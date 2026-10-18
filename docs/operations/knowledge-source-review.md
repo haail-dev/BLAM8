@@ -33,10 +33,17 @@ qualifications into retrieved chunks, and require explicit overlap decisions.
 Unanswered questions remain unknown. Owner wording and sourced additions keep
 separate attribution, including after another review or manual edit.
 
-The review starts with a last-checked task summary. Note editors, qualifications,
-topic detail and exact source evidence expand on demand. Unresolved constraints
-remain prominent; collapsing a section never selects a decision or removes an
-admission blocker. Exact sentence/block repetitions are checked across complete
+The review shows numbered business notes with visible content and explicit note
+decisions. Heading edits and Source and evidence expand on demand. Shared
+caveats are flagged once and remain available with each note's evidence. Raw
+source-unit classifications, offsets and inventory counts are not displayed.
+The Assistant guide supplies source decisions through the existing hidden
+`source_<id>`, `source_reason_<id>` and `source_default` form fields. These fields
+start empty and never approve anything automatically. Guided unknown/expanded
+markers survive a preview refresh. This presentation depends on the note-by-note
+guide; deploy the compatible guide and UI together. Existing server admission
+checks, retained source records and exclusion-reason requirements are unchanged.
+Exact sentence/block repetitions are checked across complete
 note text and shown once per pair. They may be intentional: the owner decides
 whether to retain both or merge. This is not a complete semantic duplicate or
 contradiction audit. Generic default questions are omitted for topics already

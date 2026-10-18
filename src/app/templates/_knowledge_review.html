@@ -1,30 +1,41 @@
 <form id="review-{{ review.id }}" method="post" action="/onboarding/knowledge/review/{{ review.id }}" class="mb-5 space-y-4 rounded-xl border border-slate-200 bg-white p-4" data-knowledge-review="{{ review.id }}" data-content-version="{{ review.signatures.content }}" data-evidence-version="{{ review.signatures.evidence }}" data-context-version="{{ review.signatures.context }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
   <input type="hidden" name="version" value="{{ review.version }}">
-  {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') %}
-  <input type="hidden" name="{{ name }}" value="{{ value }}">
-  {% endfor %}
-  <h2 class="font-semibold text-navy">Review {{ review.payload.origin }}</h2>
-  <div class="rounded-lg bg-slate-50 p-3 text-sm" data-review-overview><p>At last check: {{ review.summary.notes }} pending notes · {{ review.summary.decided }} decisions selected · {{ review.summary.unresolved }} source statements need a decision · {{ review.summary.overlaps }} possible overlaps.</p><p class="mt-1">First resolve source gaps, then check each note and overlap. Check changes and overlaps refreshes these counts. Unanswered details can stay unknown. Nothing is saved until you choose Save reviewed decisions.</p></div>
+  {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+  <h2 class="font-semibold text-navy">{{ review.summary.notes }} notes to review</h2>
+  <p class="text-xs text-slate-600 break-words">From {{ review.payload.origin }} · Pending, not saved to Knowledge</p>
+  <div class="rounded-lg bg-slate-50 p-3 text-sm" data-review-overview><p>Read each note and choose what to keep. Nothing is selected automatically or available to the agent until you choose Save reviewed decisions.</p><p class="mt-2">{{ review.summary.decided }} of {{ review.summary.notes }} note decisions selected{% if review.summary.overlaps %} · Possible overlaps to review below{% endif %}.</p></div>
+  {% if review.source_view.qualifications %}
+  <aside class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm" data-source-qualifications>
+    <p class="whitespace-pre-wrap break-words">{{ review.source_view.qualifications[0].text }}</p>
+    <p class="mt-1 text-xs">Shared caveats apply to all notes. Read them under Source and evidence before saving.</p>
+  </aside>
+  {% endif %}
   <p data-review-status role="status" aria-live="polite" class="text-sm text-slate-700"></p>
   {% if review.source_review_enabled and review.payload.source_snapshot %}
-  <section data-source-corrections class="space-y-2 rounded-lg border border-slate-200 p-3">
+  <details data-source-corrections class="space-y-2 rounded-lg border border-slate-200 p-3">
+    <summary class="cursor-pointer text-sm font-medium">Ask the Assistant to check these drafts</summary>
     <label class="block text-sm">Ask for source-backed corrections<input data-source-question maxlength="4000" class="mt-1 w-full rounded border border-slate-300 p-2" placeholder="What should I check against the website?"></label>
     <button type="button" data-source-ask class="rounded border border-slate-300 px-3 py-2 text-sm">Review drafts against source</button>
     <button type="button" data-source-select class="rounded border border-slate-300 px-3 py-2 text-sm">Use this batch with Assistant</button>
     <p data-source-status role="status" class="text-sm"></p>
     <div data-source-preview class="space-y-2"></div>
-  </section>
+  </details>
   {% endif %}
   <p class="text-xs text-slate-500">Nothing is selected automatically. Overlaps are candidates, not proof of a duplicate. Check wording, figures and source caveats. Merging combines the selected texts and preserves both sources; review the combined preview before saving. Saved notes change only when you explicitly choose that merge.</p>
-  {% if review.source_view.units %}{% include "_knowledge_source_coverage.html" %}{% elif review.payload.origin.startswith('Website') %}<p class="text-xs text-amber-800">No source-statement inventory was captured for this older draft. Reread the site to check source completeness; citations alone do not establish it.</p>{% endif %}
   {% for n in review.entries %}
-  <details class="space-y-2 rounded-lg border border-slate-200 p-3" data-draft="{{ n.id }}">
-    <summary class="cursor-pointer text-sm font-semibold">{{ loop.index }}. {{ n.label }} · {{ review.form.get('action_'+n.id,'Decision needed')|replace('_',' ') }}{% if n.matches %} · overlap to review{% endif %}</summary>
-    <label class="block text-sm font-medium">Label<input name="label_{{ n.id }}" value="{{ n.label }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2"></label>
-    <label class="block text-sm">Draft<textarea name="content_{{ n.id }}" rows="5" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">{{ n.content }}</textarea></label>
+  <section class="space-y-2 rounded-lg border border-slate-200 p-3" data-draft="{{ n.id }}" aria-labelledby="note-heading-{{ review.id }}-{{ n.id }}">
+    <h3 id="note-heading-{{ review.id }}-{{ n.id }}" class="text-sm font-semibold text-navy">{{ loop.index }}. {{ n.label }}</h3>
+    <p class="text-xs text-slate-600">Pending draft{% if review.source_view.qualifications %} · Shared caveats apply{% endif %}{% if n.matches %} · Possible overlap — review below{% endif %}</p>
+    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Edit note heading</summary><label class="mt-2 block text-sm font-medium">Note heading<input name="label_{{ n.id }}" value="{{ n.label }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2"></label></details>
+    <label class="block text-sm">Note content<textarea name="content_{{ n.id }}" rows="4" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">{{ n.content }}</textarea></label>
+    <label class="block text-sm font-medium">Decision<select name="action_{{ n.id }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">
+      <option value="">Choose after review</option><option value="keep"{% if review.form.get('action_'+n.id)=='keep' %} selected{% endif %}>Retain this note</option><option value="discard"{% if review.form.get('action_'+n.id)=='discard' %} selected{% endif %}>Discard this draft; keep existing evidence</option>
+      {% for target in review.entries if target.id != n.id and target.mailbox_id == n.mailbox_id %}<option value="merge_pending:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_pending:'+target.id %} selected{% endif %}>Merge into retained draft: {{ target.label }}</option>{% endfor %}
+      {% for target in n.merge_options %}<option value="merge_saved:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_saved:'+target.id %} selected{% endif %}>Merge into saved note: {{ target.label }}</option>{% endfor %}
+    </select></label>
     {% if n.combined != n.content %}<details open class="text-xs"><summary>Combined preview — check for contradictions</summary><p class="mt-1 whitespace-pre-wrap break-words">{{ n.combined }}</p></details>{% endif %}
-    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Source and evidence</summary>{% for p in n.preview_provenance %}{% if p.claim %}<p class="mt-1 whitespace-pre-wrap break-words">Draft clause: {{ p.claim }}</p>{% endif %}<p class="mt-1 whitespace-pre-wrap break-words">{{ p.source }}{% if p.excerpt %} — {{ p.excerpt }}{% endif %}</p>{% endfor %}</details>
+    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Source and evidence</summary>{% for p in n.preview_provenance %}{% if p.claim %}<p class="mt-1 whitespace-pre-wrap break-words">Draft clause: {{ p.claim }}</p>{% endif %}<p class="mt-1 whitespace-pre-wrap break-words">{{ p.source }}{% if p.excerpt %} — {{ p.excerpt }}{% endif %}</p>{% endfor %}{% if review.source_view.qualifications %}<p class="mt-3 font-medium">Shared caveats attached to this note</p>{% for u in review.source_view.qualifications %}<p class="mt-2 whitespace-pre-wrap break-words">{{ u.text }}</p><p class="text-xs break-words">{{ u.sources|join(', ') }}</p>{% endfor %}{% endif %}</details>
     {% if n.content_segments %}<details class="text-xs text-slate-600"><summary>Who supplied this wording</summary>{% for part in n.content_segments %}<p class="mt-1 whitespace-pre-wrap break-words">{{ 'Owner wording' if part.kind == 'owner_said' else ('Website-derived wording' if part.kind == 'owner_site' else 'Existing wording — authorship not recorded') }}: {{ part.text }}</p>{% endfor %}</details>{% endif %}
     {% for m in n.matches %}
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs" data-duplicate-candidate>
@@ -35,13 +46,10 @@
       <label class="mt-2 block"><input type="checkbox" name="match_{{ m.key }}" value="keep_both"{% if review.form.get("match_"+m.key)=="keep_both" %} checked{% endif %}> I reviewed this match: keep both intentionally.</label>
     </div>
     {% endfor %}
-    <label class="block text-sm font-medium">Decision<select name="action_{{ n.id }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">
-      <option value="">Choose after review</option><option value="keep"{% if review.form.get('action_'+n.id)=='keep' %} selected{% endif %}>Retain this note</option><option value="discard"{% if review.form.get('action_'+n.id)=='discard' %} selected{% endif %}>Discard this draft; keep existing evidence</option>
-      {% for target in review.entries if target.id != n.id and target.mailbox_id == n.mailbox_id %}<option value="merge_pending:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_pending:'+target.id %} selected{% endif %}>Merge into retained draft: {{ target.label }}</option>{% endfor %}
-      {% for target in n.merge_options %}<option value="merge_saved:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_saved:'+target.id %} selected{% endif %}>Merge into saved note: {{ target.label }}</option>{% endfor %}
-    </select></label>
-  </details>
+
+  </section>
   {% endfor %}
+  {% include "_knowledge_source_coverage.html" %}
   <details class="rounded-lg border border-slate-200 p-3">
     <summary class="cursor-pointer font-semibold text-sm">Unanswered details and topic decisions</summary>
     <p class="mt-2 text-xs text-slate-500">These are questions to resolve, not inferred rules. Leave unknown when you do not know. Answers and explicit not-applicable decisions are saved only when you approve this review.</p>

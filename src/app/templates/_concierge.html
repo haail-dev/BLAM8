@@ -28,7 +28,8 @@
       <span id="bc-resize-handle" role="separator" tabindex="0" aria-orientation="horizontal"
             aria-label="Resize assistant height" aria-controls="bc-panel"
             title="Drag to resize. Arrow keys adjust height; Home and End use the limits."></span>
-      <span class="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-sm font-bold">B</span>
+      <img src="/static/img/blam8-mark-small.svg?v={{ asset_rev }}" alt="" aria-hidden="true"
+           width="28" height="28" class="h-7 w-7 flex-none" style="filter: brightness(0) invert(1);">
       {# One line only (Kris 2026-08-31): the subtitle went — the bar is thinner
          and the caveat line inside the history carries the honesty instead. #}
       <div class="min-w-0">
@@ -75,8 +76,8 @@
     </form>
   </section>
 
-  {% set landing_glass_logo = request.url.path in ('/', '/login') %}
-  <!-- Landing and sign-in share the glass mark and its reduced-motion still. -->
+  {% set landing_glass_logo = request.url.path in ('/', '/login') or request.url.path.startswith('/onboarding/') %}
+  <!-- Landing, sign-in and onboarding share the glass mark and reduced-motion still. -->
   <button id="bc-bubble" type="button" aria-label="Open BLAM8 assistant" aria-expanded="false"
           {% if landing_glass_logo %}data-assistant-glass-logo{% endif %}
           class="relative ml-auto grid h-16 w-16 select-none place-items-center {% if landing_glass_logo %}bg-transparent{% else %}rounded-full bg-white shadow-lg{% endif %} p-0 text-white transition hover:scale-105"
@@ -262,6 +263,7 @@
 </style>
 
 <link rel="stylesheet" href="/static/setup_cards.css?v={{ asset_rev }}">
+<link rel="stylesheet" href="/static/concierge_busy.css?v={{ asset_rev }}">
 <script src="/static/setup_cards.js?v={{ asset_rev }}" defer></script>
 <script src="/static/concierge.js?v={{ asset_rev }}" defer></script>
 {% if landing_glass_logo %}

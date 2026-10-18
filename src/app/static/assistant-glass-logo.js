@@ -1,4 +1,4 @@
-/* Landing-page Assistant glass B. Self-contained, transparent cog openings.
+/* Landing, sign-in and onboarding Assistant glass B. Transparent cog openings.
  * Approved mist, slow cog-driven swells and rounded glass; no voice/Pond hooks.
  * The still remains usable without JS, with reduced motion or with data saver.
  */
