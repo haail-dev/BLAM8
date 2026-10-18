@@ -328,12 +328,14 @@ def test_knowledge_notes_are_written_in_the_businesss_own_voice():
     will contact owners…" — a report about the company, not the company. The
     owner reads these as THEIR knowledge and the agent quotes them, so every
     note-writing prompt asks for first person plural; the site reader also
-    never merges the given name with the site's, and never carries over
-    "book via <other system>" (BLAM8 is the booking route now)."""
+    keeps the given business identity and preserves source booking routes
+    without assuming that import grants a new operational capability."""
     from app import concierge, kb_website, knowledge_coverage as kc
     assert "first person plural" in kb_website.SYSTEM
     assert "never write 'trading as'" in kb_website.SYSTEM
-    assert "never carry over instructions to book through another" in kb_website.SYSTEM
+    assert "preserve the source's stated booking routes" in kb_website.SYSTEM
+    assert "does not enable an integration" in kb_website.SYSTEM
+    assert "Never replace source instructions with an assumed product capability" in kb_website.SYSTEM
     assert "in the business's own voice" in concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
     block = kc.prompt_block(kc.coverage([]))
     assert "IN THE BUSINESS'S OWN VOICE" in block

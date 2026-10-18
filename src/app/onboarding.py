@@ -819,6 +819,8 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
             "kb_website build failed (tenant %s, url %r): %r", ctx.tenant_id, url, e)
         return JSONResponse({"error": "Could not read that site — check the address, "
                                       "or add your facts below instead."}, status_code=502)
+    if result.get('distillation_error'):
+        return JSONResponse({'error':result['distillation_error']},status_code=422)
     if not result["entries"]:
         return JSONResponse({"error": "Couldn't find usable facts on that site — "
                                       "upload a file or paste a few notes instead."},

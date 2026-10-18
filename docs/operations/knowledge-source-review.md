@@ -21,6 +21,9 @@ joined nonadjacent passages and clauses absent from the note are rejected. These
 attributions remain review hints, not a semantic entailment check or automatic
 coverage clearance. Literal source coverage and explicit exclusions still gate
 admission. Existing pending batches are not silently recaptured or corrected.
+Malformed, output-limited or oversized model responses stage no drafts and report
+that limit explicitly. They are not presented as proof that the website has no
+usable facts, and excess proposed notes are never silently sliced off.
 
 The workflow is: import website drafts, request a source review, inspect the
 proposed additions, apply them to drafts, then use **Check changes and overlaps**

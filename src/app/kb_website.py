@@ -283,11 +283,20 @@ async def distill(tenant_id: str, site: str, pages: list[dict], *,
     )
     text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text").strip()
     usage.record_anthropic(tenant_id, msg.model, msg.usage, operation="kb_website")
+    def incomplete(reason):
+        result = DistilledEntries([])
+        result.questions = []
+        result.failure = reason
+        return result
+    if getattr(msg, 'stop_reason', None) == 'max_tokens':
+        return incomplete('The website draft response reached its output limit. No drafts were staged; try a smaller source section.')
     try:
         data = json.loads(text)
         entries = data.get("entries") or []
     except (ValueError, AttributeError):
-        return []
+        return incomplete('The website draft response could not be verified. No drafts were staged; this does not mean the source has no facts.')
+    if not isinstance(entries,list) or len(entries)>MAX_ENTRIES:
+        return incomplete('The website draft response exceeds one review batch. No notes were silently dropped; try a smaller source section.')
     result = DistilledEntries([
         {"label": (e.get("label") or "").strip() or "Website note",
          "content": e["content"].strip(), "topics": e.get("topics", []),
@@ -319,4 +328,5 @@ async def build(tenant_id: str, url: str, *, business_name: str | None = None,
     return {"site": site, "pages": [p["url"] for p in pages], "entries": entries,
             "questions":getattr(entries,"questions",[]), "source_units":inventory(pages),
             "capture_manifest": getattr(pages, 'manifest', []),
+            **({'distillation_error': entries.failure} if getattr(entries, 'failure', None) else {}),
             **({'evidence_pages': [{k: p[k] for k in ('url', 'text')} for p in pages]} if settings.knowledge_source_review_enabled else {})}

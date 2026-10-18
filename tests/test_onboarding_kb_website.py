@@ -173,6 +173,16 @@ def test_website_no_facts_is_a_422(client, store, monkeypatch):
     assert r.status_code == 422
 
 
+def test_incomplete_website_drafts_are_reported_without_staging(client,store,monkeypatch,review_store):
+    _tenant_env(monkeypatch)
+    async def build(*a,**kw):
+        return {'entries':[], 'distillation_error':'Draft output limit reached; no drafts staged.'}
+    monkeypatch.setattr(kb_website,'build',build)
+    response=client.post('/onboarding/knowledge/website',data={'url':'example.co.uk'})
+    assert response.status_code==422 and 'output limit' in response.json()['error']
+    assert review_store.rows==[] and store==[]
+
+
 def test_website_unconfigured_kb_is_a_400(client, store, monkeypatch):
     monkeypatch.setattr(kb, "is_configured", lambda: False)
     r = client.post("/onboarding/knowledge/website", data={"url": "example.co.uk"})

@@ -581,7 +581,7 @@
       }
     },
     "mailboxes": {
-      "signature": "faee1ff4f980d998051b8ad8653f712cd38c15cdc8af5d7bfe9f1d6986dd19d4",
+      "signature": "8e192abd44fdacad4f18f62b0c38fd823ec79289673b4e7f87edc8e8a5a33998",
       "surfaces": {
         "/help": {
           "disposition": "generated",
@@ -1248,7 +1248,7 @@
       }
     },
     "knowledge.review": {
-      "signature": "758dc7aa64f9091c9c371bbb6c5c42cc0f95c8fa2112bb5be2f80df1a1cfeb99",
+      "signature": "ce2cb00c6c54822c68a03168de3c92a7d3904b810769f821bd43cb3c0a758d9b",
       "surfaces": {
         "/pages": {
           "disposition": "updated",

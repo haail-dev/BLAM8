@@ -65,3 +65,19 @@ def test_multiple_exact_spans_keep_each_claim_and_reject_joined_quotes(monkeypat
     entries = asyncio.run(kb_website.distill('tenant', 'https://example.invalid', pages))
     assert len(entries[0]['provenance']) == 2
     assert {p['claim'] for p in entries[0]['provenance']} == {'We accept reports.', 'We do not promise attendance.'}
+
+
+def test_incomplete_or_oversized_model_output_is_not_reported_as_no_source_facts(monkeypatch):
+    from types import SimpleNamespace
+    response = SimpleNamespace(content=[SimpleNamespace(type='text',text='{"entries":[]}')], model='fake',usage={},stop_reason='max_tokens')
+    async def model(**kw): return response
+    monkeypatch.setattr(kb_website.llm,'create',model)
+    monkeypatch.setattr(kb_website.agent,'client',lambda:None)
+    monkeypatch.setattr(kb_website.usage,'record_anthropic',lambda *a,**k:None)
+    result=asyncio.run(kb_website.distill('tenant','https://example.invalid',[]))
+    assert result==[] and 'output limit' in result.failure
+    response.stop_reason='end_turn';response.content[0].text='unverifiable output'
+    result=asyncio.run(kb_website.distill('tenant','https://example.invalid',[]))
+    assert 'does not mean the source has no facts' in result.failure
+    response.content[0].text=json.dumps({'entries':[{'content':'Fact.'}]*31})
+    assert 'No notes were silently dropped' in asyncio.run(kb_website.distill('tenant','https://example.invalid',[])).failure
