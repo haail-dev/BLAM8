@@ -21,6 +21,8 @@ EMAIL_DERIVED_COLUMNS = ("knowledge_gap", "request_summary", "action_summary",
 
 def run() -> dict:
     now = datetime.now(timezone.utc)
+    if settings.knowledge_source_review_enabled:
+        db().table("knowledge_review_sources").delete().lt("expires_at", now.isoformat()).execute()
     cutoff = (now - timedelta(days=settings.email_retention_days)).isoformat()
     # Redact the free-text content but KEEP the audit row (from_address, subject,
     # status, timestamps) — email_log is the approval-history / audit trail.

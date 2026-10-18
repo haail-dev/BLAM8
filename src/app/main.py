@@ -163,6 +163,8 @@ app.include_router(people_router)
 app.include_router(people_viewas_router)
 app.include_router(people_join_router)
 app.include_router(onboarding_router)
+from app.knowledge_source_routes import router as knowledge_source_router
+app.include_router(knowledge_source_router)
 app.include_router(webhook_router)
 app.include_router(build_hooks_router)
 app.include_router(sms_webhook_router)

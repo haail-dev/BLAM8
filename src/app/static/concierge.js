@@ -1355,8 +1355,11 @@
     var current = readCurrent();
     var reply, fill = {}, advance = false, notes = [], spoke = true, heldFor = [], reviewLink = null;
     try {
-      var data = await postJsonWithRetry("/concierge/onboard",
-        { step: ONB_STEP, question: text, history: history, current: current });
+      var sourceReview = ONB_STEP === "knowledge" && window.Blam8KnowledgeSourceReview;
+      var data = sourceReview && sourceReview.available()
+        ? await sourceReview.ask(text)
+        : await postJsonWithRetry("/concierge/onboard",
+            { step: ONB_STEP, question: text, history: history, current: current });
       reply = data.reply; fill = data.form_fill || {}; advance = !!data.ready_to_advance;
       notes = Array.isArray(data.notes) ? data.notes : [];
       heldFor = Array.isArray(data.held_for) ? data.held_for : [];

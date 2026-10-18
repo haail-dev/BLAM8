@@ -62,7 +62,7 @@ def grounded_reply(context):
     return {"reply":text,"link":{"label":"Review actual pending Knowledge","href":"/onboarding/knowledge/review/"+pending[0]["id"]}}
 
 
-def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=None, return_to="/onboarding/knowledge", source_units=None):
+def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=None, return_to="/onboarding/knowledge", source_units=None, evidence_pages=None):
     clean = []
     for n in entries or []:
         label, content = str(n.get("label") or "").strip(), str(n.get("content") or "").strip()
@@ -79,7 +79,16 @@ def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=No
                "return_to": return_to, "topic_reviews": {}, "source_units":source_units or []}
     row = {"id": str(uuid4()), "tenant_id": tenant, "payload": payload, "state": "pending"}
     try:
-        result = db.db().table("knowledge_reviews").insert(row).execute().data
+        if evidence_pages is not None:
+            from app import knowledge_source_evidence
+            evidence = knowledge_source_evidence.build(evidence_pages)
+            payload.update(source_snapshot=evidence['id'], draft_revision=1)
+            result = db.db().rpc('capture_knowledge_review_sources', {
+                'p_tenant': tenant, 'p_review': row['id'], 'p_payload': payload, 'p_evidence': evidence}).execute().data
+            if result != row['id']:
+                raise ValueError('Source capture was not confirmed')
+        else:
+            result = db.db().table("knowledge_reviews").insert(row).execute().data
     except Exception:
         raise HTTPException(503,"The drafts could not be confirmed. Nothing was admitted to Knowledge; reload before trying again.") from None
     if not result:
@@ -119,12 +128,30 @@ def saved_source_context(context, source):
     return ""
 
 
+def wording_segments(entry):
+    """Keep legacy wording explicit without guessing who authored it."""
+    return deepcopy(entry.get('content_segments') or [
+        {'kind': 'unattributed', 'reference': 'Existing wording; authorship not recorded', 'text': entry['content']}])
+
+
+def saved_wording_segments(context, source):
+    for row in reversed(context.get('reviews', [])):
+        if row['state'] != 'saved':
+            continue
+        for entry in row['payload']['entries']:
+            if (entry.get('admitted_source'), entry.get('mailbox_id'), entry.get('admitted_content_hash')) == (
+                    source['source'], source.get('mailbox_id'), fingerprint(source['content'])):
+                return deepcopy(entry.get('combined_content_segments') or wording_segments(source))
+    return wording_segments(source)
+
+
 def candidates(entry, context, own_review=None, entries=None):
     targets = [{"id": "brief", "label": "Business brief", "content": context.get("brief", ""),
                 "kind": "brief", "provenance": [{"source": "Saved business brief"}]}]
     targets += [{"id": "saved:" + fingerprint(n["source"], n.get("mailbox_id")), "label": n["source"],
                  "content": n["content"], "kind": "saved", "mailbox_id": n.get("mailbox_id"),
-                 "provenance": saved_provenance(context,n),"source_context":saved_source_context(context,n)} for n in context["sources"]
+                 "provenance": saved_provenance(context,n),"source_context":saved_source_context(context,n),
+                 "content_segments":saved_wording_segments(context,n)} for n in context["sources"]
                 if n.get("mailbox_id") in (None, entry.get("mailbox_id"))]
     for review in context.get("reviews", []):
         if review["state"] != "pending":
@@ -194,8 +221,11 @@ def topic_view(context):
 def edited_entries(row, form, *, validate=True):
     entries = deepcopy(row["payload"]["entries"])
     for n in entries:
+        original = n['content']
         n["label"] = str(form.get("label_"+n["id"],n["label"])).strip()
         n["content"] = str(form.get("content_"+n["id"],n["content"])).strip()
+        if n['content'] != original:
+            n['content_segments'] = [{'kind': 'owner_said', 'reference': 'Owner edited this Knowledge draft', 'text': n['content']}]
         if validate and form.get("action_"+n["id"])!="discard" and (not n["label"] or len(n["label"])>160 or not n["content"] or len(n["content"])>60000):
             raise HTTPException(400,"Supply a label within 160 characters and content within 60,000 characters.")
     return entries
@@ -210,6 +240,7 @@ def effective_entries(context, row, entries, form):
             target = effective.get(action.partition(":")[2])
             if not target or target["id"]==n["id"] or form.get("action_"+target["id"])!="keep":
                 raise HTTPException(400,"Merge into another retained draft; merge chains are not allowed.")
+            target['content_segments'] = wording_segments(target) + wording_segments(n)
             target["content"] += "\n\n" + n["content"]
             target["provenance"] += n["provenance"]
             target["topics"] = sorted(set(topics(target)+topics(n)))
@@ -221,8 +252,24 @@ def effective_entries(context, row, entries, form):
             if not match: raise HTTPException(409,"That saved merge target is no longer a matching source. Check changes first.")
             effective[n["id"]].update(content=match["content"]+"\n\n"+n["content"], merge_target=match,
                 provenance=match["provenance"]+n["provenance"],
+                content_segments=wording_segments(match)+wording_segments(n),
                 source_context="\n".join(filter(None,[match.get("source_context"),n.get("source_context")])))
     return list(effective.values())
+
+
+def resolve_source_statements(row, entries, form, *, complete=False):
+    from app import knowledge_fidelity
+    before = {n['id']: n['content'] for n in entries if n.get('content_segments')}
+    decisions = knowledge_fidelity.resolve(row, entries, form, complete=complete)
+    for entry in entries:
+        original = before.get(entry['id'])
+        if original is not None and entry['content'] != original:
+            # Fidelity appends exact statements to the chosen note. Preserve its
+            # prior range attribution and identify this additional source text.
+            entry['content_segments'].append({'kind': 'owner_site',
+                'reference': 'Source-statement coverage review',
+                'text': entry['content'][len(original):].strip()})
+    return decisions
 
 
 def review_view(context, row, form=None):
@@ -233,11 +280,13 @@ def review_view(context, row, form=None):
     except HTTPException: effective = entries  # Preserve edits while the reviewer fixes an invalid choice.
     from app import knowledge_fidelity
     source_view=knowledge_fidelity.view(row,effective,form)
-    try: knowledge_fidelity.resolve(row,effective,form)
+    try: resolve_source_statements(row,effective,form)
     except HTTPException: pass  # Keep invalid exclusions visible for correction.
     by_id = {n["id"]:n for n in effective}
-    return {**row, "version": context["version"], "entries": [
+    from app.config import settings
+    return {**row, "source_review_enabled": settings.knowledge_source_review_enabled, "version": context["version"], "entries": [
         {**n, "combined":by_id.get(n["id"],n)["content"],"preview_provenance":by_id.get(n["id"],n)["provenance"],
+         "content_segments":by_id.get(n["id"],n).get("content_segments",[]),
          "matches": [m for m in candidates(by_id[n["id"]],context,row["id"],effective)
                      if m["id"]!=by_id[n["id"]].get("merge_target",{}).get("id")] if n["id"] in by_id else [],
          "merge_options": [m for m in candidates(n,context,row["id"],entries)
@@ -257,8 +306,7 @@ def plan(context, row, form):
         if action not in {"keep","discard"} and not str(action).startswith(("merge_pending:","merge_saved:")):
             raise HTTPException(400,"Choose whether to retain, merge or discard every draft.")
     effective = effective_entries(context,row,entries,form)
-    from app import knowledge_fidelity
-    source_decisions=knowledge_fidelity.resolve(row,effective,form,complete=True)
+    source_decisions=resolve_source_statements(row,effective,form,complete=True)
     notes, outcomes = [], [{**n,"decision":form["action_"+n["id"]]} for n in entries]
     for n in effective:
         matches = candidates(n, context, row["id"], effective)
@@ -273,7 +321,7 @@ def plan(context, row, form):
                       "content": n["content"] + "\n\nSource evidence:\n" + provenance,
                       "source_context":n.get("source_context","")})
         next(o for o in outcomes if o["id"]==n["id"]).update(matches=matches, admitted_source=source,
-                                                          combined_provenance=n["provenance"],combined_topics=topics(n),source_context=n.get("source_context",""))
+                                                          combined_provenance=n["provenance"],combined_content_segments=wording_segments(n),combined_topics=topics(n),source_context=n.get("source_context",""))
     topic_reviews = {}
     clarification = []
     for t in topic_view(context)["topics"]:
