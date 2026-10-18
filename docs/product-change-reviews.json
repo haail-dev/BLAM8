@@ -1,13 +1,13 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. Agent answer-grounding review: single-pass contexts now receive every compact core guide. Money guidance covers existing online/manual quote acceptance; Knowledge guidance covers draft admission, attribution, expiry and manual fallback. Public instructions separate unknown support from absence and chat access from product capability. Reviewed the exact before/after platform-help render: only product JSON guide coverage and content/definition versions changed; caller permissions, schema, tenant context and actions are unchanged. No production deployment or universal model-quality claim.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. Agent answer-grounding review: single-pass contexts now receive every compact core guide. Money guidance covers existing online/manual quote acceptance; Knowledge guidance covers draft admission, attribution, expiry and manual fallback. Public instructions separate unknown support from absence and chat access from product capability. Reviewed the exact before/after platform-help render: only product JSON guide coverage and content/definition versions changed; caller permissions, schema, tenant context and actions are unchanged. No production deployment or universal model-quality claim.  Landing presentation review: removed the sample inbox figure and caption, reclaimed its grid column, and hid assistant transcript/composer scrollbar chrome while retaining overflow scrolling. No feature, permission, plan or commercial-copy change.  Founder outreach egress repair: the shared review checker now binds internal operator tooling to separate source/test/operations evidence. Public capabilities, guides, settings and commercial surfaces are unchanged; their signatures refresh solely for the shared checker change. The founder job is not added to the product catalogue.",
   "capabilities": {
     "email": {
-      "signature": "d4a6b0ac4aa55a267c940d9760dea366d637a92c09890a1ebdd90bd08ed17d52",
+      "signature": "27806bf4639ccfe60453bff391df0ac7d54f0c859f7fd2d9caf6137a93e0e0f0",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Presentation-only: the sample inbox figure/caption is removed and the text uses one column; all retained product and commercial wording is unchanged.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
@@ -63,7 +63,7 @@
       }
     },
     "knowledge": {
-      "signature": "2c126d8f7cbee69d7d2cb2e7c33937891046c2ac0a4704cd674765143992574c",
+      "signature": "233a76f067b686827728a422e2995859fd05f23c3be78d870fbfce7a3b373210",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -114,7 +114,7 @@
       }
     },
     "scheduling": {
-      "signature": "b406421d67485d04f1976eaa30f57e4d134119627ba51e56ea549503d55ff9e1",
+      "signature": "495f485c88c409539498acfdf4fdb44aa546baad0f0d14d7cf016f736f6d41c8",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -164,7 +164,7 @@
       }
     },
     "calendar": {
-      "signature": "b493ab65079a7bd940314e78c6d18f95c90d822274337d79f47d8125496cce20",
+      "signature": "fef417803ed78c744007a804002ee296e26532e06b89665eb01b62ec65e2d630",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -215,7 +215,7 @@
       }
     },
     "crm": {
-      "signature": "ad02185d4f9019f1120c91e826df7a0ffefbdbdb93b01152a030f9522653fe2f",
+      "signature": "fd29795090578b67cec3a89e341c962c9b6c91ad0df05a67439dfdaab608b7c1",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -266,7 +266,7 @@
       }
     },
     "subjects": {
-      "signature": "9130eaf232814a5f084b75fb5167ecf577a3a68003670596ae54b72182fd3714",
+      "signature": "e1cbac99249cbb2bc6c91216991b4643de3e9ebd014f82697db5fb7d1fcce367",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -307,11 +307,11 @@
       }
     },
     "packages": {
-      "signature": "32db4b88aae79d9a41d71537f09c3b6c2814ed832d4cdcc3fcd214b59c3aabb4",
+      "signature": "ad56b232e1d64fb030b33d78cdc1dc3d484aef39155f4b70a0f252f414db8d4f",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Packages and credits: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Packages and credits: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Presentation-only: the sample inbox figure/caption is removed and the text uses one column; all retained product and commercial wording is unchanged.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
@@ -368,11 +368,11 @@
       }
     },
     "progress": {
-      "signature": "dfb20a3bf48e35e6387cd555865c123cb8d85aa20dcd7e30ac34a98cedaa6b60",
+      "signature": "2481438533bedbdac58a929a4dcfad0100f500cb3a1a5d51870a85ca5f84b811",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Progress levels and prerequisites: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Progress levels and prerequisites: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Presentation-only: the sample inbox figure/caption is removed and the text uses one column; all retained product and commercial wording is unchanged.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
@@ -429,7 +429,7 @@
       }
     },
     "money": {
-      "signature": "172e42dd457dcd1027b2ac4dfa8cfb38dd9474092caacf79a0b075b4950b865b",
+      "signature": "703b9c5e423b11c2e3f96ae829e98b9af3ae2ca26d9914eec8d6fa2d35ab1d2e",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -481,7 +481,7 @@
       }
     },
     "people": {
-      "signature": "b406b8548ecc027fdeeaa708efb332ba967e6049d926bde01fc199f7669d8a34",
+      "signature": "f4f8570f12a0b900d6ba6584809a7608084b1c108a83c2a72520380f2f30dd03",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -532,7 +532,7 @@
       }
     },
     "portal": {
-      "signature": "6bb4f54f37aca23aebca1032857a168d7242b351acf69825f7993823888022da",
+      "signature": "40599c368006a27eadd92a8c748fe902c5d3b61c785095cceb52b44d4e1d4e4f",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -582,7 +582,7 @@
       }
     },
     "mailboxes": {
-      "signature": "725a61db068d19c18a4ddaa0a26fe34311b2f6e28cf5f084bae765e943779460",
+      "signature": "658643d8d84abc42cec106db53a5b61fc289f2ac168b2a21029faf3477b07611",
       "surfaces": {
         "/help": {
           "disposition": "generated",
@@ -633,7 +633,7 @@
       }
     },
     "owner.assistant": {
-      "signature": "6036cefbc1e68fe118f250c1428130624d95d580af34c6b4969a00ea45606872",
+      "signature": "4d3baaec6ca94cdf5f24369e77c1a56e3ae2fe1eea8fe064d003344435b50db3",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -684,7 +684,7 @@
       }
     },
     "product.help": {
-      "signature": "0a206fee95b65f348db8fb5a70ccacb672de3d583280a453c10c757e7ef88144",
+      "signature": "8359ff4e2777cc0fe508cb8b61b43cdf142a5eb0e38deb5edb114eb211a38b5c",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
@@ -741,11 +741,11 @@
       }
     },
     "billing": {
-      "signature": "efd5c5c6d5b76c9bfa3223d40b7f7a298c6166276044356a49ac39c0cc9d5b81",
+      "signature": "525e993658b233cbc73cfdee098a496dfb8f9717412d9816e0de5bb51c0a209b",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "/: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "/: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Presentation-only: the sample inbox figure/caption is removed and the text uses one column; all retained product and commercial wording is unchanged.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
@@ -1033,7 +1033,7 @@
       }
     },
     "installable": {
-      "signature": "100f2641c4cbe606ce1a69844130d36c2aa05f3fa65a5cd9bc1ea127407419c7",
+      "signature": "0092c4cb2352e7d5ee7c5771e0514c7562435a6c7c92621afce58d7966a97111",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1074,7 +1074,7 @@
       }
     },
     "extensions": {
-      "signature": "3a36ef61e087754f1c3b4e21d3ef2fd0989a5df8a02db2008f59077b7a5f4df6",
+      "signature": "c65bd4daafe4c566bfb8a0f8f1d26aabbe90cf1c2fd3228e22bf5629c21accb9",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1124,7 +1124,7 @@
       }
     },
     "automation.scheduled": {
-      "signature": "8eae25e8b77092b45ee0d40eb7e1bc9424317b33d09af24b3f3d68ff48b8ba9d",
+      "signature": "cdd405d90cdad5b335c167b4768796f21d1ebacf5094bd9a2563bf046e2cf2e0",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1165,7 +1165,7 @@
       }
     },
     "outreach": {
-      "signature": "5ede8970d61615dfa971b258fca06cdcf5486c574a6438d97389dbea38bda413",
+      "signature": "b1991ef09b9f68c484ac30a19b416e05384ecb038ef1069595d15fe84fe89181",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1206,7 +1206,7 @@
       }
     },
     "knowledge.review": {
-      "signature": "57e6c145cbbd9b867c89e8f83dcdf6917b6ae535cda34093c2de206018bd0103",
+      "signature": "0df7a48bee4f00bef1a5b1c8498b2dcb3ec690065eaca68260f4afe87fe759d6",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1263,6 +1263,12 @@
           ]
         }
       }
+    }
+  },
+  "operator_sources": {
+    "src/app/admin_outreach.py": {
+      "signature": "4c18534a5ef62ff78fad68e7f127d3ccaba04a35460b47b270ba7dd9832bb9b6",
+      "reason": "Founder outreach is an internal operator tool, excluded from public capabilities. Reviewed compact reads, durable reply detection, unchanged atomic send safeguards and the migration/rollback with offline and disposable PostgreSQL tests; deployment is a separate release step."
     }
   }
 }
