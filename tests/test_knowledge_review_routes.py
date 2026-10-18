@@ -32,6 +32,22 @@ def test_preview_and_unresolved_overlap_save_nothing_and_preserve_edits(client,r
     assert client.get('/onboarding/knowledge/review/missing').status_code==404
 
 
+def test_review_preserves_assistant_context_and_json_preview_has_explicit_result(client,review_store):
+    from copy import deepcopy
+    row=review_store.stage('tenant',[{'label':'Policy','content':'Only confirmed requests proceed.'}])
+    before=deepcopy(review_store.rows); path='/onboarding/knowledge/review/'+row['id']
+    page=client.get(path)
+    assert 'id="bc-panel"' in page.text and 'data-onboarding-step="knowledge"' in page.text
+    assert 'id="onboarding-journey"' in page.text
+    identity=row['payload']['entries'][0]['id'];version=review_store.load('tenant')['version']
+    response=client.post(path,headers={'Accept':'application/json'},data={'operation':'preview','version':version,
+        'content_'+identity:'Owner edited this text.','action_'+identity:'keep'})
+    assert response.status_code==200 and 'No facts saved' in response.json()['summary']
+    assert 'Owner edited this text.' in response.json()['review_html']
+    assert 'value="keep" selected' in response.json()['review_html']
+    assert review_store.rows==before and review_store.sources==[]
+
+
 def test_assistant_questions_and_drafts_are_stored_and_linked_before_admission(client,review_store,monkeypatch):
     async def reply(*a,**kw):
         return SimpleNamespace(reply='Does the price vary with size?',form_fill={},ready_to_advance=False,

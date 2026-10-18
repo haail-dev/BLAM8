@@ -197,8 +197,8 @@
     voice: "Now let's give your agent a voice — I'm the BLAM8 AI assistant. Describe your business and how you'd like it to sound, and I'll fill these in for you to review.",
     mailbox: "Step 2 of 4 here: connect the inbox your customers email — I'm the BLAM8 AI assistant. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
     knowledge: ONB_SITE
-      ? "Last step here: the facts your agent can quote — prices, hours, policies. I'm the BLAM8 AI assistant. You gave me " + ONB_SITE + " at step 1, so I'm reading it now and drafting notes for you to tick and save on the page; then I'll ask about anything it missed. Press Next when you're done here — the five tuning steps follow inside the app with me, same stepper."
-      : "Last step here: the facts your agent can quote — prices, hours, policies. I'm the BLAM8 AI assistant: tell me your facts and I'll write the notes, or paste your website on the page and I'll fill the gaps. Press Next when you're done here — the five tuning steps follow inside the app with me, same stepper.",
+      ? "This step prepares the facts your agent may quote. I'm the BLAM8 AI assistant. The website status shows whether " + ONB_SITE + " is being read or has drafts ready. Review source gaps, note decisions and overlaps before saving. Ask for source-backed corrections when that control is available; proposals stay pending until you review and apply them."
+      : "I'm the BLAM8 AI assistant. Review the pending notes, source gaps and overlaps here. Ask for source-backed corrections when that control is available, or supply a missing fact in your own words. Pending drafts are separate from saved Knowledge; review and save decisions when ready.",
     data: "Last step — which systems do you run on? I'm the BLAM8 AI assistant: tell me and I'll point you to the right boxes to tick.",
   };
   // Mid-thread step hand-offs: same job as the greetings but WITHOUT the
@@ -212,8 +212,8 @@
     voice: "Next: your agent's voice — how replies should sound and sign off. With your mailbox connected you can have it learned from your sent emails in one click (it only ever runs on your say-so), or just describe it and I'll fill the form for you to review.",
     mailbox: "Step 2 of 4 here: connect the inbox your customers email. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
     knowledge: ONB_SITE
-      ? "Last step here: knowledge — the facts your agent can quote, like prices, hours and policies. You gave me " + ONB_SITE + " at step 1, so I'm reading it now: its notes land on the page as cards for you to tick and save, then I'll ask about anything it missed. Press Next when you're done here — the five tuning steps (diary, booking requirements, what bookings are about, contacts, getting paid) follow inside the app with me, same stepper."
-      : "Last step here: knowledge — the facts your agent can quote, like prices, hours and policies. Tell me your facts and I'll write the notes, or paste your website on the page and I'll fill the gaps; then press Next — the five tuning steps (diary, booking requirements, what bookings are about, contacts, getting paid) follow inside the app with me, same stepper.",
+      ? "Knowledge prepares facts from " + ONB_SITE + " for your review. Follow the website status, then resolve source gaps, note decisions and overlaps. Corrections and drafts remain pending until you approve the final review."
+      : "Knowledge prepares facts for review. Check source gaps, note decisions and overlaps. I can help with source-backed corrections where available; unknown details stay unknown. Review pending drafts or explicitly leave them for later before continuing.",
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
   };
   var GREETING = ONB_MODE
@@ -1391,7 +1391,7 @@
       }
     } catch (e) {
       spoke = false;
-      reply = "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
+      reply = sourceReview && sourceReview.available() ? (e.message || "The source review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
     log.push({ role: "assistant", content: reply }); saveLog(log);

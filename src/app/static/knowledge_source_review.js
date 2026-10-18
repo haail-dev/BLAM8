@@ -1,8 +1,12 @@
 /* Source corrections never admit Knowledge. The existing review form does that. */
 (function () {
   "use strict";
-  var busy = false, submitting = false, preview = null, locked = [];
+  var busy = false, submitting = false, preview = null, locked = [], selected = null;
   function forms() { return Array.from(document.querySelectorAll('[data-knowledge-review]')); }
+  function targetForm() {
+    var eligible = forms().filter(function(f){return f.dataset.reviewClosed!=='1' && f.querySelector('[data-source-corrections]');});
+    return eligible.find(function(f){return f.dataset.knowledgeReview===selected;}) || (eligible.length===1 ? eligible[0] : null);
+  }
   function say(form, text) { form.querySelector('[data-source-status]').textContent = text; }
   function node(tag, text) { var el = document.createElement(tag); el.textContent = text; return el; }
   function snapshot(form) {
@@ -22,6 +26,7 @@
       locked.forEach(function (el) { el.disabled = el.dataset.sourceWasDisabled === '1'; delete el.dataset.sourceWasDisabled; });
       locked = [];
     }
+    window.dispatchEvent(new Event('blam8:onboarding-readiness'));
   }
   async function request(form, suffix, body) {
     var response = await fetch(form.action + '/corrections' + suffix, {
@@ -34,6 +39,7 @@
   }
   function clear(form) { preview = null; form.querySelector('[data-source-preview]').replaceChildren(); }
   async function ask(form, question) {
+    if (!form) throw new Error('Choose the pending batch with Use this batch with Assistant first.');
     if (busy || submitting || window.blam8KnowledgeImportBusy) throw new Error('Wait for the current review operation.');
     if (!question.trim()) throw new Error('Say what to check against the source.');
     clear(form);
@@ -41,13 +47,14 @@
     lock(true); say(form, 'Checking the retained source and these exact drafts…');
     try {
       var data = await request(form, '', Object.assign({question: question}, base));
-      preview = {form: form, base: base, review: data.review};
+      preview = {form: form, base: base, review: data.review, question: question};
       data.changes.forEach(function (change) {
         var detail = node('details', ''); detail.open = true;
         detail.appendChild(node('summary', change.label));
         detail.appendChild(node('p', 'Original: ' + change.before));
         detail.appendChild(node('p', 'Proposed: ' + change.after));
         change.passages.forEach(function (p) { detail.appendChild(node('blockquote', p.quote)); detail.appendChild(node('p', p.url)); });
+        (change.citations || []).forEach(function(p){detail.appendChild(node('p','Citation for existing wording: '+p.claim));detail.appendChild(node('blockquote',p.quote));detail.appendChild(node('p',p.url));});
         box.appendChild(detail);
       });
       data.overlaps.forEach(function (group) { box.appendChild(node('p', 'Possible overlap; kept separate: ' + group.map(function (n) { return n.label; }).join(', '))); });
@@ -63,7 +70,7 @@
     if (JSON.stringify(snapshot(form)) !== JSON.stringify(preview.base)) {
       clear(form); say(form, 'The draft text changed. Review it again before applying.'); return;
     }
-    var body = Object.assign({review: preview.review}, preview.base);
+    var body = Object.assign({review: preview.review, owner_request: preview.question}, preview.base);
     lock(true);
     try {
       var data = await request(form, '/apply', body);
@@ -71,6 +78,7 @@
         form.elements['label_' + entry.id].value = entry.label;
         form.elements['content_' + entry.id].value = entry.content;
       });
+      form.dataset.reviewDirty = '1';
       // Keep the old version until Check changes and overlaps renders a fresh
       // preview. A racing final save is also rejected by the database.
       clear(form); say(form, data.summary);
@@ -78,6 +86,8 @@
     finally { lock(false); }
   }
   document.addEventListener('click', function (event) {
+    var selectButton = event.target.closest('[data-source-select]');
+    if (selectButton) { var selectedForm=selectButton.closest('form'); selected=selectedForm.dataset.knowledgeReview; say(selectedForm,'Assistant will review this pending batch. Your local edits are included; nothing saved.'); }
     var askButton = event.target.closest('[data-source-ask]'), applyButton = event.target.closest('[data-source-apply]');
     if (askButton) { var form = askButton.closest('form'); ask(form, form.querySelector('[data-source-question]').value).catch(function (err) { say(form, err.message); }); }
     if (applyButton) apply(applyButton.closest('form'));
@@ -97,12 +107,13 @@
   document.addEventListener('submit', function (event) {
     if (!event.target.matches('[data-knowledge-review],#kb-note,form[action="/onboarding/knowledge/upload"]')) return;
     if (busy || submitting || window.blam8KnowledgeImportBusy) { event.preventDefault(); event.stopImmediatePropagation(); return; }
+    if (event.defaultPrevented || event.submitter && event.submitter.value === 'preview') return;
     submitting = true;
   }, true);
   window.addEventListener('pageshow', function () { submitting = false; });
   window.Blam8KnowledgeSourceReview = {
     working: function () { return !!(busy || submitting); },
-    available: function () { return forms().filter(function (f) { return f.querySelector('[data-source-corrections]'); }).length === 1; },
-    ask: function (question) { return ask(forms().filter(function (f) { return f.querySelector('[data-source-corrections]'); })[0], question); }
+    available: function () { return !!targetForm(); },
+    ask: function (question) { return ask(targetForm(), question); }
   };
 })();

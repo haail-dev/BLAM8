@@ -2,12 +2,12 @@
   <summary class="cursor-pointer font-semibold text-sm">Source-to-note review · {{ review.source_view.units|length }} distinct statements · {{ review.source_view.unresolved }} unresolved</summary>
   <p class="mt-2 text-xs text-slate-500">This covers the source text actually read, not the whole website. Literal text in a retained draft counts; a citation alone does not prove coverage. Source qualifications remain attached to every derived chunk. Nothing here is saved until you approve this review.</p>
   {% if review.payload.capture_manifest %}<details class="mt-2 text-xs" data-capture-manifest><summary>Pages and capture limits</summary><p>Only retained text is inventoried. Failed, omitted or limited pages require separate review; this is not a complete website audit.</p>{% for p in review.payload.capture_manifest %}<p class="mt-1 break-words">{{ p.url }} · {{ p.status|replace('_',' ') }}{% if p.retained_chars is defined %} · {{ p.retained_chars }} of {{ p.available_chars }} characters retained{% endif %}{% if p.omitted_chars %} · {{ p.omitted_chars }} characters omitted{% endif %}</p>{% endfor %}</details>{% endif %}
-  {% if review.source_view.qualifications %}<div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs" data-source-qualifications>
-    <p class="font-semibold">Source qualifications — keep the quoted scope</p>
+  {% if review.source_view.qualifications %}<details class="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs" data-source-qualifications>
+    <summary class="cursor-pointer font-semibold">{{ review.source_view.qualifications|length }} source qualifications remain attached to every retained note</summary>
     {% for u in review.source_view.qualifications %}<p class="mt-1 whitespace-pre-wrap break-words">{{ u.text }}</p><p class="break-words">{{ u.sources|join(', ') }}</p>{% endfor %}
-  </div>{% endif %}
+  </details>{% endif %}
   <label class="mt-3 block text-xs">Optional bulk decision for unresolved statements<select name="source_default" class="mt-1 block w-full min-w-0 rounded border border-slate-300 p-1"><option value="">Resolve each statement below</option>{% for n in review.entries %}<option value="note:{{ n.id }}"{% if review.form.get('source_default')=='note:'+n.id %} selected{% endif %}>Retain unresolved statements verbatim in: {{ n.label }}</option>{% endfor %}</select></label>
-  {% for u in review.source_view.units %}<details class="mt-2 border-t border-slate-100 pt-2" data-source-unit="{{ u.id }}">
+  {% for u in review.source_view.units|sort(attribute='status',reverse=true) %}<details class="mt-2 border-t border-slate-100 pt-2" data-source-unit="{{ u.id }}"{% if u.status=='unresolved' and u.kind=='constraint' %} open{% endif %}>
     <summary class="cursor-pointer text-xs font-medium">{{ u.kind }} · {{ u.status|replace('_',' ') }}{% if u.entries|length>1 %} · repeated across {{ u.entries|length }} drafts{% endif %}</summary>
     <p class="mt-1 whitespace-pre-wrap break-words text-xs">{{ u.text }}</p>
     {% for url in u.sources %}<p class="text-xs text-slate-500 break-words">Source: {{ url }}</p>{% endfor %}

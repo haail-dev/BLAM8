@@ -598,7 +598,7 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
                     r"\b(correct|rewrite|replacement|existing (notes|cards)|review.only|source.faithful)\b",question,re.I):
                 grounded=knowledge_review.grounded_reply(review_context)
                 return OnboardResponse(reply=grounded["reply"],form_fill={},ready_to_advance=False,
-                                       notes=[],review_link=grounded["link"])
+                                       notes=[],review_link=grounded["link"],journey=journey)
         except HTTPException:
             return OnboardResponse(reply="I couldn't verify your saved knowledge and pending drafts. Please reload before reviewing changes; nothing has been saved.",form_fill={},ready_to_advance=False)
     # The later steps know the business from step 1 (brief, sector) instead of

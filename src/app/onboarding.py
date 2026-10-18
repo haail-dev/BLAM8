@@ -720,6 +720,7 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
         review_coverage=knowledge_review.topic_view(review_context), pending_reviews=pending_reviews,
         source_texts=text_by_source,
         coverage_ask=coverage_ask, site_url=website, auto_site=auto_site,
+        site_state=knowledge_review.website_state(review_context),
         site_done=site_read, site_note_count=len(site_sources), held_notes=held_notes,
         next_target=next_target,
         next_label="Finish setup" if next_target["href"] == "/app/" else "Next: " + next_target["label"],
@@ -871,7 +872,8 @@ def _knowledge_review_fragments(request, ctx):
     base = {"request": request, "review_coverage": cov}
     reviews = [knowledge_review.review_view(context,r) for r in context["reviews"] if r["state"] == "pending"]
     return {"coverage_html": templates.env.get_template("_knowledge_coverage_review.html").render(**base),
-            "review_html": "".join(templates.env.get_template("_knowledge_review.html").render(**base,review=r) for r in reviews)}
+            "review_html": "".join(templates.env.get_template("_knowledge_review.html").render(**base,review=r) for r in reviews),
+            'site_state': knowledge_review.website_state(context)}
 
 
 @router.get("/knowledge/reviews")
@@ -891,8 +893,8 @@ def knowledge_review_get(request: Request, review_id: str, ctx: TenantCtx = Depe
     context = knowledge_review.load(ctx.tenant_id)
     row = _knowledge_review_row(context,review_id)
     if row["state"] != "pending": return RedirectResponse(row["payload"].get("return_to","/onboarding/knowledge"),status_code=303)
-    return templates.TemplateResponse(request,"knowledge_review.html",{"review":knowledge_review.review_view(context,row),
-        "review_coverage":knowledge_review.topic_view(context)},headers={"Cache-Control":"no-store"})
+    return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row),
+        review_coverage=knowledge_review.topic_view(context)),headers={"Cache-Control":"no-store"})
 
 
 @router.post("/knowledge/review/{review_id}",dependencies=[Depends(require_csrf)])
@@ -915,11 +917,15 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             if admitted:
                 setup_held.mark_used(ctx.tenant_id, "knowledge", client=ctx.client)
         else:
-            return templates.TemplateResponse(request,"knowledge_review.html",{"review":knowledge_review.review_view(context,row,form),
-                "review_coverage":knowledge_review.topic_view(context)})
+            view = knowledge_review.review_view(context,row,form)
+            if request.headers.get('accept') == 'application/json':
+                html = templates.env.get_template('_knowledge_review.html').render(request=request,review=view)
+                return JSONResponse({'review_html': html, 'summary': f"Check complete: {view['summary']['overlaps']} possible overlaps; {view['summary']['unresolved']} source statements need a decision. No facts saved.", 'site_state': knowledge_review.website_state(context)})
+            return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=view,
+                review_coverage=knowledge_review.topic_view(context), preview_complete=True))
     except HTTPException as exc:
-        return templates.TemplateResponse(request,"knowledge_review.html",{"review":knowledge_review.review_view(context,row,form),
-            "review_coverage":knowledge_review.topic_view(context),"error":exc.detail},status_code=exc.status_code)
+        return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row,form),
+            review_coverage=knowledge_review.topic_view(context),error=exc.detail),status_code=exc.status_code)
     except Exception:
         raise HTTPException(503,"The decision could not be confirmed. Reload to check before retrying.") from None
     return RedirectResponse(row["payload"].get("return_to","/onboarding/knowledge"),status_code=303)

@@ -51,18 +51,23 @@
 {# Done = collapsed (Kris 2026-09-13: "still showing even though it's been
    done"): once "Website — …" notes exist the box becomes one line, and
    Read again reveals it for a re-run. #}
-{% if site_done %}
+{% set site_state = site_state or {'state': 'saved' if site_done else 'idle', 'pending_notes': 0, 'saved_notes': site_note_count or 0} %}
+<div id="site-lifecycle" class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}">
+  <p data-site-heading class="font-semibold">{% if site_state.state=='pending' %}Website drafts ready to review{% elif site_state.state=='saved' %}Website notes saved{% else %}Start from your website{% endif %}</p>
+  <p data-site-description>{% if site_state.state=='pending' %}{{ site_state.pending_notes }} drafts pending. Nothing from these drafts is saved to Knowledge.{% elif site_state.state=='saved' %}{{ site_state.saved_notes }} notes saved to Knowledge.{% else %}Read key pages and prepare notes for your review.{% endif %}</p>
+  <a data-site-review href="{{ site_state.review_href or '#knowledge-pending-reviews' }}"{% if not site_state.pending_notes %} hidden{% endif %} class="mt-2 inline-block font-semibold text-brand">Review {{ site_state.pending_notes }} drafts</a>
+</div>
+{% if site_done and site_state.state=='saved' %}
 <div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm" id="site-done">
-  <p class="text-slate-600"><span class="font-semibold text-navy">Website read</span>{% if site_url %} — {{ site_url }}{% endif %} · {{ site_note_count }} note{{ '' if site_note_count == 1 else 's' }} saved.</p>
+  <p class="text-slate-600">{% if site_url %}{{ site_url }}{% else %}Website source{% endif %}</p>
   <button type="button" id="site-again" class="shrink-0 text-xs font-semibold text-brand hover:underline">Read again</button>
 </div>
 {% endif %}
-<div class="mb-4 rounded-xl border border-brand/30 bg-brand-50/50 p-4" id="site-box" data-onb-site="{{ site_url if auto_site else '' }}"{% if auto_site %} data-auto-site="1"{% endif %}{% if site_done %} hidden{% endif %} data-scope="{{ (request.state.tenant_id or '')[:12] }}">
-  <p class="text-sm font-semibold text-navy">{% if auto_site %}Reading your website{% else %}Start from your website{% endif %}</p>
-  <p class="mt-0.5 text-xs text-slate-500 leading-relaxed">{% if auto_site %}You gave us {{ site_url }} at step 1 — we're reading its key pages (services, prices, FAQs) and drafting your knowledge from them. You review every note before anything is saved.{% else %}Paste your address — we read your key pages (services, prices, FAQs) and draft your knowledge. You review every note before anything is saved.{% endif %}</p>
+<div class="mb-4 rounded-xl border border-brand/30 bg-brand-50/50 p-4" id="site-box" data-onb-site="{{ site_url if auto_site else '' }}"{% if auto_site %} data-auto-site="1"{% endif %}{% if site_done and site_state.state=='saved' %} hidden{% endif %} data-scope="{{ (request.state.tenant_id or '')[:12] }}">
+  <p class="text-xs text-slate-500 leading-relaxed">Read again deliberately to create another pending batch. Existing review edits stay on this page. Every note needs your review before it is saved.</p>
   <div class="mt-2 flex gap-2">
     <input id="site-url" inputmode="url" autocomplete="url" class="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" placeholder="www.yourcompany.co.uk" value="{{ site_url or '' }}">
-    <button id="site-go" type="button" class="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50">Read my site</button>
+    <button id="site-go" type="button" class="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50">{{ 'Read again' if site_state.state in ['pending','saved'] else 'Read my site' }}</button>
   </div>
   <p id="site-status" hidden class="mt-2 text-xs text-slate-500"></p>
   <input type="hidden" id="knowledge-review-csrf" value="{{ csrf_token(request) }}">

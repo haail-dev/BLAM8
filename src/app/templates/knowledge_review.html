@@ -1,8 +1,13 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Review Knowledge · BLAM8</title>{% include "_theme_head.html" %}<style>@media(max-width:640px){input,select,textarea{font-size:16px!important}}</style><script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script></head>
-<body class="bg-slate-100 text-slate-800 font-sans"><header class="bg-navy px-4 py-4 text-white font-bold" data-pull-bar>BLAM8 · Review Knowledge</header>
-<main class="mx-auto max-w-2xl p-4" data-pull-root>
-  <a class="text-sm text-brand" href="{{ review.payload.return_to }}">← Back to Knowledge</a>
-  {% if error %}<p role="alert" class="my-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm">{{ error }}</p>{% endif %}
-  {% include "_knowledge_coverage_review.html" %}
-  {% include "_knowledge_review.html" %}
-</main><script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script></body></html>
+{% extends "onboarding/base.html" %}
+{% block title %}Review Knowledge · BLAM8{% endblock %}
+{% block heading %}Review pending Knowledge{% endblock %}
+{% block subheading %}Keep the Assistant alongside the exact drafts. Proposals and applied corrections remain pending until you approve the final review.{% endblock %}
+{% block content %}
+<a class="text-sm text-brand" href="{{ review.payload.return_to }}">← Back to Knowledge</a>
+{% if error %}<p role="alert" class="my-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm">{{ error }}</p>{% endif %}
+{% if preview_complete %}<p role="status" class="my-3 rounded-lg bg-slate-50 p-3 text-sm">Check complete: {{ review.summary.overlaps }} possible overlaps; {{ review.summary.unresolved }} source statements need a decision. No facts saved.</p>{% endif %}
+{% include "_knowledge_coverage_review.html" %}
+<div id="knowledge-pending-reviews">{% include "_knowledge_review.html" %}</div>
+<script src="/static/knowledge_onboarding_review.js?v={{ asset_rev }}" defer></script>
+{% if knowledge_source_review_enabled %}<script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script>{% endif %}
+{% endblock %}

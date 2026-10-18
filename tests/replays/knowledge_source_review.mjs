@@ -19,9 +19,9 @@ const note=element(); note.elements={content:{value:''}};
 const document = {addEventListener:(name,fn)=>events[name]=fn, createElement:element,
   querySelectorAll:s=>s==='[data-knowledge-review]'?[form]:controls,
   querySelector:s=>s==='[data-knowledge-later]'?later:element(), getElementById:()=>note};
-const window={addEventListener(){}};
+const window={addEventListener(){},dispatchEvent(){}};
 const fetch=(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}));
-vm.runInNewContext(fs.readFileSync('src/app/static/knowledge_source_review.js','utf8'),{document,window,fetch,console});
+vm.runInNewContext(fs.readFileSync('src/app/static/knowledge_source_review.js','utf8'),{document,window,fetch,console,Event:class{constructor(type){this.type=type;}}});
 function event(target) { return {target,prevented:false,stopped:false,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;}}; }
 function target(kind) { return {closest:s=>s.includes(kind)?targetButton:null}; }
 const targetButton={closest:()=>form,hasAttribute:()=>false};
