@@ -1,5 +1,11 @@
 # Concierge — the onboarding co-pilot (SCOPE — DRAFT)
 
+**About you capture (offline contract, 18 October 2026):** supplied goals and
+business facts belong in their separate Step 1 fields, with material qualifiers
+retained. The widget distinguishes unsubmitted edits from recorded held
+suggestions. See [capture and review](../onboarding-interview-capture.md) for the
+persistence boundary, pause behaviour, tests and live-retest limitation.
+
 **Mobile panel height:** drag the blue Assistant header up or down below 768px.
 The sheet starts at 60% height and remembers the chosen proportion for the
 current tenant and browser tab. It clamps to 240px minimum (or the available
