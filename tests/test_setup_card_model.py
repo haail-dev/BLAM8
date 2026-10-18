@@ -72,7 +72,8 @@ def route_client(monkeypatch):
     from app import security
     monkeypatch.setattr(security, '_BUCKETS', {})
     state = {"cards": {}, "changes": delta(), "saves": [], "contexts": []}
-    app.dependency_overrides[require_tenant] = lambda: TenantCtx(tenant_id="owner", client=None)
+    app.dependency_overrides[require_tenant] = lambda: TenantCtx(tenant_id="owner", client=None, user_id="owner")
+    monkeypatch.setattr(routes.db, "get_member", lambda *a: None)
     monkeypatch.setattr(routes, "_tenant_context", lambda ctx: {})
     monkeypatch.setattr(routes.usage, "record_anthropic", lambda *a, **kw: None)
     monkeypatch.setattr(routes.setup_handoff, "load_steps", lambda *a: [])
