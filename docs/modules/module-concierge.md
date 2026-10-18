@@ -24,7 +24,7 @@ namespace, no new RAG code). Ready to build. Origin: 2026-06-29 conversation —
 through the real onboarding instead of leaving them to scroll a form alone.
 
 ## Goal
-The landing-page launcher (`/` only) uses `static/assistant-glass-logo.js`: a
+The landing and sign-in launchers (`/` and `/login`) use `static/assistant-glass-logo.js`: a
 transparent glass B with mist, slow cog-driven water swells and rotating cog
 cut-outs. Pink mist sheds from actual particles along the full slanted left
 edge, drifting left with the longest reach at the centre and a shorter taper
@@ -36,8 +36,9 @@ transparent. The upper cog is slightly right of the lower cog. The existing
 supplies a soft shadow. Animation loads when idle and pauses when the launcher
 or document is hidden. Reduced motion, data saver and no JavaScript use
 `static/img/blam8-assistant-glass.png`. Other public/onboarding launchers and the
-live Concierge/Pond effects are unchanged. Browser checks:
-`python tests/assistant_glass_browser.py` (after building public CSS).
+live Concierge/Pond effects are unchanged. Route rendering is covered by
+`tests/test_assistant_glass_logo.py`; live browser verification belongs in the
+external QA workspace.
 
 A single corner widget that does two jobs across the public→tenant boundary:
 

@@ -616,50 +616,54 @@
       }
     },
     "product.help": {
-      "signature": "90a2eb86e9897942c2c89459e0d6722e0ba44cf7439542d987078fadf1ee03ce",
+      "signature": "a486d1da1548a17a1e7d9782ab7baf6627797dbbdd4b11c0b44e6a355c95808a",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract.",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
-            "src/app/static/concierge.js"
+            "src/app/static/concierge.js",
+            "tests/test_assistant_glass_logo.py"
           ]
         },
         "/pages": {
           "disposition": "reviewed_unchanged",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change.",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
-            "src/app/static/concierge.js"
+            "src/app/static/concierge.js",
+            "tests/test_assistant_glass_logo.py"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings.",
+          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
-            "src/app/static/concierge.js"
+            "src/app/static/concierge.js",
+            "tests/test_assistant_glass_logo.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence.",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
-            "src/app/static/concierge.js"
+            "src/app/static/concierge.js",
+            "tests/test_assistant_glass_logo.py"
           ]
         }
       }
