@@ -213,3 +213,14 @@ PR #109 had replaced three launcher markup/comment occurrences with one inline C
 remaining exact property is recorded with its own browser-menu explanation, owner and
 closure step; it is not a business callout rule. The detector, vocabulary and file scope
 are unchanged. This is a review of that one CSS occurrence, not a word/file exemption.
+
+## Website source capture — 18 October 2026
+
+Only `extractor-website` changes: the prompt requests separate exact quotations
+for each note clause, all contributing pages, material non-main qualifications,
+and questions only for absent source detail. Source booking routes are preserved
+instead of assuming that import authorises replacement. The sources schema adds the exact
+note `claim`. Replacing precisely the system prompt and schema in the complete
+candidate with the base values reproduces the previous record byte for byte.
+The obsolete comment describing that booking-route substitution is removed with
+its exact source-debt occurrence. No detector, vocabulary or scan scope changes.

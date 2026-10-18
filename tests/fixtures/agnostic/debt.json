@@ -4830,30 +4830,6 @@
       "reason": 0
     },
     {
-      "path": "src/app/kb_website.py",
-      "line": 94,
-      "kind": "comment",
-      "fingerprint": "040d1b8268155be57400dec60385f3efb34ee3e03c6b4b955bed35109085c43a",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "# Found on the first live read (kennels run #10): the site said \"book via",
-      "owner": "U20",
-      "closure_step": "S4a",
-      "reason": 0
-    },
-    {
-      "path": "src/app/kb_website.py",
-      "line": 95,
-      "kind": "comment",
-      "fingerprint": "6765ba3fe3a012c97f62617df4bda9f684e731d81bf3521103efc519f9be377b",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "# Revelation Pets\" — true of the site, wrong the moment the assistant is",
-      "owner": "U20",
-      "closure_step": "S4a",
-      "reason": 0
-    },
-    {
       "path": "src/app/knowledge.py",
       "line": 60,
       "kind": "comment",

@@ -6,6 +6,22 @@ labels, order and original text. It proposes only complete passages from the
 retained source, before or after an existing note. Citations prove attribution,
 not that a statement is true or appropriate; the owner must still review it.
 
+Website capture separates block boundaries and records source locations. Material
+wording in headers, footers, navigation and asides is inventoried too; menu text
+is not promoted into business notes automatically. Each read reports failures,
+non-HTML/empty pages, duplicate redirects, page-limit omissions and character
+limits. Only complete retained blocks or sentences enter the inventory. A digest
+and character counts account for the available extracted text, but omitted text
+is not retained evidence and cannot be cited as though read. Discovery covers
+links on the starting page, not the entire site. Short pages are retained too.
+
+New distillations request a separate exact note clause and one or more contiguous
+source quotations per clause. Every quote is checked against its claimed page;
+joined nonadjacent passages and clauses absent from the note are rejected. These
+attributions remain review hints, not a semantic entailment check or automatic
+coverage clearance. Literal source coverage and explicit exclusions still gate
+admission. Existing pending batches are not silently recaptured or corrected.
+
 The workflow is: import website drafts, request a source review, inspect the
 proposed additions, apply them to drafts, then use **Check changes and overlaps**
 and **Save reviewed decisions**. Applying corrections does not save Knowledge.

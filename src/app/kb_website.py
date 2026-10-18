@@ -25,7 +25,7 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
-from app import agent, knowledge as kb, llm, usage
+from app import agent, knowledge as kb, knowledge_capture, llm, usage
 from app.config import settings
 
 log = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ DISTILL_SCHEMA = {
                     "label": {"type": "string"},
                     "content": {"type": "string"},
                     "topics": {"type":"array", "items":{"type":"string","enum":["prices","rules","process","cadence","payment","safety","coverage","hours"]}},
-                    "sources": {"type":"array","items":{"type":"object","properties":{"url":{"type":"string"},"excerpt":{"type":"string"}},"required":["url","excerpt"],"additionalProperties":False}},
+                    "sources": {"type":"array","items":{"type":"object","properties":{"url":{"type":"string"},"excerpt":{"type":"string"},"claim":{"type":"string"}},"required":["url","excerpt","claim"],"additionalProperties":False}},
                 },
                 "required": ["label", "content", "topics", "sources"],
                 "additionalProperties": False,
@@ -77,9 +77,6 @@ SYSTEM = (
         # notes are shown to the owner as THEIR knowledge and quoted by the agent
         # to customers, so "We open at 7am" is right and "The business opens at
         # 7am" is not.
-        # Found on the first live read (kennels run #10): the site said "book via
-        # Revelation Pets" — true of the site, wrong the moment the assistant is
-        # the way customers book.
         "You read the text of a small business's website and distill it into a knowledge base for the "
         "AI assistant that answers this business's customer emails. Produce one note per topic customers ask about, as many notes as the pages hold (there is no "
         "target count), and keep EVERY distinct rule, price and policy the pages state — never drop one "
@@ -95,20 +92,31 @@ SYSTEM = (
         "use 'We' or 'Our' with the site's exact facts — never 'the business', 'they', 'their' or "
         "'owners must'. Refer to the business by the name you are given below; never combine it with a "
         "different name found on the site and never write 'trading as'.\n"
-        "HOW TO BOOK: the AI assistant IS now how customers enquire and book, so never carry over "
-        "instructions to book through another website, app or booking system named on the pages; keep "
-        "the policy behind it (a prerequisite, a deposit, notice) and drop the tool."
+        "HOW TO BOOK: preserve the source's stated booking routes, prerequisites, deposits and notice. "
+        "Reading a website does not enable an integration or make the assistant an authorised booking "
+        "route. Never replace source instructions with an assumed product capability."
     )
 )
 SYSTEM += ("\nFor every note, identify relevant topic keys and cite page URLs with exact supporting excerpts. "
+           "For each distinct clause in the note, supply its exact note wording as claim and one or more "
+           "separate contiguous source excerpts. Never join nonadjacent passages into one quotation. "
+           "Cite every contributing page when a note combines facts from multiple pages. "
+           "The source is supplied as location-labelled blocks: keep material limitations and qualifications "
+           "even in a footer, header, aside or navigation region; omit pure menu labels from notes. "
            "Preserve scope, uncertainty and source caveats, including fictional/test facts. Do not generalise a "
            "missing integration into a missing service. Return unanswered follow-up questions under questions, "
            "tagged by topic; absent facts stay unknown. Never infer 'no variation' or 'not applicable'. "
-           "Do not remove apparent duplicate proposals: the owner reviews overlap explicitly.")
+           "Do not remove apparent duplicate proposals: the owner reviews overlap explicitly. "
+           "Ask only about details not already stated in the supplied pages. A source saying a rule varies "
+           "by agreement is an answer about scope, not a reason to ask for one universal value.")
 
 
 class DistilledEntries(list):
     questions: list
+
+
+class CrawledPages(list):
+    manifest: list
 
 
 def normalize_url(url: str) -> str:
@@ -138,7 +146,9 @@ async def _fetch_raw(client: httpx.AsyncClient, url: str) -> tuple[str, bytes, s
     else:
         raise ValueError("Too many redirects.")
     r.raise_for_status()
-    return url, r.content[: kb.MAX_UPLOAD_BYTES], r.headers.get("content-type", "").lower()
+    if len(r.content) > kb.MAX_UPLOAD_BYTES:
+        raise ValueError("Page exceeds the download limit; no partial page was used.")
+    return url, r.content, r.headers.get("content-type", "").lower()
 
 
 _INDEX_NAMES = ("/index.html", "/index.htm", "/default.html")
@@ -199,7 +209,9 @@ async def crawl(url: str) -> tuple[str, list[dict]]:
         if "text/html" not in ctype:
             raise ValueError("That address isn't a web page — paste your website's home page.")
         html = body.decode("utf-8", errors="replace")
-        pages = [{"url": final_url, "text": kb._html_to_text(html)[:PAGE_CHARS]}]
+        home = knowledge_capture.extract(html)
+        pages = CrawledPages([{"url": final_url, **knowledge_capture.bounded(home, min(PAGE_CHARS, TOTAL_CHARS))}])
+        pages.manifest = [{'url': final_url, 'status': 'read', **{k: pages[0][k] for k in ('available_chars', 'retained_chars', 'omitted_chars', 'available_hash')}}]
 
         sem = asyncio.Semaphore(4)
 
@@ -208,27 +220,37 @@ async def crawl(url: str) -> tuple[str, list[dict]]:
                 try:
                     fu, b, ct = await _fetch_raw(client, u)
                     if "text/html" not in ct:
-                        return None
-                    text = kb._html_to_text(b.decode("utf-8", errors="replace"))[:PAGE_CHARS]
-                    # Under ~200 chars a page is a stub or a JS shell — no facts.
-                    return {"url": fu, "text": text} if len(text) >= 200 else None
+                        return {'url': u, 'status': 'not_html'}
+                    capture = knowledge_capture.extract(b.decode("utf-8", errors="replace"))
+                    return {"url": fu, 'requested_url': u, 'status': 'read' if capture['text'] else 'empty', 'capture': capture}
                 except Exception:
-                    return None  # one dead link never sinks the crawl
+                    return {'url': u, 'status': 'failed'}
 
-        links = discover_links(final_url, html)[: MAX_PAGES - 1]
+        discovered = discover_links(final_url, html)
+        links = discovered[: MAX_PAGES - 1]
         fetched = await asyncio.gather(*(grab(u) for u in links))
 
     seen_urls = {pages[0]["url"].rstrip("/")}
     total = len(pages[0]["text"])
     for page in fetched:
-        if page is None or page["url"].rstrip("/") in seen_urls:
+        if page['status'] != 'read':
+            pages.manifest.append({k: v for k, v in page.items() if k != 'capture'})
             continue
-        if total >= TOTAL_CHARS:
-            break
-        page["text"] = page["text"][: TOTAL_CHARS - total]
-        total += len(page["text"])
+        if page["url"].rstrip("/") in seen_urls:
+            pages.manifest.append({'url': page['url'], 'status': 'duplicate_redirect'})
+            continue
+        retained = knowledge_capture.bounded(page['capture'], min(PAGE_CHARS, max(0, TOTAL_CHARS - total)))
+        pages.manifest.append({'url': page['url'], 'requested_url': page['requested_url'], 'status': 'read' if retained['text'] else 'budget_omitted',
+                               **{k: retained[k] for k in ('available_chars', 'retained_chars', 'omitted_chars', 'available_hash')}})
+        if not retained['text']:
+            continue
+        total += len(retained["text"])
         seen_urls.add(page["url"].rstrip("/"))
-        pages.append(page)
+        pages.append({'url': page['url'], **retained})
+    pages.manifest += [{'url': u, 'status': 'page_limit_omitted'} for u in discovered[MAX_PAGES - 1:]]
+    if not any(p['text'] for p in pages):
+        raise ValueError('No readable source text fits the capture limits.')
+    pages[:] = [p for p in pages if p['text']]
     return final_url, pages
 
 
@@ -238,7 +260,9 @@ def _build_prompt(site: str, pages: list[dict], business_name: str | None,
              + (f" ({industry})" if industry else ""),
              f"Their website: {site}", ""]
     for p in pages:
-        lines += [f"=== PAGE: {p['url']} ===", p["text"], ""]
+        lines += [f"=== PAGE: {p['url']} ==="]
+        lines += ([f"[{b['location']}] {b['text']}" for b in p['blocks']] if p.get('blocks') else [p['text']])
+        lines.append('')
     return "\n".join(lines)
 
 
@@ -267,9 +291,11 @@ async def distill(tenant_id: str, site: str, pages: list[dict], *,
     result = DistilledEntries([
         {"label": (e.get("label") or "").strip() or "Website note",
          "content": e["content"].strip(), "topics": e.get("topics", []),
-         "provenance": [{"source": p["url"], "excerpt": cite["excerpt"][:1500]}
+         "provenance": [{"source": p["url"], "excerpt": cite["excerpt"],
+                         **({'claim': cite['claim']} if cite.get('claim') else {})}
              for cite in e.get("sources", []) if isinstance(cite,dict)
              for p in pages if cite.get("url")==p["url"] and cite.get("excerpt")
+             and (not cite.get('claim') or cite['claim'] in e['content'])
              and " ".join(cite["excerpt"].split()) in " ".join(p["text"].split())]}
         for e in entries[:MAX_ENTRIES]
         if isinstance(e, dict) and (e.get("content") or "").strip()
@@ -292,4 +318,5 @@ async def build(tenant_id: str, url: str, *, business_name: str | None = None,
     from app.knowledge_fidelity import inventory
     return {"site": site, "pages": [p["url"] for p in pages], "entries": entries,
             "questions":getattr(entries,"questions",[]), "source_units":inventory(pages),
-            **({'evidence_pages': pages} if settings.knowledge_source_review_enabled else {})}
+            "capture_manifest": getattr(pages, 'manifest', []),
+            **({'evidence_pages': [{k: p[k] for k in ('url', 'text')} for p in pages]} if settings.knowledge_source_review_enabled else {})}

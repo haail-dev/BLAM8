@@ -62,7 +62,7 @@ def grounded_reply(context):
     return {"reply":text,"link":{"label":"Review actual pending Knowledge","href":"/onboarding/knowledge/review/"+pending[0]["id"]}}
 
 
-def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=None, return_to="/onboarding/knowledge", source_units=None, evidence_pages=None):
+def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=None, return_to="/onboarding/knowledge", source_units=None, evidence_pages=None, capture_manifest=None):
     clean = []
     for n in entries or []:
         label, content = str(n.get("label") or "").strip(), str(n.get("content") or "").strip()
@@ -76,7 +76,8 @@ def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=No
     if len(clean) > 30 or sum(len(n["content"]) for n in clean) > 180000:
         raise HTTPException(400, "Review at most thirty notes at a time.")
     payload = {"entries": clean, "questions": clean_questions(questions), "origin": origin,
-               "return_to": return_to, "topic_reviews": {}, "source_units":source_units or []}
+               "return_to": return_to, "topic_reviews": {}, "source_units":source_units or [],
+               "capture_manifest": capture_manifest or []}
     row = {"id": str(uuid4()), "tenant_id": tenant, "payload": payload, "state": "pending"}
     try:
         if evidence_pages is not None:

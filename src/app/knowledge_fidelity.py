@@ -7,7 +7,7 @@ import hashlib
 import re
 from fastapi import HTTPException
 
-QUALIFICATION = re.compile(r"\b(fictional|illustrative|synthetic|sample|demonstration|provisional)\b|\btest[ -](only|rig|profile|facts|data|business|site|website|guidance)\b|\bnot a (live|real)\b", re.I)
+QUALIFICATION = re.compile(r"\b(fictional|illustrative|synthetic|sample|demonstration|provisional)\b|\btest[ -](only|rig|profile|facts|data|business|site|website|guidance)\b|\bnot a (live|real)\b|\bno real\b", re.I)
 CONSTRAINT = re.compile(r"\b(must|never|cannot|do not|does not|shall|should not|only if|unless|not until)\b", re.I)
 
 
@@ -20,15 +20,22 @@ def inventory(pages):
     units = {}
     for page in pages:
         # Preserve newlines and sentence boundaries without rewriting any words.
+        offset = 0
         for paragraph in re.split(r"\n+|(?<=[.!?])\s+(?=[A-Z‘“\"'])", page["text"]):
             text = normal(paragraph)
             if not text:
                 continue
+            start = page['text'].find(paragraph, offset)
+            end = start + len(paragraph)
+            offset = end
+            locations = sorted({b['location'] for b in page.get('blocks', []) if b['start'] < end and b['end'] > start})
             key = hashlib.sha256(text.encode()).hexdigest()[:24]
             row = units.setdefault(key, {"id":key,"text":text,"sources":[],
                 "kind":"qualification" if QUALIFICATION.search(text) else "constraint" if CONSTRAINT.search(text) else "statement"})
             if page["url"] not in row["sources"]:
                 row["sources"].append(page["url"])
+            row.setdefault('spans', []).append({'url': page['url'], 'start': start, 'end': end,
+                                                'locations': locations or ['body']})
     if len(units)>1000:
         raise ValueError("The source has too many statements for one review. Import smaller sections; no statements were silently dropped.")
     return list(units.values())

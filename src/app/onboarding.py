@@ -828,7 +828,7 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
     if settings.knowledge_source_review_enabled:
         if evidence_pages is None:
             raise HTTPException(503, 'Source capture could not be confirmed. Nothing was staged.')
-    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"),
+    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"), capture_manifest=result.get('capture_manifest'),
         **({'evidence_pages': evidence_pages} if evidence_pages is not None else {}))
     fragments = _knowledge_review_fragments(request, ctx)
     return JSONResponse({**result, **fragments, "review_id": row["id"]})
