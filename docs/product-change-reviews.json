@@ -1,9 +1,9 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions.",
   "capabilities": {
     "email": {
-      "signature": "27f03a84e34ed68ce41a86f4474ef406118ecbd004ad0c87c4af7b9f2a15a31b",
+      "signature": "dd96c3dc1e60fdf60334d3f0e415df85c3de9a5b0a5150e1de26ee9e14dde83c",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -63,7 +63,7 @@
       }
     },
     "knowledge": {
-      "signature": "149c0e32d7d5f0bb249df8c48a342878162b0c7a24162faf2b0795384a2e3846",
+      "signature": "4395a7910d0cc53307034c37ecd79a6d96787311130574b9853017e7305f009b",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -114,7 +114,7 @@
       }
     },
     "scheduling": {
-      "signature": "aa016503b7ec01e2be5dbd74989b998e60695b3f5c27343ada73bd181186bbed",
+      "signature": "17425360b4eb0005c4196ad36f68c82cd1fc30a786aa19faf86a19173b18bc45",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -164,7 +164,7 @@
       }
     },
     "calendar": {
-      "signature": "eb9e0835ff4ce10c3e7faac66c089bd78f30c4f62b734842c534588f14783724",
+      "signature": "890aa97e327fd3c27294e9c6396d00e8cfc7f9cc83a716773404c5dd271e668b",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -215,7 +215,7 @@
       }
     },
     "crm": {
-      "signature": "aa063bfe9e52499175284d45d935c5acc2f9d7f24d3380cf6f2a269595d08705",
+      "signature": "1133568217d10da1de52bdfd77c7884ba24f226ded10c5e55e39b5a32bcc7504",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -266,7 +266,7 @@
       }
     },
     "subjects": {
-      "signature": "5c1e3b9b062f7c0353f201b9d1b70f7d1ecdb92c2ac1ea409b67ef18ee02e3f7",
+      "signature": "6b90b0222f83cd7475360053fa18bfb25c5de9d24129eeabc2e98be6729c63fb",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -307,7 +307,7 @@
       }
     },
     "packages": {
-      "signature": "1d9c94dee172d364e3dd64dd1a5d135973a614fd781153299b9990c8c6c219f5",
+      "signature": "62cb1f5572834cd0c1e1c51352a7ca094f4c7eab34703d933f6a0515b013a167",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -368,7 +368,7 @@
       }
     },
     "progress": {
-      "signature": "bdcb0dd12aeb0f2087f3e0154f2daf80ecce1f24e48389609bff332e4f656f4b",
+      "signature": "686ee6ecef005ca5d4dde6ff71d8a756ba32f0e36cd1dd57befc8594da24e657",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -429,7 +429,7 @@
       }
     },
     "money": {
-      "signature": "c7005959c9cab105bc265e57e4b7d6d786b273569d51372e693fcea3c0f68369",
+      "signature": "8507b3471228693490799e7217fa717de77e5463c75f7582d8ce8404db4175cd",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -480,7 +480,7 @@
       }
     },
     "people": {
-      "signature": "2a068db156b3d298286f5afdeb8ab71091218a53ba14e15bcb1608e006459dee",
+      "signature": "c91fdcb9a1455af2ce80c59e11f64aa6f95f66a0e5f89b1936b6f6594e4dc86f",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -531,7 +531,7 @@
       }
     },
     "portal": {
-      "signature": "814f2d2c6aa9acaaa9c0934def053dfb8d6d76db85dc037a1b181872015157b9",
+      "signature": "e57fcf68cd3ee7b583d0dbb4e5730c263e26d17588e567e770e3f73fc2c9119a",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -581,7 +581,7 @@
       }
     },
     "mailboxes": {
-      "signature": "12f3f8de4a0eb474127beb3707b0b5f72b93348e54447bd9298e59629dcc8a6b",
+      "signature": "dae1a432a43a2e0c71799683806735ecd8868adbb67ab74336bdbf53931e94b7",
       "surfaces": {
         "/help": {
           "disposition": "generated",
@@ -650,7 +650,7 @@
       }
     },
     "owner.assistant": {
-      "signature": "148072f0e3ba94153c21def31c46e6211bb6571d83fe42ca4ff4f81613d8c0ee",
+      "signature": "face512677343c55d5c0592b6cf2be2fba9387b2a56601185629c6e4f839c755",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -701,11 +701,11 @@
       }
     },
     "product.help": {
-      "signature": "301ee917830fa54d33ef9f8068793607bf08747e23eca726b39a0dfb716499c2",
+      "signature": "cc9563bedc1cf347992b69bf697dc4ca283e7e373c0bdf12516d3464f06bfecc",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -713,12 +713,16 @@
             "src/app/concierge.py",
             "src/app/static/concierge.js",
             "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-journey.md",
+            "tests/test_onboarding_journey.py",
+            "src/app/onboarding_journey.py",
+            "src/app/static/onboarding_journey.js"
           ]
         },
         "/pages": {
           "disposition": "reviewed_unchanged",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -726,25 +730,26 @@
             "src/app/concierge.py",
             "src/app/static/concierge.js",
             "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-journey.md",
+            "tests/test_onboarding_journey.py",
+            "src/app/onboarding_journey.py",
+            "src/app/static/onboarding_journey.js"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer.",
           "evidence": [
-            "docs/modules/module-concierge.md",
-            "docs/onboarding-interview-capture.md",
-            "tests/test_onboarding_capture.py",
-            "src/app/concierge.py",
-            "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/onboarding-journey.md",
+            "tests/test_onboarding_journey.py",
+            "src/app/onboarding_journey.py",
+            "src/app/static/onboarding_journey.js"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -752,13 +757,27 @@
             "src/app/concierge.py",
             "src/app/static/concierge.js",
             "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-journey.md",
+            "tests/test_onboarding_journey.py",
+            "src/app/onboarding_journey.py",
+            "src/app/static/onboarding_journey.js"
+          ]
+        },
+        "docs/onboarding-journey.md": {
+          "disposition": "updated",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer.",
+          "evidence": [
+            "docs/onboarding-journey.md",
+            "tests/test_onboarding_journey.py",
+            "src/app/onboarding_journey.py",
+            "src/app/static/onboarding_journey.js"
           ]
         }
       }
     },
     "billing": {
-      "signature": "e269e07c47afc8b6db8d797fb88de2ff18e2a48979935382d0119a9e30877ab5",
+      "signature": "bbfecc1dd6169b3f1d0cf19bba91ebb30838aa55dc2dadadad91e83bded4bcb1",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -1050,7 +1069,7 @@
       }
     },
     "installable": {
-      "signature": "b65f7589d4ace200a0ccdaf9b9362ae89be20c6144f8f502499323e467c03148",
+      "signature": "a1b19ccd6c284492c446d30d82076f90745f3aa670a5009ae5fd8242fbd74f2d",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1091,7 +1110,7 @@
       }
     },
     "extensions": {
-      "signature": "9e5c941ae1b979e976c92541483c405a8196ecaef7bba3ae1965af5fc0b37679",
+      "signature": "cad1c950fa50329dcc5978ff96f4c0c1cb6fe2a029fd73b5f72c5510eec75989",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1141,7 +1160,7 @@
       }
     },
     "automation.scheduled": {
-      "signature": "25867fceaec4572cb14dde5f74df03d19cbb0b2f5f3f637b9e10af14efba0199",
+      "signature": "e68a72959407547db7415b7db389f8bb365bdd0aecb186d9c4879c199f505d23",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1182,7 +1201,7 @@
       }
     },
     "outreach": {
-      "signature": "b9e5f433c0031b234731fd52f5d11c01d833556750ec40c993482f1b74b0b52b",
+      "signature": "5f3c9ce2ef767b18fe826d36ae3d8f9c95db2068b3c12e2d60e86a78c0b27c51",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1223,7 +1242,7 @@
       }
     },
     "knowledge.review": {
-      "signature": "a4c173a7cc5fbd29678177be12e9a744de580b76f0ea86a28337c4f507a48ae8",
+      "signature": "0dce3fd05c792c0109f9488a4cc308a1f3279a459bdfd0e9db8d3bf86d5d9b72",
       "surfaces": {
         "/pages": {
           "disposition": "updated",

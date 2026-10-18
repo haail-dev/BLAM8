@@ -124,7 +124,7 @@
 </script>
 {% set concierge_authed = true %}
 {% set concierge_onboarding_step = step %}
-<script id="onboarding-journey" type="application/json">{{ journey|tojson }}</script>
+<script id="onboarding-journey" type="application/json">{{ journey|default(none)|tojson }}</script>
 <script src="/static/onboarding_journey.js?v={{ asset_rev }}"></script>
 {% include "_concierge.html" %}
 <script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
