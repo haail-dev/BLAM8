@@ -43,8 +43,11 @@ class Query:
         self.fake, self.table = fake, table
         self.filters, self.action, self.fields, self.bounds = [], "select", {}, None
         self.ignore = False
+        self.columns = "*"
 
-    def select(self, *a): return self
+    def select(self, columns="*"):
+        self.columns = columns
+        return self
     def eq(self, key, value):
         if key == "config_snapshot" and isinstance(value, str): value = json.loads(value)
         self.filters.append(lambda r: r.get(key) == value)
@@ -83,6 +86,23 @@ class Query:
             for r in matched: r.update(copy.deepcopy(self.fields))
         if self.bounds:
             matched = matched[self.bounds[0]:self.bounds[1]+1]
+        if self.action == "select":
+            # Tenant outreach and scheduled-plan tests reuse this query helper;
+            # egress instrumentation is opt-in on the founder fake database.
+            if hasattr(self.fake, "reads"):
+                self.fake.reads.append((self.table, self.columns, [r.get("id") for r in matched]))
+            if self.columns != "*":
+                def project(row):
+                    result = {}
+                    for field in self.columns.split(","):
+                        if field == "subject:payload->>subject":
+                            result["subject"] = (row.get("payload") or {}).get("subject")
+                        else:
+                            result[field] = row.get(field)
+                    return result
+                matched = [project(row) for row in matched]
+            if hasattr(self.fake, "read_bytes"):
+                self.fake.read_bytes += len(json.dumps(matched))
         return SimpleNamespace(data=copy.deepcopy(matched))
 
 
@@ -92,8 +112,15 @@ class FakeDB:
                        "vcrm_prospects": [prospect],
                        "email_connections": [{"id": "mailbox", "tenant_id": cfg["inbox_tenant_id"], "sync_failing_since": None}]}
         self.claims, self.claim_result = [], False
+        self.reads, self.read_bytes = [], 0
     def table(self, name): return Query(self, name)
     def rpc(self, name, params):
+        if name == "admin_outreach_stale_drafts":
+            ids = [{"id": r["id"]} for r in self.tables.get("admin_outreach_messages", [])
+                   if r["status"] in ("draft", "approved") and r.get("config_snapshot") != params["p_config"]]
+            result = SimpleNamespace(order=lambda *a: result,
+                                     range=lambda start, end: SimpleNamespace(execute=lambda: SimpleNamespace(data=ids[start:end+1])))
+            return result
         if name == "admin_outreach_lock":
             self.tables["admin_outreach_config"][0]["lease_token"] = params["p_token"]
             return SimpleNamespace(execute=lambda: SimpleNamespace(data=True))
@@ -310,3 +337,160 @@ def test_csrf_and_auth_are_required(client):
     assert client.post("/admin/outreach/control", data={"action": "resume"}).status_code == 403
     del app.dependency_overrides[require_admin]
     assert client.get("/admin/outreach", follow_redirects=False).status_code in (302, 303, 401, 403, 307)
+
+
+def inbound(cfg, prospect, **changes):
+    return {"id": "reply", "tenant_id": cfg["inbox_tenant_id"], "kind": "inbound",
+            "from_address": prospect["email"], "subject": "An introduction", "body_in": "Let's talk",
+            "created_at": NOW.isoformat()} | changes
+
+
+def test_idle_scan_does_not_download_history_bodies_or_template_copies(fake, cfg, prospect):
+    # Deliberately exceed one page and use large bodies/configuration snapshots.
+    fake.tables["email_log"] = [inbound(cfg, prospect, id=f"old-{i}", body_in="x" * 20000) for i in range(600)]
+    fake.tables["admin_outreach_events"] = [
+        {"id": f"inbox:old-{i}", "email": prospect["email"], "kind": "replied", "created_at": NOW.isoformat()}
+        for i in range(600)]
+    fake.tables["admin_outreach_messages"] = [
+        {"id": f"sent-{i}", "email": f"p{i}@example.org", "step": 0, "status": "sent",
+         "sent_at": NOW.isoformat(), "payload": {"subject": "An introduction", "text": "x" * 20000},
+         "config_snapshot": {"template": "x" * 20000}} for i in range(600)]
+    full_history_bytes = len(json.dumps(fake.tables["email_log"])) + len(json.dumps(fake.tables["admin_outreach_messages"]))
+    outreach.sync(cfg, SimpleNamespace(list=lambda path: []), NOW)
+    outreach.prepare(cfg, NOW)
+    outreach.digest(cfg, NOW, {})
+    assert not any(table == "email_log" and "body_in" in columns for table, columns, _ in fake.reads)
+    assert not any(table == "admin_outreach_messages" and (columns == "*" or "config_snapshot" in columns or columns == "payload")
+                   for table, columns, _ in fake.reads)
+    assert fake.read_bytes < full_history_bytes / 100
+
+
+def test_only_unseen_known_inbound_bodies_are_fetched_and_replay_is_safe(fake, cfg, prospect):
+    fake.tables["email_log"] = [
+        inbound(cfg, prospect, id="seen"),
+        inbound(cfg, prospect, id="unknown", from_address="other@example.org"),
+        inbound(cfg, prospect, id="outbound", kind="outbound"),
+        inbound(cfg, prospect, id="other-tenant", tenant_id="other"),
+        inbound(cfg, prospect, id="new", kind=None, from_address="OWNER@example.com")]
+    fake.tables["admin_outreach_events"] = [{"id": "inbox:seen", "email": prospect["email"], "kind": "auto"}]
+    provider = SimpleNamespace(list=lambda path: [])
+    outreach.sync(cfg, provider, NOW)
+    bodies = [ids for table, columns, ids in fake.reads if table == "email_log" and columns == "id,body_in"]
+    assert bodies == [["new"]]
+    assert prospect["status"] == "REPLIED"
+    fake.reads.clear()
+    # No process-local cursor/cache: an independent run uses durable events.
+    outreach.sync(cfg, provider, NOW)
+    assert not any(table == "email_log" and "body_in" in columns for table, columns, _ in fake.reads)
+
+
+def test_late_import_with_old_timestamp_is_detected(fake, cfg, prospect):
+    provider = SimpleNamespace(list=lambda path: [])
+    outreach.sync(cfg, provider, NOW)
+    fake.tables["email_log"] = [inbound(cfg, prospect, created_at="2026-10-01T00:00:00+00:00", body_in="Please stop")]
+    outreach.sync(cfg, provider, NOW)
+    assert prospect["status"] == "NOT_NOW"
+
+
+@pytest.mark.parametrize("paused,now", [(True, NOW), (False, NOW.replace(hour=22))])
+def test_paused_and_overnight_detect_stop_without_preparing_or_sending(fake, cfg, prospect, monkeypatch, paused, now):
+    fake.tables["admin_outreach_config"][0]["enabled"] = not paused
+    fake.tables["email_log"] = [inbound(cfg, prospect, body_in="Please stop")]
+    monkeypatch.setattr(outreach, "utcnow", lambda: now)
+    monkeypatch.setattr(outreach.Provider, "list", lambda *a: [])
+    monkeypatch.setattr(outreach, "prepare", lambda *a: pytest.fail("Idle tick prepared drafts"))
+    assert outreach.run()["blocked"] == ("Paused" if paused else "Outside working window")
+    assert prospect["status"] == "NOT_NOW"
+    assert not fake.claims
+
+
+def test_missing_reply_body_blocks_sending_and_does_not_mark_seen(fake, cfg, prospect, monkeypatch):
+    fake.tables["email_log"] = [inbound(cfg, prospect)]
+    execute = Query.execute
+    def missing(query):
+        if query.table == "email_log" and query.columns == "id,body_in":
+            return SimpleNamespace(data=[])
+        return execute(query)
+    monkeypatch.setattr(Query, "execute", missing)
+    monkeypatch.setattr(outreach.Provider, "list", lambda *a: [])
+    assert "Job failed" in outreach.run()["blocked"]
+    assert not fake.claims
+    assert not fake.tables.get("admin_outreach_events")
+
+
+def test_auto_reply_delays_followup_and_later_stop_still_wins(fake, cfg, prospect):
+    prospect.update(status="EMAILED", next_action_date="2026-10-13")
+    fake.tables["email_log"] = [inbound(cfg, prospect, subject="Automatic reply", body_in="Out of office")]
+    provider = SimpleNamespace(list=lambda path: [])
+    outreach.sync(cfg, provider, NOW)
+    assert prospect["status"] == "EMAILED"
+    assert prospect["next_action_date"] == "2026-10-19"
+    fake.tables["email_log"].append(inbound(cfg, prospect, id="stop", body_in="Please unsubscribe"))
+    outreach.sync(cfg, provider, NOW)
+    assert prospect["status"] == "NOT_NOW"
+
+
+def test_historical_rendered_subject_is_available_without_full_payload(fake, cfg, prospect):
+    fake.tables["admin_outreach_messages"] = [{"id": "first", "email": prospect["email"], "step": 0,
+        "status": "sent", "payload": {"subject": "Earlier personalised subject", "text": "large template"}}]
+    fake.tables["email_log"] = [inbound(cfg, prospect, subject="Re: Earlier personalised subject")]
+    outreach.sync(cfg, SimpleNamespace(list=lambda path: []), NOW)
+    assert prospect["status"] == "REPLIED"
+
+
+def test_send_loads_one_payload_and_preserves_idempotent_claim(fake, cfg, monkeypatch):
+    monkeypatch.setattr(outreach, "sync", lambda *a: [])
+    outreach.prepare(cfg, NOW)
+    message = fake.tables["admin_outreach_messages"][0]
+    message["status"] = "approved"
+    fake.claim_result = True
+    sent = []
+    monkeypatch.setattr(outreach.Provider, "send", lambda self, row: sent.append(row) or "receipt")
+    result = outreach.run()
+    assert result["sent"] == message["id"]
+    assert len(sent) == len(fake.claims) == 1
+    assert sent[0]["payload"] == message["payload"]
+    assert message["status"] == "sent"
+    assert [ids for table, columns, ids in fake.reads if table == "admin_outreach_messages" and columns == "id,payload,step"] == [[message["id"]]]
+
+
+def test_provider_bounce_still_cancels_pending_messages(fake, cfg, prospect):
+    outreach.prepare(cfg, NOW)
+    provider = SimpleNamespace(
+        list=lambda path: ([{"id": "sent", "last_event": "bounced", "to": [prospect["email"]]}]
+                           if path == "/emails" else []))
+    outreach.sync(cfg, provider, NOW)
+    assert prospect["status"] == "NOT_NOW"
+    assert fake.tables["admin_outreach_messages"][0]["status"] == "cancelled"
+
+
+def test_provider_received_reply_still_uses_detail_and_stops_followup(fake, cfg, prospect):
+    outreach.prepare(cfg, NOW)
+    received = {"id": "received", "from": "OWNER@example.com", "subject": "Re: An introduction"}
+    details = []
+    def detail(path):
+        details.append(path)
+        return {"html": "<p>Interested, let's talk.</p>"}
+    provider = SimpleNamespace(list=lambda path: [] if path == "/emails" else [received], get=detail)
+    outreach.sync(cfg, provider, NOW)
+    assert prospect["status"] == "REPLIED"
+    assert fake.tables["admin_outreach_messages"][0]["status"] == "cancelled"
+    outreach.sync(cfg, provider, NOW)
+    assert details == ["/emails/receiving/received"]
+
+
+def test_inbox_body_batches_keep_all_replies_across_pages(fake, cfg, prospect):
+    fake.tables["email_log"] = [inbound(cfg, prospect, id=f"new-{i}") for i in range(501)]
+    outreach.sync(cfg, SimpleNamespace(list=lambda path: []), NOW)
+    fetched = [ids for table, columns, ids in fake.reads if table == "email_log" and columns == "id,body_in"]
+    assert [len(ids) for ids in fetched] == [100, 100, 100, 100, 100, 1]
+    assert len(fake.tables["admin_outreach_events"]) == 501
+
+
+def test_stale_draft_ids_are_not_truncated_at_api_row_limit(fake, cfg, prospect):
+    fake.tables["vcrm_prospects"] = [prospect | {"id": f"p{i}", "email": f"p{i}@example.org"} for i in range(1100)]
+    fake.tables["admin_outreach_messages"] = [
+        {"id": f"m{i}", "email": f"p{i}@example.org", "step": 0, "status": "approved",
+         "created_at": NOW.isoformat(), "config_snapshot": {}} for i in range(1100)]
+    outreach.prepare(cfg, NOW)
+    assert all(m["status"] == "draft" and m["config_snapshot"] == cfg for m in fake.tables["admin_outreach_messages"])
