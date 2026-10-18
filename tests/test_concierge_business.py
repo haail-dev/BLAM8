@@ -129,7 +129,7 @@ def test_tools_for_starter_hides_the_pro_set():
     assert names == {"get_inbox_overview", "search_conversations",
                      "get_conversation", "search_knowledge_base",
                      "list_invoices", "list_quotes", "get_availability",
-                     "list_expiring", "list_awaiting_approval"}
+                     "list_expiring", "get_product_help", "list_awaiting_approval"}
     full = {t["name"] for t in concierge_data.tools_for(True)}
     assert concierge_data.PRO_TOOLS < full
 

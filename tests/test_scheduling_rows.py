@@ -167,7 +167,8 @@ def test_help_is_an_offer_not_the_headline():
     hidden [data-concierge-ask]; the page shows one quiet "/help" line."""
     s = io.open(PARTIAL, encoding="utf-8").read()
     assert not re.search(r"<button[^>]*data-concierge-ask", s), "the help button is back"
-    assert re.search(r"<span hidden data-concierge-ask=\"Set up my diary settings", s),         "the walk-through's question is gone"
+    assert re.search(r"<span hidden data-concierge-ask=\"Review my current diary settings", s), "the walk-through's question is gone"
+    assert "do not assume numbers or claim a proposal was saved" in s
     assert 'include "app/_help_hint.html"' in s
 
 

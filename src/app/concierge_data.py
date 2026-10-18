@@ -371,9 +371,9 @@ TOOLS += [
             },
         },
     },
-    # LAST in the catalogue on purpose: the agnostic render baselines key their
-    # debt entries by tool position (tests/fixtures/agnostic/debt.json), so a tool
-    # added anywhere earlier moves every entry after it.
+    # Keep this historical position: the agnostic render baselines key debt by
+    # tool position (tests/fixtures/agnostic/debt.json). Append new tools below
+    # this list so existing entries do not shift.
     {
         "name": "list_awaiting_approval",
         "description": (
@@ -403,6 +403,8 @@ TOOLS += [
     },
 ]
 
+from app.platform_help import TOOL as _PRODUCT_HELP_TOOL
+TOOLS += [_PRODUCT_HELP_TOOL]
 TOOL_NAMES = frozenset(t["name"] for t in TOOLS)
 
 # Which door each tool reads through (docs/plan-people.md slice 4). A staff
@@ -429,6 +431,7 @@ TOOL_DOORS: dict[str, str | None] = {
     "search_knowledge_base": None,
     # Their own cards, already door-checked when they were staged.
     "list_awaiting_approval": None,
+    "get_product_help": None,
 }
 
 
@@ -1140,7 +1143,14 @@ def _list_awaiting_approval(tenant_id, client, args, member=None, user_id=None) 
     return concierge_ledger.ledger(tenant_id, client, args, member, user_id)
 
 
+def _get_product_help(tenant_id, client, args, member=None):
+    from app import platform_help
+    return platform_help.lookup(args.get('query',''),
+        platform_help.runtime_context(tenant_id,client,member),all_features=args.get('all') is True)
+
+
 _EXECUTORS = {
+    "get_product_help": _get_product_help,
     "get_inbox_overview": _get_inbox_overview,
     "search_conversations": _search_conversations,
     "get_conversation": _get_conversation,
@@ -1175,7 +1185,7 @@ _ONE_CUSTOMER = ("get_contact_timeline", "get_contact_record")
 # shape that has lost the mailbox by then.
 _MEMBER_AWARE = frozenset(("get_inbox_overview", "search_conversations", "get_conversation",
                            # narrowed like the Diary page (plan step 4, G4)
-                           "list_bookings",
+                           "list_bookings", "get_product_help",
                            # the asker's own cards
                            "list_awaiting_approval"))
 

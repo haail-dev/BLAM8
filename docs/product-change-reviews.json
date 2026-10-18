@@ -1,0 +1,1113 @@
+{
+  "format": 1,
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim.",
+  "capabilities": {
+    "email": {
+      "signature": "964514cc3a6854d005702444e70ce8854eb923ab88fd721453c004e90f1a1ac6",
+      "surfaces": {
+        "/": {
+          "disposition": "generated",
+          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "evidence": [
+            "src/app/templates/landing.html",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Email drafts and approval: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/how-it-works": {
+          "disposition": "reviewed_unchanged",
+          "reason": "Email drafts and approval: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "evidence": [
+            "src/app/templates/how_it_works.html",
+            "docs/product-knowledge.md"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "email: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:email": {
+          "disposition": "updated",
+          "reason": "Email drafts and approval: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Email drafts and approval: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "knowledge": {
+      "signature": "10101e26c91f2fa458517bd76ed5bf282039137a5ee028e2e6ce127245745baf",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Business knowledge: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Business knowledge: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "knowledge: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:knowledge": {
+          "disposition": "updated",
+          "reason": "Business knowledge: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Business knowledge: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "scheduling": {
+      "signature": "ee3c6bacf1622bb4ed64787d7ea5638ce2f0655a7fd1cf7fbe5ff2195c318c1f",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Services, capacity and booking rules: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/how-it-works": {
+          "disposition": "reviewed_unchanged",
+          "reason": "Services, capacity and booking rules: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "evidence": [
+            "src/app/templates/how_it_works.html",
+            "docs/product-knowledge.md"
+          ]
+        },
+        "agent:scheduling": {
+          "disposition": "updated",
+          "reason": "Services, capacity and booking rules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Services, capacity and booking rules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Services, capacity and booking rules: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "calendar": {
+      "signature": "b8d22f6d89fed3addfd02aba443d5afa556f37cbee148f8fd475a1b62d55855d",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Calendar connection and sync: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Calendar connection and sync: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "calendar: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:calendar": {
+          "disposition": "updated",
+          "reason": "Calendar connection and sync: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Calendar connection and sync: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "crm": {
+      "signature": "e8faee7640c384c658c781c040cdfdc4780569c28a07e7e5770ea161fd420911",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Customer records and follow-ups: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Customer records and follow-ups: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "agent:crm": {
+          "disposition": "updated",
+          "reason": "Customer records and follow-ups: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Customer records and follow-ups: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Customer records and follow-ups: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "subjects": {
+      "signature": "4128619d7fa469c4d52c32506068fe0c22ef80dcc81db3a610a6cf59b8cfdcd3",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Separately tracked subjects and evidence: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "agent:subjects": {
+          "disposition": "updated",
+          "reason": "Separately tracked subjects and evidence: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Separately tracked subjects and evidence: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Separately tracked subjects and evidence: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "packages": {
+      "signature": "970f7b8ed90f3a0aa11ec44aa0c20e37a89a301cc61ecf3ce411ea29c40a70bd",
+      "surfaces": {
+        "/": {
+          "disposition": "generated",
+          "reason": "Packages and credits: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "evidence": [
+            "src/app/templates/landing.html",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Packages and credits: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Packages and credits: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "agent:packages": {
+          "disposition": "updated",
+          "reason": "Packages and credits: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Packages and credits: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Packages and credits: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "progress": {
+      "signature": "1745c97bb067c19afe3bcbe73bf0a4582f80f76a260cd5ca9a0db79d881a4027",
+      "surfaces": {
+        "/": {
+          "disposition": "generated",
+          "reason": "Progress levels and prerequisites: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "evidence": [
+            "src/app/templates/landing.html",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Progress levels and prerequisites: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Progress levels and prerequisites: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "agent:progress": {
+          "disposition": "updated",
+          "reason": "Progress levels and prerequisites: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Progress levels and prerequisites: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Progress levels and prerequisites: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "money": {
+      "signature": "b50df4343ad50f998a7238326a65dfa1a39a36c89f8bac784b31b45dd8d6b74e",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Quotes, invoices and payment records: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/stripe": {
+          "disposition": "generated",
+          "reason": "Quotes, invoices and payment records: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "evidence": [
+            "src/app/templates/stripe.html",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "agent:money": {
+          "disposition": "updated",
+          "reason": "Quotes, invoices and payment records: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Quotes, invoices and payment records: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Quotes, invoices and payment records: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "people": {
+      "signature": "97ae24c9d69d839fee110d63d9e357bca25d115e1fafb9b825b4b99ba0cec950",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "People and permissions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "People and permissions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "agent:people": {
+          "disposition": "updated",
+          "reason": "People and permissions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "People and permissions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "People and permissions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "portal": {
+      "signature": "17ba0c503092e4c4312b223b60c837e59d2ebd59baee1547dea232e6e9d58bee",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Customer portal and job sheets: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/for-customers": {
+          "disposition": "reviewed_unchanged",
+          "reason": "Customer portal and job sheets: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "evidence": [
+            "src/app/templates/for_customers.html",
+            "docs/product-knowledge.md"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "portal: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:portal": {
+          "disposition": "updated",
+          "reason": "Customer portal and job sheets: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Customer portal and job sheets: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "mailboxes": {
+      "signature": "5d61a3c61447cda30babe2d8f7beb0b5876d90d5e89a8a4f8f7cbf8ee575f9d4",
+      "surfaces": {
+        "/help": {
+          "disposition": "generated",
+          "reason": "Mailbox connections and overrides: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/how-it-works": {
+          "disposition": "reviewed_unchanged",
+          "reason": "Mailbox connections and overrides: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "evidence": [
+            "src/app/templates/how_it_works.html",
+            "docs/product-knowledge.md"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "mailboxes: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:mailboxes": {
+          "disposition": "updated",
+          "reason": "Mailbox connections and overrides: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Mailbox connections and overrides: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "owner.assistant": {
+      "signature": "87e44821b958d720a43b33bb9a2b98e4194b052838eafe3396bb9132ce52ff93",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "agent:owner.assistant": {
+          "disposition": "updated",
+          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "product.help": {
+      "signature": "aab037f913f6f2dce1ec97ee3ca96d60d8c5f4a48732554bb18cf63aff58a445",
+      "surfaces": {
+        "/help": {
+          "disposition": "generated",
+          "reason": "Product help and setup proposals: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/pages": {
+          "disposition": "updated",
+          "reason": "Product help and setup proposals: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor.",
+          "evidence": [
+            "src/app/pages_index.py",
+            "tests/test_pages_index.py"
+          ]
+        },
+        "agent:product.help": {
+          "disposition": "updated",
+          "reason": "Product help and setup proposals: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Product help and setup proposals: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "billing": {
+      "signature": "f1537332ade964337e8cf3fdf275e0778b6cab397977ef075ba03b7744dc9fc4",
+      "surfaces": {
+        "/": {
+          "disposition": "generated",
+          "reason": "/: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/#pricing": {
+          "disposition": "generated",
+          "reason": "Plans and billing: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "evidence": [
+            "src/app/templates/_product_pricing.html",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "/capabilities: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/compare": {
+          "disposition": "generated",
+          "reason": "/compare: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/for-businesses": {
+          "disposition": "generated",
+          "reason": "/for-businesses: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/for/logistics": {
+          "disposition": "generated",
+          "reason": "/for/logistics: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/for/trades": {
+          "disposition": "generated",
+          "reason": "/for/trades: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/help": {
+          "disposition": "generated",
+          "reason": "Plans and billing: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "evidence": [
+            "src/app/help_center.py",
+            "src/app/platform_content.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/help/does-blam8-answer-phone-calls": {
+          "disposition": "generated",
+          "reason": "/help/does-blam8-answer-phone-calls: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/help/how-much-does-blam8-cost": {
+          "disposition": "generated",
+          "reason": "/help/how-much-does-blam8-cost: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/help/what-is-an-os-module": {
+          "disposition": "generated",
+          "reason": "/help/what-is-an-os-module: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/help/what-is-blam8": {
+          "disposition": "generated",
+          "reason": "/help/what-is-blam8: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/llms.txt": {
+          "disposition": "generated",
+          "reason": "/llms.txt: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/pages": {
+          "disposition": "generated",
+          "reason": "/pages: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/partners": {
+          "disposition": "generated",
+          "reason": "/partners: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/stripe": {
+          "disposition": "generated",
+          "reason": "Plans and billing: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "evidence": [
+            "src/app/templates/stripe.html",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/calendly": {
+          "disposition": "generated",
+          "reason": "/vs/calendly: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/fyxer": {
+          "disposition": "generated",
+          "reason": "/vs/fyxer: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/hubspot": {
+          "disposition": "generated",
+          "reason": "/vs/hubspot: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/jobber": {
+          "disposition": "generated",
+          "reason": "/vs/jobber: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/mailchimp": {
+          "disposition": "generated",
+          "reason": "/vs/mailchimp: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/moneypenny": {
+          "disposition": "generated",
+          "reason": "/vs/moneypenny: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/podium": {
+          "disposition": "generated",
+          "reason": "/vs/podium: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/servicem8": {
+          "disposition": "generated",
+          "reason": "/vs/servicem8: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/tradify": {
+          "disposition": "generated",
+          "reason": "/vs/tradify: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "/vs/zapier": {
+          "disposition": "generated",
+          "reason": "/vs/zapier: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "evidence": [
+            "src/app/main.py",
+            "src/app/platform_public.py",
+            "tests/test_platform_public.py"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "billing: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:billing": {
+          "disposition": "updated",
+          "reason": "Plans and billing: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Plans and billing: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "installable": {
+      "signature": "bd20824da978d210d954ad870f63c0e4f4c84345410fe66878f0e025db42c6a6",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Installable app and notifications: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "README.md": {
+          "disposition": "updated",
+          "reason": "installable: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "evidence": [
+            "README.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "agent:installable": {
+          "disposition": "updated",
+          "reason": "Installable app and notifications: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Installable app and notifications: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        }
+      }
+    },
+    "extensions": {
+      "signature": "73208c375fd29147eac7253913edd3bf10814cc3441f2d92e8806cf906ccff1c",
+      "surfaces": {
+        "/capabilities": {
+          "disposition": "generated",
+          "reason": "Restricted operational modules: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "evidence": [
+            "src/app/templates/capabilities.html",
+            "src/app/product_guides.py"
+          ]
+        },
+        "/partners": {
+          "disposition": "reviewed_unchanged",
+          "reason": "Restricted operational modules: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "evidence": [
+            "src/app/templates/partners.html",
+            "docs/product-knowledge.md"
+          ]
+        },
+        "agent:extensions": {
+          "disposition": "updated",
+          "reason": "Restricted operational modules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Restricted operational modules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Restricted operational modules: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "automation.scheduled": {
+      "signature": "711fcfca612cd99a7d5e7afeff74f681aa193335ca88fcda585cd545f7f66c90",
+      "surfaces": {
+        "/pages": {
+          "disposition": "updated",
+          "reason": "Scheduled plans: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor.",
+          "evidence": [
+            "src/app/pages_index.py",
+            "tests/test_pages_index.py"
+          ]
+        },
+        "agent:automation.scheduled": {
+          "disposition": "updated",
+          "reason": "Scheduled plans: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Scheduled plans: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Scheduled plans: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "outreach": {
+      "signature": "9cba1ac1cce39af927f9366a8dcf5ecf454d74ce3554e4adff4b6e885d5df304",
+      "surfaces": {
+        "/pages": {
+          "disposition": "updated",
+          "reason": "Tenant outreach: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor.",
+          "evidence": [
+            "src/app/pages_index.py",
+            "tests/test_pages_index.py"
+          ]
+        },
+        "agent:outreach": {
+          "disposition": "updated",
+          "reason": "Tenant outreach: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Tenant outreach: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Tenant outreach: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    },
+    "knowledge.review": {
+      "signature": "dc7cecbd2e987ddab23d6b523aa81aad6bccb7aa4c1c8d3096f3ce7d65e5f477",
+      "surfaces": {
+        "/pages": {
+          "disposition": "updated",
+          "reason": "Existing Knowledge admission review: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "evidence": [
+            "src/app/pages_index.py",
+            "tests/test_pages_index.py"
+          ]
+        },
+        "agent:knowledge.review": {
+          "disposition": "updated",
+          "reason": "Existing Knowledge admission review: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "evidence": [
+            "src/app/product_guides.py",
+            "tests/test_platform_help.py"
+          ]
+        },
+        "docs/product-knowledge.md": {
+          "disposition": "updated",
+          "reason": "Existing Knowledge admission review: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "evidence": [
+            "docs/product-knowledge.md",
+            "src/app/product_inventory.py"
+          ]
+        },
+        "docs/verified-behaviours.md": {
+          "disposition": "updated",
+          "reason": "Existing Knowledge admission review: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "evidence": [
+            "docs/verified-behaviours.md",
+            "tests/test_platform_capabilities.py"
+          ]
+        }
+      }
+    }
+  }
+}

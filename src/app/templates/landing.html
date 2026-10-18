@@ -82,10 +82,10 @@
       "offers": {
         "@type": "AggregateOffer",
         "priceCurrency": "GBP",
-        "lowPrice": "39",
-        "highPrice": "249",
-        "offerCount": "3",
-        "description": "Starter £39/month (AI-drafted replies, scheduling, quotes, invoices, People and the customer portal), Pro £99/month (adds the self-filling CRM with dependants, packages and progress) or Pro + Concierge £249/month (everything in Pro plus the Concierge, an assistant for the owner that knows the business and acts once you confirm, by chat or by voice). Free trial of the full product, the Concierge included, no card to start — 14 days or {{ trial_email_cap }} handled emails, whichever comes first."
+        "lowPrice": "{{ product_price_number('email') }}",
+        "highPrice": "{{ product_price_number('concierge') }}",
+        "offerCount": "{{ product_plans() | length }}",
+        "description": "Starter {{ product_price('email') }}/month (AI-drafted replies, scheduling, quotes, invoices, People and the customer portal), Pro {{ product_price('starter') }}/month (adds the self-filling CRM with dependants, packages and progress) or Pro + Concierge {{ product_price('concierge') }}/month (everything in Pro plus the Concierge, an assistant for the owner that knows the business and acts once you confirm, by chat or by voice). Free trial of the full product, the Concierge included, no card to start — 14 days or {{ trial_email_cap }} handled emails, whichever comes first."
       },
       "publisher": { "@id": "{{ base_url }}/#organization" }
     },
@@ -151,7 +151,7 @@
         {
           "@type": "Question",
           "name": "How much does BLAM8 cost?",
-          "acceptedAnswer": { "@type": "Answer", "text": "From £39 per month. Starter (£39/month) includes AI-drafted replies in your voice, scheduling with calendar sync, quotes, invoices and the customer portal, on one mailbox with 300 emails a month. Pro (£99/month) adds the self-filling CRM — contacts, deals, promises, documents, dependants, packages and follow-up sequences — plus 750 emails a month, additional mailboxes at £39/month each, and priority support. Pro + Concierge (£249/month) is everything in Pro plus the Concierge — ask her anything about your business, by typing or by voice, and she drafts the card and acts once you confirm — on the same allowance as Pro. Every account starts with a free trial of the full product — every feature open, the Concierge included, no card to start: it runs for 14 days or {{ trial_email_cap }} handled emails, whichever comes first." }
+          "acceptedAnswer": { "@type": "Answer", "text": "From {{ product_price('email') }} per month. Starter ({{ product_price('email') }}/month) includes AI-drafted replies in your voice, scheduling with calendar sync, quotes, invoices and the customer portal, on one mailbox with 300 emails a month. Pro ({{ product_price('starter') }}/month) adds the self-filling CRM — contacts, deals, promises, documents, dependants, packages and follow-up sequences — plus 750 emails a month, additional mailboxes at {{ product_value('addon.mailbox') }}/month each, and priority support. Pro + Concierge ({{ product_price('concierge') }}/month) is everything in Pro plus the Concierge — ask her anything about your business, by typing or by voice, and she drafts the card and acts once you confirm — on the same allowance as Pro. Every account starts with a free trial of the full product — every feature open, the Concierge included, no card to start: it runs for {{ product_value('trial.days') }} days or {{ trial_email_cap }} handled emails, whichever comes first." }
         },
         {
           "@type": "Question",
@@ -641,63 +641,10 @@
         {# The cap is disclosed here, next to the pricing, rather than left for someone to
            discover when the trial stops. It reads from settings so the number can't drift
            from what the deployment enforces. #}
-        <p class="mt-2 text-slate-600 max-w-3xl">Free trial: the full product — every feature, the Concierge included — for 14 days or {{ trial_email_cap }} handled emails, whichever comes first. No card to start. Cancel anytime.</p>
+        <p class="mt-2 text-slate-600 max-w-3xl">Free trial: the released core product, the Concierge included — for {{ product_value('trial.days') }} days or {{ trial_email_cap }} handled emails, whichever comes first. No card to start. Cancel anytime.</p>
         <p class="mt-1 text-sm text-slate-500 max-w-3xl">On every plan: quotes, invoices and chasing, the customer portal, People, calendar sync and the installable app.</p>
         <div class="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          <!-- Starter -->
-          <div class="rounded-xl border-2 border-brand bg-white/80 p-5 md:p-6 flex flex-col relative">
-            <span class="absolute -top-3 left-5 rounded-full bg-brand px-3 py-0.5 text-xs font-bold text-white whitespace-nowrap">Most popular to start</span>
-            <h3 class="text-xl font-bold text-navy">Starter</h3>
-            <p class="mt-1 text-sm text-slate-500">Replies, booking, quotes &amp; invoices, for one-person businesses</p>
-            <div class="mt-3"><span class="text-3xl font-bold text-navy">&pound;39</span><span class="text-sm text-slate-500 ml-1">per month</span></div>
-            <p class="mt-1 text-xs text-slate-400">1 mailbox &middot; 300 emails/month</p>
-            <ul class="mt-3 space-y-1 text-sm text-slate-700 flex-1">
-              <li class="flex gap-2"><span class="text-brand">&check;</span>AI-drafted replies in your voice</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Knowledge base — your prices, policies, FAQs</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Booking details gathered &amp; pinned</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Scheduling &amp; capacity diary, calendar sync</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Quotes accepted online, invoices raised &amp; chased</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Customer portal for the customers you already have</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Draft-only by default</li>
-            </ul>
-            <a href="/login" class="mt-5 block w-full text-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Start free 14-day trial</a>
-            <p class="mt-2 text-center text-xs text-slate-400">No card to start</p>
-          </div>
-          <!-- Pro -->
-          <div class="rounded-xl border border-slate-200 bg-white/80 p-5 md:p-6 flex flex-col">
-            <h3 class="text-xl font-bold text-navy">Pro</h3>
-            <p class="mt-1 text-sm text-slate-500">The full loop — everything in Starter plus the self-filling CRM</p>
-            <div class="mt-3"><span class="text-3xl font-bold text-navy">&pound;99</span><span class="text-sm text-slate-500 ml-1">per month</span></div>
-            <p class="mt-1 text-xs text-slate-400">1 mailbox &middot; 750 emails/month</p>
-            <ul class="mt-3 space-y-1 text-sm text-slate-700 flex-1">
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Everything in Starter</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Self-filling CRM: contacts, companies, deals, promises, documents</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Dependants, packages &amp; progress on every customer record</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Follow-up sequences &amp; customer-mood flags</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Higher email volume — 750 emails/month</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Additional mailboxes &pound;39/mo each (+300 emails/month)</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Priority support</li>
-            </ul>
-            <a href="/login" class="mt-5 block w-full text-center rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition">Start free 14-day trial</a>
-            <p class="mt-2 text-center text-xs text-slate-400">No card to start</p>
-          </div>
-          <!-- Pro + Concierge -->
-          <div class="rounded-xl border border-slate-200 bg-white/80 p-5 md:p-6 flex flex-col" data-water-card>
-            <h3 class="text-xl font-bold text-navy">Pro + Concierge</h3>
-            <p class="mt-1 text-sm text-slate-500">Pro, plus the Concierge — ask, act and talk to your business</p>
-            <div class="mt-3"><span class="text-3xl font-bold text-navy">&pound;249</span><span class="text-sm text-slate-500 ml-1">per month</span></div>
-            <p class="mt-1 text-xs text-slate-400">1 mailbox &middot; 750 emails/month</p>
-            <ul class="mt-3 space-y-1 text-sm text-slate-700 flex-1">
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Everything in Pro</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>The Concierge: ask anything about your business</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Say it, she drafts the card — you confirm</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Hold to talk: speak to her hands-free</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>Cards that wait for you, checked again against today</li>
-              <li class="flex gap-2"><span class="text-brand">&check;</span>The morning brief opens straight into her</li>
-            </ul>
-            <a href="/login" class="mt-5 block w-full text-center rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition">Start free 14-day trial</a>
-            <p class="mt-2 text-center text-xs text-slate-400">No card to start</p>
-          </div>
+          {% include "_product_pricing.html" %}
         </div>
         <p class="mt-3 text-sm text-slate-500">The CRM pre-fills quietly on every account, so it opens already populated the day you upgrade. {% if invite_gate %}Works with Microsoft 365 / Outlook today; Gmail by invite while verification completes.{% else %}Works with Microsoft 365 / Outlook and Gmail.{% endif %} Need something bigger? <a href="mailto:hello@blam8.com?subject=BLAM8%20—%20something%20bigger" class="text-brand font-semibold hover:underline">Talk to us</a>.</p>
       </div>
@@ -765,7 +712,7 @@
           </details>
           <details class="group py-3">
             <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">How much is it?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
-            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">From £39/month — see <a href="#pricing" class="text-brand font-medium hover:underline">pricing</a>. Starter covers replies, booking, quotes, invoices and the portal; Pro adds the self-filling CRM with dependants, packages and progress; Pro + Concierge (£249) adds the Concierge, who knows your business and acts once you confirm. The free trial opens the full product, the Concierge included, for 14 days or {{ trial_email_cap }} handled emails, whichever comes first — no card to start.</p>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">From {{ product_price('email') }}/month — see <a href="#pricing" class="text-brand font-medium hover:underline">pricing</a>. Starter covers replies, booking, quotes, invoices and the portal; Pro adds the self-filling CRM with dependants, packages and progress; Pro + Concierge ({{ product_price('concierge') }}) adds the Concierge, who knows your business and acts once you confirm. The free trial opens the full product, the Concierge included, for {{ product_value('trial.days') }} days or {{ trial_email_cap }} handled emails, whichever comes first — no card to start.</p>
           </details>
           <details class="group py-3">
             <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Is there a contract?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>

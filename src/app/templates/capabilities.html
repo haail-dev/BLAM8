@@ -14,7 +14,7 @@
         {
           "@type": "Question",
           "name": "What does BLAM8 actually do?",
-          "acceptedAnswer": { "@type": "Answer", "text": "BLAM8 is the AI front desk for service businesses. It runs one loop from a business email address: it reads every inbound customer email, drafts the reply in the business's voice from its real prices and policies (and holds the draft to ask the owner one question when the answer isn't in its knowledge), holds the slot so a live diary can't double-book, drops the confirmed job into Outlook or Google Calendar, drafts the quote for the customer to accept online, raises the invoice and chases it at 7, 14 and 30 days overdue, and writes the CRM — contact, company, deal, promises, documents and dependants — straight from the thread. Your customers, the ones your emails already reach, get a portal to check, move and pay their bookings and ask questions; your team goes on it too, including people who never sign in; and the whole thing installs as an app with push notifications. Replies, booking, quotes, invoices, People and the portal are on Starter (£39/month); the self-filling CRM with dependants, packages and progress is Pro (£99/month); the Concierge, an assistant that answers from your records and acts once you confirm, is Pro + Concierge (£249/month). Draft-first approval by default; auto-send is opt-in per mailbox." }
+          "acceptedAnswer": { "@type": "Answer", "text": "BLAM8 is the AI front desk for service businesses. It runs one loop from a business email address: it reads every inbound customer email, drafts the reply in the business's voice from its real prices and policies (and holds the draft to ask the owner one question when the answer isn't in its knowledge), holds the slot so a live diary can't double-book, drops the confirmed job into Outlook or Google Calendar, drafts the quote for the customer to accept online, raises the invoice and chases it at 7, 14 and 30 days overdue, and writes the CRM — contact, company, deal, promises, documents and dependants — straight from the thread. Your customers, the ones your emails already reach, get a portal to check, move and pay their bookings and ask questions; your team goes on it too, including people who never sign in; and the whole thing installs as an app with push notifications. Replies, booking, quotes, invoices, People and the portal are on Starter ({{ product_price('email') }}/month); the self-filling CRM with dependants, packages and progress is Pro ({{ product_price('starter') }}/month); the Concierge, an assistant that answers from your records and acts once you confirm, is Pro + Concierge ({{ product_price('concierge') }}/month). Draft-first approval by default; auto-send is opt-in per mailbox." }
         },
         {
           "@type": "Question",
@@ -69,7 +69,7 @@
   <div class="absolute inset-0 -z-10 bg-slate-50"></div>
   <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-16">
     <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
-      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Capabilities, honestly · updated 25 September 2026
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Capabilities, honestly · current release reference
     </p>
     <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
       What BLAM8 does — and what it doesn't.
@@ -210,7 +210,7 @@
           <li class="flex gap-2"><span class="text-brand">&check;</span>The morning brief is her first message of the day</li>
           <li class="flex gap-2"><span class="text-brand">&check;</span>Fills your onboarding from a chat, and turns any bad draft into a rule or a knowledge fix</li>
         </ul>
-        <p class="mt-4 text-xs text-slate-400">The Concierge comes with Pro + Concierge (&pound;249/mo) and is open during the free trial. Starter and Pro keep App help in the search box, for how-to-use-the-app questions. Daily fair-use caps apply to the assistant.</p>
+        <p class="mt-4 text-xs text-slate-400">The Concierge comes with Pro + Concierge ({{ product_price('concierge') }}/mo) and is open during the free trial. Starter and Pro keep App help in the search box, for how-to-use-the-app questions. Daily fair-use caps apply to the assistant.</p>
       </div>
 
       <div class="rounded-xl border border-slate-200 bg-white p-7">
@@ -241,7 +241,7 @@
         <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
           <li class="flex gap-2"><span class="text-brand">&check;</span>Point it at your website and it drafts your knowledge for review; a knowledge interview asks the questions your website didn't answer</li>
           <li class="flex gap-2"><span class="text-brand">&check;</span>The setup assistant proposes your diary shape, services, booking checklist, dependants and pipeline from a few questions; the walk-through ends on Today with the loop running</li>
-          <li class="flex gap-2"><span class="text-brand">&check;</span>Learn your voice from your sent email in one click at setup; multiple mailboxes, each with its own persona — &pound;39/mo per mailbox beyond your plan's included one</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Learn your voice from your sent email in one click at setup; multiple mailboxes, each with its own persona — {{ product_value('addon.mailbox') }}/mo per mailbox beyond your plan's included one</li>
           <li class="flex gap-2"><span class="text-brand">&check;</span>Worked setups for {{ setups|length }} kinds of business — {% for s in setups %}{{ s.trade }}{% if not loop.last %}, {% endif %}{% endfor %} — each run through the live system end to end, with the honest gaps written down and fixed</li>
         </ul>
       </div>
@@ -333,4 +333,13 @@
   </div>
 </section>
 
+<section class="mx-auto max-w-6xl px-5 py-12" id="product-reference">
+<h2 class="text-2xl font-bold text-navy">Capability reference and limitations</h2>
+<p>Availability depends on your account, permissions and saved settings. Restricted and disabled entries are descriptions, not availability promises.</p>
+{% for capability in public_capabilities() %}
+<details class="mt-4" data-product-capability="{{ capability.id }}">
+<summary>{{ capability.title }} · {{ capability.status }}</summary><p>{{ capability.instructions }}</p>
+</details>
+{% endfor %}
+</section>
 {% endblock %}

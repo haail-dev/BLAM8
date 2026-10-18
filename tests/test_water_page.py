@@ -83,9 +83,12 @@ def test_the_landing_turns_the_water_on_for_visitors_and_marks_its_deck_and_card
     assert "/static/water-page.js?v={{ asset_rev }}" in LANDING and "/static/water-ambient.js?v={{ asset_rev }}" in LANDING
     assert "requestIdleCallback" in LANDING
     assert '<div class="deck-sky" data-water-host>' in LANDING
-    card = LANDING[LANDING.index("<!-- Pro + Concierge -->"):]
-    assert "data-water-card" in card.split("\n")[1]
-    assert LANDING.count("data-water-card") == 2   # the comment-free attribute once, and the mention in the block comment
+    from fastapi.testclient import TestClient
+    from app.main import app
+    rendered = TestClient(app).get('/').text
+    cards = re.findall(r'<div\b[^>]*\bdata-water-card\b[^>]*>', rendered)
+    assert len(cards) == 1
+    assert 'data-product-plan="concierge"' in cards[0]
 
 
 def test_the_concierge_popup_gets_its_own_water_while_it_is_open():

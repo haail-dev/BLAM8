@@ -131,6 +131,7 @@ SOURCE_BY_OPERATION: dict[str, str] = {
     "concierge_fix": "owner", "concierge_business": "owner", "concierge_discovery": "owner", "concierge_discovery_rewrite": "owner",
     "concierge_task": "owner",              # one task of the Concierge's task list (src/app/concierge_tasks.py)
     "gptlive_session": "owner",             # one GPT-Live voice session, priced by the second (src/app/gptlive.py)
+    "scheduled_plan": "owner",             # an explicitly configured scheduled occurrence
     "concierge_task_plan": "owner", "concierge_task_review": "owner",  # the planner and reviewer seats (src/app/task_loop.py)
     "concierge_email": "owner",             # a new email the owner asked for by voice (src/app/concierge_draft.py)
     "voice_learning": "owner", "voice_sample": "owner", "ocr_stock_in": "owner",

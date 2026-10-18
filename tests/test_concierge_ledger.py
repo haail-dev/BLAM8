@@ -100,8 +100,8 @@ def by_id(out):
 # ── one tool, registered the way the others are ─────────────────────────────
 def test_the_ledger_is_the_approvals_tool_and_there_is_no_second_tool():
     names = [t["name"] for t in concierge_data.TOOLS]
-    assert names[-1] == TOOL and "get_my_work" not in names
-    tool = concierge_data.TOOLS[-1]
+    assert names.count(TOOL) == 1 and "get_my_work" not in names
+    tool = next(t for t in concierge_data.TOOLS if t["name"] == TOOL)
     assert set(tool["input_schema"]["properties"]) == {"status", "since_days", "customer", "limit"}
     assert tool["input_schema"]["properties"]["status"]["enum"] == ["open", "recent", "all"]
     assert concierge_data.tool_door(TOOL) is None

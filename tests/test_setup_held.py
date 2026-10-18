@@ -172,7 +172,7 @@ def test_help_schema_and_reply_carry_held():
         {"page": "invoice_settings", "values": [{"name": "default_deposit_percent", "value": "25"}]}]
     assert concierge._help_held("not json") == []
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "11. HELD FOR LATER" in prompt
+    assert "No durable proposal context" in prompt and "Do not emit recommend or held settings" in prompt
 
 
 # ── the routes record what the model held ────────────────────────────────────

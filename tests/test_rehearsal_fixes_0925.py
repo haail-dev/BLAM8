@@ -41,5 +41,5 @@ def test_the_help_never_calls_a_default_the_owners_own():
     src = open("src/app/concierge.py", encoding="utf-8").read()
     from app import concierge
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "never guessed: a value they never gave stays off the card" in prompt
-    assert "Never call a field 'already filled in'" in prompt and "ALREADY in its boxes" not in src
+    assert "never fill a default" in prompt
+    assert "Preserve existing choices unless" in prompt and "ALREADY in its boxes" not in src

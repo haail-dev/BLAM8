@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}BLAM8 for Businesses — AI Front Desk &amp; Inbox Agent{% endblock %}
-{% block meta_description %}BLAM8 answers your emails in your voice, books jobs into your live diary and fills your CRM automatically. From £39/month, 14-day free trial of the full product, no card to start. Sign up or log in.{% endblock %}
+{% block meta_description %}BLAM8 answers your emails in your voice, books jobs into your live diary and fills your CRM automatically. From {{ product_price('email') }}/month, 14-day free trial of the full product, no card to start. Sign up or log in.{% endblock %}
 
 {% block structured_data %}
 <script type="application/ld+json">
@@ -32,7 +32,7 @@
         {
           "@type": "Question",
           "name": "How much does BLAM8 cost?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Starter is £39/month — AI-drafted replies in your voice, scheduling with calendar sync, quotes and invoices, on one mailbox with 300 emails a month. Pro is £99/month — adds the self-filling CRM (contacts, deals, promises, follow-up sequences), 750 emails a month, additional mailboxes at £39 each and priority support. Pro + Concierge is £249/month — everything in Pro plus the Concierge, an assistant that knows your business and acts once you confirm, on the same allowance as Pro. Every account starts with a free 14-day trial of the full product — every feature open, the Concierge included, no card to start — and plans are monthly with no contract." }
+          "acceptedAnswer": { "@type": "Answer", "text": "Starter is {{ product_price('email') }}/month — AI-drafted replies in your voice, scheduling with calendar sync, quotes and invoices, on one mailbox with 300 emails a month. Pro is {{ product_price('starter') }}/month — adds the self-filling CRM (contacts, deals, promises, follow-up sequences), 750 emails a month, additional mailboxes at {{ product_value('addon.mailbox') }} each and priority support. Pro + Concierge is {{ product_price('concierge') }}/month — everything in Pro plus the Concierge, an assistant that knows your business and acts once you confirm, on the same allowance as Pro. Every account starts with a free 14-day trial of the full product — every feature open, the Concierge included, no card to start — and plans are monthly with no contract." }
         },
         {
           "@type": "Question",
@@ -112,9 +112,9 @@
     <div>
       <h2 class="text-3xl font-bold tracking-tight text-navy">Three plans, monthly, cancel anytime</h2>
       <ul class="mt-6 space-y-4 text-slate-600 leading-relaxed">
-        <li><span class="font-semibold text-navy">Starter, £39/mo.</span> AI-drafted replies in your voice, scheduling with calendar sync, quotes and invoices. The CRM pre-fills quietly, ready to open on Pro. 1 mailbox, 300 emails/month.</li>
-        <li><span class="font-semibold text-navy">Pro, £99/mo.</span> Adds the self-filling CRM — contacts, deals, promises, follow-up sequences, customer-mood flags — plus 750 emails/month, additional mailboxes at £39 each and priority support.</li>
-        <li><span class="font-semibold text-navy">Pro + Concierge, £249/mo.</span> Everything in Pro, plus the Concierge — ask her anything about your business, by typing or by voice, and she drafts the card and acts once you confirm. Same allowance as Pro.</li>
+        <li><span class="font-semibold text-navy">Starter, {{ product_price('email') }}/mo.</span> AI-drafted replies in your voice, scheduling with calendar sync, quotes and invoices. The CRM pre-fills quietly, ready to open on Pro. 1 mailbox, {{ product_value('allowance.email') }}.</li>
+        <li><span class="font-semibold text-navy">Pro, {{ product_price('starter') }}/mo.</span> Adds the self-filling CRM — contacts, deals, promises, follow-up sequences, customer-mood flags — plus {{ product_value('allowance.starter') }}, additional mailboxes at {{ product_value('addon.mailbox') }} each and priority support.</li>
+        <li><span class="font-semibold text-navy">Pro + Concierge, {{ product_price('concierge') }}/mo.</span> Everything in Pro, plus the Concierge — ask her anything about your business, by typing or by voice, and she drafts the card and acts once you confirm. Same allowance as Pro.</li>
       </ul>
       <p class="mt-4 text-slate-600 leading-relaxed"><span class="font-semibold text-navy">People, on every plan.</span> Your team, including people who never sign in. Choose what each person can see and do, see the app exactly as they do with "View as", and put one or several people on a job. No seat charges.</p>
       <a href="/#pricing" class="mt-6 inline-flex items-center text-sm font-semibold text-brand hover:underline">See full pricing and FAQ →</a>

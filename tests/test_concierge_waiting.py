@@ -113,10 +113,10 @@ def test_the_brain_can_list_the_cards_awaiting_approval(monkeypatch):
     assert empty["items"] == [] and empty["total"] == 0
 
 
-def test_the_approvals_tool_is_last_in_the_catalogue_and_on_both_tiers(monkeypatch):
+def test_the_approvals_tool_keeps_its_position_and_is_on_both_tiers(monkeypatch):
     from app import concierge_data
-    # LAST: the render baselines key their debt by tool position.
-    assert concierge_data.TOOLS[-1]["name"] == "list_awaiting_approval"
+    # Existing position stays fixed when a new read-only tool is appended.
+    assert concierge_data.TOOLS[16]["name"] == "list_awaiting_approval"
     for full_qa in (True, False):
         assert "list_awaiting_approval" in {t["name"] for t in concierge_data.tools_for(full_qa)}
     assert concierge_data.tool_door("list_awaiting_approval") is None

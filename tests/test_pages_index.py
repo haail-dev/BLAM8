@@ -54,6 +54,8 @@ def test_index_shape():
     for s in sections:
         for g in s["groups"]:
             assert g["access"] in pages_index.ACCESS, (s["key"], g["title"])
+            identities = [(p["route"], p["href"]) for p in g["pages"]]
+            assert len(identities) == len(set(identities)), (s["key"], g["title"])
             for p in g["pages"]:
                 # a per-record page has no link of its own but says where it opens
                 # from; a dynamic family (help topics, setups) links each member

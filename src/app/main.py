@@ -704,7 +704,7 @@ _COMPARISONS = [
      "blurb": "Podium's AI Employee answers texts and calls for US, Canadian and "
               "Australian businesses — from $399/month, and as of September 2026 we "
               "could find no UK operation. BLAM8 answers email for UK businesses "
-              "at £39–£249/month, in GBP."},
+              "at {{product:price.email}}–{{product:price.concierge}}/month, in GBP."},
     {"slug": "moneypenny", "name": "Moneypenny",
      "hook": "They answer your phone. Who answers your email?",
      "blurb": "Moneypenny answers your phone and website chat — human receptionists, "
@@ -722,11 +722,12 @@ _COMPARISONS = [
      "blurb": "HubSpot's CRM still depends on your team logging things, and its "
               "answering agent starts at Professional ($90–$100 per seat a month plus "
               "$1,500 onboarding, checked September 2026). BLAM8's CRM fills itself "
-              "in from the mail flow, on the £99/month Pro plan."},
+              "in from the mail flow, on the {{product:price.starter}}/month Pro plan."},
 ]
 
 from app.architecture import GROUPS as _ARCH_GROUPS
 from app.help_center import BY_SLUG as _HELP_BY_SLUG, TOPICS as _HELP_TOPICS
+from app import platform_public
 from app import setups as _setups
 
 _PUBLIC_PAGES = ["/", "/for-businesses", "/for-customers",
@@ -819,7 +820,7 @@ def llms_txt():
     base = templates.env.globals["base_url"]
     comparisons = "\n".join(
         f"- [BLAM8 vs {c['name']}]({base}/vs/{c['slug']}): {c['blurb']}"
-        for c in _COMPARISONS)
+        for c in platform_public.resolve_data(_COMPARISONS))
     help_topics = "\n".join(
         f"- [{t['question']}]({base}/help/{t['slug']})" for t in _HELP_TOPICS)
     setup_pages = "\n".join(
@@ -839,7 +840,7 @@ Key facts:
 - Scheduling understands real capacity — timed slots, whole days, multi-day jobs — places holds that cannot double-book, and confirms the job in the same email thread.
 - The CRM fills itself in from email: contacts, tracked fields, deals with stage and value, and promises owed in both directions. It also reads each customer's mood across the thread; frustrated customers are flagged to a human and heated threads always wait for human approval.
 - Not a chatbot wrapper — the AI proposes, business state decides. Replies are grounded in the business's own uploaded knowledge, not the model's memory. Diary holds are database records checked against real capacity, so the AI cannot double-book by being confidently wrong. Booking moves run through capacity-checked operations that refuse impossible changes and offer real alternatives. Every action the Concierge takes is a two-step proposal — the owner sees exactly what will happen and confirms — single-use, expiring, and audit-logged. Nothing is sent, moved or created on the model's say-so alone.
-- The Concierge (Pro + Concierge plan, £249/month — the only plan with it): the owner's own assistant, not a receptionist for callers or customers (the email agent answers customers on every plan). Ask and it looks it up from the inbox, CRM, diary and knowledge base ("who's in on Saturday?", "which invoices are overdue?", "what's running out?"); say what you want and it drafts an action card you confirm — draft or send an email, block or reopen days, change a stay, update a pet's (or any dependant's) details, ask for a renewal, delegate a job to someone on the team; it can also move, cancel and chase. By typing or by live hands-free voice, and the morning brief is its first message. A card you haven't answered waits and comes back rebuilt against today's data. It knows who is asking and what they may do. It also fills onboarding from a chat and turns any bad draft into a standing rule or knowledge fix.
+- The Concierge (Pro + Concierge plan, {platform_public.price('concierge')}/month — the only plan with it): the owner's own assistant, not a receptionist for callers or customers (the email agent answers customers on every plan). Ask and it looks it up from the inbox, CRM, diary and knowledge base ("who's in on Saturday?", "which invoices are overdue?", "what's running out?"); say what you want and it drafts an action card you confirm — draft or send an email, block or reopen days, change a stay, update a pet's (or any dependant's) details, ask for a renewal, delegate a job to someone on the team; it can also move, cancel and chase. By typing or by live hands-free voice, and the morning brief is its first message. A card you haven't answered waits and comes back rebuilt against today's data. It knows who is asking and what they may do. It also fills onboarding from a chat and turns any bad draft into a standing rule or knowledge fix.
 - Customer portal (invite only): your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every BLAM8 email, or a code sent to the address the business holds for them. Strangers are turned away. No customer accounts.
 - People (every plan, no per-seat charge): the business's team, including staff who never sign in; roles (owner, manager, staff, accountant) and what each person may see and do; "View as" shows the owner the app exactly as one of their people sees it; one or several people on a job (a setting).
 - Stays that change: a stay can be extended, shortened or moved — from the job page on any plan, or by asking the Concierge on Pro + Concierge. The price follows the nights, an extra night raises its own draft invoice, and shortening back cancels it.
@@ -847,7 +848,7 @@ Key facts:
 - Smart inbox labels: every email is auto-categorised on arrival into six live labels (Needs Reply, Draft Ready, Replied, Booked, FYI, Automated) that follow the job as it progresses — no rules to set up, and the Concierge reads the same labels.
 - Within its own suite the chain email → diary → job → invoice is fully connected with an audit log: invoices can be raised, emailed and chased with payment reminders.
 - Installable app: BLAM8 is a Progressive Web App on Mac, Windows, iOS and Android — no app store — with push notifications for drafts ready to approve, portal bookings and escalations.
-- Pricing (GBP, monthly, cancel any time; the free trial opens the FULL product, Concierge included, with no card to start, running 14 days or {settings.trial_email_cap} handled emails, whichever comes first): Starter £39 (AI-drafted replies + scheduling with calendar sync, quotes and invoices — 1 mailbox, 300 emails/month) · Pro £99 (adds the self-filling CRM — contacts, deals, promises, follow-up sequences, customer-mood flags — plus 750 emails/month, additional mailboxes £39 each, priority support) · Pro + Concierge £249 (everything in Pro plus the Concierge — same allowance as Pro). Starter and Pro have no Concierge. The CRM pre-fills quietly on every account — open from day one of the trial, and already populated if you upgrade to Pro later. No per-seat pricing. Bigger operations: hello@blam8.com.
+- Pricing (GBP, monthly, cancel any time; the free trial opens the FULL product, Concierge included, with no card to start, running {settings.trial_days} days or {settings.trial_email_cap} handled emails, whichever comes first): Starter {platform_public.price('email')} (AI-drafted replies + scheduling with calendar sync, quotes and invoices — 1 mailbox, 300 emails/month) · Pro {platform_public.price('starter')} (adds the self-filling CRM — contacts, deals, promises, follow-up sequences, customer-mood flags — plus 750 emails/month, additional mailboxes {platform_public.value('addon.mailbox')} each, priority support) · Pro + Concierge {platform_public.price('concierge')} (everything in Pro plus the Concierge — same allowance as Pro). Starter and Pro have no Concierge. The CRM pre-fills quietly on every account — open from day one of the trial, and already populated if you upgrade to Pro later. No per-seat pricing. Bigger operations: hello@blam8.com.
 - Sign-in is open to everyone (Microsoft or Google — passwordless OAuth). Connecting a GMAIL mailbox is invite-only while Google verification completes (Google caps unverified-app Gmail grants); Microsoft 365 / Outlook mailboxes connect instantly with no cap.
 - Auto-sent replies disclose that an AI assistant wrote them (EU AI Act, Article 50). Mailbox access is revocable OAuth consent — never a stored password. Customer data is stored in the UK and isolated per company; AI drafting uses a US sub-processor (Anthropic) under UK data-transfer safeguards.
 - Not yet available: SMS and missed-call text-back are built and being tested; they switch on when testing is done. No phone-call answering (the Concierge's voice is for the owner, not callers). No third-party app integrations beyond mail, calendar, Stripe and the accountant export.
@@ -1028,7 +1029,7 @@ async def pages_index_page(request: Request):
         is_admin = True
     except Exception:
         is_admin = False
-    sections = pages_index.build(_COMPARISONS, _HELP_TOPICS, _setups.SETUPS)
+    sections = pages_index.build(platform_public.resolve_data(_COMPARISONS), _HELP_TOPICS, _setups.SETUPS)
     return templates.TemplateResponse(request, "pages.html", {
         "sections": sections, "admin": is_admin,
         "total": pages_index.count(sections), "access_labels": pages_index.ACCESS})
@@ -1043,7 +1044,8 @@ def help_hub(request: Request):
 
 @app.get("/help/{slug}", response_class=HTMLResponse)
 def help_topic(request: Request, slug: str):
-    topic = _HELP_BY_SLUG.get(slug)
+    from app import platform_content
+    topic = next((t for t in platform_content.public_topics() if t['slug']==slug),None)
     if not topic:
         raise HTTPException(status_code=404)
     return templates.TemplateResponse(request, "help_topic.html", {"topic": topic})
@@ -1055,7 +1057,7 @@ def compare(request: Request):
     the internal-linking spine for every /vs/* page (which the footer no longer
     lists one by one). Cards render from _COMPARISONS."""
     return templates.TemplateResponse(request, "compare.html",
-                                      {"comparisons": _COMPARISONS})
+                                      {"comparisons": platform_public.resolve_data(_COMPARISONS)})
 
 
 @app.get("/vs/mailchimp", response_class=HTMLResponse)

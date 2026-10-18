@@ -64,3 +64,12 @@ def gap_title(gap) -> str:
 
 
 templates.env.filters["gap_title"] = gap_title
+
+# Shared catalogue values are resolved at render time, not copied into templates.
+from app import platform_public
+templates.env.globals.update(product_price=platform_public.price, product_value=platform_public.value,
+                             public_capabilities=platform_public.public_capabilities,
+                             product_plans=platform_public.public_plans,
+                             product_price_number=platform_public.price_number,
+                             product_commission=platform_public.commission,
+                             product_subscription_price=platform_public.subscription_price)

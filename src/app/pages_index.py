@@ -265,7 +265,6 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
                  _p("/admin/invites", "Gmail invites", "mint, track and revoke invite codes"),
                  _p("/admin/llm", "LLM calls", "every model call, grouped into exchanges"),
                  _p("/admin/llm/{call_id}", "One call", "the envelope and, when kept, the prompt", via="/admin/llm"),
-                 _p("/admin/outreach", "Outreach", "platform outreach campaigns, drafts and sends"),
                  _p("/admin/os-access", "Founding access", "the OS vetting queue"),
                  _p("/admin/partners", "Partners", "every partner and their ledger; payouts"),
                  _p("/admin/requests", "Requests & reports", "every tenant's, newest first"),
@@ -282,7 +281,7 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
 # GET routes that are not pages, with the reason. The test refuses an entry here that
 # no longer exists, so this list can't rot either.
 EXCLUDED = {
-    "/concierge/voice/gptlive/events/{session_id}": "a live event stream, not a human-facing page",
+    "/concierge/business/status/{proposal_id}": "one confirmed-action receipt, JSON",
     "/admin/": "alias of /admin",
     "/concierge/voice/gptlive/events/{session_id}": "polled JSON events for the GPT-Live screen, signed-in only",
     "/onboarding/": "alias of /onboarding",

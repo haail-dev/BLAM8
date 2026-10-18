@@ -715,6 +715,12 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
         except Exception:
             raise HTTPException(503, "Saved proposals could not be checked. Reload before trying again.") from None
     try:
+        from app import platform_help
+        if tenant is not None:
+            try:
+                tenant['_product_context'] = platform_help.runtime_context(ctx.tenant_id,ctx.client,_asker(ctx))
+            except Exception:
+                tenant['_product_context'] = None  # Unknown availability never becomes permission.
         result = await concierge.answer_help(question, history, tenant=tenant,
                                              tenant_id=ctx.tenant_id)
     except Exception:
@@ -1614,6 +1620,7 @@ def diary_shape_line(cfg: dict | None) -> str | None:
 # ghost trail — "Checking your inbox…" is honest mid-flight, "Checked your
 # inbox" is honest afterwards.
 _BUSINESS_TOOL_HINTS = {
+    "get_product_help": "Checking product help…",
     "get_inbox_overview": "Checking your inbox…",
     "search_conversations": "Searching your inbox…",
     "get_conversation": "Reading the conversation…",
@@ -1637,6 +1644,7 @@ _BUSINESS_TOOL_HINTS = {
     debrief_walk.TOOL_NAME: debrief_walk.HINT,
 }
 _BUSINESS_TOOL_LABELS = {
+    "get_product_help": "Checked product help",
     "get_inbox_overview": "Checked your inbox",
     "search_conversations": "Searched your inbox",
     "get_conversation": "Read the conversation",

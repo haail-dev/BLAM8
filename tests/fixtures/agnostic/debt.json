@@ -1,7 +1,8 @@
 {
   "reasons": [
     "Current shared trade wording or context; remove or trace to explicitly applied tenant data in this closure step. No exemption.",
-    "Exact CSS -webkit-touch-callout property suppresses the browser touch menu; it is not a business service or policy. Reviewed after landing-launcher markup replacement; detector remains unchanged."
+    "Exact CSS -webkit-touch-callout property suppresses the browser touch menu; it is not a business service or policy. Reviewed after landing-launcher markup replacement; detector remains unchanged.",
+    "Reviewed product-content port: existing marketing examples moved from help/KB Python literals into the shared article JSON, and llms.txt now resolves catalogue prices. These exact industry words remain tracked debt, not business configuration or an exemption; original U01/S1b ownership retained."
   ],
   "entries": [
     {
@@ -3485,54 +3486,6 @@
       "reason": 0
     },
     {
-      "path": "src/app/help_center.py",
-      "line": 57,
-      "kind": "string",
-      "fingerprint": "1ed9eb284e316b1ccfb5d539d96593f1e052d2fb4907f3764c23e21d4a1d9294",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"For haulage & logistics\"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/help_center.py",
-      "line": 243,
-      "kind": "string",
-      "fingerprint": "1ed9eb284e316b1ccfb5d539d96593f1e052d2fb4907f3764c23e21d4a1d9294",
-      "scope": "<module>",
-      "occurrence": 1,
-      "excerpt": "\"For haulage & logistics\"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/help_center.py",
-      "line": 109,
-      "kind": "string",
-      "fingerprint": "3c64632c04f90d93cdc0c79e29e468f81c42088878138c0897db7b6b739a1811",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"BLAM8 is not a workflow-integration platform — if you need app-to-app plumbing, \"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/help_center.py",
-      "line": 13,
-      "kind": "string",
-      "fingerprint": "cb86ac32d59c3117e946b614f3c84c69f0cea2479b410fdd13a788953f5efedc",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "- plain text paragraphs only (they feed JSON-LD verbatim; links go in",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
       "path": "src/app/industry_lingo.py",
       "line": 30,
       "kind": "comment",
@@ -4944,18 +4897,6 @@
       "scope": "<module>",
       "occurrence": 0,
       "excerpt": "\"Buy a worker, or build the plumbing?\"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/main.py",
-      "line": 739,
-      "kind": "f-string",
-      "fingerprint": "a0a86eb16d77c57d5a96e2d39461553ad65e2b4cfb47c4ae652691b7286f1ab6",
-      "scope": "llms_txt",
-      "occurrence": 0,
-      "excerpt": "# BLAM8 > BLAM8 is the inbox that books the job and fills the CRM, for UK small businesses. It reads",
       "owner": "U01",
       "closure_step": "S1b",
       "reason": 0
@@ -6888,78 +6829,6 @@
       "scope": "<module>",
       "occurrence": 0,
       "excerpt": "\"Pallet capacity tracking\"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/plans.py",
-      "line": 528,
-      "kind": "string",
-      "fingerprint": "66550ea056162a215dfde982d83b0e48d26a85ae999a70986503e6671f480910",
-      "scope": "pricing_blurb",
-      "occurrence": 0,
-      "excerpt": "\"- Bigger operations (multiple sites or depots, franchise groups, custom \"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/platform_kb_content.py",
-      "line": 69,
-      "kind": "string",
-      "fingerprint": "10571794926db29a61e8a99a172fa6cf01f96a1b0fefad7558772e909ad7f420",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"For hauliers and distribution, Field OS · Transport models your \"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/platform_kb_content.py",
-      "line": 75,
-      "kind": "string",
-      "fingerprint": "37bd000057cf352c490d60611ff5f460ebb668783216709d3b07a1ca0c6bc089",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"only; how you organise vehicles stays internal. IMPORTANT: Field OS and the \"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/platform_kb_content.py",
-      "line": 121,
-      "kind": "string",
-      "fingerprint": "58ec4dc3d44530c68232eb0131937736ab5ce5298cfdd6e478377c1f09859c2a",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"separate depot or branch inboxes — each with its own persona and rules while \"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/platform_kb_content.py",
-      "line": 70,
-      "kind": "string",
-      "fingerprint": "8565b474c47c401ae2f719e2316830093f51a5076cb8f52ef791a70092c328a5",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"branches and vehicles (pallet spaces and weight limits) and books each order \"",
-      "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/platform_kb_content.py",
-      "line": 71,
-      "kind": "string",
-      "fingerprint": "c65867ab3f4cd4aca9d50cce56ff021df3d4f8dd8cfddeccb3071993d3086268",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": "\"onto a specific vehicle-day with real capacity enforcement — racing emails can't \"",
       "owner": "U01",
       "closure_step": "S1b",
       "reason": 0
@@ -19565,18 +19434,6 @@
       "reason": 0
     },
     {
-      "path": "render/platform-data/$[0].system[0].text",
-      "line": 116,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
       "path": "render/platform-data/$[0].system[1].text",
       "line": 4,
       "kind": "render",
@@ -19589,18 +19446,6 @@
       "reason": 0
     },
     {
-      "path": "render/platform-help/$[0].system[0].text",
-      "line": 229,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
       "path": "render/platform-help/$[0].system[1].text",
       "line": 4,
       "kind": "render",
@@ -19608,18 +19453,6 @@
       "scope": "<render-value>",
       "occurrence": 0,
       "excerpt": "Industry (as they chose it): farrier",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "render/platform-help/$[0].system[1].text",
-      "line": 15,
-      "kind": "render",
-      "fingerprint": "100f69aa7622b8b86303a80170c658002287e9f9e5ce4485b306199e1ae8b6a7",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "Their business type wasn't an exact match — ask what they do, then use the closest of these recipes:",
       "owner": "U19",
       "closure_step": "S1b",
       "reason": 0
@@ -19633,18 +19466,6 @@
       "occurrence": 0,
       "excerpt": "recruitment",
       "owner": "U01",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "render/platform-industry/$[0].system[0].text",
-      "line": 116,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
-      "owner": "U19",
       "closure_step": "S1b",
       "reason": 0
     },
@@ -19673,30 +19494,6 @@
       "reason": 0
     },
     {
-      "path": "render/platform-interview/$[0].system[0].text",
-      "line": 116,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "render/platform-knowledge/$[0].system[0].text",
-      "line": 116,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
       "path": "render/platform-knowledge/$[0].system[1].text",
       "line": 4,
       "kind": "render",
@@ -19709,18 +19506,6 @@
       "reason": 0
     },
     {
-      "path": "render/platform-mailbox/$[0].system[0].text",
-      "line": 116,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
       "path": "render/platform-mailbox/$[0].system[1].text",
       "line": 4,
       "kind": "render",
@@ -19728,18 +19513,6 @@
       "scope": "<render-value>",
       "occurrence": 0,
       "excerpt": "Industry (as they chose it): farrier",
-      "owner": "U19",
-      "closure_step": "S1b",
-      "reason": 0
-    },
-    {
-      "path": "render/platform-voice/$[0].system[0].text",
-      "line": 116,
-      "kind": "render",
-      "fingerprint": "cf3dd564a578c8c14499728b312aa7530fcaa229cf0c42ec7e533e238225407f",
-      "scope": "<render-value>",
-      "occurrence": 0,
-      "excerpt": "- Bigger operations (multiple sites or depots, franchise groups, custom volumes): not sold self-serv",
       "owner": "U19",
       "closure_step": "S1b",
       "reason": 0
@@ -21111,6 +20884,78 @@
       "owner": "U21",
       "closure_step": "S4b",
       "reason": 1
+    },
+    {
+      "path": "src/app/main.py",
+      "line": 831,
+      "kind": "f-string",
+      "fingerprint": "606f60b8c1f2a1703834ba27d8ec4cb73c789473ad40ff7b4ab9ef3d563b1d89",
+      "scope": "llms_txt",
+      "occurrence": 0,
+      "excerpt": "# BLAM8\n\n> BLAM8 is the inbox that books the job and fills the CRM, for UK small businesses. It reads every customer email, replies in the business's own voice ",
+      "owner": "U01",
+      "closure_step": "S1b",
+      "reason": 2
+    },
+    {
+      "path": "src/app/platform_articles.json",
+      "line": 79,
+      "kind": "asset",
+      "fingerprint": "1401b95f8bdf486bf1ef0ebce5ed7a7395a7f5a2d9795e8c9632a8a399cfc7e6",
+      "scope": "<module>",
+      "occurrence": 0,
+      "excerpt": "      \"A single BLAM8 account can run many mailboxes — for example orders@, sales@ and separate depot or branch inboxes — each with its own persona and rules wh",
+      "owner": "U01",
+      "closure_step": "S1b",
+      "reason": 2
+    },
+    {
+      "path": "src/app/platform_articles.json",
+      "line": 285,
+      "kind": "asset",
+      "fingerprint": "2d26c76908f8d17eae89a83167799cf704c178c3de03c491b28753150443eb4f",
+      "scope": "<module>",
+      "occurrence": 0,
+      "excerpt": "        \"For haulage & logistics\",",
+      "owner": "U01",
+      "closure_step": "S1b",
+      "reason": 2
+    },
+    {
+      "path": "src/app/platform_articles.json",
+      "line": 489,
+      "kind": "asset",
+      "fingerprint": "2d26c76908f8d17eae89a83167799cf704c178c3de03c491b28753150443eb4f",
+      "scope": "<module>",
+      "occurrence": 1,
+      "excerpt": "        \"For haulage & logistics\",",
+      "owner": "U01",
+      "closure_step": "S1b",
+      "reason": 2
+    },
+    {
+      "path": "src/app/platform_articles.json",
+      "line": 340,
+      "kind": "asset",
+      "fingerprint": "e2ffa4894607ac5481fd93752b421c2b9ab7b5557c8b6de896a11a779a8e18a3",
+      "scope": "<module>",
+      "occurrence": 0,
+      "excerpt": "      \"Deliberately not: Notion, Slack, third-party CRMs, or build-your-own pipelines. BLAM8 is not a workflow-integration platform — if you need app-to-app plu",
+      "owner": "U01",
+      "closure_step": "S1b",
+      "reason": 2
+    },
+    {
+      "path": "src/app/platform_articles.json",
+      "line": 47,
+      "kind": "asset",
+      "fingerprint": "edda5f1ae908dad0d347d85a0e998842ffb7fba250d92f25354165571c76bac0",
+      "scope": "<module>",
+      "occurrence": 0,
+      "excerpt": "      \"For hauliers and distribution, Field OS · Transport models your branches and vehicles (pallet spaces and weight limits) and books each order onto a speci",
+      "owner": "U01",
+      "closure_step": "S1b",
+      "reason": 2
     }
   ]
 }

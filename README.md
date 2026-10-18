@@ -25,6 +25,11 @@ Run the documented maintenance commands from the repository root.
 
 ## Verification
 
+Product discovery, typed/voice help and public commercial values share a local,
+versioned content catalogue. See [product knowledge](docs/product-knowledge.md)
+for source ownership, availability qualifications and refresh preparation.
+Discovery describes existing behavior; it does not enable features or execute work.
+
 Node.js is required by the JavaScript replay tests. For database integration
 tests, put PostgreSQL's `initdb`, `pg_ctl`, and `postgres` binaries on `PATH`.
 The tests create their own disposable database clusters.

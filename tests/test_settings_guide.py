@@ -77,7 +77,7 @@ def test_help_prompt_injects_customer_and_guide():
     guide = sg.guide_for(tenant["industry"], tenant["brief"], {})
     p = build_help_prompt(tenant=tenant, settings_guide=guide)
     assert "<your_customer>" in p and "Happy Tails" in p and "boarding kennels" in p
-    assert "<settings_guide>" in p and "Overnight stays" in p
+    assert "<settings_guide>" not in p and "never fill a default" in p
     assert "diary_settings:" in p                      # the new nav destination is offered
     # bare prompt (no tenant) is unchanged — no customer/guide blocks
     bare = build_help_prompt()

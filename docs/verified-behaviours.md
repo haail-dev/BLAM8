@@ -1,5 +1,20 @@
 # Verified behaviours — what is PROVEN to work, and what guards it
 
+## Product knowledge: local offline verification (18 October 2026)
+
+The product evidence map, discovery adapters, local versioned articles, public
+commercial values and refresh preparation are checked offline. No production
+index publication or feature enablement is claimed. See [product knowledge](product-knowledge.md).
+
+| Behaviour | Guard |
+|---|---|
+| Evidence associations and route inventory stay accounted for | `tests/test_product_inventory.py`, `tests/test_pages_index.py` |
+| Discovery preserves module, preview, permission and confirmation distinctions | `tests/test_platform_capabilities.py` |
+| Typed/voice product help shares local sources and remains separate from tenant knowledge | `tests/test_platform_help.py` |
+| Stable topic IDs reconcile versions; foreign, partial or changed receipts fail verification | `tests/test_platform_content.py` |
+| Public values and shared help follow canonical sources | `tests/test_platform_public.py` |
+
+
 ## Scheduled plan: local verification, awaiting rollout (10 October 2026)
 
 These are isolated checks, not production execution or delivery claims. See [scheduled-plan operations](scheduled-plan-operations.md).

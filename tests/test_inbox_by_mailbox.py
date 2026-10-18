@@ -155,7 +155,7 @@ def test_the_inbox_tools_are_handed_the_person():
     from app import concierge_data
     assert concierge_data._MEMBER_AWARE == frozenset(
         ("get_inbox_overview", "search_conversations", "get_conversation",
-         "list_bookings",   # narrowed like the Diary page (people plan step 4)
+         "list_bookings", "get_product_help",   # narrowed like the Diary page (people plan step 4)
          "list_awaiting_approval"))   # the asker's own cards, not a mailbox lens
     src = _read("src/app/concierge_data.py")
     assert "if name in _MEMBER_AWARE else" in src
