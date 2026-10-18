@@ -1365,6 +1365,13 @@
         reviewLink = data.review_link;
       }
       if (!reply || !String(reply).trim()) throw new Error("empty reply");
+      if (ONB_STEP === "interview") {
+        reply += "\n\nForm edits are for review and are not saved until you submit this form. "
+          + "This chat turn has not changed sending settings. "
+          + (heldFor.length
+            ? "The items listed as kept for later below were recorded as suggestions, not applied settings or saved Knowledge."
+            : "No new items were recorded as kept for later in this turn.");
+      }
     } catch (e) {
       spoke = false;
       reply = "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";

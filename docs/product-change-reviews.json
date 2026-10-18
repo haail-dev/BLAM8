@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim.",
   "capabilities": {
     "email": {
       "signature": "44700171d78bfa6976c57c455d9fb7a94ddbcdf80220ea40ace96be8bd52cd77",
@@ -616,43 +616,50 @@
       }
     },
     "product.help": {
-      "signature": "ebc2c3c8d7aead6386f50f5b2d8cecf62f5e6270caf907903ea49c85160a98ab",
+      "signature": "90a2eb86e9897942c2c89459e0d6722e0ba44cf7439542d987078fadf1ee03ce",
       "surfaces": {
         "/help": {
-          "disposition": "generated",
-          "reason": "Product help and setup proposals: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Live Assistant spacing and mobile height resizing are preserved from source 10243e27; presentation changes do not alter help answers or permissions.",
+          "disposition": "reviewed_unchanged",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract.",
           "evidence": [
-            "src/app/help_center.py",
-            "src/app/platform_content.py",
-            "tests/test_platform_public.py",
-            "docs/modules/module-concierge.md"
+            "docs/modules/module-concierge.md",
+            "docs/onboarding-interview-capture.md",
+            "tests/test_onboarding_capture.py",
+            "src/app/concierge.py",
+            "src/app/static/concierge.js"
           ]
         },
         "/pages": {
-          "disposition": "updated",
-          "reason": "Product help and setup proposals: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor. Live Assistant spacing and mobile height resizing are preserved from source 10243e27; presentation changes do not alter help answers or permissions.",
+          "disposition": "reviewed_unchanged",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change.",
           "evidence": [
-            "src/app/pages_index.py",
-            "tests/test_pages_index.py",
-            "docs/modules/module-concierge.md"
+            "docs/modules/module-concierge.md",
+            "docs/onboarding-interview-capture.md",
+            "tests/test_onboarding_capture.py",
+            "src/app/concierge.py",
+            "src/app/static/concierge.js"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Product help and setup proposals: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Live Assistant spacing and mobile height resizing are preserved from source 10243e27; presentation changes do not alter help answers or permissions.",
+          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings.",
           "evidence": [
-            "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/modules/module-concierge.md"
+            "docs/modules/module-concierge.md",
+            "docs/onboarding-interview-capture.md",
+            "tests/test_onboarding_capture.py",
+            "src/app/concierge.py",
+            "src/app/static/concierge.js"
           ]
         },
         "docs/product-knowledge.md": {
-          "disposition": "updated",
-          "reason": "Product help and setup proposals: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Live Assistant spacing and mobile height resizing are preserved from source 10243e27; presentation changes do not alter help answers or permissions.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence.",
           "evidence": [
-            "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/modules/module-concierge.md"
+            "docs/modules/module-concierge.md",
+            "docs/onboarding-interview-capture.md",
+            "tests/test_onboarding_capture.py",
+            "src/app/concierge.py",
+            "src/app/static/concierge.js"
           ]
         }
       }

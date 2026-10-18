@@ -477,8 +477,8 @@ async def scenario_answer(question: str):
 # The authenticated mode: drive the EXISTING onboarding wizard. The concierge
 # fills the visible fields from the conversation; the user still clicks the real
 # Continue button (the existing CSRF-protected POST stays the only write path).
-# So this mode WRITES NOTHING server-side — it turns a chat into field values the
-# frontend mirrors into the real form. Field names below match the wizard
+# Form values are suggestions only; the route separately records supported
+# held-for-later suggestions. Field names below match the wizard
 # templates 1:1 (onboarding/industry.html, voice.html).
 ONBOARDING_STEPS = {
     # The interview-first front door: the assistant asks what the business does
@@ -488,13 +488,31 @@ ONBOARDING_STEPS = {
         "title": "about your business",
         "guidance": (
             (
-                "Interview them, ONE question at a time: first what the company does and who its customers "
+                "Capture EVERYTHING already supplied in the current message, conversation and form before "
+                "asking a question. Map business facts and who they serve to `business_brief`; map work they "
+                "want handled to `goals` in the SAME reply, even when both arrive in one message. Goals must "
+                "not appear only in the brief. Keep human-review requirements, limits on delegated work and "
+                "team-owned responsibilities with the goals; these describe intent, not applied controls. "
+                "Preserve material qualifiers in summaries, including fictional/test-only or demo scope, "
+                "location, exclusions and limits; do not drop them to meet a sentence target. "
+                "Once About you is sufficient, do not require extra scheduling, CRM, booking-subject or "
+                "optional website details. Ask only for missing essentials; optional details can wait. "
+                "If they ask to stop for review, fill the supplied fields, set ready_to_advance FALSE, "
+                "acknowledge the pause and do not ask another question or urge Continue. A pause, a blank "
+                "banner, no navigation or no record creation is a conversational instruction, not a "
+                "business setting to store. Do not infer an operating system or integration. "
+                "Business rules for a later step may use existing supported `held` fields only when "
+                "appropriate and not forbidden by the user; never invent a held field or put rules in "
+                "writing-style fields. Do not claim sending controls were changed or that a held Knowledge "
+                "suggestion is saved Knowledge. The UI reports actual save/held status. "
+                "When essentials are missing, interview them, ONE question at a time: first what the company does and who its customers "
                 "are, then what they'd like email, scheduling and CRM to take off their plate. Weave in the "
                 "business name early — it's shown to THEIR customers on the booking portal and in replies, so "
                 "if they mention a trading name, fill business_name with it exactly as they wrote it. Fill the "
                 "form as you learn: business_brief and goals in their own words. Put their own description "
                 "of what they do in industry, preserving their wording. Do not map it to a category or infer "
-                "settings from it. Leave it blank until they answer. One more question, once you know what "
+                "settings from it. Leave it blank until they answer. If further booking detail is needed "
+                "and they have not asked to pause, ask once you know what "
                 "they do: is a booking "
                 "about something that belongs to the customer — a person, item or other named subject? If yes, "
                 "put it in business_brief in their words (including whether each customer may have one or "
@@ -711,6 +729,15 @@ def _onboarding_sections(step: str, current: dict | None = None, coverage: dict 
     """(fixed for the step, changes per turn) — the two halves of the prompt."""
     from app.context_version import RUNTIME_TEXT_VERSION
     spec = ONBOARDING_STEPS[step]
+    reply_guidance = (
+        "respect a request to pause for review: do not ask another question or urge Continue. "
+        "Pausing is a supported workflow choice within these rules. Otherwise, when the essentials "
+        "are captured, invite them to review and submit the form when they choose. "
+        if step == "interview" else
+        "ask them to check it and press the step's button — Continue, or Next "
+        "on the last step, which carries on into the app's tuning steps (or "
+        "tell you what to change). "
+    )
     sections = [
         f"Context version: {RUNTIME_TEXT_VERSION}",
         "You are the website assistant for the product described in the facts "
@@ -725,9 +752,7 @@ def _onboarding_sections(step: str, current: dict | None = None, coverage: dict 
         "haven't given it, leave that field an empty string — never invent a "
         "business name, sector, sign-off or any other detail.\n"
         "2. Put your spoken message in `reply`: briefly say what you filled in and "
-        "ask them to check it and press the step's button — Continue, or Next "
-        "on the last step, which carries on into the app's tuning steps (or "
-        "tell you what to change). Keep it short and warm.\n"
+        f"{reply_guidance}Keep it short and warm.\n"
         "3. Set `ready_to_advance` true only when this step's essentials are "
         "captured and the customer seems happy to move on.\n"
         "4. You may also answer general questions about the product from the facts "
