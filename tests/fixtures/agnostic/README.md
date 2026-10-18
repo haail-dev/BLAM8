@@ -213,3 +213,30 @@ PR #109 had replaced three launcher markup/comment occurrences with one inline C
 remaining exact property is recorded with its own browser-menu explanation, owner and
 closure step; it is not a business callout rule. The detector, vocabulary and file scope
 are unchanged. This is a review of that one CSS occurrence, not a word/file exemption.
+
+## Website source capture — 18 October 2026
+
+Only `extractor-website` changes: the prompt requests separate exact quotations
+for each note clause, all contributing pages, material non-main qualifications,
+and questions only for absent source detail. Source booking routes are preserved
+instead of assuming that import authorises replacement. The sources schema adds the exact
+note `claim`. Replacing precisely the system prompt and schema in the complete
+candidate with the base values reproduces the previous record byte for byte.
+The obsolete comment describing that booking-route substitution is removed with
+its exact source-debt occurrence. No detector, vocabulary or scan scope changes.
+The product evidence map now includes the capture/fidelity/evidence-template
+sources and their guards. The full `platform-help` comparison changes only the
+`content_version` and `definition_version` fields inside the retrieved catalogue
+JSON; replacing those fields restores the base request exactly. Its visible
+answer context, permissions, actions and selected articles are unchanged.
+
+## Pending Knowledge workspace — 18 October 2026
+
+`platform-knowledge` changes only the step guidance: it describes actual source,
+overlap and note decisions, separate draft application/final approval, and asks
+only for missing facts without presupposing a universal rule. Replacing exactly
+that guidance in the complete new request reproduces the base snapshot. The
+Knowledge source-correction model uses its own strict schema/contract tests.
+`platform-help` again changes only the two catalogue version fields after the
+reviewed guide and source associations change. Full request comparisons retain
+the same selected articles, permissions and actions. No detector/debt changes.

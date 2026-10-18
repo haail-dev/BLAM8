@@ -1,11 +1,14 @@
-<form method="post" action="/onboarding/knowledge/review/{{ review.id }}" class="mb-5 space-y-4 rounded-xl border border-slate-200 bg-white p-4" data-knowledge-review="{{ review.id }}">
+<form id="review-{{ review.id }}" method="post" action="/onboarding/knowledge/review/{{ review.id }}" class="mb-5 space-y-4 rounded-xl border border-slate-200 bg-white p-4" data-knowledge-review="{{ review.id }}" data-content-version="{{ review.signatures.content }}" data-evidence-version="{{ review.signatures.evidence }}" data-context-version="{{ review.signatures.context }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
   <input type="hidden" name="version" value="{{ review.version }}">
   <h2 class="font-semibold text-navy">Review {{ review.payload.origin }}</h2>
+  <div class="rounded-lg bg-slate-50 p-3 text-sm" data-review-overview><p>At last check: {{ review.summary.notes }} pending notes · {{ review.summary.decided }} decisions selected · {{ review.summary.unresolved }} source statements need a decision · {{ review.summary.overlaps }} possible overlaps.</p><p class="mt-1">First resolve source gaps, then check each note and overlap. Check changes and overlaps refreshes these counts. Unanswered details can stay unknown. Nothing is saved until you choose Save reviewed decisions.</p></div>
+  <p data-review-status role="status" aria-live="polite" class="text-sm text-slate-700"></p>
   {% if review.source_review_enabled and review.payload.source_snapshot %}
   <section data-source-corrections class="space-y-2 rounded-lg border border-slate-200 p-3">
     <label class="block text-sm">Ask for source-backed corrections<input data-source-question maxlength="4000" class="mt-1 w-full rounded border border-slate-300 p-2" placeholder="What should I check against the website?"></label>
     <button type="button" data-source-ask class="rounded border border-slate-300 px-3 py-2 text-sm">Review drafts against source</button>
+    <button type="button" data-source-select class="rounded border border-slate-300 px-3 py-2 text-sm">Use this batch with Assistant</button>
     <p data-source-status role="status" class="text-sm"></p>
     <div data-source-preview class="space-y-2"></div>
   </section>
@@ -13,17 +16,18 @@
   <p class="text-xs text-slate-500">Nothing is selected automatically. Overlaps are candidates, not proof of a duplicate. Check wording, figures and source caveats. Merging combines the selected texts and preserves both sources; review the combined preview before saving. Saved notes change only when you explicitly choose that merge.</p>
   {% if review.source_view.units %}{% include "_knowledge_source_coverage.html" %}{% elif review.payload.origin.startswith('Website') %}<p class="text-xs text-amber-800">No source-statement inventory was captured for this older draft. Reread the site to check source completeness; citations alone do not establish it.</p>{% endif %}
   {% for n in review.entries %}
-  <section class="space-y-2 rounded-lg border border-slate-200 p-3" data-draft="{{ n.id }}">
+  <details class="space-y-2 rounded-lg border border-slate-200 p-3" data-draft="{{ n.id }}">
+    <summary class="cursor-pointer text-sm font-semibold">{{ loop.index }}. {{ n.label }} · {{ review.form.get('action_'+n.id,'Decision needed')|replace('_',' ') }}{% if n.matches %} · overlap to review{% endif %}</summary>
     <label class="block text-sm font-medium">Label<input name="label_{{ n.id }}" value="{{ n.label }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2"></label>
     <label class="block text-sm">Draft<textarea name="content_{{ n.id }}" rows="5" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">{{ n.content }}</textarea></label>
     {% if n.combined != n.content %}<details open class="text-xs"><summary>Combined preview — check for contradictions</summary><p class="mt-1 whitespace-pre-wrap break-words">{{ n.combined }}</p></details>{% endif %}
-    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Source and evidence</summary>{% for p in n.preview_provenance %}<p class="mt-1 whitespace-pre-wrap break-words">{{ p.source }}{% if p.excerpt %} — {{ p.excerpt }}{% endif %}</p>{% endfor %}</details>
+    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Source and evidence</summary>{% for p in n.preview_provenance %}{% if p.claim %}<p class="mt-1 whitespace-pre-wrap break-words">Draft clause: {{ p.claim }}</p>{% endif %}<p class="mt-1 whitespace-pre-wrap break-words">{{ p.source }}{% if p.excerpt %} — {{ p.excerpt }}{% endif %}</p>{% endfor %}</details>
     {% if n.content_segments %}<details class="text-xs text-slate-600"><summary>Who supplied this wording</summary>{% for part in n.content_segments %}<p class="mt-1 whitespace-pre-wrap break-words">{{ 'Owner wording' if part.kind == 'owner_said' else ('Website-derived wording' if part.kind == 'owner_site' else 'Existing wording — authorship not recorded') }}: {{ part.text }}</p>{% endfor %}</details>{% endif %}
     {% for m in n.matches %}
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs" data-duplicate-candidate>
       <p class="font-semibold">Possible overlap: {{ m.label }} ({{ m.kind }})</p>
-      <p class="mt-1">{{ m.reason }}. Shared words: {{ m.overlap | join(', ') }}</p>
-      <p class="mt-1 whitespace-pre-wrap break-words">{{ m.excerpt }}</p>
+      <p class="mt-1">{{ m.reason }}. This check does not establish contradiction or complete semantic coverage.</p>
+      {% if m.exact_passages %}{% for passage in m.exact_passages %}<blockquote class="mt-1 whitespace-pre-wrap break-words">{{ passage }}</blockquote>{% endfor %}{% else %}<p class="mt-1 whitespace-pre-wrap break-words">{{ m.excerpt }}</p>{% endif %}
       {% for p in m.provenance or [] %}<p class="mt-1">Source: {{ p.source }}</p>{% endfor %}
       <label class="mt-2 block"><input type="checkbox" name="match_{{ m.key }}" value="keep_both"{% if review.form.get("match_"+m.key)=="keep_both" %} checked{% endif %}> I reviewed this match: keep both intentionally.</label>
     </div>
@@ -33,9 +37,9 @@
       {% for target in review.entries if target.id != n.id and target.mailbox_id == n.mailbox_id %}<option value="merge_pending:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_pending:'+target.id %} selected{% endif %}>Merge into retained draft: {{ target.label }}</option>{% endfor %}
       {% for target in n.merge_options %}<option value="merge_saved:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_saved:'+target.id %} selected{% endif %}>Merge into saved note: {{ target.label }}</option>{% endfor %}
     </select></label>
-  </section>
+  </details>
   {% endfor %}
-  <details class="rounded-lg border border-slate-200 p-3" open>
+  <details class="rounded-lg border border-slate-200 p-3">
     <summary class="cursor-pointer font-semibold text-sm">Unanswered details and topic decisions</summary>
     <p class="mt-2 text-xs text-slate-500">These are questions to resolve, not inferred rules. Leave unknown when you do not know. Answers and explicit not-applicable decisions are saved only when you approve this review.</p>
     {% for t in review.coverage.topics %}

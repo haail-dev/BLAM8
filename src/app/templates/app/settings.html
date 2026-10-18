@@ -565,6 +565,14 @@
         <textarea id="business_brief" name="business_brief" rows="3" class="{{ field }}" placeholder="Describe what you do and who your customers are…">{{ cfg.business_brief or '' }}</textarea>
       </div>
 
+      {% if cfg.goals %}
+      <div id="recorded-goals">
+        <h3 class="{{ label }}">Your recorded goals</h3>
+        <p class="whitespace-pre-wrap text-sm text-slate-700">{{ cfg.goals }}</p>
+        <p class="{{ help }}">Used as context for drafts and Assistant answers. Recording a goal does not apply a setting or restrict diary actions. Review <a href="#sending-mode" class="underline">How replies go out</a> for drafting and sending controls. “Never do” is writing guidance; it does not disable tools.</p>
+      </div>
+      {% endif %}
+
       <div>
         <label class="{{ label }}" for="agent_name">What the agent calls itself</label>
         <p class="{{ help }}">e.g. “the office team” or “Sarah from the office”. Leave blank to stay neutral.</p>
@@ -622,7 +630,7 @@
 
       <div>
         <label class="{{ label }}" for="never_do">Never do</label>
-        <p class="{{ help }}">Things the agent must never promise or say.</p>
+        <p class="{{ help }}">Writing guidance about what the agent should not promise or say. This does not disable tools or change drafting and sending controls.</p>
         <textarea id="never_do" name="never_do" rows="3" class="{{ field }}" placeholder="Never quote a firm price&#10;Never confirm a delivery date without ops sign-off">{{ cfg.never_do or '' }}</textarea>
       </div>
 

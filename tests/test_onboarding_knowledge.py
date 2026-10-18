@@ -4,7 +4,8 @@ The wizard's Continue used to be a bare link, so a typed-but-not-Added note was
 silently discarded on the way out: prod showed ZERO knowledge_chunks for the
 reviewer's tenant. The fix routes Continue through the note form (then=continue)
 and re-renders errors with the note intact. These pin that contract end-to-end:
-type note -> Continue -> saved -> visible on /app/knowledge.
+type note -> Continue preserves it -> Review note stages it -> final admission
+is separate from both actions.
 
 Run: python -m pytest tests/test_onboarding_knowledge.py -q
 """
@@ -63,10 +64,11 @@ def _app_page_env(monkeypatch):
     monkeypatch.setattr(dashboard.db, "is_enterprise", lambda *a, **k: False)
 
 
-# ── the wizard's Continue saves a typed note (the reviewer's data loss) ──────
+# ── Continue preserves typed notes without silently staging them ────────────
 
 # Knowledge is the wizard's LAST step since 2026-08-02 (the live-data step is
-# off-flow): Finish saves any typed note, marks onboarded, and lands in the app.
+# off-flow). Typed notes require Review note; empty Continue can finish only
+# after an explicit decision about any pending drafts.
 def test_continue_with_typed_note_requires_review_before_finishing(client, store, monkeypatch, review_store):
     done = []
     monkeypatch.setattr(db, "set_onboarded", lambda tid, client=None: done.append(tid))
@@ -75,10 +77,10 @@ def test_continue_with_typed_note_requires_review_before_finishing(client, store
     monkeypatch.setattr(db, "upsert_tenant_config", lambda *a, **k: None)
     r = client.post("/onboarding/knowledge/text", data={**NOTE, "then": "continue"},
                     follow_redirects=False)
-    assert r.status_code == 303
-    assert "/knowledge/review/" in r.headers["location"]
+    assert r.status_code == 200 and 'Your pasted note is unsaved' in r.text
+    assert NOTE['content'] in r.text
     assert done == [] and store == []
-    assert review_store.rows[-1]["payload"]["entries"][0]["content"] == NOTE["content"]
+    assert review_store.rows==[]
 
 
 def test_finish_with_an_empty_box_just_completes(client, store, monkeypatch):

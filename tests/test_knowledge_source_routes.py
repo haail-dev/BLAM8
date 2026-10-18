@@ -68,10 +68,12 @@ def test_csrf_is_enforced(source_client):
     assert client.post(url(row), json={'version':'v1','question':'Review'}).status_code == 403
 
 
-def test_continue_does_not_stage_unsaved_note_and_requires_explicit_pending_choice(source_client, monkeypatch):
+@pytest.mark.parametrize('enabled',[True,False])
+def test_continue_does_not_stage_unsaved_note_and_requires_explicit_pending_choice(source_client, monkeypatch,enabled):
     client, row, evidence, context, calls, _ = source_client
     monkeypatch.setattr(db, 'list_knowledge_sources', lambda *a, **k: [])
     monkeypatch.setattr(kb, 'is_configured', lambda: True)
+    monkeypatch.setattr(routes.settings,'knowledge_source_review_enabled',enabled)
     monkeypatch.setattr(knowledge_review, 'stage', lambda *a, **k: pytest.fail('Continue must not stage text'))
     from fastapi.responses import RedirectResponse
     monkeypatch.setattr(onboarding, '_finish', lambda ctx: RedirectResponse('/finished', status_code=303))

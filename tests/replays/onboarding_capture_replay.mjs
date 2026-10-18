@@ -41,7 +41,7 @@ for (const [step, held, fails] of [
   assert.equal(spoke, !fails);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, '/concierge/onboard');
-  assert(!events.some(e => e[0] === 'continue'));
+  assert(events.some(e => e[0] === 'continue')); // availability refresh is independent of model advance=false
   assert.equal(log[0].content, bubbles[0].text);
   if (fails) {
     assert(Object.values(elements).every(el => el.value === ''));

@@ -321,16 +321,6 @@ async def request_google_access(email: str = Form(""), message: str = Form(""),
     return RedirectResponse(f"{nxt}?gmail=requested", status_code=303)
 
 
-def _spawn_backlog(tenant_id: str, conn_id: str) -> None:
-    """Kick off app/backlog.import_recent without holding the callback. A
-    loop that cannot schedule (tests, a sync context) just skips it."""
-    try:
-        from app import backlog
-        backlog.start_import(tenant_id, conn_id)
-    except Exception:
-        logging.getLogger("blautom8.oauth").warning("backlog import not started", exc_info=True)
-
-
 _BACKLOG_TASKS: set = set()   # strong refs so a running import is never garbage-collected
 
 
@@ -427,10 +417,7 @@ async def callback(request: Request):
         db.set_subscription(conn_id, sub["id"], sub["expirationDateTime"])
     except Exception:
         pass
-    # The recent backlog comes in behind the redirect — filed, never drafted
-    # (src/app/backlog.py; Kris 2026-09-13: an empty inbox gave nobody anything to
-    # ignore). Detached: the connect stands whatever happens to it.
-    _spawn_backlog(tenant_id, conn_id)
+    # Historical import is a separate owner choice after connection.
 
     # Mid-onboarding? Return to the wizard so they continue the guided setup.
     # Voice auto-learning is OFFERED (opt-in) at the voice step — deliberately
@@ -567,10 +554,7 @@ async def google_callback(request: Request):
                     conn_id, datetime.fromtimestamp(exp_ms / 1000, tz=timezone.utc).isoformat())
         except Exception:
             logging.getLogger("blautom8.oauth").warning("gmail watch arm failed", exc_info=True)
-    # The recent backlog, behind the redirect (see the Microsoft callback).
-    # The watermark above already sits past these messages, so push and poll
-    # never draft them; the import files them as "before BLAM8".
-    _spawn_backlog(tenant_id, conn_id)
+    # Preserve the new-mail watermark; historical import needs its own choice.
     if not was_onboarded:
         # Voice auto-learning is opt-in at the voice step (see the Microsoft
         # callback above) — never started from a connect.

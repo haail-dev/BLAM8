@@ -5,10 +5,16 @@
   <p{% if backlog_status.state == 'running' %} data-backlog-started{% endif %}{% if backlog_status.ready is defined %} data-backlog-count="{{ backlog_status.ready }}"{% endif %}>{{ backlog_status.message }}</p>
   {% for detail in backlog_status.details or [] %}<p class="mt-1">{{ detail }}</p>{% endfor %}
   {% if backlog_status.retry %}
+  <p class="mt-2">Optional historical import{% if backlog_status.address %} for {{ backlog_status.address }}{% endif %}: read and store sender, subject, message body and conversation identifiers from up to 100 Inbox messages in the 14 days before this mailbox was first connected. This helps you review senders before enabling drafting. Automated messages are filed separately. This import creates no drafts, sends no replies and creates no contacts.</p>
   <form method="post" action="{{ '/app/settings/mailbox/backlog' if backlog_settings else '/onboarding/mailbox/backlog' }}" class="mt-2">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-    <button class="text-xs font-semibold text-brand hover:underline" data-backlog-retry>{{ 'Import recent messages' if backlog_status.state == 'not_started' else 'Try importing again' }}</button>
+    <input type="hidden" name="connection_id" value="{{ backlog_status.connection_id }}">
+    <input type="hidden" name="expected_run" value="{{ backlog_status.expected_run }}">
+    <button name="decision" value="import" class="text-xs font-semibold text-brand hover:underline" data-backlog-retry>{{ 'Import now' if backlog_status.state == 'not_started' else 'Retry this import' }}</button>
+    <button name="decision" value="skip" class="ml-3 text-xs underline">Skip import</button>
+    <button name="decision" value="later" class="ml-3 text-xs underline">Decide later</button>
   </form>
   {% endif %}
+  <p class="mt-2 text-xs">New incoming mail can still be read and stored while connected. Skipping historical import does not pause new-mail sync or change drafting and sending settings.</p>
   <p data-backlog-refresh-error class="hidden mt-2">Import status could not be refreshed. Reload this page to check progress.</p>
 </div>

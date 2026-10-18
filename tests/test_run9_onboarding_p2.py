@@ -109,11 +109,23 @@ def test_the_onboard_route_passes_the_tenant_to_the_voice_and_knowledge_steps(cl
     monkeypatch.setattr(routes.fairuse, "onboarding_allowed", lambda *a, **k: True)
     monkeypatch.setattr(routes, "_tenant_context", lambda ctx: {"name": "Brightwell", "brief": "cleaning"})
     monkeypatch.setattr(routes.db, "knowledge_source_texts", lambda *a, **k: [])
+    monkeypatch.setattr(routes.db, "get_tenant", lambda *a, **k: {"industry": "Example"})
+    monkeypatch.setattr(routes.db, "get_tenant_config", lambda *a, **k: {})
+    monkeypatch.setattr(routes.db, "get_connection_status", lambda *a, **k: {"id": "mailbox"})
+    from app import onboarding, setup_held
+    monkeypatch.setattr(setup_held, "load", lambda *a, **k: [])
+    next_target = {"label": "Getting paid", "href": "/app/invoices/settings"}
+    monkeypatch.setattr(onboarding, "_next_step_target", lambda ctx: next_target)
     for step in ("knowledge", "voice", "interview"):
         r = client.post("/concierge/onboard", json={"step": step, "question": "hi", "history": [], "current": {}})
         assert r.status_code == 200, r.text
-    assert seen[0] == ("knowledge", {"name": "Brightwell", "brief": "cleaning"})
-    assert seen[1][1] is not None and seen[2] == ("interview", None)
+    for (step, tenant), expected_next in zip(seen, (next_target, {"label": "Knowledge", "href": "/onboarding/knowledge"},
+                                                    {"label": "Customer inbox", "href": "/onboarding/mailbox"})):
+        assert tenant["onboarding_journey"]["current"] == step
+        assert tenant["onboarding_journey"]["next"] == expected_next
+        assert tenant["onboarding_journey"]["saved_completion"]["mailbox"] is True
+        business = {key: value for key, value in tenant.items() if key != "onboarding_journey"}
+        assert business == ({"name": "Brightwell", "brief": "cleaning"} if step in ("knowledge", "voice") else {})
 
 
 # ── #7 the card carries only new notes ───────────────────────────────────────

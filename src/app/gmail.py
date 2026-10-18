@@ -411,13 +411,16 @@ async def list_sent_messages(access_token: str, top: int = 300) -> list[dict]:
     return out
 
 
-async def list_recent_inbox_ids(access_token: str, days: int = 14, limit: int = 100) -> list[str]:
+async def list_recent_inbox_ids(access_token: str, days: int = 14, limit: int = 100,
+                                before: datetime | None = None) -> list[str]:
     """Ids of INBOX messages from the last `days`, newest first, at most
     `limit` — the backlog a fresh connection brings in (src/app/backlog.py).
     Gmail's search syntax carries the window (`newer_than:14d`); one list call,
     no bodies."""
+    query = (f"after:{int((before-timedelta(days=int(days))).timestamp())} before:{int(before.timestamp())}"
+             if before else f"newer_than:{int(days)}d")
     data = await _get(access_token, "/messages",
-                      {"labelIds": "INBOX", "q": f"newer_than:{int(days)}d",
+                      {"labelIds": "INBOX", "q": query,
                        "maxResults": str(min(int(limit), 500))})
     return [m["id"] for m in (data.get("messages") or []) if m.get("id")]
 

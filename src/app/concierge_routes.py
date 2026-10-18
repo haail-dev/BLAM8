@@ -207,6 +207,7 @@ def _tenant_context(ctx: TenantCtx) -> dict | None:
             "name": tenant.get("name") or tenant.get("company"),
             "industry": tenant.get("industry"),
             "brief": (tcfg.get("business_brief") or "").strip() or None,
+            "goals": (tcfg.get("goals") or "").strip() or None,
             "modules": sorted(modules) if modules else [],
             "cfg": cfg,
             "crm": crm_state,
@@ -541,6 +542,7 @@ class OnboardResponse(BaseModel):
     ready_to_advance: bool
     notes: list[dict] = Field(default_factory=list)
     review_link: dict | None = None
+    journey: dict | None = None
     # Labels of the pages this turn held facts for — written ONLY from what
     # the server recorded, so the widget's "Kept for later" line is never a
     # claim the store did not make good on (src/app/setup_held.py).
@@ -568,6 +570,24 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
     question = body.question.strip()[:MAX_INAPP_QUESTION_CHARS]
     history = concierge.sanitize_history(
         [t.model_dump() for t in body.history], MAX_HISTORY_TURNS, MAX_TURN_CHARS)
+    from app import onboarding_journey
+    saved, connected = {}, None
+    try:
+        t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
+        cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+        connected = bool(db.get_connection_status(ctx.tenant_id, client=ctx.client))
+        saved = {"interview": bool(t.get("industry")), "mailbox": connected,
+                 "voice": bool(cfg.get("voice_profile_source")), "knowledge": bool(t.get("onboarded_at"))}
+    except Exception:
+        pass  # Unknown completion is never described as false or complete.
+    journey = onboarding_journey.describe(body.step, connected=connected, saved=saved)
+    if body.step == "knowledge":
+        try:
+            from app.onboarding import _next_step_target
+            journey = onboarding_journey.describe(body.step, connected=connected, saved=saved,
+                                                   next_target=_next_step_target(ctx))
+        except Exception:
+            pass  # The next tuning destination remains unverified, not guessed.
     coverage = None
     if body.step == "knowledge":
         from app import knowledge_coverage, knowledge_review
@@ -579,12 +599,17 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
                     r"\b(correct|rewrite|replacement|existing (notes|cards)|review.only|source.faithful)\b",question,re.I):
                 grounded=knowledge_review.grounded_reply(review_context)
                 return OnboardResponse(reply=grounded["reply"],form_fill={},ready_to_advance=False,
-                                       notes=[],review_link=grounded["link"])
+                                       notes=[],review_link=grounded["link"],journey=journey)
         except HTTPException:
             return OnboardResponse(reply="I couldn't verify your saved knowledge and pending drafts. Please reload before reviewing changes; nothing has been saved.",form_fill={},ready_to_advance=False)
     # The later steps know the business from step 1 (brief, sector) instead of
     # relying on the chat history to carry it (run #9 hand-off). Best-effort.
     tenant = _tenant_context(ctx) if body.step in ("voice", "knowledge", "mailbox") else None
+    tenant = dict(tenant or {})
+    tenant["onboarding_journey"] = journey
+    if journey and body.step != "knowledge" and onboarding_journey.is_navigation_request(question):
+        return OnboardResponse(reply=onboarding_journey.navigation_reply(journey), form_fill={},
+                               ready_to_advance=False, journey=journey)
     # What earlier turns held (any step): the prompt carries it so nothing is
     # asked twice; what THIS turn holds is recorded after the reply.
     from app import setup_held
@@ -611,7 +636,7 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
             review_link = {"label":"Review pending Knowledge", "href":f"/onboarding/knowledge/review/{row['id']}"}
         return OnboardResponse(reply=result.reply, form_fill=result.form_fill,
                                ready_to_advance=result.ready_to_advance,
-                               notes=list(result.notes or []), held_for=held_for, review_link=review_link)
+                               notes=list(result.notes or []), held_for=held_for, review_link=review_link, journey=journey)
     return await run_in_threadpool(_blocking)
 
 
@@ -645,6 +670,7 @@ class HelpResponse(BaseModel):
     held_for: list[str] = Field(default_factory=list)
     setup_cards: list[dict] = Field(default_factory=list)
     card_errors: list[str] = Field(default_factory=list)
+    evidence: list[dict] = Field(default_factory=list)
 
 
 class SettingsRowsRequest(BaseModel):
@@ -700,9 +726,15 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
     question = body.question.strip()[:MAX_INAPP_QUESTION_CHARS]
     history = concierge.sanitize_history(
         [t.model_dump() for t in body.history], MAX_HISTORY_TURNS, MAX_TURN_CHARS)
-    tenant = _tenant_context(ctx)
+    from app.help_investigation import Investigator
+    investigator = await run_in_threadpool(Investigator, ctx)
+    # The legacy setup snapshot contains private configuration and Knowledge.
+    # Resolve access before loading it, rather than trusting a model to hide it.
+    tenant = (await run_in_threadpool(_tenant_context, ctx)) if investigator.can_configure else {}
     card_snapshot, card_enabled = {}, False
     if body.card_mode:
+        if not investigator.can_configure:
+            raise HTTPException(403, "Settings changes require a settings manager outside View as.")
         await require_csrf_header(request)
         from app import setup_card_model, setup_card_store, setup_cards
         try:
@@ -715,14 +747,13 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
         except Exception:
             raise HTTPException(503, "Saved proposals could not be checked. Reload before trying again.") from None
     try:
-        from app import platform_help
-        if tenant is not None:
-            try:
-                tenant['_product_context'] = platform_help.runtime_context(ctx.tenant_id,ctx.client,_asker(ctx))
-            except Exception:
-                tenant['_product_context'] = None  # Unknown availability never becomes permission.
+        tenant = tenant or {}
+        try:
+            tenant['_product_context'] = await run_in_threadpool(investigator.product_context)
+        except Exception:
+            tenant['_product_context'] = None  # Unknown availability never becomes permission.
         result = await concierge.answer_help(question, history, tenant=tenant,
-                                             tenant_id=ctx.tenant_id)
+                                             tenant_id=ctx.tenant_id, investigator=investigator)
     except Exception:
         return HelpResponse(
             reply="Sorry — I couldn't answer that just now. You can reach the team "
@@ -733,8 +764,8 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
                                operation="concierge_help", module="concierge")
         card_errors, updated_cards = [], []
         reply = result.reply
-        recs = result.recommend
-        held = getattr(result, "held", None)
+        recs = result.recommend if investigator.can_configure else None
+        held = getattr(result, "held", None) if investigator.can_configure else None
         if card_enabled:
             from uuid import uuid4
             recs, rejected = setup_card_model.without_legacy_rows(recs)
@@ -788,14 +819,15 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
             # A card with no kind, or the prose verdict — unless a kind is on the
             # table, in which case the owner still saves it.
             no_kind = not proposes_kind and not card_errors and (bool(cards) or bool(getattr(result, "no_dependants", False)))
-            if no_kind:
+            if no_kind and investigator.can_configure:
                 db.mark_dependants_configured(ctx.tenant_id, client=ctx.client)
                 closed_step = "dependants"
         except Exception:
             log.warning("dependants stamp from the card failed (tenant=%s)", ctx.tenant_id, exc_info=True)
         from app import setup_held
-        held_for = setup_held.add(ctx.tenant_id, held, step="help",
+        held_for = (setup_held.add(ctx.tenant_id, held, step="help",
                                   client=ctx.client, on_pages=setup_held.pages_for_path(body.path))
+                    if investigator.can_configure else [])
         # During the walk a reply may not re-offer a finished page (re-run
         # 2026-09-13: the Invoice step's arrival ask carried five cards for
         # pages already done). Only read the steps when there is a card to judge.
@@ -808,7 +840,7 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
         # While the setup walk is unfinished, a reply never offers a door to
         # ANOTHER step's page (run #10 (ccc)).
         link = result.link
-        if link:
+        if link and investigator.can_configure:
             try:
                 if not setup_handoff.nav_allowed(link, setup_handoff.load_steps(ctx.tenant_id, ctx.client),
                                                  body.path):
@@ -817,7 +849,8 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
                 log.warning("nav filter failed (tenant=%s)", ctx.tenant_id, exc_info=True)
         return HelpResponse(reply=reply, link=link, submit=result.submit,
                             recommend=recs, closed_step=closed_step,
-                            held_for=held_for, setup_cards=updated_cards, card_errors=card_errors)
+                            held_for=held_for, setup_cards=updated_cards, card_errors=card_errors,
+                            evidence=getattr(result, 'evidence', None) or [])
     return await run_in_threadpool(_blocking)
 
 
@@ -1175,7 +1208,7 @@ def _knowledge_note_names(ctx: TenantCtx) -> list[str]:
 
 # The agent-settings fields the draft prompt is actually built from — the
 # non-knowledge half of the grounding a suspect statement could have come from.
-_GROUNDING_FIELDS = ("business_brief", "agent_name", "tone", "sign_off", "do_list",
+_GROUNDING_FIELDS = ("business_brief", "goals", "agent_name", "tone", "sign_off", "do_list",
                      "never_do", "escalation", "custom_instructions", "examples")
 
 
@@ -1210,7 +1243,10 @@ def _settings_hits(tcfg: dict, phrase: str) -> list[dict]:
             continue
         low = text.lower()
         if any(w in low for w in words):
-            hits.append({"setting": field, "excerpt": text[:300]})
+            hit = {"setting": field, "excerpt": text[:300]}
+            if field == "goals":
+                hit["authority"] = "Recorded intent only; not an applied control or proof an action occurred."
+            hits.append(hit)
     return hits
 
 
@@ -1297,6 +1333,7 @@ async def fix(body: FixRequest, ctx: TenantCtx = Depends(require_tenant)) -> Str
                          "label": "Checked knowledge & settings", "detail": phrase})
 
     async def _ask():
+        draft_ctx["owner_goals"] = tcfg.get("goals")
         result = await concierge.answer_fix(question, history, draft_ctx=draft_ctx,
                                             never_rules=str(tcfg.get("never_do") or ""),
                                             requirement_labels=fields,   # full fields: label+required+hint
@@ -1889,9 +1926,10 @@ async def business(body: BusinessRequest, ctx: TenantCtx = Depends(require_conci
         return StreamingResponse(_day_capped(), media_type="application/x-ndjson")
     # A compact voice block so proposed drafts read like the business writes
     # (best-effort — its absence just means a more generic draft).
-    voice = None
+    voice, goals = None, None
     try:
         tcfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+        goals = tcfg.get("goals")
         voice = "\n".join(f"{k}: {v}" for k, v in (
             ("Signs off as", tcfg.get("sign_off")),
             ("Tone", tcfg.get("tone")),
@@ -1973,7 +2011,7 @@ async def business(body: BusinessRequest, ctx: TenantCtx = Depends(require_conci
                 + (concierge_tasks.foreground_tools() if starter else []),
                 tool_executor=_executor, on_tool=_on_tool,
                 business_name=tenant.get("name") or tenant.get("company"),
-                today=today, full_qa=full_qa, voice=voice, tenant_id=ctx.tenant_id,
+                today=today, full_qa=full_qa, voice=voice, goals=goals, tenant_id=ctx.tenant_id,
                 actions=actions, diary_shape=diary_shape,
                 settings_guidance=settings_guidance,
                 question_note="\n".join(filter(None, [
@@ -3358,9 +3396,10 @@ async def voice_chat(body: VoiceChatRequest,
     if not allowed:
         return _said_402(ctx, fairuse.capped_reply(tenant, day_cap))
 
-    voice = None
+    voice, goals = None, None
     try:
         tcfg = await asyncio.to_thread(db.get_tenant_config, ctx.tenant_id, client=ctx.client) or {}
+        goals = tcfg.get("goals")
         voice = "\n".join(f"{k}: {v}" for k, v in (
             ("Signs off as", tcfg.get("sign_off")),
             ("Tone", tcfg.get("tone")),
@@ -3547,7 +3586,7 @@ async def voice_chat(body: VoiceChatRequest,
                               *([debrief_walk.TOOL] if walk is not None and not walk.finished else [])]),
                     tool_executor=_executor, on_tool=_on_tool,
                     business_name=tenant.get("name") or tenant.get("company"),
-                    today=today, full_qa=full_qa, voice=voice,
+                    today=today, full_qa=full_qa, voice=voice, goals=goals,
                     tenant_id=ctx.tenant_id,
                     on_delta=_on_delta, voice_mode=True, tasks_on=True,
                     cancelled=lambda: turn_state.status == "cancelled",

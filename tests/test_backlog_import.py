@@ -17,6 +17,7 @@ from pathlib import Path
 import pytest
 
 from app import backlog, db, gmail, graph, mailbox
+from tests.mailbox_import_fixture import approved_run
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,7 +28,8 @@ def _read(rel: str) -> str:
 
 @pytest.fixture(autouse=True)
 def durable_import_state(monkeypatch):
-    monkeypatch.setattr(db, "claim_mailbox_import", lambda *a: {"run_id": "test", "state": "running"})
+    monkeypatch.setattr(db, "claim_mailbox_import", lambda *a: approved_run())
+    monkeypatch.setattr(db, "mailbox_import_access", lambda *a, **kw: {"backlog_import": approved_run()})
     monkeypatch.setattr(db, "finish_mailbox_import", lambda *a: None)
 
 
@@ -77,7 +79,8 @@ def env(monkeypatch):
         return "tok"
     monkeypatch.setattr(mailbox, "valid_access_token", token)
 
-    async def ids(token, days=14, limit=100):
+    async def ids(token, days=14, limit=100, before=None):
+        assert before.isoformat() == "2026-10-18T20:00:00+00:00"
         return ["old1", "new1", "self1", "new2", "gone"]
     monkeypatch.setattr(gmail, "list_recent_inbox_ids", ids)
     monkeypatch.setattr(db, "get_email_log_by_message",
@@ -148,10 +151,10 @@ def test_import_writes_no_contacts_and_no_drafts():
 
 
 # ── the hook and the surfaces ────────────────────────────────────────────────
-def test_both_callbacks_spawn_the_import_and_the_surfaces_say_so():
+def test_callbacks_never_start_historical_import_and_explicit_choice_is_available():
     oauth = _read("src/app/oauth.py")
-    assert oauth.count("_spawn_backlog(tenant_id, conn_id)") == 2         # Microsoft + Google
-    assert "backlog.start_import(tenant_id, conn_id)" in oauth
+    assert "_spawn_backlog" not in oauth
+    assert "backlog.start_import" not in oauth
     assert "_TASKS.add(task)" in _read("src/app/backlog.py")                  # never garbage-collected mid-run
     assert "data-before-blam8" in _read("src/app/templates/app/_conversation_list.html")
     assert '{% include "_backlog_status.html" %}' in _read("src/app/templates/onboarding/mailbox.html")

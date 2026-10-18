@@ -62,7 +62,17 @@ def grounded_reply(context):
     return {"reply":text,"link":{"label":"Review actual pending Knowledge","href":"/onboarding/knowledge/review/"+pending[0]["id"]}}
 
 
-def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=None, return_to="/onboarding/knowledge", source_units=None, evidence_pages=None):
+def website_state(context):
+    pending = [r for r in context['reviews'] if r['state']=='pending' and r['payload'].get('origin','').startswith('Website')]
+    saved_names = {n.get('admitted_source') for r in context['reviews'] if r['state']=='saved'
+                   and r['payload'].get('origin','').startswith('Website') for n in r['payload']['entries']}
+    saved = [s for s in context['sources'] if s['source'] in saved_names or s['source'].startswith('Website — ')]
+    return {'state': 'pending' if pending else 'saved' if saved else 'idle',
+            'pending_notes': sum(len(r['payload']['entries']) for r in pending), 'saved_notes': len(saved),
+            'review_href': '#review-'+pending[0]['id'] if pending else None}
+
+
+def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=None, return_to="/onboarding/knowledge", source_units=None, evidence_pages=None, capture_manifest=None):
     clean = []
     for n in entries or []:
         label, content = str(n.get("label") or "").strip(), str(n.get("content") or "").strip()
@@ -76,7 +86,8 @@ def stage(tenant, entries, *, origin="Owner note", questions=None, mailbox_id=No
     if len(clean) > 30 or sum(len(n["content"]) for n in clean) > 180000:
         raise HTTPException(400, "Review at most thirty notes at a time.")
     payload = {"entries": clean, "questions": clean_questions(questions), "origin": origin,
-               "return_to": return_to, "topic_reviews": {}, "source_units":source_units or []}
+               "return_to": return_to, "topic_reviews": {}, "source_units":source_units or [],
+               "capture_manifest": capture_manifest or []}
     row = {"id": str(uuid4()), "tenant_id": tenant, "payload": payload, "state": "pending"}
     try:
         if evidence_pages is not None:
@@ -145,6 +156,15 @@ def saved_wording_segments(context, source):
     return wording_segments(source)
 
 
+def shared_passages(a, b):
+    """Exact full-content sentence/block repetitions, not semantic equivalence."""
+    def passages(text):
+        return {' '.join(p.split()).casefold(): p.strip() for p in re.split(r'\n+|(?<=[.!?])\s+', text)
+                if len(p.strip()) >= 40 and len(p.split()) >= 7}
+    left, right = passages(a), passages(b)
+    return [right[k] for k in right if k in left]
+
+
 def candidates(entry, context, own_review=None, entries=None):
     targets = [{"id": "brief", "label": "Business brief", "content": context.get("brief", ""),
                 "kind": "brief", "provenance": [{"source": "Saved business brief"}]}]
@@ -171,11 +191,13 @@ def candidates(entry, context, own_review=None, entries=None):
         ga,gb = " ".join(re.findall(r"\w+",a.casefold()))," ".join(re.findall(r"\w+",b.casefold()))
         contained = min(len(ga),len(gb))>=12 and (ga in gb or gb in ga)
         same_label = entry["label"].casefold() == target["label"].removeprefix("Website — ").casefold()
+        passages = shared_passages(a, b)
         if b and (same_label or contained or a.strip().casefold() == b.strip().casefold() or
-                  (len(common) >= 5 and (overlap >= .45 or ratio >= .65))):
-            found.append({**target, "key": fingerprint(entry["id"], a, target["id"], b),
-                          "overlap": sorted(common)[:24], "excerpt": b[:1200],
-                          "reason": "Matching label" if same_label else "Shared wording; check meaning and numbers"})
+                  passages or (len(common) >= 5 and (overlap >= .45 or ratio >= .65))):
+            pair = sorted([(entry['id'], a), (target['id'], b)])
+            found.append({**target, "key": fingerprint(pair),
+                          "overlap": sorted(common)[:24], "excerpt": b[:1200], 'exact_passages': passages,
+                          "reason": "Exact repeated passage; repetition may be intentional" if passages else "Matching label" if same_label else "Shared wording; check meaning and numbers"})
     return found
 
 
@@ -202,7 +224,13 @@ def topic_view(context):
         # Confirmations expire when any saved evidence changes.
         evidence = fingerprint([(s["source"],s.get("mailbox_id"),s["content"]) for s in sorted(context["sources"],key=lambda s:(s["source"],s.get("mailbox_id") or ""))])
         state = answers.get("state", "unknown") if answers.get("evidence") == evidence else ("partial" if have else "unknown")
-        questions = [{"id": fingerprint(key, q), "question": q, "answer": "", "status": "unknown"} for q in QUESTIONS[key]]
+        # A default interview is useful only when no source evidence exists.
+        # Mentioned topics remain unknown/partial; this never certifies coverage.
+        defaults = QUESTIONS[key] if not (have or draft) else []
+        questions = [{"id": fingerprint(key, q), "question": q, "answer": "", "status": "unknown"} for q in defaults]
+        for q in answers.get('questions', []):
+            if q['id'] not in {v['id'] for v in questions}:
+                questions.append(q)
         for r in context.get("reviews", []):
             if r["state"]=="discarded": continue
             for q in r["payload"].get("questions", []):
@@ -284,7 +312,7 @@ def review_view(context, row, form=None):
     except HTTPException: pass  # Keep invalid exclusions visible for correction.
     by_id = {n["id"]:n for n in effective}
     from app.config import settings
-    return {**row, "source_review_enabled": settings.knowledge_source_review_enabled, "version": context["version"], "entries": [
+    result = {**row, "source_review_enabled": settings.knowledge_source_review_enabled, "version": context["version"], "entries": [
         {**n, "combined":by_id.get(n["id"],n)["content"],"preview_provenance":by_id.get(n["id"],n)["provenance"],
          "content_segments":by_id.get(n["id"],n).get("content_segments",[]),
          "matches": [m for m in candidates(by_id[n["id"]],context,row["id"],effective)
@@ -292,6 +320,21 @@ def review_view(context, row, form=None):
          "merge_options": [m for m in candidates(n,context,row["id"],entries)
                            if m["kind"]=="saved" and m.get("mailbox_id")==n.get("mailbox_id")]} for n in entries],
         "form": form, "coverage": topic_view(context), "source_view":source_view}
+    seen = set()
+    for entry in result['entries']:
+        unique = []
+        for match in entry['matches']:
+            if match['key'] not in seen:
+                seen.add(match['key'])
+                unique.append(match)
+        entry['matches'] = unique
+    result['signatures'] = {'content': fingerprint(row['payload']['entries'], row['payload'].get('draft_revision')),
+                            'evidence': fingerprint(row['payload'].get('source_units'), row['payload'].get('source_snapshot'), row['payload'].get('capture_manifest')),
+                            'context': context['version']}
+    result['summary'] = {'notes': len(entries), 'decided': sum(bool(form.get('action_'+n['id'])) for n in entries),
+                         'overlaps': len(seen), 'unresolved': source_view['unresolved'],
+                         'questions': sum(q['status']=='unknown' for t in result['coverage']['topics'] for q in t['questions'])}
+    return result
 
 
 def plan(context, row, form):

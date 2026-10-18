@@ -39,6 +39,7 @@ class ReviewRequest(DraftRequest):
 
 class ApplyRequest(DraftRequest):
     review: dict
+    owner_request: str = Field(default='', max_length=4000)
 
 
 def state(ctx, review_id, version):
@@ -70,7 +71,8 @@ async def preview(review_id: UUID, body: ReviewRequest, ctx: TenantCtx = Depends
 def apply(review_id: UUID, body: ApplyRequest, ctx: TenantCtx = Depends(require_source_review)):
     try:
         row, evidence = state(ctx, review_id, body.version)
-        payload = knowledge_source_review.corrected_payload(row, evidence, body.review, body.edits)
+        payload = knowledge_source_review.corrected_payload(row, evidence, body.review, body.edits,
+            owner_request=body.owner_request,reviewer=ctx.user_id)
         result = db.db().rpc('revise_knowledge_review_sources', {
             'p_tenant': ctx.tenant_id, 'p_review': str(review_id),
             'p_expected': body.version, 'p_payload': payload}).execute().data

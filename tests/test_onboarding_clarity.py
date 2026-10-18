@@ -248,7 +248,9 @@ def test_knowledge_reads_the_step_one_site_on_arrival(client, monkeypatch):
     assert 'data-auto-site="1"' in r.text
     assert 'data-onb-site="littledogs.co.uk"' in r.text
     assert 'value="littledogs.co.uk"' in r.text               # the box is pre-filled
-    assert "Reading your website" in r.text
+    # The server schedules the read; only the running browser operation may
+    # claim it is reading. Reloaded pending/saved states come from storage.
+    assert 'data-state="idle"' in r.text and 'data-site-heading' in r.text
     # the chat interview waits for the read — and never asks for the site again
     assert 'data-onb-autoask-after="site"' in r.text
     ask = r.text.split('data-onb-autoask="')[1].split('"')[0]
@@ -263,7 +265,8 @@ def test_knowledge_does_not_re_read_a_site_already_saved(client, monkeypatch):
     assert 'data-onb-autoask-after' not in r.text              # interview starts straight away
     # done = one line, the box collapsed behind Read again (Kris 2026-09-13)
     assert 'id="site-done"' in r.text and "2 notes saved" in r.text
-    assert 'id="site-box"' in r.text and "Start from your website" in r.text
+    assert 'id="site-box"' in r.text and 'data-state="saved"' in r.text
+    assert "Website notes saved" in r.text
     box_tag = r.text.split('id="site-box"')[1].split(">")[0]
     assert " hidden" in box_tag
     assert 'id="site-again"' in r.text
@@ -293,7 +296,8 @@ def test_the_page_signals_the_read_and_the_panel_waits_for_it():
     assert "sessionStorage.getItem(stamp)==='1'" in script
     assert "'blam8_site_autoread:'+box.dataset.scope" in script
     assert 'data-scope="{{ (request.state.tenant_id or' in html
-    assert "if(done)announce(false);else read();" in script
+    assert "A previous read was attempted in this tab" in script
+    assert "No completed website drafts are confirmed" in script
     js = _read("src/app/static/concierge.js")
     block = js.split("function maybeOnbAutoAsk")[1].split("// ── proactive notifications")[0]
     assert 'el.getAttribute("data-onb-autoask-after") === "site"' in block
@@ -311,14 +315,15 @@ def test_first_greeting_orients_before_it_asks():
     assert "separate from the account you just signed in with" in intro
     # honest count (Kris 2026-09-13): four here, five more in the app
     assert "five more with me" in intro and "Nine in all" in intro
-    assert "Last step here" in js and "Last step:" not in js
+    assert "source gaps, note decisions and overlaps" in js
     assert "Hit Finish setup" not in js and "After Finish setup" not in js   # one flow of nine
     assert intro.rstrip().endswith('what does your business do, and who are your customers?"')
     assert "AI assistant" in intro                              # Art 50 disclosure stays first
     assert "interview: ONB_INTRO," in js
     # the knowledge greeting names the site being read when there is one
     assert 'var ONB_SITE = ' in js
-    assert 'so I\'m reading it now' in js
+    assert 'so I\'m reading it now' not in js
+    assert "Pending drafts are separate from saved Knowledge" in js
 
 
 
@@ -328,12 +333,14 @@ def test_knowledge_notes_are_written_in_the_businesss_own_voice():
     will contact owners…" — a report about the company, not the company. The
     owner reads these as THEIR knowledge and the agent quotes them, so every
     note-writing prompt asks for first person plural; the site reader also
-    never merges the given name with the site's, and never carries over
-    "book via <other system>" (BLAM8 is the booking route now)."""
+    keeps the given business identity and preserves source booking routes
+    without assuming that import grants a new operational capability."""
     from app import concierge, kb_website, knowledge_coverage as kc
     assert "first person plural" in kb_website.SYSTEM
     assert "never write 'trading as'" in kb_website.SYSTEM
-    assert "never carry over instructions to book through another" in kb_website.SYSTEM
+    assert "preserve the source's stated booking routes" in kb_website.SYSTEM
+    assert "does not enable an integration" in kb_website.SYSTEM
+    assert "Never replace source instructions with an assumed product capability" in kb_website.SYSTEM
     assert "in the business's own voice" in concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
     block = kc.prompt_block(kc.coverage([]))
     assert "IN THE BUSINESS'S OWN VOICE" in block

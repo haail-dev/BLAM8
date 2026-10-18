@@ -44,7 +44,8 @@ router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 # step came OFF the wizard 2026-08-02 (Julius: another step between them and the
 # plan; reintroduce later as an in-app prompt) — its routes below survive
 # off-flow, so nothing links break and the capture can return cheaply.
-STEPS = ["interview", "mailbox", "voice", "knowledge"]
+from app import onboarding_journey
+STEPS = list(onboarding_journey.STEPS)
 
 INDUSTRIES = [
     {"id": "logistics", "label": "Logistics & haulage", "os": "field",
@@ -269,7 +270,16 @@ def _step_ctx(step: str, **extra) -> dict:
     # The classic industry picker isn't in STEPS (the interview replaced it) but
     # still renders — on the stepper it borrows the interview's slot.
     stepper = step if step in STEPS else "interview"
+    saved = {}
+    if "selected" in extra:
+        saved["interview"] = bool(extra["selected"])
+    if "connected" in extra:
+        saved["mailbox"] = bool(extra["connected"])
+    if "cfg" in extra:
+        saved["voice"] = bool((extra["cfg"] or {}).get("voice_profile_source"))
     return {"steps": STEPS, "step": step, "stepper": stepper,
+            "journey": onboarding_journey.describe(step, connected=extra.get("connected"), saved=saved,
+                                                     next_target=extra.get("next_target")),
             "step_index": STEPS.index(stepper), "step_count": len(STEPS),
             "tuning": tuning_steps(), "knowledge_source_review_enabled": settings.knowledge_source_review_enabled, **extra}
 
@@ -315,12 +325,15 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     return RedirectResponse(nxt["href"] if nxt else "/app/", status_code=303)
 
 
-def _next_step_label(ctx: TenantCtx) -> str:
-    """The wizard's last button: 'Next: Diary settings' — the first tuning step
-    still open (a tenant with nothing left to tune sees 'Finish setup')."""
+def _next_step_target(ctx: TenantCtx) -> dict:
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
-    return f"Next: {nxt['label']}" if nxt else "Finish setup"
+    return {"label": nxt["label"], "href": nxt["href"]} if nxt else {"label": "Today", "href": "/app/"}
+
+
+def _next_step_label(ctx: TenantCtx) -> str:
+    target = _next_step_target(ctx)
+    return "Finish setup" if target["href"] == "/app/" else "Next: " + target["label"]
 
 
 # ── resume ───────────────────────────────────────────────────────────────────
@@ -544,15 +557,10 @@ def mailbox_get(request: Request, change: str = "", ctx: TenantCtx = Depends(req
 
 
 @router.post("/mailbox/backlog", dependencies=[Depends(require_csrf)])
-async def mailbox_backlog(ctx: TenantCtx = Depends(require_tenant)):
-    """Bring in the last two weeks now — the retry when the connect-time import
-    brought nothing (or ran before this feature existed). Detached, same as
-    the OAuth callback's; the page says it has started."""
+async def mailbox_backlog(request: Request, ctx: TenantCtx = Depends(require_tenant)):
+    """Record the explicit mailbox-specific import choice before starting work."""
     from app import backlog
-    conns = db.list_mailboxes(ctx.tenant_id, client=ctx.client)
-    if not conns:
-        return RedirectResponse("/onboarding/mailbox", status_code=303)
-    backlog.start_import(ctx.tenant_id, conns[0]["id"])
+    await backlog.choose_import(request, ctx)
     return RedirectResponse("/onboarding/mailbox", status_code=303)
 
 
@@ -706,21 +714,24 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
     from app import setup_held
     held_notes = setup_held.for_page(
         [i for i in (cfg.get("setup_held") or []) if isinstance(i, dict)], "knowledge")
+    next_target = _next_step_target(ctx)
     return templates.TemplateResponse(request, "onboarding/knowledge.html", _step_ctx(
         "knowledge", sources=sources, configured=kb.is_configured(), coverage=cov,
         review_coverage=knowledge_review.topic_view(review_context), pending_reviews=pending_reviews,
         source_texts=text_by_source,
         coverage_ask=coverage_ask, site_url=website, auto_site=auto_site,
+        site_state=knowledge_review.website_state(review_context),
         site_done=site_read, site_note_count=len(site_sources), held_notes=held_notes,
-        next_label=_next_step_label(ctx),
+        next_target=next_target,
+        next_label="Finish setup" if next_target["href"] == "/app/" else "Next: " + next_target["label"],
         msg=request.query_params.get("msg"), err=request.query_params.get("err")))
 
 
 @router.post("/knowledge/text", dependencies=[Depends(require_csrf)])
 async def knowledge_text(request: Request, label: str = Form(""), content: str = Form(""),
                          then: str = Form(""), ctx: TenantCtx = Depends(require_tenant)):
-    """Stage a pasted note for review. Source-review mode requires an explicit
-    Review note action; Continue preserves unsaved text and pending drafts."""
+    """Stage pasted text only through Review note. Continue preserves unsaved
+    text and requires an explicit decision to leave pending drafts for later."""
     content = (content or "").strip()
     # Knowledge is the wizard's last step: Continue finishes setup (the
     # live-data step is off-flow since 2026-08-02).
@@ -733,7 +744,7 @@ async def knowledge_text(request: Request, label: str = Form(""), content: str =
             "knowledge", sources=sources, configured=kb.is_configured(),
             msg=None, err=err, prefill_label=label, prefill_content=content))
 
-    if finishing and settings.knowledge_source_review_enabled:
+    if finishing:
         if content:
             return stay('Your pasted note is unsaved. Choose Review note, or clear the box before continuing. Your text is kept below.')
         from app import knowledge_review
@@ -809,6 +820,8 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
             "kb_website build failed (tenant %s, url %r): %r", ctx.tenant_id, url, e)
         return JSONResponse({"error": "Could not read that site — check the address, "
                                       "or add your facts below instead."}, status_code=502)
+    if result.get('distillation_error'):
+        return JSONResponse({'error':result['distillation_error']},status_code=422)
     if not result["entries"]:
         return JSONResponse({"error": "Couldn't find usable facts on that site — "
                                       "upload a file or paste a few notes instead."},
@@ -818,7 +831,7 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
     if settings.knowledge_source_review_enabled:
         if evidence_pages is None:
             raise HTTPException(503, 'Source capture could not be confirmed. Nothing was staged.')
-    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"),
+    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"), capture_manifest=result.get('capture_manifest'),
         **({'evidence_pages': evidence_pages} if evidence_pages is not None else {}))
     fragments = _knowledge_review_fragments(request, ctx)
     return JSONResponse({**result, **fragments, "review_id": row["id"]})
@@ -859,7 +872,8 @@ def _knowledge_review_fragments(request, ctx):
     base = {"request": request, "review_coverage": cov}
     reviews = [knowledge_review.review_view(context,r) for r in context["reviews"] if r["state"] == "pending"]
     return {"coverage_html": templates.env.get_template("_knowledge_coverage_review.html").render(**base),
-            "review_html": "".join(templates.env.get_template("_knowledge_review.html").render(**base,review=r) for r in reviews)}
+            "review_html": "".join(templates.env.get_template("_knowledge_review.html").render(**base,review=r) for r in reviews),
+            'site_state': knowledge_review.website_state(context)}
 
 
 @router.get("/knowledge/reviews")
@@ -879,8 +893,8 @@ def knowledge_review_get(request: Request, review_id: str, ctx: TenantCtx = Depe
     context = knowledge_review.load(ctx.tenant_id)
     row = _knowledge_review_row(context,review_id)
     if row["state"] != "pending": return RedirectResponse(row["payload"].get("return_to","/onboarding/knowledge"),status_code=303)
-    return templates.TemplateResponse(request,"knowledge_review.html",{"review":knowledge_review.review_view(context,row),
-        "review_coverage":knowledge_review.topic_view(context)},headers={"Cache-Control":"no-store"})
+    return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row),
+        review_coverage=knowledge_review.topic_view(context)),headers={"Cache-Control":"no-store"})
 
 
 @router.post("/knowledge/review/{review_id}",dependencies=[Depends(require_csrf)])
@@ -903,11 +917,15 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             if admitted:
                 setup_held.mark_used(ctx.tenant_id, "knowledge", client=ctx.client)
         else:
-            return templates.TemplateResponse(request,"knowledge_review.html",{"review":knowledge_review.review_view(context,row,form),
-                "review_coverage":knowledge_review.topic_view(context)})
+            view = knowledge_review.review_view(context,row,form)
+            if request.headers.get('accept') == 'application/json':
+                html = templates.env.get_template('_knowledge_review.html').render(request=request,review=view)
+                return JSONResponse({'review_html': html, 'summary': f"Check complete: {view['summary']['overlaps']} possible overlaps; {view['summary']['unresolved']} source statements need a decision. No facts saved.", 'site_state': knowledge_review.website_state(context)})
+            return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=view,
+                review_coverage=knowledge_review.topic_view(context), preview_complete=True))
     except HTTPException as exc:
-        return templates.TemplateResponse(request,"knowledge_review.html",{"review":knowledge_review.review_view(context,row,form),
-            "review_coverage":knowledge_review.topic_view(context),"error":exc.detail},status_code=exc.status_code)
+        return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row,form),
+            review_coverage=knowledge_review.topic_view(context),error=exc.detail),status_code=exc.status_code)
     except Exception:
         raise HTTPException(503,"The decision could not be confirmed. Reload to check before retrying.") from None
     return RedirectResponse(row["payload"].get("return_to","/onboarding/knowledge"),status_code=303)

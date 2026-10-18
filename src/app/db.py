@@ -414,6 +414,21 @@ def claim_mailbox_import(tenant_id: str, connection_id: str) -> dict | None:
         "p_tenant": tenant_id, "p_connection": connection_id}).execute().data or None
 
 
+def choose_mailbox_import(tenant_id, connection_id, actor_id, decision, expected_run):
+    return db().rpc("choose_mailbox_import", {
+        "p_tenant": tenant_id, "p_connection": connection_id, "p_actor": actor_id,
+        "p_decision": decision, "p_expected_run": expected_run}).execute().data is True
+
+
+def mailbox_import_access(tenant_id, connection_id, client=None):
+    rows = ((client or db()).table("email_connections")
+            .select("id,address,created_at,backlog_import,backlog_import_choice")
+            .eq("tenant_id", tenant_id).eq("id", connection_id).limit(1).execute().data)
+    if not rows:
+        raise LookupError("Mailbox not found")
+    return rows[0]
+
+
 def finish_mailbox_import(tenant_id: str, connection_id: str, run: dict) -> None:
     """An old worker cannot overwrite a replacement run's status."""
     db().table("email_connections").update({"backlog_import": run}).eq(

@@ -6,6 +6,25 @@ labels, order and original text. It proposes only complete passages from the
 retained source, before or after an existing note. Citations prove attribution,
 not that a statement is true or appropriate; the owner must still review it.
 
+Website capture separates block boundaries and records source locations. Material
+wording in headers, footers, navigation and asides is inventoried too; menu text
+is not promoted into business notes automatically. Each read reports failures,
+non-HTML/empty pages, duplicate redirects, page-limit omissions and character
+limits. Only complete retained blocks or sentences enter the inventory. A digest
+and character counts account for the available extracted text, but omitted text
+is not retained evidence and cannot be cited as though read. Discovery covers
+links on the starting page, not the entire site. Short pages are retained too.
+
+New distillations request a separate exact note clause and one or more contiguous
+source quotations per clause. Every quote is checked against its claimed page;
+joined nonadjacent passages and clauses absent from the note are rejected. These
+attributions remain review hints, not a semantic entailment check or automatic
+coverage clearance. Literal source coverage and explicit exclusions still gate
+admission. Existing pending batches are not silently recaptured or corrected.
+Malformed, output-limited or oversized model responses stage no drafts and report
+that limit explicitly. They are not presented as proof that the website has no
+usable facts, and excess proposed notes are never silently sliced off.
+
 The workflow is: import website drafts, request a source review, inspect the
 proposed additions, apply them to drafts, then use **Check changes and overlaps**
 and **Save reviewed decisions**. Applying corrections does not save Knowledge.
@@ -13,6 +32,53 @@ Existing admission rules still account for source statements, carry source
 qualifications into retrieved chunks, and require explicit overlap decisions.
 Unanswered questions remain unknown. Owner wording and sourced additions keep
 separate attribution, including after another review or manual edit.
+
+The review starts with a last-checked task summary. Note editors, qualifications,
+topic detail and exact source evidence expand on demand. Unresolved constraints
+remain prominent; collapsing a section never selects a decision or removes an
+admission blocker. Exact sentence/block repetitions are checked across complete
+note text and shown once per pair. They may be intentional: the owner decides
+whether to retain both or merge. This is not a complete semantic duplicate or
+contradiction audit. Generic default questions are omitted for topics already
+represented by evidence; explicit unanswered questions and unknown topic states
+remain, and saved answers are preserved.
+
+Check changes and overlaps runs in place with a visible running, completed or
+failure result; it saves no facts. Without JavaScript the same read-only preview
+renders in the review page. That page carries the same tenant-scoped Assistant
+context as onboarding. Use this batch with Assistant selects an exact pending
+batch when several are available. Source-review errors are shown directly,
+without automatically retrying a potentially completed request.
+
+Citation-only proposals attach exact retained passages to existing note clauses
+without rewriting the note. Multiple spans/pages remain separate quotations.
+The before/after proposal shows both wording and attribution for owner review.
+Applying a proposal records its source identity, revision, owner request, reviewer,
+time and before/after details in the pending payload. The audit is bounded at
+twenty applications and 350,000 serialized characters; reaching a limit rejects the change without
+dropping earlier history. Repeated/stale apply requests cannot duplicate a write.
+Attribution still does not certify entailment. Missing footer evidence in an
+older batch cannot become a website quote; capture it properly or supply an
+explicit owner clarification for separate review.
+
+Each review exposes separate content, evidence and shared-context signatures.
+An identical refresh says no new evidence arrived. Changed stored versions do not
+overwrite dirty local forms: both versions are available for comparison, with an
+explicit choice to adopt the stored form. After the stored context changes, a fresh preview against the current version
+is required before admission. A no-longer-pending batch preserves local text
+and disables further browser decisions. Refresh/navigation is never correction,
+approval or history deletion.
+
+Website status distinguishes idle, reading, pending drafts, actual saved notes,
+failure and unconfirmed outcomes. Pending drafts get a counted Review drafts
+link; Read again is deliberate. A session attempt marker cannot establish read
+completion. After an uncertain read, Check stored drafts performs a read-only
+refresh while retaining local edits, before another explicit read is offered.
+Knowledge operation changes dispatch the onboarding readiness event; Continue
+still requires the real page action and existing pending/unsaved safeguards.
+Those navigation safeguards apply with source corrections disabled too. Loading
+the review controller does not enable source capture or its correction routes;
+the feature flag, permissions and retained evidence still gate those controls.
 
 The Assistant uses this source-review path when exactly one eligible draft
 batch is present. Multiple batches can be reviewed using their individual

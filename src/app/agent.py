@@ -444,6 +444,9 @@ def build_system_prompt(cfg: dict, knowledge: str | None = None, subject: str | 
 
     # ── Tenant voice & identity ──────────────────────────────────────────────
     voice = [f"What the business does:\n{brief}"]
+    from app import owner_goals
+    if goals_context := owner_goals.context(cfg.get("goals")):
+        voice.append(goals_context)
     voice.append(f"Tone of voice: {_clean(cfg.get('tone')) or 'professional and warm'}.")
     if _clean(cfg.get("agent_name")):
         voice.append(f"Refer to yourself as: {_clean(cfg['agent_name'])}.")
@@ -2531,6 +2534,9 @@ def build_outbound_prompt(cfg: dict, purpose: str, facts: str, channel: str = "e
     brief = _clean(cfg.get("business_brief")) or "A business that contacts its customers."
     voice = [f"What the business does:\n{brief}",
              f"Tone of voice: {_clean(cfg.get('tone')) or 'professional and warm'}."]
+    from app import owner_goals
+    if goals_context := owner_goals.context(cfg.get("goals")):
+        voice.append(goals_context)
     if _clean(cfg.get("agent_name")):
         voice.append(f"Refer to yourself as: {_clean(cfg['agent_name'])}.")
     if channel == "email" and sign_off.normalise(cfg.get("sign_off")):
