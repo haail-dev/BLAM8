@@ -670,6 +670,7 @@ class HelpResponse(BaseModel):
     held_for: list[str] = Field(default_factory=list)
     setup_cards: list[dict] = Field(default_factory=list)
     card_errors: list[str] = Field(default_factory=list)
+    evidence: list[dict] = Field(default_factory=list)
 
 
 class SettingsRowsRequest(BaseModel):
@@ -725,9 +726,15 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
     question = body.question.strip()[:MAX_INAPP_QUESTION_CHARS]
     history = concierge.sanitize_history(
         [t.model_dump() for t in body.history], MAX_HISTORY_TURNS, MAX_TURN_CHARS)
-    tenant = _tenant_context(ctx)
+    from app.help_investigation import Investigator
+    investigator = await run_in_threadpool(Investigator, ctx)
+    # The legacy setup snapshot contains private configuration and Knowledge.
+    # Resolve access before loading it, rather than trusting a model to hide it.
+    tenant = (await run_in_threadpool(_tenant_context, ctx)) if investigator.can_configure else {}
     card_snapshot, card_enabled = {}, False
     if body.card_mode:
+        if not investigator.can_configure:
+            raise HTTPException(403, "Settings changes require a settings manager outside View as.")
         await require_csrf_header(request)
         from app import setup_card_model, setup_card_store, setup_cards
         try:
@@ -740,14 +747,13 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
         except Exception:
             raise HTTPException(503, "Saved proposals could not be checked. Reload before trying again.") from None
     try:
-        from app import platform_help
-        if tenant is not None:
-            try:
-                tenant['_product_context'] = platform_help.runtime_context(ctx.tenant_id,ctx.client,_asker(ctx))
-            except Exception:
-                tenant['_product_context'] = None  # Unknown availability never becomes permission.
+        tenant = tenant or {}
+        try:
+            tenant['_product_context'] = await run_in_threadpool(investigator.product_context)
+        except Exception:
+            tenant['_product_context'] = None  # Unknown availability never becomes permission.
         result = await concierge.answer_help(question, history, tenant=tenant,
-                                             tenant_id=ctx.tenant_id)
+                                             tenant_id=ctx.tenant_id, investigator=investigator)
     except Exception:
         return HelpResponse(
             reply="Sorry — I couldn't answer that just now. You can reach the team "
@@ -758,8 +764,8 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
                                operation="concierge_help", module="concierge")
         card_errors, updated_cards = [], []
         reply = result.reply
-        recs = result.recommend
-        held = getattr(result, "held", None)
+        recs = result.recommend if investigator.can_configure else None
+        held = getattr(result, "held", None) if investigator.can_configure else None
         if card_enabled:
             from uuid import uuid4
             recs, rejected = setup_card_model.without_legacy_rows(recs)
@@ -813,14 +819,15 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
             # A card with no kind, or the prose verdict — unless a kind is on the
             # table, in which case the owner still saves it.
             no_kind = not proposes_kind and not card_errors and (bool(cards) or bool(getattr(result, "no_dependants", False)))
-            if no_kind:
+            if no_kind and investigator.can_configure:
                 db.mark_dependants_configured(ctx.tenant_id, client=ctx.client)
                 closed_step = "dependants"
         except Exception:
             log.warning("dependants stamp from the card failed (tenant=%s)", ctx.tenant_id, exc_info=True)
         from app import setup_held
-        held_for = setup_held.add(ctx.tenant_id, held, step="help",
+        held_for = (setup_held.add(ctx.tenant_id, held, step="help",
                                   client=ctx.client, on_pages=setup_held.pages_for_path(body.path))
+                    if investigator.can_configure else [])
         # During the walk a reply may not re-offer a finished page (re-run
         # 2026-09-13: the Invoice step's arrival ask carried five cards for
         # pages already done). Only read the steps when there is a card to judge.
@@ -833,7 +840,7 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
         # While the setup walk is unfinished, a reply never offers a door to
         # ANOTHER step's page (run #10 (ccc)).
         link = result.link
-        if link:
+        if link and investigator.can_configure:
             try:
                 if not setup_handoff.nav_allowed(link, setup_handoff.load_steps(ctx.tenant_id, ctx.client),
                                                  body.path):
@@ -842,7 +849,8 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
                 log.warning("nav filter failed (tenant=%s)", ctx.tenant_id, exc_info=True)
         return HelpResponse(reply=reply, link=link, submit=result.submit,
                             recommend=recs, closed_step=closed_step,
-                            held_for=held_for, setup_cards=updated_cards, card_errors=card_errors)
+                            held_for=held_for, setup_cards=updated_cards, card_errors=card_errors,
+                            evidence=getattr(result, 'evidence', None) or [])
     return await run_in_threadpool(_blocking)
 
 

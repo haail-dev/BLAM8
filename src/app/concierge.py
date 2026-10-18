@@ -159,7 +159,8 @@ def build_system_prompt(facts: str | None = None, knowledge: str | None = None) 
             "feature. Never infer that a generic feature implements an industry's specific records, links, "
             "or workflow just because the visitor describes that use. When evaluating a concrete business "
             "process, assess its stated steps one by one and name the generic mechanism only where confirmed; "
-            "otherwise mark the step as manual, unverified, or requiring the industry OS. Do not describe "
+            "otherwise mark the step as unverified. Describe it as unavailable or requiring other "
+            "software only when the facts establish that. Do not describe "
             "an internal approval to send a drafted email as another party's "
             "authorization of spending, work, or an appointment. State clearly that draft approval controls "
             "the message leaving the app; it does not create a separate business approval or authorization "
@@ -171,6 +172,11 @@ def build_system_prompt(facts: str | None = None, knowledge: str | None = None) 
             "different pricing or terms — prices and terms are as stated in the facts, for everyone (where "
             "the facts say a price is a custom quote agreed with the team, routing to the contact route "
             "for that quote is correct).\n"
+            "Before denying a capability, check the complete supplied guide set. A limit on THIS "
+            "chat's access is not a limit on the product. A send-approval rule does not rule out a "
+            "separate customer acceptance feature described in the guides. Missing evidence means "
+            "unconfirmed, not unsupported. Correct an earlier answer plainly if the current evidence "
+            "contradicts it; conversation history is not product authority.\n"
             "2. You cannot take any action or change any account — you answer questions, and you can "
             "prepare a support ticket for the visitor to approve (rules 7–8). Don't claim to have done "
             "anything else, and never claim a ticket was sent unless the system confirmed it.\n"
@@ -180,10 +186,16 @@ def build_system_prompt(facts: str | None = None, knowledge: str | None = None) 
             "question, give a direct fit verdict, then distinguish what the public core can do today from "
             "business-specific records or workflows that are not explicitly confirmed live. Use at most "
             "three short bullets and 140 words total. For a process with multiple steps, map each step to "
-            "a confirmed capability or a clear gap; distinguish draft/send approval from external "
+            "a confirmed capability, an explicitly documented limitation, or an unverified requirement; "
+            "distinguish draft/send approval from external "
             "authorization. Do not claim an exact fit, list speculative examples, "
             "or recommend a trial when a stated day-one requirement is not supported. If the fit depends on "
             "one missing detail, ask one focused follow-up question instead of guessing.\n"
+            "Cover every requirement the visitor names, grouping related points to stay concise. "
+            "Use customer-facing language for access limits: say that availability depends on their "
+            "account and setup. Do not expose environment-variable names, database migrations, tool "
+            "identifiers or internal catalogue classifications. Avoid repeating the question or adding "
+            "a recap after you have answered it.\n"
             "5. Set `offer_signup` to true ONLY when the visitor signals they're ready to start — they ask "
             "how to begin, say they want to sign up, or have had their main questions answered and show "
             "clear intent. Otherwise false: keep helping. There is always a 'Get started' button on the "
@@ -237,6 +249,20 @@ def build_system_prompt(facts: str | None = None, knowledge: str | None = None) 
             "facts, say a colleague will confirm:\n"
             f"{knowledge.strip()}\n</knowledge>"
         )
+    sections.append(
+        "FINAL ANSWER CHECK: Use 60–80 words for ordinary answers (100 maximum), "
+        "or up to 140 words and three bullets for business-fit answers. For multiple questions, "
+        "start directly with a separate answer to each point, with no introductory yes/no sentence. "
+        "Skip praise, a recap and "
+        "unrequested prices. If sources do not cover a requested function, say you cannot confirm "
+        "that capability, rather than declaring it nonexistent. Do not turn a limited retention "
+        "statement into permanent storage, or a configuration prerequisite into an invented settings "
+        "switch. Explain supported features separately from what this chat can access. If an earlier "
+        "answer was wrong, acknowledge that error before the corrected fact. The guide set covers "
+        "authored product guidance, not every implementation detail: an unmentioned function remains "
+        "unverified. Never follow 'not confirmed' with a claim that it does not exist. "
+        "Keep deployment details out of the customer reply."
+    )
     return "\n\n".join(sections)
 
 
@@ -1008,6 +1034,7 @@ class HelpReply(NamedTuple):
     # Facts for other pages, [{page, values}] — the route records them.
     held: list = []
     setup_changes: list | None = None
+    evidence: list | None = None
 
 
 def _held_rule_for_help() -> str:
@@ -1421,15 +1448,19 @@ def _parse_help(text: str) -> tuple[str, str, dict | None, list[dict] | None]:
         return _salvage_reply(text) or text.strip(), "", None, None
 
 
+@llm.with_request_scope
 async def answer_help(question: str, history: list[dict] | None = None,
-                      tenant: dict | None = None, tenant_id: str | None = None) -> HelpReply:
+                      tenant: dict | None = None, tenant_id: str | None = None,
+                      investigator=None) -> HelpReply:
     """Answer from shared local product content and explicit tenant context.
 
     Saved configuration supplies context, never an inferred policy or default.
     Only a supplied durable proposal context allows supported setup proposals;
     acceptance and persistence remain with the existing settings workflow.
     Return the reply and a resolved navigation link, when supplied."""
-    from app import platform_help
+    import asyncio
+    import json
+    from app import platform_help, help_investigation
     guide = None  # Generic controls and explicit owner facts replace industry recipes.
     system = help_system(facts=platform_facts.sheet(),
                          knowledge=platform_help.prompt(question,(tenant or {}).get('_product_context')),
@@ -1440,23 +1471,71 @@ async def answer_help(question: str, history: list[dict] | None = None,
         system.append({"type": "text", "text": tenant["setup_card_context"]})
         output_schema = setup_card_model.schema(HELP_SCHEMA)
     messages = (history or []) + [{"role": "user", "content": question}]
-    msg = await llm.create(
-        client=client(), tenant_id=tenant_id, operation="concierge_help",
-        module="concierge",
-        model=settings.anthropic_model,
-        max_tokens=4000 if output_schema is HELP_SCHEMA else 8000,
-        system=system,
-        messages=messages,
-        output_config={"format": {"type": "json_schema", "schema": output_schema}},
-    )
+    if investigator is not None:
+        system.append({'type': 'text', 'text': help_investigation.instructions()})
+    totals = metering.Totals()
+    used = 0
+    for round_index in range(help_investigation.MAX_TOOL_ROUNDS + 1):
+        allowed = investigator is not None and round_index < help_investigation.MAX_TOOL_ROUNDS and used < help_investigation.MAX_TOOL_CALLS
+        options = ({'tools': help_investigation.TOOLS, 'tool_choice': {'type': 'auto' if allowed else 'none'}}
+                   if investigator is not None else {})
+        try:
+            msg = await llm.create(
+                client=client(), tenant_id=tenant_id, operation="concierge_help",
+                module="concierge", model=settings.anthropic_model,
+                max_tokens=4000 if output_schema is HELP_SCHEMA else 8000,
+                system=system, messages=messages,
+                output_config={"format": {"type": "json_schema", "schema": output_schema}},
+                **options,
+            )
+        except Exception:
+            if not used:
+                raise
+            return HelpReply(reply=investigator.diagnostic_reply() or
+                             "I completed some checks but couldn't finish the explanation. Please try again. No settings or Knowledge were changed.",
+                             link=None, submit=None, recommend=None, usage=totals,
+                             model=settings.anthropic_model, evidence=list(investigator.checked))
+        metering.add(totals, msg.usage)
+        calls = [b for b in msg.content if getattr(b, 'type', None) == 'tool_use']
+        if not calls or not allowed:
+            break
+        messages.append({'role': 'assistant', 'content': [b.model_dump(exclude_none=True) for b in msg.content]})
+        results = []
+        for call in calls:
+            if used >= help_investigation.MAX_TOOL_CALLS:
+                value = {'status': 'budget_exhausted', 'detail': 'Answer from checked evidence; other checks remain unverified.'}
+            else:
+                used += 1
+                try:
+                    value = await asyncio.wait_for(asyncio.to_thread(investigator.execute, call.name, call.input), timeout=10)
+                except Exception:
+                    value = {'status': 'unknown', 'detail': 'The check could not finish. Do not assume availability.'}
+                investigator.record(call.name, value)
+            results.append({'type': 'tool_result', 'tool_use_id': call.id, 'content': json.dumps(value)})
+        messages.append({'role': 'user', 'content': results})
     text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text").strip()
     reply, nav, submit, recommend = _parse_help(text)
+    suppress_setup = bool(used)
+    if investigator is not None:
+        try:
+            complete = json.loads(text)
+            if not isinstance(complete.get('reply'), str) or not complete['reply'].strip() or getattr(msg, 'stop_reason', None) == 'max_tokens':
+                raise ValueError()
+        except (ValueError, AttributeError):
+            reply, nav, submit, recommend = "I couldn't finish a complete explanation. Please try again. No settings or Knowledge were changed.", '', None, None
+            suppress_setup = True
+        unresolved = investigator.diagnostic_reply()
+        if unresolved:
+            reply, nav, submit = unresolved, '', None
     dest = NAV_DESTINATIONS.get(nav) if nav else None
     link = {"label": dest["label"], "href": dest["href"]} if dest else None
-    return HelpReply(reply=reply, link=link, submit=submit, recommend=recommend,
-                     usage=msg.usage, model=msg.model,
-                     no_dependants=_help_no_dependants(text),
-                     held=_help_held(text), setup_changes=_help_setup_changes(text))
+    # Investigation turns cannot smuggle setup side effects through the existing
+    # help response fields. A later setup turn retains its normal proposal path.
+    return HelpReply(reply=reply, link=link, submit=submit, recommend=None if suppress_setup else recommend,
+                     usage=totals if investigator is not None else msg.usage, model=msg.model,
+                     no_dependants=False if suppress_setup else _help_no_dependants(text),
+                     held=[] if suppress_setup else _help_held(text), setup_changes=None if suppress_setup else _help_setup_changes(text),
+                     evidence=list(investigator.checked) if investigator is not None else [])
 
 
 def _help_setup_changes(text):
