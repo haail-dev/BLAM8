@@ -1,69 +1,87 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions. PM-ONB-005: reviewed structured capture, exact per-clause attribution, all source locations and disclosed crawl limits. The 19 other capability definitions and authored guides are unchanged; source-bound signatures include the shared evidence map and maintained reference. Their existing per-surface dispositions still apply. Knowledge and mailbox shared-route dispositions record their specific review; no provider, permission, commercial or execution change. PM-ONB-006/007: reviewed the pending review workspace, exact repeated-passage pairs, nonmutating preview, explicit lifecycle and version reconciliation, retained Assistant context and citation-only proposals with separate draft apply/final admission. Existing source flag remains disabled. Shared inventory/Concierge metadata changes do not alter other capability gates or commercial claims.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions. PM-ONB-005: reviewed structured capture, exact per-clause attribution, all source locations and disclosed crawl limits. The 19 other capability definitions and authored guides are unchanged; source-bound signatures include the shared evidence map and maintained reference. Their existing per-surface dispositions still apply. Knowledge and mailbox shared-route dispositions record their specific review; no provider, permission, commercial or execution change. PM-ONB-006/007: reviewed the pending review workspace, exact repeated-passage pairs, nonmutating preview, explicit lifecycle and version reconciliation, retained Assistant context and citation-only proposals with separate draft apply/final admission. Existing source flag remains disabled. Shared inventory/Concierge metadata changes do not alter other capability gates or commercial claims. PM-ONB-002 context slice: recorded Goals reach drafting and owner Assistant prompts as intent, with no new control, writer, permission or enforcement claim. Settings and grounding state that distinction. Shared evidence signature changes do not broaden commercial or action claims.",
   "capabilities": {
     "email": {
-      "signature": "ece0bede2531e8ae23486dfa331a7122981c67385fb642d892e95334d96ce3ba",
+      "signature": "1347f497ac95de7a3f196c00aefcf258cc339ccbeebfa364cd0df362759f3947",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
             "tests/test_platform_public.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Email drafts and approval: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/templates/capabilities.html",
             "src/app/product_guides.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "/how-it-works": {
           "disposition": "reviewed_unchanged",
-          "reason": "Email drafts and approval: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/templates/how_it_works.html",
             "docs/product-knowledge.md",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "email: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "email: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "README.md",
             "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "agent:email": {
           "disposition": "updated",
-          "reason": "Email drafts and approval: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Email drafts and approval: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         }
       }
     },
     "knowledge": {
-      "signature": "31c852280f36280a4e454469ce96d5229e9ec10f132f3cd96b6a6410949d2eb8",
+      "signature": "633465ecf74ccfc47bef7f271d3de6dead1171305fdc1a2bddca96918c06def9",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -114,7 +132,7 @@
       }
     },
     "scheduling": {
-      "signature": "a0138c5082a427c464c3a85512fc492859337eb9b975dbfd3c84fa82232ed8f3",
+      "signature": "ce5f7f428efd03b681ab00933803cc5cf7d9200157b4236208d659d4e2a7fdeb",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -164,7 +182,7 @@
       }
     },
     "calendar": {
-      "signature": "597714981c256a14167318eea352e1c756e027472c887e4016183036ec4f96f9",
+      "signature": "b1139b7a5bff58201f027ed72004860d4608b764206db61089468b9a46ed6db4",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -215,7 +233,7 @@
       }
     },
     "crm": {
-      "signature": "b3775099effaf96c1581bd3c1a9c9909c77483636a0320d10cb039d217b79ee2",
+      "signature": "4bc1ac3aa44133b1077368f9eef49c84160afdfdb4ac6edceb821ef1237e093b",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -266,7 +284,7 @@
       }
     },
     "subjects": {
-      "signature": "a5a553ee372915cccdddd2c9c89564986105dfd784b641057f225b9f557b2e90",
+      "signature": "cd2664d20562df8ad11a2a6c7ba47946e7a993a378471e95cadf0d98e24741d5",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -307,7 +325,7 @@
       }
     },
     "packages": {
-      "signature": "61786085eaf797fae1935ba6be95f2fea6ecf6dc6570da58a39b08bf38375e9f",
+      "signature": "2c9c3ea699be7e14d830a077915a27e42b555b524fd0e6c059686d614e7278c1",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -368,7 +386,7 @@
       }
     },
     "progress": {
-      "signature": "04f472010520c0776a6f995a7a1b11c634bd7ae26e20e3bbeffe58120fd94463",
+      "signature": "d3478ba06c54ee1ddfe682d9b5c3fdb64aa03a179a9e8f011e78f8602ad29314",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -429,7 +447,7 @@
       }
     },
     "money": {
-      "signature": "fcd3d4a4227407b5d8f5b960fad737673167f580a2384d52fa25985aef97cf2c",
+      "signature": "6071f2a9840070050c15cf5d83152369fb11131e92dab58e01e205ee7349cc04",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -480,7 +498,7 @@
       }
     },
     "people": {
-      "signature": "d33daba99af70888a48d3f0260972b8cd7c96179b5bfd3be964dc78a6b778296",
+      "signature": "cf689768aa6410ee7cee196aa43c5ffcf94a35be4d839a4a0d45d16f9edf420d",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -531,7 +549,7 @@
       }
     },
     "portal": {
-      "signature": "1e7d555793dd7447a2eb3c8d0457ee32f04d6c76f5932a60a58c965da9a40616",
+      "signature": "accaa4685df55c736a9cb05a2da8dbc46c26893997bd428562731eba6cdf7112",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -581,7 +599,7 @@
       }
     },
     "mailboxes": {
-      "signature": "98873b78727b6e0c4c7359d36090ddf2217e48851973aa78e004d9b1e0abfc2f",
+      "signature": "a8ee100e1bd20dce3934c571f78a7069aeeec2f0c6150bce10f58fb0ad7c37bc",
       "surfaces": {
         "/help": {
           "disposition": "generated",
@@ -656,62 +674,77 @@
       }
     },
     "owner.assistant": {
-      "signature": "71716e4afd81eaa982d067ce76daabbbc5b4a82e401cc33710ba02497da74549",
+      "signature": "831fb3cdaed0ff7acd2fca55f9e90c37da27c7495e4b342da033c7226a7ce313",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/templates/capabilities.html",
             "src/app/product_guides.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
             "tests/test_platform_public.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "agent:owner.assistant": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/verified-behaviours.md",
             "tests/test_platform_capabilities.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/knowledge-source-review.md",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         }
       }
     },
     "product.help": {
-      "signature": "fed74d749362486ec9ac2ca31e9449934821526e75c12b25df83fbf1ba9c68e9",
+      "signature": "23c3ed6f498c3ae2f5a503e1ecfebb1a4f8f277f4fc87525a42fd76ade959778",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -724,12 +757,15 @@
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
             "src/app/static/onboarding_journey.js",
-            "tests/test_knowledge_review_routes.py"
+            "tests/test_knowledge_review_routes.py",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "/pages": {
           "disposition": "reviewed_unchanged",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /pages: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /pages: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -742,24 +778,30 @@
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
             "src/app/static/onboarding_journey.js",
-            "tests/test_knowledge_review_routes.py"
+            "tests/test_knowledge_review_routes.py",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on agent:product.help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on agent:product.help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
             "src/app/static/onboarding_journey.js",
             "src/app/static/concierge.js",
-            "tests/test_knowledge_review_routes.py"
+            "tests/test_knowledge_review_routes.py",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on docs/product-knowledge.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on docs/product-knowledge.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -772,25 +814,40 @@
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
             "src/app/static/onboarding_journey.js",
-            "tests/test_knowledge_review_routes.py"
+            "tests/test_knowledge_review_routes.py",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         },
         "docs/onboarding-journey.md": {
           "disposition": "updated",
-          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on docs/onboarding-journey.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on docs/onboarding-journey.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
             "src/app/static/onboarding_journey.js",
             "src/app/static/concierge.js",
-            "tests/test_knowledge_review_routes.py"
+            "tests/test_knowledge_review_routes.py",
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
+          ]
+        },
+        "docs/onboarding-goals-context.md": {
+          "disposition": "updated",
+          "reason": "Documents exact Goals transport surfaces and the remaining distinction between recorded intent, writing guidance and enforceable operational controls. No automatic policy backfill or enforcement is claimed.",
+          "evidence": [
+            "docs/onboarding-goals-context.md",
+            "tests/test_owner_goals_context.py",
+            "src/app/owner_goals.py"
           ]
         }
       }
     },
     "billing": {
-      "signature": "52c61a65b54090eef2efd0d838c0f84cec550eda86f61845b6c90e335391ef2e",
+      "signature": "0d20852f5ae618ee8e7cd3a23738dabb34acaeb2a2c72e4b9a567b63b0b99a41",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -1082,7 +1139,7 @@
       }
     },
     "installable": {
-      "signature": "04b756eedf809767ece1b8370577905e2d1984eec4fb4b926c91ced176c04c2c",
+      "signature": "60336f302c216c00cbf5b16bd6c46fb1cbae1c6496beeec6ac48cfc9b9f49eff",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1123,7 +1180,7 @@
       }
     },
     "extensions": {
-      "signature": "9ba5e404b4243fb60fe13182ed575bcfc611c9cf74021e8bd88d60f39bfe7d95",
+      "signature": "102e58c0527d393fac321548c6380e862c8cd15e7a1b39cba4c8e0fa835c829f",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1173,7 +1230,7 @@
       }
     },
     "automation.scheduled": {
-      "signature": "93af96c7d51545b180021e35667f429be7f3fcefa6e5e539fe5cac482d806099",
+      "signature": "803f94f454c48b45eba2865cc41f3f166496ab56c5e58596c282b618f4542cc6",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1214,7 +1271,7 @@
       }
     },
     "outreach": {
-      "signature": "d1ff6ec0facd613384d45bb394b81a8aab8734fb96a1347a7e67413f193ed229",
+      "signature": "0472c5a49fbf76f61fa2853d3a0a7b25e9839a365b2650f8339ddd09d2783d44",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1255,7 +1312,7 @@
       }
     },
     "knowledge.review": {
-      "signature": "61199dd4f3d6b3c11996dc72ccc0769469292ea8dcc3caf9c766139804cfaa25",
+      "signature": "f9be2ef91c0c9d7545f3a6f0a194a1009224d3f8aef7b1071bf4ef655bb68069",
       "surfaces": {
         "/pages": {
           "disposition": "updated",

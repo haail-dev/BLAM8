@@ -207,6 +207,7 @@ def _tenant_context(ctx: TenantCtx) -> dict | None:
             "name": tenant.get("name") or tenant.get("company"),
             "industry": tenant.get("industry"),
             "brief": (tcfg.get("business_brief") or "").strip() or None,
+            "goals": (tcfg.get("goals") or "").strip() or None,
             "modules": sorted(modules) if modules else [],
             "cfg": cfg,
             "crm": crm_state,
@@ -1199,7 +1200,7 @@ def _knowledge_note_names(ctx: TenantCtx) -> list[str]:
 
 # The agent-settings fields the draft prompt is actually built from — the
 # non-knowledge half of the grounding a suspect statement could have come from.
-_GROUNDING_FIELDS = ("business_brief", "agent_name", "tone", "sign_off", "do_list",
+_GROUNDING_FIELDS = ("business_brief", "goals", "agent_name", "tone", "sign_off", "do_list",
                      "never_do", "escalation", "custom_instructions", "examples")
 
 
@@ -1234,7 +1235,10 @@ def _settings_hits(tcfg: dict, phrase: str) -> list[dict]:
             continue
         low = text.lower()
         if any(w in low for w in words):
-            hits.append({"setting": field, "excerpt": text[:300]})
+            hit = {"setting": field, "excerpt": text[:300]}
+            if field == "goals":
+                hit["authority"] = "Recorded intent only; not an applied control or proof an action occurred."
+            hits.append(hit)
     return hits
 
 
@@ -1321,6 +1325,7 @@ async def fix(body: FixRequest, ctx: TenantCtx = Depends(require_tenant)) -> Str
                          "label": "Checked knowledge & settings", "detail": phrase})
 
     async def _ask():
+        draft_ctx["owner_goals"] = tcfg.get("goals")
         result = await concierge.answer_fix(question, history, draft_ctx=draft_ctx,
                                             never_rules=str(tcfg.get("never_do") or ""),
                                             requirement_labels=fields,   # full fields: label+required+hint
@@ -1913,9 +1918,10 @@ async def business(body: BusinessRequest, ctx: TenantCtx = Depends(require_conci
         return StreamingResponse(_day_capped(), media_type="application/x-ndjson")
     # A compact voice block so proposed drafts read like the business writes
     # (best-effort — its absence just means a more generic draft).
-    voice = None
+    voice, goals = None, None
     try:
         tcfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+        goals = tcfg.get("goals")
         voice = "\n".join(f"{k}: {v}" for k, v in (
             ("Signs off as", tcfg.get("sign_off")),
             ("Tone", tcfg.get("tone")),
@@ -1997,7 +2003,7 @@ async def business(body: BusinessRequest, ctx: TenantCtx = Depends(require_conci
                 + (concierge_tasks.foreground_tools() if starter else []),
                 tool_executor=_executor, on_tool=_on_tool,
                 business_name=tenant.get("name") or tenant.get("company"),
-                today=today, full_qa=full_qa, voice=voice, tenant_id=ctx.tenant_id,
+                today=today, full_qa=full_qa, voice=voice, goals=goals, tenant_id=ctx.tenant_id,
                 actions=actions, diary_shape=diary_shape,
                 settings_guidance=settings_guidance,
                 question_note="\n".join(filter(None, [
@@ -3382,9 +3388,10 @@ async def voice_chat(body: VoiceChatRequest,
     if not allowed:
         return _said_402(ctx, fairuse.capped_reply(tenant, day_cap))
 
-    voice = None
+    voice, goals = None, None
     try:
         tcfg = await asyncio.to_thread(db.get_tenant_config, ctx.tenant_id, client=ctx.client) or {}
+        goals = tcfg.get("goals")
         voice = "\n".join(f"{k}: {v}" for k, v in (
             ("Signs off as", tcfg.get("sign_off")),
             ("Tone", tcfg.get("tone")),
@@ -3571,7 +3578,7 @@ async def voice_chat(body: VoiceChatRequest,
                               *([debrief_walk.TOOL] if walk is not None and not walk.finished else [])]),
                     tool_executor=_executor, on_tool=_on_tool,
                     business_name=tenant.get("name") or tenant.get("company"),
-                    today=today, full_qa=full_qa, voice=voice,
+                    today=today, full_qa=full_qa, voice=voice, goals=goals,
                     tenant_id=ctx.tenant_id,
                     on_delta=_on_delta, voice_mode=True, tasks_on=True,
                     cancelled=lambda: turn_state.status == "cancelled",
