@@ -68,9 +68,16 @@ def test_ci_has_an_unconditional_guard_and_full_offline_run():
     # so a PR push isn't tested twice; the no-filter bans below still apply.
     assert "pull_request:" in workflow
     assert "push:\n    branches: [main]" in workflow
-    assert "tests/test_agnostic_context.py" in workflow and "tests/test_agnostic_inventory.py" in workflow
+    guard_command = next(line for line in workflow.splitlines()
+                         if "run: python tests/run_offline.py tests/test_agnostic_context.py" in line)
+    for name in ("context", "surfaces", "outcomes", "inventory"):
+        assert f"tests/test_agnostic_{name}.py" in guard_command
+    assert workflow.index(guard_command) < workflow.index("Install and expose disposable PostgreSQL")
     assert "python tests/run_offline.py tests -q" in workflow
     assert "--basetemp=.cache/pytest-full" in workflow
+    assert "timeout-minutes: 30" in workflow
+    assert "group: ${{ github.workflow }}-${{ github.ref }}" in workflow
+    assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in workflow
     # CI must find real PostgreSQL binaries and put them on PATH (the runner's
     # own install; the exact discovery command may change).
     assert "/usr/lib/postgresql" in workflow and 'test -x "$pg_bin/initdb"' in workflow         and "GITHUB_PATH" in workflow
