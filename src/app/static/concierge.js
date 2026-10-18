@@ -198,7 +198,7 @@
     mailbox: "Step 2 of 4 here: connect the inbox your customers email — I'm the BLAM8 AI assistant. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
     knowledge: ONB_SITE
       ? "I'm the BLAM8 AI assistant. Once " + ONB_SITE + " has been read, we'll go through your actual notes together. Tell me what to keep or correct; I'll ask about anything that needs your decision. Nothing from the drafts is available to the agent until you save the review."
-      : "I'm the BLAM8 AI assistant. We'll go through your notes together. Tell me what to keep or correct, and I'll ask about anything needing your decision. Unknown details can stay unknown. Nothing from the drafts is available to the agent until you save the review.",
+      : "I'm the BLAM8 AI assistant. We'll go through your notes together. Tell me what to keep or correct, and I'll ask about anything needing your decision. Pending drafts are separate from saved Knowledge. Unknown details can stay unknown. Nothing from the drafts is available to the agent until you save the review.",
     data: "Last step — which systems do you run on? I'm the BLAM8 AI assistant: tell me and I'll point you to the right boxes to tick.",
   };
   // Mid-thread step hand-offs: same job as the greetings but WITHOUT the
@@ -1445,15 +1445,6 @@
     pinToTop(replyEl);
     return spoke;
   }
-
-  // The review controller starts when actual drafts arrive, rather than asking
-  // the owner to interpret an inventory of source-audit labels.
-  window.blam8KnowledgeGuideStart = async function () {
-    if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return false;
-    sending = true; sendBtn.disabled = true; showTyping();
-    try { return await onboardTurn("", []); }
-    finally { sending = false; sendBtn.disabled = false; }
-  };
 
   // Node builder + appender split so the voice overlay's stage can render the
   // SAME links and cards (listeners included) into its own container.
@@ -2711,6 +2702,15 @@
       if (!PENDING_KB_CARDS.length) btn.click();   // nothing pending now → the real Next
     })();
   }, true);
+
+  // Start from actual stored drafts when they arrive. Keep browser integration
+  // outside the onboarding-turn function and its standalone replay boundary.
+  window.blam8KnowledgeGuideStart = async function () {
+    if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return false;
+    sending = true; sendBtn.disabled = true; showTyping();
+    try { return await onboardTurn("", []); }
+    finally { sending = false; sendBtn.disabled = false; }
+  };
 
   // Restore open state across navigation. On a setup step, open by default so the
   // co-pilot is right there — unless the user explicitly closed it this session.
