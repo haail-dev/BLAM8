@@ -75,8 +75,8 @@
     </form>
   </section>
 
-  {% set landing_glass_logo = request.url.path == '/' %}
-  <!-- The landing glass mark retains a still for reduced motion and no JS. -->
+  {% set landing_glass_logo = request.url.path in ('/', '/login') %}
+  <!-- Landing and sign-in share the glass mark and its reduced-motion still. -->
   <button id="bc-bubble" type="button" aria-label="Open BLAM8 assistant" aria-expanded="false"
           {% if landing_glass_logo %}data-assistant-glass-logo{% endif %}
           class="relative ml-auto grid h-16 w-16 select-none place-items-center {% if landing_glass_logo %}bg-transparent{% else %}rounded-full bg-white shadow-lg{% endif %} p-0 text-white transition hover:scale-105"
