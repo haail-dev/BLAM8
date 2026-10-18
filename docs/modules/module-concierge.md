@@ -50,6 +50,13 @@ the actual state; only an active operation has the `bc-busy` marker. Completing
 the operation removes that marker and restores the current notice or Continue
 action. Reduced motion and forced colours use static readable text.
 
+The installable app uses a static glass B on navy at 192px and 512px, with a
+padded 512px maskable variant, a 96px shortcut icon and a 180px Apple touch icon.
+These are rendered from the existing glass-logo renderer at its native 600px
+source resolution. Distinct glass-icon filenames and versioned manifest URLs
+avoid reusing the old flat-logo cache entries. Public, app and onboarding Apple
+touch links use the same glass icon. The notification badge is unchanged.
+
 A single corner widget that does two jobs across the public→tenant boundary:
 
 1. **Pre-login concierge** — anyone on the landing/marketing pages can ask BLAM8
