@@ -229,3 +229,14 @@ sources and their guards. The full `platform-help` comparison changes only the
 `content_version` and `definition_version` fields inside the retrieved catalogue
 JSON; replacing those fields restores the base request exactly. Its visible
 answer context, permissions, actions and selected articles are unchanged.
+
+## Pending Knowledge workspace — 18 October 2026
+
+`platform-knowledge` changes only the step guidance: it describes actual source,
+overlap and note decisions, separate draft application/final approval, and asks
+only for missing facts without presupposing a universal rule. Replacing exactly
+that guidance in the complete new request reproduces the base snapshot. The
+Knowledge source-correction model uses its own strict schema/contract tests.
+`platform-help` again changes only the two catalogue version fields after the
+reviewed guide and source associations change. Full request comparisons retain
+the same selected articles, permissions and actions. No detector/debt changes.

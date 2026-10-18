@@ -1,9 +1,9 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions. PM-ONB-005: reviewed structured capture, exact per-clause attribution, all source locations and disclosed crawl limits. The 19 other capability definitions and authored guides are unchanged; source-bound signatures include the shared evidence map and maintained reference. Their existing per-surface dispositions still apply. Knowledge and mailbox shared-route dispositions record their specific review; no provider, permission, commercial or execution change.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions. PM-ONB-005: reviewed structured capture, exact per-clause attribution, all source locations and disclosed crawl limits. The 19 other capability definitions and authored guides are unchanged; source-bound signatures include the shared evidence map and maintained reference. Their existing per-surface dispositions still apply. Knowledge and mailbox shared-route dispositions record their specific review; no provider, permission, commercial or execution change. PM-ONB-006/007: reviewed the pending review workspace, exact repeated-passage pairs, nonmutating preview, explicit lifecycle and version reconciliation, retained Assistant context and citation-only proposals with separate draft apply/final admission. Existing source flag remains disabled. Shared inventory/Concierge metadata changes do not alter other capability gates or commercial claims.",
   "capabilities": {
     "email": {
-      "signature": "f891e1dd26a47176298f88735d51236db43aa4218ef86d940a9da5e377c37613",
+      "signature": "ece0bede2531e8ae23486dfa331a7122981c67385fb642d892e95334d96ce3ba",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -63,7 +63,7 @@
       }
     },
     "knowledge": {
-      "signature": "0503bfbd5da67049959761a9c320fabc2588d02b6c7915b05cdc69395a2ce7f8",
+      "signature": "31c852280f36280a4e454469ce96d5229e9ec10f132f3cd96b6a6410949d2eb8",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -114,7 +114,7 @@
       }
     },
     "scheduling": {
-      "signature": "a0c03f774a1a05d87e761ef1df4e7cd2e574535592b91a95b863b4d942f1c110",
+      "signature": "a0138c5082a427c464c3a85512fc492859337eb9b975dbfd3c84fa82232ed8f3",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -164,7 +164,7 @@
       }
     },
     "calendar": {
-      "signature": "77a5cf4c37fb1f2f1cfcbcf0933c2bc3ca7bc05817c788bbce3183a96db1e37a",
+      "signature": "597714981c256a14167318eea352e1c756e027472c887e4016183036ec4f96f9",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -215,7 +215,7 @@
       }
     },
     "crm": {
-      "signature": "9833a91d5c2c0dda5238e2577140590d6fae1a265fc579c5e9fc0b9cd05a0c97",
+      "signature": "b3775099effaf96c1581bd3c1a9c9909c77483636a0320d10cb039d217b79ee2",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -266,7 +266,7 @@
       }
     },
     "subjects": {
-      "signature": "e6cdc75fee54846cc6eb8044ddc6e5e66d8f79dc5e646f3da364d382f14d45c0",
+      "signature": "a5a553ee372915cccdddd2c9c89564986105dfd784b641057f225b9f557b2e90",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -307,7 +307,7 @@
       }
     },
     "packages": {
-      "signature": "31cc47e66d61c6e9d7b5060bd56f3f3315e67ea2962afcae14aff9540f363f0a",
+      "signature": "61786085eaf797fae1935ba6be95f2fea6ecf6dc6570da58a39b08bf38375e9f",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -368,7 +368,7 @@
       }
     },
     "progress": {
-      "signature": "6bf0a275e75f913a1dff0776c64d647b4c4b21fecf88d2574c0feb487b68b19e",
+      "signature": "04f472010520c0776a6f995a7a1b11c634bd7ae26e20e3bbeffe58120fd94463",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -429,7 +429,7 @@
       }
     },
     "money": {
-      "signature": "72c0e505e5c0ddb1279744ea8568135c48aab7e82c4f358330d65b9c2bda507a",
+      "signature": "fcd3d4a4227407b5d8f5b960fad737673167f580a2384d52fa25985aef97cf2c",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -480,7 +480,7 @@
       }
     },
     "people": {
-      "signature": "14260688d56b6b8e117aff41059eab36b7a8b4bbeb63883b2f5ad5fae98cf0cd",
+      "signature": "d33daba99af70888a48d3f0260972b8cd7c96179b5bfd3be964dc78a6b778296",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -531,7 +531,7 @@
       }
     },
     "portal": {
-      "signature": "b0650ca5da0b0de63a64aae9a7c2619b0db9391486fef1266856cc4b34d3a302",
+      "signature": "1e7d555793dd7447a2eb3c8d0457ee32f04d6c76f5932a60a58c965da9a40616",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -581,11 +581,11 @@
       }
     },
     "mailboxes": {
-      "signature": "8e192abd44fdacad4f18f62b0c38fd823ec79289673b4e7f87edc8e8a5a33998",
+      "signature": "eb89ad5dbc55c2bc140aa81c888ace4b78b1d52f76fa4ff4ceed46b571aecc28",
       "surfaces": {
         "/help": {
           "disposition": "generated",
-          "reason": "Mailbox connections and overrides: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for /help: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import.",
+          "reason": "Mailbox connections and overrides: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for /help: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import. Shared Knowledge review routes now retain Assistant context and read-only previews; this surface still uses the explicit mailbox import choice and approval gate.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
@@ -598,7 +598,7 @@
         },
         "/how-it-works": {
           "disposition": "reviewed_unchanged",
-          "reason": "Mailbox connections and overrides: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for /how-it-works: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import.",
+          "reason": "Mailbox connections and overrides: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for /how-it-works: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import. Shared Knowledge review routes now retain Assistant context and read-only previews; this surface still uses the explicit mailbox import choice and approval gate.",
           "evidence": [
             "src/app/templates/how_it_works.html",
             "docs/product-knowledge.md",
@@ -610,7 +610,7 @@
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "mailboxes: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for README.md: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import.",
+          "reason": "mailboxes: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for README.md: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import. Shared Knowledge review routes now retain Assistant context and read-only previews; this surface still uses the explicit mailbox import choice and approval gate.",
           "evidence": [
             "README.md",
             "src/app/product_inventory.py",
@@ -622,7 +622,7 @@
         },
         "agent:mailboxes": {
           "disposition": "updated",
-          "reason": "Mailbox connections and overrides: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for agent:mailboxes: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import.",
+          "reason": "Mailbox connections and overrides: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for agent:mailboxes: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import. Shared Knowledge review routes now retain Assistant context and read-only previews; this surface still uses the explicit mailbox import choice and approval gate.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
@@ -634,7 +634,7 @@
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Mailbox connections and overrides: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for docs/product-knowledge.md: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import.",
+          "reason": "Mailbox connections and overrides: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Historical import is now a separate explicit mailbox-scoped choice; connecting still enables new-mail sync. No provider scope, sending permission or automatic drafting is enabled by import. The operation reference records the migration and fail-closed rollback. Knowledge-only edits to the shared onboarding route were reviewed for docs/product-knowledge.md: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import. Shared Knowledge review routes now retain Assistant context and read-only previews; this surface still uses the explicit mailbox import choice and approval gate.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
@@ -646,7 +646,7 @@
         },
         "docs/operations/mailbox-import-choice.md": {
           "disposition": "updated",
-          "reason": "Documents historical-import choice, fixed preconnection scope, worker approval, retry/reconnect semantics, migration order and fail-closed rollback; offline tests do not claim live provider consent verification. Knowledge-only edits to the shared onboarding route were reviewed for docs/operations/mailbox-import-choice.md: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import.",
+          "reason": "Documents historical-import choice, fixed preconnection scope, worker approval, retry/reconnect semantics, migration order and fail-closed rollback; offline tests do not claim live provider consent verification. Knowledge-only edits to the shared onboarding route were reviewed for docs/operations/mailbox-import-choice.md: mailbox-scoped import choices, provider permissions and worker approval remain unchanged; website evidence does not start mail import. Shared Knowledge review routes now retain Assistant context and read-only previews; this surface still uses the explicit mailbox import choice and approval gate.",
           "evidence": [
             "docs/operations/mailbox-import-choice.md",
             "tests/test_mailbox_import_choice.py",
@@ -656,7 +656,7 @@
       }
     },
     "owner.assistant": {
-      "signature": "9a955c34bfa9e5c895fcf77c9b4aeaa0fde1ac9a42dc76236c59a19269b22b66",
+      "signature": "71716e4afd81eaa982d067ce76daabbbc5b4a82e401cc33710ba02497da74549",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -707,11 +707,11 @@
       }
     },
     "product.help": {
-      "signature": "0f1ceb37ce26ff17d2ab6ac9295bd59827a44506d276123f5b9e6cdb683aeb0e",
+      "signature": "fed74d749362486ec9ac2ca31e9449934821526e75c12b25df83fbf1ba9c68e9",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged.",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -723,12 +723,13 @@
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
-            "src/app/static/onboarding_journey.js"
+            "src/app/static/onboarding_journey.js",
+            "tests/test_knowledge_review_routes.py"
           ]
         },
         "/pages": {
           "disposition": "reviewed_unchanged",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged.",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /pages: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -740,22 +741,25 @@
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
-            "src/app/static/onboarding_journey.js"
+            "src/app/static/onboarding_journey.js",
+            "tests/test_knowledge_review_routes.py"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on agent:product.help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
-            "src/app/static/onboarding_journey.js"
+            "src/app/static/onboarding_journey.js",
+            "src/app/static/concierge.js",
+            "tests/test_knowledge_review_routes.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged.",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on docs/product-knowledge.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -767,23 +771,26 @@
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
-            "src/app/static/onboarding_journey.js"
+            "src/app/static/onboarding_journey.js",
+            "tests/test_knowledge_review_routes.py"
           ]
         },
         "docs/onboarding-journey.md": {
           "disposition": "updated",
-          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on docs/onboarding-journey.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
             "src/app/onboarding_journey.py",
-            "src/app/static/onboarding_journey.js"
+            "src/app/static/onboarding_journey.js",
+            "src/app/static/concierge.js",
+            "tests/test_knowledge_review_routes.py"
           ]
         }
       }
     },
     "billing": {
-      "signature": "5f79457eeef29d0ccb04179291fddea03d5af6f59de18ebf76cd3fee0fe6527e",
+      "signature": "52c61a65b54090eef2efd0d838c0f84cec550eda86f61845b6c90e335391ef2e",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -1075,7 +1082,7 @@
       }
     },
     "installable": {
-      "signature": "fd8c144478e530535a9055a720b1ae0c89a377f93c2c364c4a6ff93b03109fb1",
+      "signature": "04b756eedf809767ece1b8370577905e2d1984eec4fb4b926c91ced176c04c2c",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1116,7 +1123,7 @@
       }
     },
     "extensions": {
-      "signature": "11672b36d976b03a016f4c21bc45475d3af571c076222338720adfe361b44c73",
+      "signature": "9ba5e404b4243fb60fe13182ed575bcfc611c9cf74021e8bd88d60f39bfe7d95",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1166,7 +1173,7 @@
       }
     },
     "automation.scheduled": {
-      "signature": "16fc24a5c4e11bb982763941d7e1f8652a19c2cee8eecaa87fb64ecb0e34c064",
+      "signature": "93af96c7d51545b180021e35667f429be7f3fcefa6e5e539fe5cac482d806099",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1207,7 +1214,7 @@
       }
     },
     "outreach": {
-      "signature": "c8b080823ff952469371da664df3743cd050e7a4e47f465e96c79085670dad44",
+      "signature": "d1ff6ec0facd613384d45bb394b81a8aab8734fb96a1347a7e67413f193ed229",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1248,11 +1255,11 @@
       }
     },
     "knowledge.review": {
-      "signature": "ce2cb00c6c54822c68a03168de3c92a7d3904b810769f821bd43cb3c0a758d9b",
+      "signature": "b3a3e49caa59b2370a04ee27827794e83fd7f1d2f28b81af4e17a24718fed511",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: /pages describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: /pages describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on /pages: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
           "evidence": [
             "src/app/pages_index.py",
             "tests/test_pages_index.py",
@@ -1260,12 +1267,15 @@
             "tests/test_knowledge_source_review.py",
             "tests/test_knowledge_source_routes.py",
             "tests/test_knowledge_capture.py",
-            "tests/test_knowledge_fidelity.py"
+            "tests/test_knowledge_fidelity.py",
+            "tests/test_knowledge_review_workspace.py",
+            "tests/test_knowledge_source_ui.py",
+            "tests/test_knowledge_source_database.py"
           ]
         },
         "agent:knowledge.review": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: agent:knowledge.review describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: agent:knowledge.review describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on agent:knowledge.review: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
@@ -1273,12 +1283,15 @@
             "tests/test_knowledge_source_review.py",
             "tests/test_knowledge_source_routes.py",
             "tests/test_knowledge_capture.py",
-            "tests/test_knowledge_fidelity.py"
+            "tests/test_knowledge_fidelity.py",
+            "tests/test_knowledge_review_workspace.py",
+            "tests/test_knowledge_source_ui.py",
+            "tests/test_knowledge_source_database.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/product-knowledge.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/product-knowledge.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/product-knowledge.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
@@ -1286,12 +1299,15 @@
             "tests/test_knowledge_source_review.py",
             "tests/test_knowledge_source_routes.py",
             "tests/test_knowledge_capture.py",
-            "tests/test_knowledge_fidelity.py"
+            "tests/test_knowledge_fidelity.py",
+            "tests/test_knowledge_review_workspace.py",
+            "tests/test_knowledge_source_ui.py",
+            "tests/test_knowledge_source_database.py"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/verified-behaviours.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/verified-behaviours.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/verified-behaviours.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
           "evidence": [
             "docs/verified-behaviours.md",
             "tests/test_platform_capabilities.py",
@@ -1299,19 +1315,24 @@
             "tests/test_knowledge_source_review.py",
             "tests/test_knowledge_source_routes.py",
             "tests/test_knowledge_capture.py",
-            "tests/test_knowledge_fidelity.py"
+            "tests/test_knowledge_fidelity.py",
+            "tests/test_knowledge_review_workspace.py",
+            "tests/test_knowledge_source_ui.py",
+            "tests/test_knowledge_source_database.py"
           ]
         },
         "docs/operations/knowledge-source-review.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The operations reference records retention and rollback. Source capture review: docs/operations/knowledge-source-review.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The operations reference records retention and rollback. Source capture review: docs/operations/knowledge-source-review.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/operations/knowledge-source-review.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
           "evidence": [
             "docs/operations/knowledge-source-review.md",
             "tests/test_knowledge_source_database.py",
             "tests/test_knowledge_source_review.py",
             "tests/test_knowledge_source_routes.py",
             "tests/test_knowledge_capture.py",
-            "tests/test_knowledge_fidelity.py"
+            "tests/test_knowledge_fidelity.py",
+            "tests/test_knowledge_review_workspace.py",
+            "tests/test_knowledge_source_ui.py"
           ]
         }
       }

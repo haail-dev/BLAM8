@@ -3,6 +3,7 @@ from app import knowledge_review as kr, knowledge_source_review as source, knowl
 from tests.test_knowledge_review import context, entry, form
 from tests.test_knowledge_source_review import seeded
 import pytest
+from fastapi import HTTPException
 
 
 def test_partial_sentence_overlap_after_long_unrelated_prefix_has_one_pair_and_exact_evidence():
@@ -18,7 +19,8 @@ def test_partial_sentence_overlap_after_long_unrelated_prefix_has_one_pair_and_e
     f=form(ctx,row);f['match_'+a[0]['key']]='keep_both'
     assert len(kr.plan(ctx,row,f)[0])==2 and ctx==before
     f['content_two']=two['content']+' Changed wording.'
-    with pytest.raises(Exception):kr.plan(ctx,row,f)
+    with pytest.raises(HTTPException) as failure:kr.plan(ctx,row,f)
+    assert failure.value.status_code==409
 
 
 def test_known_topic_does_not_create_default_questions_or_approve_coverage():
@@ -78,3 +80,29 @@ def test_citation_cannot_create_replacement_wording_or_manufacture_a_missing_foo
     with pytest.raises(setup_cards.Invalid,match='existing note'):source.validate(card,saved,raw)
     card,raw=citation_review(row,saved);raw['changes'][0]['citations'][0]['reference']='missing-footer/0/0/5'
     with pytest.raises(setup_cards.Invalid,match='retained'):source.validate(card,saved,raw)
+
+
+def test_requested_missing_intake_and_contact_constraints_reach_actual_drafts_without_admission():
+    from app import knowledge_fidelity
+    from uuid import uuid4
+    intake='We acknowledge the report, gather details, then explain the next step.'
+    contact='Do not claim that another party or emergency service has been contacted unless that action is confirmed.'
+    pages=[{'url':'https://example.invalid/home','text':'Fictional sample facts.\n'+intake},
+           {'url':'https://example.invalid/hours','text':contact}]
+    saved=evidence.build(pages)
+    row={'id':str(uuid4()),'state':'pending','payload':{'source_snapshot':saved['id'],'draft_revision':1,
+        'source_units':knowledge_fidelity.inventory(pages),'entries':[
+            entry('intake','Intake','We acknowledge reports and gather details.'),entry('hours','Office','We review reports in office hours.')],
+        'questions':[],'origin':'Website'}}
+    card=source.draft_card(row,saved);raw={'revision':1,'changes':[], 'overlaps':[],'questions':[]}
+    for line,page,quote in zip(card['lines'],(0,1),(intake,contact)):
+        raw['changes'].append({'id':line['id'],'content_hash':evidence.digest(line['fields']['content']),
+            'insertions':[{'position':'after','reference':evidence.reference(saved,page,quote)}]})
+    before=deepcopy(row);payload=source.corrected_payload(row,saved,raw,owner_request='Restore both source constraints.',reviewer='owner')
+    assert row==before and row['state']=='pending'
+    assert intake in payload['entries'][0]['content'] and contact in payload['entries'][1]['content']
+    ctx={'version':'fresh','brief':'','sources':[],'reviews':[{**row,'payload':payload}]}
+    notes,admitted=kr.plan(ctx,ctx['reviews'][0],{'version':'fresh','action_intake':'keep','action_hours':'keep'})
+    assert all('Fictional sample facts.' in n['source_context'] for n in notes)
+    assert all(u['status']!='unresolved' for u in admitted['source_decisions'])
+    assert ctx['sources']==[]  # constructing final decisions still does not write Knowledge

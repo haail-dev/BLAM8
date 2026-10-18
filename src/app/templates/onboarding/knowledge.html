@@ -52,7 +52,7 @@
    done"): once "Website — …" notes exist the box becomes one line, and
    Read again reveals it for a re-run. #}
 {% set site_state = site_state or {'state': 'saved' if site_done else 'idle', 'pending_notes': 0, 'saved_notes': site_note_count or 0} %}
-<div id="site-lifecycle" class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}">
+<div id="site-lifecycle" class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}" data-pending-notes="{{ site_state.pending_notes }}" data-review-href="{{ site_state.review_href or '#knowledge-pending-reviews' }}">
   <p data-site-heading class="font-semibold">{% if site_state.state=='pending' %}Website drafts ready to review{% elif site_state.state=='saved' %}Website notes saved{% else %}Start from your website{% endif %}</p>
   <p data-site-description>{% if site_state.state=='pending' %}{{ site_state.pending_notes }} drafts pending. Nothing from these drafts is saved to Knowledge.{% elif site_state.state=='saved' %}{{ site_state.saved_notes }} notes saved to Knowledge.{% else %}Read key pages and prepare notes for your review.{% endif %}</p>
   <a data-site-review href="{{ site_state.review_href or '#knowledge-pending-reviews' }}"{% if not site_state.pending_notes %} hidden{% endif %} class="mt-2 inline-block font-semibold text-brand">Review {{ site_state.pending_notes }} drafts</a>

@@ -45,5 +45,11 @@ requests[1].resolve({ok:true,json:async()=>({...incoming('read',form('c2','e1','
 await read;assert.equal(active,beforeRead);assert.equal(lifecycle.dataset.state,'pending');assert.equal(go.textContent,'Read again');assert.equal(link.textContent,'Review 10 drafts');assert.match(description.textContent,/Nothing.*saved/);
 const failed=go.listeners.click();requests[2].resolve({ok:false,json:async()=>({error:'Synthetic fetch failure'})});await failed;
 assert.equal(lifecycle.dataset.state,'error');assert.equal(go.textContent,'Try again');assert.equal(active,beforeRead);
+assert.equal(link.textContent,'Review 10 drafts');assert.equal(link.hidden,false);
 input.listeners.input();assert.equal(lifecycle.dataset.state,'idle');
+const uncertain=go.listeners.click();requests[3].resolve({ok:true,json:async()=>{throw Error('Synthetic lost response');}});await uncertain;
+assert.equal(lifecycle.dataset.state,'unconfirmed');assert.equal(go.textContent,'Check stored drafts');assert.equal(requests.length,4);
+const reconcile=go.listeners.click();assert.equal(requests[4].url,'/onboarding/knowledge/reviews');
+requests[4].resolve({ok:true,json:async()=>({...incoming('reconciled',form('c2','e1','v2')),site_state:{state:'pending',pending_notes:10}})});await reconcile;
+assert.equal(lifecycle.dataset.state,'pending');assert.equal(active,beforeRead);assert.equal(requests.length,5);
 console.log('Workspace no-op/dirty refresh, nonmutating preview and website lifecycle replay passed');

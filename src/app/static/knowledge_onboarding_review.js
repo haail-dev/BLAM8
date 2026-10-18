@@ -3,6 +3,7 @@
   'use strict';
   var go=document.getElementById('site-go'), input=document.getElementById('site-url');
   var lifecycle=document.getElementById('site-lifecycle'), busy=false;
+  var knownSite={pending_notes:lifecycle ? Number(lifecycle.dataset.pendingNotes || 0) : 0,review_href:lifecycle && lifecycle.dataset.reviewHref};
   function ready(){window.dispatchEvent(new Event('blam8:onboarding-readiness'));}
   function notice(form,text){if(!form)return;var el=form.querySelector('[data-review-status]');if(el)el.textContent=text;}
   function signature(form){return ['contentVersion','evidenceVersion','contextVersion'].map(function(k){return form.dataset[k] || '';}).join('/');}
@@ -45,8 +46,14 @@
       var responseDoc=parser.parseFromString(data.review_html || '', 'text/html');
       var incomingIds=Array.from(responseDoc.querySelectorAll('[data-knowledge-review]')).map(function(f){return f.dataset.knowledgeReview;});
       oldForms.forEach(function(f){if(!incomingIds.includes(f.dataset.knowledgeReview)){
+        var wasClosed=f.dataset.reviewClosed==='1';
         f.dataset.reviewClosed='1';notice(f,'This batch is no longer pending in stored reviews. Local text is preserved; reload after copying any unsaved edits.');
-        f.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+        f.querySelectorAll('button:not([data-review-dismiss])').forEach(function(b){b.disabled=true;});
+        if(!wasClosed){
+          var dismiss=document.createElement('button');dismiss.type='button';dismiss.dataset.reviewDismiss='1';
+          dismiss.textContent='Dismiss this local copy after preserving my unsaved text';
+          dismiss.addEventListener('click',function(){f.remove();ready();});f.appendChild(dismiss);
+        }
       }});
     }
     var coverage=parser.parseFromString(data.coverage_html || '', 'text/html').getElementById('knowledge-review-coverage');
@@ -57,12 +64,13 @@
   }
   function present(state){
     if(!lifecycle)return;
+    if(state.pending_notes!==undefined){knownSite.pending_notes=state.pending_notes;knownSite.review_href=state.review_href;}
     lifecycle.dataset.state=state.state;
     var title={idle:'Start from your website',reading:'Reading your website',pending:'Website drafts ready to review',saved:'Website notes saved',error:'Website read failed',unconfirmed:'Website read outcome unconfirmed'};
     lifecycle.querySelector('[data-site-heading]').textContent=title[state.state];
     lifecycle.querySelector('[data-site-description]').textContent=state.message || (state.state==='pending' ? state.pending_notes+' drafts pending. Nothing from these drafts is saved to Knowledge.' : state.state==='saved' ? state.saved_notes+' notes saved to Knowledge.' : 'Read key pages and prepare notes for your review.');
     var link=lifecycle.querySelector('[data-site-review]');
-    link.hidden=!state.pending_notes;link.textContent='Review '+(state.pending_notes || 0)+' drafts';link.href=state.review_href || '#knowledge-pending-reviews';
+    link.hidden=!knownSite.pending_notes;link.textContent='Review '+knownSite.pending_notes+' drafts';link.href=knownSite.review_href || '#knowledge-pending-reviews';
     if(go){go.disabled=state.state==='reading';go.textContent=state.state==='reading'?'Reading…':state.state==='unconfirmed'?'Check stored drafts':state.state==='error'?'Try again':state.state==='idle'?'Read my site':'Read again';}
   }
   window.Blam8KnowledgeReview={replace:replace,signature:signature};
