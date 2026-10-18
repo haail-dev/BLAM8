@@ -103,7 +103,10 @@ def test_source_inventory_blocks_admission_and_preserves_corrections(client,revi
         'version':review_store.load('tenant')['version'],'operation':'save',
         'action_'+id:'keep','content_'+id:'The corrected fee is £95.'})
     assert r.status_code==409 and 'corrected fee' in r.text
-    assert 'Approval must precede a booking.' in r.text and review_store.sources==[]
+    unit=row['payload']['source_units'][0]
+    assert unit['text']=='Approval must precede a booking.' and review_store.sources==[]
+    assert f'type="hidden" name="source_{unit["id"]}" value=""' in r.text
+    assert 'Source-to-note review' not in r.text
 
 
 @pytest.mark.parametrize('admitted',[0,1])

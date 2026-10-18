@@ -12,7 +12,7 @@ const doc={
   getElementById:()=>({textContent:JSON.stringify({current:step,next:{label:'Voice'}})}),
   querySelectorAll(selector){return selector==='[data-onb-continue]'?(action?[action]:[]):Array(pending).fill({});},
   querySelector(selector){return selector.includes('content')?{value:note}:null;},
-  createElement(){return {className:'',textContent:'',listeners:{},addEventListener(name,fn){this.listeners[name]=fn;}};}
+  createElement(){return {className:'',textContent:'',children:[],listeners:{},setAttribute(name,value){this[name]=value;},appendChild(el){this.children.push(el);},addEventListener(name,fn){this.listeners[name]=fn;}};}
 };
 const window={Blam8KnowledgeSourceReview:{working:()=>busy}};
 const context=vm.createContext({window,document:doc,Array,JSON,PENDING_KB_CARDS:[],cta,ADVANCE_WANTED:false,
@@ -34,6 +34,15 @@ action=makeAction();action.disabled=true;button.listeners.click();assert.equal(c
 action=makeAction();step='knowledge';pending=1;assert.equal(state.read(0).ready,false);
 pending=0;note='Unsaved note';assert.equal(state.read(0).ready,false);
 note='';busy=true;assert.equal(state.read(0).ready,false);
+assert.equal(state.read(0).blocker,'busy');
+cta.children=[];context.showContinueHint();
+assert.equal(cta.children[0].className,'bc-busy');
+assert.equal(cta.children[0].role,'status');
+assert.match(cta.children[0].children[0].textContent,/Wait for the current operation/);
 busy=false;assert.equal(state.read(1).ready,false);
 assert.equal(state.read(0).ready,true);
+cta.children=[];context.showContinueHint();
+assert(!cta.children.some(el=>el.className==='bc-busy'),'busy animation removed when operation ends');
+note='Unsaved';cta.children=[];context.showContinueHint();
+assert(!cta.children.some(el=>el.className==='bc-busy'),'a review decision is not active work');
 console.log('Journey readiness and explicit-click replay passed');

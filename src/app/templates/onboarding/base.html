@@ -46,7 +46,11 @@
      only the wizard below reserves space when the assistant opens. #}
   <header class="relative bg-navy flex-none" data-pull-bar data-bc-full-width>
     <div class="flex h-full w-full items-center justify-between gap-3">
-      <span class="font-bold text-white text-lg tracking-tight">BLAM8</span>
+      <span class="flex items-center gap-2 font-bold text-white text-lg tracking-tight">
+        <img src="/static/img/blam8-mark-small.svg?v={{ asset_rev }}" alt="" aria-hidden="true"
+             width="28" height="28" class="h-7 w-7 flex-none" style="filter: brightness(0) invert(1);">
+        BLAM8
+      </span>
       {# The login may differ from the connected inbox. Keep it at the far
          right above the dock, while the wordmark aligns with the left gutter.
          Safe-area padding belongs to the header. #}

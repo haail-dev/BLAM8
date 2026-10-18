@@ -2,7 +2,7 @@
 (function () {
   function availability(state) {
     if (!state.action) return {ready:false, reason:'No Continue action is available on this page.'};
-    if (state.busy) return {ready:false, reason:'Wait for the current operation to finish.'};
+    if (state.busy) return {ready:false, blocker:'busy', reason:'Wait for the current operation to finish.'};
     if (state.pendingCards) return {ready:false, reason:'Save or clear the pending notes card before continuing.'};
     if (state.step === 'knowledge') {
       if (state.unsavedNote) return {ready:false, reason:'Your pasted note is unsaved. Review it or clear it before continuing.'};

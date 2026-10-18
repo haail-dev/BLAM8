@@ -24,7 +24,7 @@ namespace, no new RAG code). Ready to build. Origin: 2026-06-29 conversation —
 through the real onboarding instead of leaving them to scroll a form alone.
 
 ## Goal
-The landing and sign-in launchers (`/` and `/login`) use `static/assistant-glass-logo.js`: a
+The landing, sign-in and onboarding launchers (`/`, `/login` and `/onboarding/*`) use `static/assistant-glass-logo.js`: a
 transparent glass B with mist, slow cog-driven water swells and rotating cog
 cut-outs. Pink mist sheds from actual particles along the full slanted left
 edge, drifting left with the longest reach at the centre and a shorter taper
@@ -35,10 +35,19 @@ transparent. The upper cog is slightly right of the lower cog. The existing
 64-pixel button still opens the same chat. Its white disc is removed; the glass
 supplies a soft shadow. Animation loads when idle and pauses when the launcher
 or document is hidden. Reduced motion, data saver and no JavaScript use
-`static/img/blam8-assistant-glass.png`. Other public/onboarding launchers and the
+`static/img/blam8-assistant-glass.png`. The chat header and onboarding page header
+use the existing compact brand mark. Other public launchers and the
 live Concierge/Pond effects are unchanged. Route rendering is covered by
 `tests/test_assistant_glass_logo.py`; live browser verification belongs in the
 external QA workspace.
+
+While the application reports an active onboarding operation, its waiting line
+uses the reusable `bc-busy` / `bc-busy-text` presentation: a plain grey text line
+with a slow pink-and-blue shine across the letters. There is no surrounding box.
+Text remains readable throughout; there is no progress
+estimate. Completing the operation removes that presentation. Reduced motion
+and forced colours use static readable text. Pending review decisions alone do
+not activate the shine.
 
 A single corner widget that does two jobs across the public→tenant boundary:
 

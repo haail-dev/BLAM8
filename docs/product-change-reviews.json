@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions. PM-ONB-005: reviewed structured capture, exact per-clause attribution, all source locations and disclosed crawl limits. The 19 other capability definitions and authored guides are unchanged; source-bound signatures include the shared evidence map and maintained reference. Their existing per-surface dispositions still apply. Knowledge and mailbox shared-route dispositions record their specific review; no provider, permission, commercial or execution change. PM-ONB-006/007: reviewed the pending review workspace, exact repeated-passage pairs, nonmutating preview, explicit lifecycle and version reconciliation, retained Assistant context and citation-only proposals with separate draft apply/final admission. Existing source flag remains disabled. Shared inventory/Concierge metadata changes do not alter other capability gates or commercial claims. PM-ONB-002 context slice: recorded Goals reach drafting and owner Assistant prompts as intent, with no new control, writer, permission or enforcement claim. Settings and grounding state that distinction. Shared evidence signature changes do not broaden commercial or action claims.      Agent answer-grounding review: single-pass contexts now receive every compact core guide. Money guidance covers existing online/manual quote acceptance; Knowledge guidance covers draft admission, attribution, expiry and manual fallback. Public instructions separate unknown support from absence and chat access from product capability. Reviewed the exact before/after platform-help render: only product JSON guide coverage and content/definition versions changed; caller permissions, schema, tenant context and actions are unchanged. No production deployment or universal model-quality claim. Internal Help investigation: reviewed bounded document/code/account tools, authenticated tenant binding, fail-closed member/settings access, setup-side-effect suppression and per-call usage aggregation. The exact platform-help render differs only in the product.help guide and its two article copies, plus definition/content versions; all other guide text, permissions, caller data and schema are unchanged. The agnostic lexical debt diff is empty. Public routes acquire no tools and commercial values are unchanged. General-purpose workspace files, migrations and provider credentials are not added. No deployment claim.   Landing presentation review: removed the sample inbox figure and caption, reclaimed its grid column, and hid assistant transcript/composer scrollbar chrome while retaining overflow scrolling. No feature, permission, plan or commercial-copy change.  Founder outreach egress repair: the shared review checker now binds internal operator tooling to separate source/test/operations evidence. Public capabilities, guides, settings and commercial surfaces are unchanged; their signatures refresh solely for the shared checker change. The founder job is not added to the product catalogue.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. PM-ONB-004 author review: mailbox source association now includes the historical-import entry points and provider window queries. Historical import requires explicit choice and worker approval. Other capability semantics and public commercial claims are unchanged; shared inventory/source signature changes were reviewed without broadening those claims. PM-ONB-003: reviewed the server-owned wizard descriptor, explicit-click readiness and deterministic navigation responses. Knowledge admission and manual form submission remain guarded. Shared source signatures change without changing commercial claims or permissions. PM-ONB-005: reviewed structured capture, exact per-clause attribution, all source locations and disclosed crawl limits. The 19 other capability definitions and authored guides are unchanged; source-bound signatures include the shared evidence map and maintained reference. Their existing per-surface dispositions still apply. Knowledge and mailbox shared-route dispositions record their specific review; no provider, permission, commercial or execution change. PM-ONB-006/007: reviewed the pending review workspace, exact repeated-passage pairs, nonmutating preview, explicit lifecycle and version reconciliation, retained Assistant context and citation-only proposals with separate draft apply/final admission. Existing source flag remains disabled. Shared inventory/Concierge metadata changes do not alter other capability gates or commercial claims. PM-ONB-002 context slice: recorded Goals reach drafting and owner Assistant prompts as intent, with no new control, writer, permission or enforcement claim. Settings and grounding state that distinction. Shared evidence signature changes do not broaden commercial or action claims.      Agent answer-grounding review: single-pass contexts now receive every compact core guide. Money guidance covers existing online/manual quote acceptance; Knowledge guidance covers draft admission, attribution, expiry and manual fallback. Public instructions separate unknown support from absence and chat access from product capability. Reviewed the exact before/after platform-help render: only product JSON guide coverage and content/definition versions changed; caller permissions, schema, tenant context and actions are unchanged. No production deployment or universal model-quality claim. Internal Help investigation: reviewed bounded document/code/account tools, authenticated tenant binding, fail-closed member/settings access, setup-side-effect suppression and per-call usage aggregation. The exact platform-help render differs only in the product.help guide and its two article copies, plus definition/content versions; all other guide text, permissions, caller data and schema are unchanged. The agnostic lexical debt diff is empty. Public routes acquire no tools and commercial values are unchanged. General-purpose workspace files, migrations and provider credentials are not added. No deployment claim.   Landing presentation review: removed the sample inbox figure and caption, reclaimed its grid column, and hid assistant transcript/composer scrollbar chrome while retaining overflow scrolling. No feature, permission, plan or commercial-copy change.  Founder outreach egress repair: the shared review checker now binds internal operator tooling to separate source/test/operations evidence. Public capabilities, guides, settings and commercial surfaces are unchanged; their signatures refresh solely for the shared checker change. The founder job is not added to the product catalogue. Knowledge UI review: numbered editable notes replace the visible source-unit inventory; source choices remain hidden and depend on the companion note guide. Busy shine and onboarding brand reuse are presentation changes. No live testing, deployment or automatic approval is claimed.",
   "capabilities": {
     "email": {
       "signature": "8460707d1af6431a370063faf2a3cda2fa6c34493fef26daec89c28006680038",
@@ -753,11 +753,11 @@
       }
     },
     "product.help": {
-      "signature": "4c3858b007b9d3a2076ba53f8b2a46e3ecab145ec6a01f90e4dae9655b1034e4",
+      "signature": "5d4df8ae183cabf21eb228527c7f8634a8865e396f38b07db11bd8043d64c217",
       "surfaces": {
         "/help": {
           "disposition": "generated",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only. UI review: Help discovery and permissions are unchanged; the active-operation wait now has a readable reduced-motion-aware shine and onboarding reuses the approved glass logo.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -778,12 +778,14 @@
             "src/app/concierge_routes.py",
             "src/app/product_guides.py",
             "docs/operations/help-investigation.md",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/replays/onboarding_journey_replay.mjs"
           ]
         },
         "/pages": {
           "disposition": "generated",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /pages: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on /pages: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only. UI review: Page discovery still describes the existing application-owned setup flow; visual busy and logo changes do not change action availability.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -804,12 +806,14 @@
             "src/app/concierge_routes.py",
             "src/app/product_guides.py",
             "docs/operations/help-investigation.md",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/replays/onboarding_journey_replay.mjs"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on agent:product.help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on agent:product.help: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only. UI review: Reviewed the combined note guide and busy state: only existing application busy state selects animation, while pending decisions remain static and final submission remains explicit.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
@@ -824,12 +828,17 @@
             "src/app/concierge_routes.py",
             "src/app/product_guides.py",
             "docs/operations/help-investigation.md",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/operations/knowledge-source-review.md",
+            "docs/modules/module-concierge.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on docs/product-knowledge.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. Wizard order and explicit-click readiness are documented in docs/onboarding-journey.md; existing routes, permissions and commercial claims are unchanged. Knowledge-only Assistant guidance and review continuity were checked on docs/product-knowledge.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.   Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only. UI review: Source ownership and capability claims remain accurate; the presentation introduces no writer, entitlement or public price change.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -850,12 +859,14 @@
             "src/app/concierge_routes.py",
             "src/app/product_guides.py",
             "docs/operations/help-investigation.md",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/replays/onboarding_journey_replay.mjs"
           ]
         },
         "docs/onboarding-journey.md": {
           "disposition": "updated",
-          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on docs/onboarding-journey.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting.",
+          "reason": "Initial wizard destinations now come from application state. Continue availability uses visible validated actions, retains Knowledge blockers and executes only on an explicit click. This adds no permission, commercial promise or automatic writer. Knowledge-only Assistant guidance and review continuity were checked on docs/onboarding-journey.md: pending drafts and source proposals are not described as saved Knowledge; actual page readiness retains the deliberate-click boundary. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. UI review: Existing readiness events, required form validation and explicit-click navigation remain intact; the busy blocker only selects presentation.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
@@ -865,27 +876,42 @@
             "tests/test_knowledge_review_routes.py",
             "docs/onboarding-goals-context.md",
             "tests/test_owner_goals_context.py",
-            "src/app/owner_goals.py"
+            "src/app/owner_goals.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/operations/knowledge-source-review.md",
+            "docs/modules/module-concierge.md"
           ]
         },
         "docs/onboarding-goals-context.md": {
           "disposition": "updated",
-          "reason": "Documents exact Goals transport surfaces and the remaining distinction between recorded intent, writing guidance and enforceable operational controls. No automatic policy backfill or enforcement is claimed.",
+          "reason": "Documents exact Goals transport surfaces and the remaining distinction between recorded intent, writing guidance and enforceable operational controls. No automatic policy backfill or enforcement is claimed. UI review: Goals remain descriptive context; logo and review presentation add no inferred settings or execution restrictions.",
           "evidence": [
             "docs/onboarding-goals-context.md",
             "tests/test_owner_goals_context.py",
-            "src/app/owner_goals.py"
+            "src/app/owner_goals.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/operations/knowledge-source-review.md",
+            "docs/modules/module-concierge.md"
           ]
         },
         "docs/operations/help-investigation.md": {
           "disposition": "updated",
-          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
+          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only. UI review: Read-only Help investigation and account evidence are unchanged; note decisions still use the existing guarded review form.",
           "evidence": [
             "src/app/help_investigation.py",
             "src/app/concierge_routes.py",
             "src/app/product_guides.py",
             "docs/operations/help-investigation.md",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/operations/knowledge-source-review.md",
+            "docs/modules/module-concierge.md"
           ]
         }
       }
@@ -1356,11 +1382,11 @@
       }
     },
     "knowledge.review": {
-      "signature": "9ef3a56008b934410ae99283886568f6acdd778cc19c11e6e57fc0052967c0e3",
+      "signature": "6a77f50e1b857a9ebb8d75c6902203e1303bf2ea87e17bfe1daa5fdb02e52526",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: /pages describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on /pages: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: /pages describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on /pages: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate. UI review: Knowledge notes now expose content and explicit decisions first; the raw source inventory is removed from visible review, with guide-compatible hidden fields retaining existing admission decisions.",
           "evidence": [
             "src/app/pages_index.py",
             "tests/test_pages_index.py",
@@ -1371,12 +1397,16 @@
             "tests/test_knowledge_fidelity.py",
             "tests/test_knowledge_review_workspace.py",
             "tests/test_knowledge_source_ui.py",
-            "tests/test_knowledge_source_database.py"
+            "tests/test_knowledge_source_database.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/modules/module-concierge.md"
           ]
         },
         "agent:knowledge.review": {
           "disposition": "reviewed_unchanged",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: agent:knowledge.review describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on agent:knowledge.review: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.  Knowledge admission review: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: agent:knowledge.review describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on agent:knowledge.review: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.  Knowledge admission review: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. UI review: Reviewed against the note-by-note Assistant guide dependency: source choices, exclusion reasons and optional-question progress survive preview; no automatic admission or coverage approval is introduced.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
@@ -1389,12 +1419,16 @@
             "tests/test_knowledge_source_ui.py",
             "tests/test_knowledge_source_database.py",
             "src/app/help_investigation.py",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/modules/module-concierge.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/product-knowledge.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/product-knowledge.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.  Knowledge admission review: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/product-knowledge.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/product-knowledge.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.  Knowledge admission review: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. UI review: Knowledge source authority, pending versus saved state and release qualifications remain accurate; the underlying admission checks are unchanged.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
@@ -1407,12 +1441,16 @@
             "tests/test_knowledge_source_ui.py",
             "tests/test_knowledge_source_database.py",
             "docs/operations/help-investigation.md",
-            "tests/test_help_investigation.py"
+            "tests/test_help_investigation.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/modules/module-concierge.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/verified-behaviours.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/verified-behaviours.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. Source capture review: docs/verified-behaviours.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/verified-behaviours.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate. UI review: No new live verification claim is added. Synthetic browser previews and offline checks cover presentation; the paused live rig is untouched.",
           "evidence": [
             "docs/verified-behaviours.md",
             "tests/test_platform_capabilities.py",
@@ -1423,12 +1461,16 @@
             "tests/test_knowledge_fidelity.py",
             "tests/test_knowledge_review_workspace.py",
             "tests/test_knowledge_source_ui.py",
-            "tests/test_knowledge_source_database.py"
+            "tests/test_knowledge_source_database.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/modules/module-concierge.md"
           ]
         },
         "docs/operations/knowledge-source-review.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The operations reference records retention and rollback. Source capture review: docs/operations/knowledge-source-review.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/operations/knowledge-source-review.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The operations reference records retention and rollback. Source capture review: docs/operations/knowledge-source-review.md describes pending-only Knowledge; location-labelled blocks, exact clause passages and disclosed read limits add no admission authority or live enablement. Synthetic capture/fidelity checks cover retained caveats and omissions. Workspace review on docs/operations/knowledge-source-review.md: progressive exact evidence, counted pending tasks, explicit version reconciliation and citation proposals preserve final admission, unknown answers and the disabled source feature gate. UI review: Updated the current review instructions for visible numbered notes, optional evidence and hidden source decisions, explicitly requiring the compatible guide at release.",
           "evidence": [
             "docs/operations/knowledge-source-review.md",
             "tests/test_knowledge_source_database.py",
@@ -1437,7 +1479,11 @@
             "tests/test_knowledge_capture.py",
             "tests/test_knowledge_fidelity.py",
             "tests/test_knowledge_review_workspace.py",
-            "tests/test_knowledge_source_ui.py"
+            "tests/test_knowledge_source_ui.py",
+            "tests/test_knowledge_review_presentation.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/onboarding_journey_replay.mjs",
+            "docs/modules/module-concierge.md"
           ]
         }
       }

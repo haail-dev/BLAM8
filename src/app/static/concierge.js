@@ -590,6 +590,15 @@
       var reason = document.createElement("p");
       reason.className = "text-xs text-slate-500 text-center";
       reason.textContent = state.reason || "No Continue action is available on this page.";
+      if (state.blocker === "busy") {
+        reason.className = "bc-busy";
+        reason.setAttribute("role", "status");
+        var busyText = document.createElement("span");
+        busyText.className = "bc-busy-text";
+        busyText.textContent = reason.textContent;
+        reason.textContent = "";
+        reason.appendChild(busyText);
+      }
       cta.appendChild(reason);
       cta.classList.remove("hidden");
       return;

@@ -117,11 +117,12 @@ async def test_every_embedded_chunk_carries_source_qualification(monkeypatch):
 def test_source_review_is_unselected_and_escapes_source_markup():
     ctx,row=source_review()
     row['payload']['source_units']+=fidelity.inventory([{'url':'https://example.test/x','text':'<script>bad()</script>'}])
+    row['payload']['entries'][0]['provenance'].append({'source':'https://example.test/x','excerpt':'<script>bad()</script>'})
     env=Environment(loader=FileSystemLoader(Path(__file__).parents[1]/'src/app/templates'),autoescape=True)
     html=env.get_template('_knowledge_review.html').render(review=kr.review_view(ctx,row),csrf_token=lambda r:'token',request={})
-    assert 'Source-to-note review' in html and '4 unresolved' in html
+    assert 'Source-to-note review' not in html and 'source text' not in html
     assert 'data-source-qualifications' in html and '&lt;script&gt;' in html
+    assert '<script>' not in html
     import re
-    source_selects=re.findall(r'<select name="source_[^"]*".*?</select>',html,re.S)
-    assert source_selects and '<script>' not in html
-    assert all(not re.search(r'<option[^>]* selected',select) for select in source_selects)
+    source_inputs=re.findall(r'<input type="hidden" name="source_[^"]*" value="([^"]*)">',html)
+    assert source_inputs and all(value == '' for value in source_inputs)
