@@ -114,6 +114,15 @@ They do not certify natural-language model answer quality or live availability.
 
 ## Change gate and remaining documentation debt
 
+With source review enabled, Knowledge onboarding can guide the owner through
+actual pending notes, supporting website wording, overlaps and unanswered
+details. Chat prepares local review-form choices; it does not admit Knowledge.
+The separate Save action still runs the existing admission checks. See
+[the guided-review contract](architecture/knowledge-concierge-guidance.md) for
+permissions, stale-form handling and the distinction between unsaved choices
+and saved facts. This describes the code path, not a deployment or live-model
+quality claim.
+
 Run `python scripts/ci/audit_product_coverage.py` to check the current evidence map,
 guide coverage and source-bound review receipts. Run
 `python scripts/ci/check_product_change.py --base COMMIT` to additionally reject

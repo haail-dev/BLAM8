@@ -1,6 +1,9 @@
 <form id="review-{{ review.id }}" method="post" action="/onboarding/knowledge/review/{{ review.id }}" class="mb-5 space-y-4 rounded-xl border border-slate-200 bg-white p-4" data-knowledge-review="{{ review.id }}" data-content-version="{{ review.signatures.content }}" data-evidence-version="{{ review.signatures.evidence }}" data-context-version="{{ review.signatures.context }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
   <input type="hidden" name="version" value="{{ review.version }}">
+  {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') %}
+  <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {% endfor %}
   <h2 class="font-semibold text-navy">Review {{ review.payload.origin }}</h2>
   <div class="rounded-lg bg-slate-50 p-3 text-sm" data-review-overview><p>At last check: {{ review.summary.notes }} pending notes · {{ review.summary.decided }} decisions selected · {{ review.summary.unresolved }} source statements need a decision · {{ review.summary.overlaps }} possible overlaps.</p><p class="mt-1">First resolve source gaps, then check each note and overlap. Check changes and overlaps refreshes these counts. Unanswered details can stay unknown. Nothing is saved until you choose Save reviewed decisions.</p></div>
   <p data-review-status role="status" aria-live="polite" class="text-sm text-slate-700"></p>

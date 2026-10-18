@@ -315,7 +315,8 @@ def test_first_greeting_orients_before_it_asks():
     assert "separate from the account you just signed in with" in intro
     # honest count (Kris 2026-09-13): four here, five more in the app
     assert "five more with me" in intro and "Nine in all" in intro
-    assert "source gaps, note decisions and overlaps" in js
+    assert "We'll check each note and any decisions it needs together." in js
+    assert "Drafts and corrections stay pending until you save your reviewed decisions." in js
     assert "Hit Finish setup" not in js and "After Finish setup" not in js   # one flow of nine
     assert intro.rstrip().endswith('what does your business do, and who are your customers?"')
     assert "AI assistant" in intro                              # Art 50 disclosure stays first

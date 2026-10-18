@@ -197,8 +197,8 @@
     voice: "Now let's give your agent a voice — I'm the BLAM8 AI assistant. Describe your business and how you'd like it to sound, and I'll fill these in for you to review.",
     mailbox: "Step 2 of 4 here: connect the inbox your customers email — I'm the BLAM8 AI assistant. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
     knowledge: ONB_SITE
-      ? "This step prepares the facts your agent may quote. I'm the BLAM8 AI assistant. The website status shows whether " + ONB_SITE + " is being read or has drafts ready. Review source gaps, note decisions and overlaps before saving. Ask for source-backed corrections when that control is available; proposals stay pending until you review and apply them."
-      : "I'm the BLAM8 AI assistant. Review the pending notes, source gaps and overlaps here. Ask for source-backed corrections when that control is available, or supply a missing fact in your own words. Pending drafts are separate from saved Knowledge; review and save decisions when ready.",
+      ? "I'm the BLAM8 AI assistant. Once " + ONB_SITE + " has been read, we'll go through your actual notes together. Tell me what to keep or correct; I'll ask about anything that needs your decision. Nothing from the drafts is available to the agent until you save the review."
+      : "I'm the BLAM8 AI assistant. We'll go through your notes together. Tell me what to keep or correct, and I'll ask about anything needing your decision. Pending drafts are separate from saved Knowledge. Unknown details can stay unknown. Nothing from the drafts is available to the agent until you save the review.",
     data: "Last step — which systems do you run on? I'm the BLAM8 AI assistant: tell me and I'll point you to the right boxes to tick.",
   };
   // Mid-thread step hand-offs: same job as the greetings but WITHOUT the
@@ -212,8 +212,8 @@
     voice: "Next: your agent's voice — how replies should sound and sign off. With your mailbox connected you can have it learned from your sent emails in one click (it only ever runs on your say-so), or just describe it and I'll fill the form for you to review.",
     mailbox: "Step 2 of 4 here: connect the inbox your customers email. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
     knowledge: ONB_SITE
-      ? "Knowledge prepares facts from " + ONB_SITE + " for your review. Follow the website status, then resolve source gaps, note decisions and overlaps. Corrections and drafts remain pending until you approve the final review."
-      : "Knowledge prepares facts for review. Check source gaps, note decisions and overlaps. I can help with source-backed corrections where available; unknown details stay unknown. Review pending drafts or explicitly leave them for later before continuing.",
+      ? "I'll help you review the notes prepared from " + ONB_SITE + ". We'll check each note and any decisions it needs together. Drafts and corrections stay pending until you save your reviewed decisions."
+      : "I'll help you review each note and any decisions it needs. Unknown details can stay unknown. The drafts stay pending until you save your reviewed decisions, or you can choose to leave them for later.",
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
   };
   var GREETING = ONB_MODE
@@ -1369,8 +1369,12 @@
     var current = readCurrent();
     var reply, fill = {}, advance = false, notes = [], spoke = true, heldFor = [], reviewLink = null;
     try {
+      var knowledgeGuide = ONB_STEP === "knowledge" && window.Blam8KnowledgeGuide;
+      if (knowledgeGuide) msgs.querySelectorAll('[data-knowledge-guide-actions] button').forEach(function (button) { button.disabled = true; });
       var sourceReview = ONB_STEP === "knowledge" && window.Blam8KnowledgeSourceReview;
-      var data = sourceReview && sourceReview.available()
+      var data = knowledgeGuide && knowledgeGuide.available()
+        ? await knowledgeGuide.ask(text)
+        : sourceReview && sourceReview.available()
         ? await sourceReview.ask(text)
         : await postJsonWithRetry("/concierge/onboard",
             { step: ONB_STEP, question: text, history: history, current: current });
@@ -1391,12 +1395,40 @@
       }
     } catch (e) {
       spoke = false;
-      reply = sourceReview && sourceReview.available() ? (e.message || "The source review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
+      reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
     log.push({ role: "assistant", content: reply }); saveLog(log);
     var replyEl = bubbleEl("assistant", reply);
     msgs.appendChild(replyEl);
+    if (data && data.focus_hash && knowledgeGuide) {
+      var choices = document.createElement("div");
+      choices.setAttribute("data-knowledge-guide-actions", "");
+      choices.className = "flex flex-wrap gap-2 px-1 py-2";
+      (data.guide_actions || []).forEach(function (choice) {
+        var button = document.createElement("button"); button.type = "button";
+        button.className = "rounded-lg border border-brand px-3 py-2 text-sm text-brand";
+        button.textContent = choice.label;
+        button.addEventListener("click", function () {
+          if (sending) return;
+          if (!knowledgeGuide.isCurrent(data.focus_hash)) { input.value = "Show the current note"; send(); return; }
+          input.value = choice.message; send();
+        });
+        choices.appendChild(button);
+      });
+      if (data.guide_save) {
+        var save = document.createElement("button"); save.type = "button";
+        save.className = "rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white";
+        save.textContent = "Save reviewed decisions";
+        save.addEventListener("click", function () {
+          if (sending) return;
+          if (knowledgeGuide.isCurrent(data.focus_hash)) knowledgeGuide.save();
+          else { input.value = "Show the current note"; send(); }
+        });
+        choices.appendChild(save);
+      }
+      msgs.appendChild(choices);
+    }
     appendHeldLine(heldFor);
     applyFill(fill);
     if (reviewLink) {
@@ -2059,6 +2091,7 @@
     else { await askTurn(text, history); }
 
     sending = false; sendBtn.disabled = false; applyQuestionAllowance(); input.focus();
+    if (window.Blam8KnowledgeGuide) window.Blam8KnowledgeGuide.start();
   }
 
   // ── wiring ────────────────────────────────────────────────────────────────
@@ -2669,6 +2702,15 @@
       if (!PENDING_KB_CARDS.length) btn.click();   // nothing pending now → the real Next
     })();
   }, true);
+
+  // Start from actual stored drafts when they arrive. Keep browser integration
+  // outside the onboarding-turn function and its standalone replay boundary.
+  window.blam8KnowledgeGuideStart = async function () {
+    if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return false;
+    sending = true; sendBtn.disabled = true; showTyping();
+    try { return await onboardTurn("", []); }
+    finally { sending = false; sendBtn.disabled = false; }
+  };
 
   // Restore open state across navigation. On a setup step, open by default so the
   // co-pilot is right there — unless the user explicitly closed it this session.
