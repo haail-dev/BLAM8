@@ -127,11 +127,11 @@ def readiness(cfg):
     return missing
 
 
-def rows(table, configure=lambda q: q, order="id"):
+def rows(table, configure=lambda q: q, order="id", *, columns="*"):
     """Do not silently truncate CRM or inbox history at PostgREST's row limit."""
     result = []
     for offset in range(0, 1000000, 500):
-        page = configure(db.db().table(table).select("*")).order(order).range(offset, offset + 499).execute().data or []
+        page = configure(db.db().table(table).select(columns)).order(order).range(offset, offset + 499).execute().data or []
         result.extend(page)
         if len(page) < 500:
             return result
@@ -241,7 +241,7 @@ def suppress(email, reason, cfg):
         raise ValueError("Enter a valid email address.")
     db.db().table("admin_outreach_suppressions").upsert({"email": email, "reason": reason}).execute()
     # Match exact mailboxes, never guess which firm owns a domain.
-    for p in rows("vcrm_prospects"):
+    for p in rows("vcrm_prospects", columns="id,email"):
         if address(p.get("email")) == email:
             db.vcrm_update_prospect(p["id"], {"status": "NOT_NOW", "next_action": reason, "next_action_date": None})
     db.db().table("admin_outreach_messages").update({"status": "cancelled", "error": reason}).eq("email", email).in_("status", ["draft", "approved"]).execute()
@@ -258,19 +258,32 @@ def sync(cfg, provider, now):
     mailboxes = db.db().table("email_connections").select("id,sync_failing_since").eq("tenant_id", cfg["inbox_tenant_id"]).execute().data or []
     if not mailboxes or any(m.get("sync_failing_since") for m in mailboxes):
         raise RuntimeError("Connected reply inbox is missing or unhealthy")
-    prospects = rows("vcrm_prospects")
-    suppressed = {s["email"] for s in rows("admin_outreach_suppressions", order="email")}
+    prospects = rows("vcrm_prospects", columns="id,email,status,next_action,next_action_date")
+    suppressed = {s["email"] for s in rows("admin_outreach_suppressions", order="email", columns="email")}
     for p in prospects:
         email = address(p.get("email"))
         if email and email not in suppressed and (p["status"] == "NOT_NOW" or re.search(r"STOP REQUEST|BOUNCED|SPAM COMPLAINT|never contact", p.get("next_action") or "", re.I)):
             suppress(email, p.get("next_action") or "Never contact again", cfg)
             suppressed.add(email)
     known = {address(p.get("email")) for p in prospects if p.get("email")}
-    seen = {e["id"] for e in rows("admin_outreach_events")}
+    seen = {e["id"] for e in rows("admin_outreach_events", columns="id")}
     sent = provider.list("/emails")
-    incoming = rows("email_log", lambda q: q.eq("tenant_id", cfg["inbox_tenant_id"]).gte("created_at", (now - timedelta(days=45)).isoformat()))
-    messages = [("inbox:" + m["id"], address(m.get("from_address")), m.get("subject") or "", m.get("body_in") or "")
-                for m in incoming if m.get("kind") in (None, "inbound")]
+    # Rescan lightweight identities, not bodies. Keeping the lookback (rather than
+    # a created_at watermark) also catches late imports, retries and new prospects.
+    incoming = rows("email_log", lambda q: q.eq("tenant_id", cfg["inbox_tenant_id"]).gte("created_at", (now - timedelta(days=45)).isoformat()),
+                    columns="id,from_address,subject,kind")
+    incoming = [m for m in incoming if m.get("kind") in (None, "inbound")
+                and "inbox:" + m["id"] not in seen and address(m.get("from_address")) in known]
+    bodies = {}
+    for offset in range(0, len(incoming), 100):
+        ids = [m["id"] for m in incoming[offset:offset + 100]]
+        batch = rows("email_log", lambda q: q.eq("tenant_id", cfg["inbox_tenant_id"]).in_("id", ids),
+                     columns="id,body_in")
+        bodies.update({m["id"]: m.get("body_in") or "" for m in batch})
+        if not set(ids) <= bodies.keys():
+            raise RuntimeError("Reply bodies incomplete; sending blocked.")
+    messages = [("inbox:" + m["id"], address(m.get("from_address")), m.get("subject") or "", bodies[m["id"]])
+                for m in incoming]
     for m in provider.list("/emails/receiving"):
         key, email = "resend:" + m["id"], address(m.get("from"))
         if key not in seen and email in known:
@@ -286,7 +299,7 @@ def sync(cfg, provider, now):
                     suppress(email, m["last_event"], cfg)
                     db.db().table("admin_outreach_events").upsert({"id": key, "email": email, "kind": m["last_event"]}).execute()
     subjects = [s["template_subject"].lower() for s in cfg["steps"]] + [s.lower() for s in cfg["legacy_subjects"]]
-    subjects += [m["payload"].get("subject", "").lower() for m in rows("admin_outreach_messages")]
+    subjects += [(m.get("subject") or "").lower() for m in rows("admin_outreach_messages", columns="subject:payload->>subject")]
     for key, email, subject, body in messages:
         if key in seen or email not in known:
             continue
@@ -316,13 +329,27 @@ def sync(cfg, provider, now):
 
 
 def prepare(cfg, now):
-    suppressed = {r["email"] for r in rows("admin_outreach_suppressions", order="email")}
-    existing = {(m["email"], m["step"]): m for m in rows("admin_outreach_messages")}
+    suppressed = {r["email"] for r in rows("admin_outreach_suppressions", order="email", columns="email")}
+    existing = {(m["email"], m["step"]): m for m in rows("admin_outreach_messages",
+                columns="id,email,step,status,created_at,sent_at,attempted_at")}
+    # Compare snapshots inside Postgres; copying the same templates into every
+    # draft made downloading this column on every sweep particularly expensive.
+    # POST keeps large valid configurations out of URL query strings. Paginate
+    # the RPC too: more than 1,000 stale drafts must still lose approval.
+    stale = set()
+    for offset in range(0, 1000000, 500):
+        page = (db.db().rpc("admin_outreach_stale_drafts", {"p_config": cfg})
+                .order("id").range(offset, offset + 499).execute().data or [])
+        stale.update(m["id"] for m in page)
+        if len(page) < 500:
+            break
+    else:
+        raise RuntimeError("Outreach data exceeds the scan limit; sending blocked.")
     # Replies survive duplicate/imported prospect rows too.
-    replied = {e["email"] for e in rows("admin_outreach_events") if e["kind"] == "replied"}
+    replied = {e["email"] for e in rows("admin_outreach_events", lambda q: q.eq("kind", "replied"), columns="email")}
     today = now.astimezone(ZoneInfo(cfg["timezone"])).date().isoformat()
     remaining = max(0, target(cfg, now) - sum(in_plan(m, cfg) and m["status"] in ("sent", "sending", "unknown", "draft", "approved") for m in existing.values()))
-    prospects = rows("vcrm_prospects")
+    prospects = rows("vcrm_prospects", columns="id,email,status,next_action,next_action_date,kind,email_verified,soft_match,company_number,email_source,description,contact_name,business_name")
     replied |= {address(p.get("email")) for p in prospects if p["status"] in ("REPLIED", "CALL_BOOKED", "SIGNED_UP", "NOT_NOW")}
     count = 0
     for p in prospects:
@@ -338,7 +365,7 @@ def prepare(cfg, now):
             continue  # historical first touch must be reconciled, not guessed
         if (email, step) in existing:
             old = existing[(email, step)]
-            if old["status"] in ("draft", "approved") and old.get("config_snapshot") != cfg:
+            if old["status"] in ("draft", "approved") and old.get("id") in stale:
                 db.db().table("admin_outreach_messages").update({"payload": compose(p, cfg, step), "config_snapshot": cfg,
                     "status": "draft"}).eq("id", old["id"]).in_("status", ["draft", "approved"]).execute()
             continue
@@ -358,8 +385,8 @@ def prepare(cfg, now):
 def digest(cfg, now, result):
     local = now.astimezone(ZoneInfo(cfg["timezone"]))
     day = local.date().isoformat()
-    messages = rows("admin_outreach_messages")
-    events = rows("admin_outreach_events")
+    messages = rows("admin_outreach_messages", columns="step,status,sent_at,attempted_at,created_at")
+    events = rows("admin_outreach_events", columns="email,kind,created_at")
     def local_day(value):
         return datetime.fromisoformat(value).astimezone(ZoneInfo(cfg["timezone"])).date().isoformat() if value else ""
     def save(on_day, closed, outcome):
@@ -373,7 +400,7 @@ def digest(cfg, now, result):
             counts[kind] = len({e["email"] for e in events if e["kind"] == kind and local_day(e["created_at"]) == on_day})
         db.db().table("admin_outreach_digests").upsert({"day": on_day, "summary": counts, "updated_at": now.isoformat()}).execute()
         return counts
-    previous = {d["day"]: d for d in rows("admin_outreach_digests", order="day")}
+    previous = {d["day"]: d for d in rows("admin_outreach_digests", order="day", columns="day,summary")}
     for planned_day in sorted(cfg["plan"]):
         if planned_day < day and not previous.get(planned_day, {}).get("summary", {}).get("closed"):
             save(planned_day, True, {"note": "Day closed from durable history after restart"})
@@ -395,7 +422,12 @@ def run(*, preview=False):
         provider = Provider()
         observed = sync(cfg, provider, utcnow())  # any failure aborts before preparing/sending
         update_state({"last_sync_at": utcnow().isoformat()}, token)
-        result = {"drafts_prepared": prepare(cfg, utcnow())}
+        # Reply/stop detection above remains active while paused and overnight.
+        # Explicit Preview still prepares drafts; scheduled ticks only do so
+        # when sending is enabled and the working window is open.
+        result = {}
+        if preview or (current["enabled"] and in_window(cfg, utcnow())):
+            result["drafts_prepared"] = prepare(cfg, utcnow())
         if preview or not current["enabled"]:
             result["blocked"] = "Preview only" if preview else "Paused"
             return result
@@ -405,7 +437,7 @@ def run(*, preview=False):
         if current.get("last_attempt_at") and (utcnow() - datetime.fromisoformat(current["last_attempt_at"])).total_seconds() < cfg["min_gap_seconds"]:
             result["blocked"] = "Minimum gap between emails"
             return result
-        messages = rows("admin_outreach_messages")
+        messages = rows("admin_outreach_messages", columns="id,status,step,created_at")
         if any(m["status"] in ("sending", "unknown") for m in messages):
             result["blocked"] = "Reconcile an uncertain send before resuming"
             return result
@@ -417,6 +449,12 @@ def run(*, preview=False):
             result["blocked"] = "Provider cap reached; shortfall carries forward"
             return result
         for message in candidates:
+            # Only the selected send needs a payload. Read before claiming: a
+            # failed read must not strand a reserved send in 'sending'.
+            detail = db.db().table("admin_outreach_messages").select("id,payload,step").eq("id", message["id"]).execute().data or []
+            if len(detail) != 1:
+                raise RuntimeError("Send payload unavailable; sending blocked.")
+            message = message | detail[0]
             claimed = db.db().rpc("admin_outreach_claim", {"p_id": message["id"], "p_token": token, "p_config": cfg,
                                  "p_observed": len(recent), "p_provider_ids": [m["id"] for m in recent]}).execute().data
             if not claimed:
