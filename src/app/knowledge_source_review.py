@@ -138,7 +138,7 @@ def validate(card, evidence, raw):
     return {'revision': card['revision'], 'review': deepcopy(raw), 'changes': changes,
             'overlaps': [[{'id': i, 'label': available[i]['label']} for i in ids] for ids in overlaps],
             'questions': questions,
-            'summary': f"Review ready: {len(changes)} card(s) with proposed additions; {len(overlaps)} possible overlap(s). Drafts and Knowledge are unchanged."}
+            'summary': f"Review ready: {len(changes)} note(s) with proposed text or citation changes; {len(overlaps)} possible overlap(s). Drafts and Knowledge are unchanged."}
 
 
 def content_segments(card, line):

@@ -730,8 +730,8 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
 @router.post("/knowledge/text", dependencies=[Depends(require_csrf)])
 async def knowledge_text(request: Request, label: str = Form(""), content: str = Form(""),
                          then: str = Form(""), ctx: TenantCtx = Depends(require_tenant)):
-    """Stage a pasted note for review. Source-review mode requires an explicit
-    Review note action; Continue preserves unsaved text and pending drafts."""
+    """Stage pasted text only through Review note. Continue preserves unsaved
+    text and requires an explicit decision to leave pending drafts for later."""
     content = (content or "").strip()
     # Knowledge is the wizard's last step: Continue finishes setup (the
     # live-data step is off-flow since 2026-08-02).
@@ -744,7 +744,7 @@ async def knowledge_text(request: Request, label: str = Form(""), content: str =
             "knowledge", sources=sources, configured=kb.is_configured(),
             msg=None, err=err, prefill_label=label, prefill_content=content))
 
-    if finishing and settings.knowledge_source_review_enabled:
+    if finishing:
         if content:
             return stay('Your pasted note is unsaved. Choose Review note, or clear the box before continuing. Your text is kept below.')
         from app import knowledge_review

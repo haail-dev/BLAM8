@@ -76,6 +76,9 @@ completion. After an uncertain read, Check stored drafts performs a read-only
 refresh while retaining local edits, before another explicit read is offered.
 Knowledge operation changes dispatch the onboarding readiness event; Continue
 still requires the real page action and existing pending/unsaved safeguards.
+Those navigation safeguards apply with source corrections disabled too. Loading
+the review controller does not enable source capture or its correction routes;
+the feature flag, permissions and retained evidence still gate those controls.
 
 The Assistant uses this source-review path when exactly one eligible draft
 batch is present. Multiple batches can be reviewed using their individual

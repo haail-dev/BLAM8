@@ -52,4 +52,6 @@ assert.equal(lifecycle.dataset.state,'unconfirmed');assert.equal(go.textContent,
 const reconcile=go.listeners.click();assert.equal(requests[4].url,'/onboarding/knowledge/reviews');
 requests[4].resolve({ok:true,json:async()=>({...incoming('reconciled',form('c2','e1','v2')),site_state:{state:'pending',pending_notes:10}})});await reconcile;
 assert.equal(lifecycle.dataset.state,'pending');assert.equal(active,beforeRead);assert.equal(requests.length,5);
+tokens.set('closed',[]);window.Blam8KnowledgeReview.replace({review_html:'closed'});
+assert.equal(active,beforeRead);assert.equal(active.dataset.reviewClosed,'1');assert.equal(active.edits,'Unsaved owner text');
 console.log('Workspace no-op/dirty refresh, nonmutating preview and website lifecycle replay passed');
