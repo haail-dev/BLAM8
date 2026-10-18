@@ -6,12 +6,14 @@ import pytest
 from jinja2 import Environment, FileSystemLoader
 
 from app import backlog, db, mailbox
+from tests.mailbox_import_fixture import approved_run
 
 
 @pytest.fixture
 def run(monkeypatch):
     saved = []
-    monkeypatch.setattr(db, "claim_mailbox_import", lambda *a: {"run_id": "run-1", "state": "running"})
+    monkeypatch.setattr(db, "claim_mailbox_import", lambda *a: approved_run())
+    monkeypatch.setattr(db, "mailbox_import_access", lambda *a, **kw: {"backlog_import": approved_run()})
     monkeypatch.setattr(db, "finish_mailbox_import", lambda *args: saved.append(args[-1]))
     monkeypatch.setattr(db, "log_agent_event", lambda *a, **kw: None)
     monkeypatch.setattr(db, "get_connection_by_id", lambda *a: {"mailbox": "self@example.test"})
@@ -90,12 +92,13 @@ def render(status):
     ("complete", 93, 0, 93, 0, "No recent messages need review", False),
     ("partial", 100, 5, 93, 2, "5 recent messages are ready to review", True),
     ("failed", 0, 0, 0, 0, "did not finish", True),
-    ("not_started", 0, 0, 0, 0, "Import details for earlier messages are unavailable", True),
+    ("not_started", 0, 0, 0, 0, "Historical mail has not been imported", True),
 ])
 def test_rendered_states(monkeypatch, state, selected, ready, auto, fetch, phrase, retry):
     run = {"state": state, "expires_at": (datetime.now(timezone.utc)+timedelta(minutes=15)).isoformat(),
            "counts": {"selected": selected, "automated": auto, "fetch_failed": fetch}}
     monkeypatch.setattr(db, "get_mailbox_import", lambda *a, **kw: run)
+    monkeypatch.setattr(db, "mailbox_import_access", lambda *a, **kw: {"address": "example@test.invalid"})
     def count(tid, **kw):
         assert kw["mailbox_id"] == "mailbox" and kw["strict"]
         return ready
@@ -109,6 +112,7 @@ def test_rendered_states(monkeypatch, state, selected, ready, auto, fetch, phras
 
 
 def test_expired_and_read_errors_are_not_empty_inbox(monkeypatch):
+    monkeypatch.setattr(db, "mailbox_import_access", lambda *a, **kw: {})
     monkeypatch.setattr(db, "get_mailbox_import", lambda *a, **kw: {
         "state": "running", "expires_at": (datetime.now(timezone.utc)-timedelta(seconds=1)).isoformat()})
     monkeypatch.setattr(backlog, "count_rows", lambda *a, **kw: 0)
@@ -142,7 +146,7 @@ async def test_duplicates_exclusions_and_filing_failures_reconcile(run, monkeypa
 
 @pytest.mark.asyncio
 async def test_interrupted_run_reports_unprocessed_messages(run, monkeypatch):
-    async def interrupted(tid, cid, days, limit, counts):
+    async def interrupted(tid, cid, days, limit, counts, **kwargs):
         counts.update(selected=10, review=2)
         raise asyncio.CancelledError()
     monkeypatch.setattr(backlog, "_import_messages", interrupted)
@@ -151,16 +155,16 @@ async def test_interrupted_run_reports_unprocessed_messages(run, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_oauth_and_both_retry_routes_use_shared_claim(monkeypatch):
-    from app import dashboard, oauth, onboarding
-    ctx = SimpleNamespace(tenant_id="tenant", client=object())
+async def test_both_explicit_choice_routes_use_shared_handler(monkeypatch):
+    from app import dashboard, onboarding
+    ctx = SimpleNamespace(tenant_id="tenant", client=object(), user_id="owner")
     calls = []
-    monkeypatch.setattr(db, "list_mailboxes", lambda tid, client=None: [{"id": "mailbox"}])
-    monkeypatch.setattr(backlog, "start_import", lambda *a: calls.append(a) or False)
-    assert (await onboarding.mailbox_backlog(ctx)).headers["location"] == "/onboarding/mailbox"
-    assert (await dashboard.settings_mailbox_backlog(ctx)).headers["location"] == "/app/settings"
-    oauth._spawn_backlog("tenant", "mailbox")
-    assert calls == [("tenant", "mailbox")] * 3
+    async def choose(request, context): calls.append((request, context))
+    monkeypatch.setattr(backlog, "choose_import", choose)
+    request = object()
+    assert (await onboarding.mailbox_backlog(request, ctx)).headers["location"] == "/onboarding/mailbox"
+    assert (await dashboard.settings_mailbox_backlog(request, ctx)).headers["location"] == "/app/settings"
+    assert calls == [(request, ctx)] * 2
 
 
 def test_strict_counts_are_mailbox_scoped_paginated_and_exclude_ignored(monkeypatch):

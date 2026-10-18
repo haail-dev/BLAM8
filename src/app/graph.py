@@ -105,15 +105,19 @@ async def graph_post(
         return r.json() if r.content else {}
 
 
-async def list_recent_inbox_ids(access_token: str, days: int = 14, limit: int = 100) -> list[str]:
+async def list_recent_inbox_ids(access_token: str, days: int = 14, limit: int = 100,
+                                before=None) -> list[str]:
     """Ids of Inbox messages received in the last `days`, newest first, at
     most `limit` — the backlog a fresh connection brings in (src/app/backlog.py).
     Ids only; the pipeline's own fetch reads each message."""
     from datetime import datetime, timedelta, timezone
-    since = (datetime.now(timezone.utc) - timedelta(days=int(days))).strftime("%Y-%m-%dT%H:%M:%SZ")
+    since = ((before or datetime.now(timezone.utc)) - timedelta(days=int(days))).strftime("%Y-%m-%dT%H:%M:%SZ")
+    condition = f"receivedDateTime ge {since}"
+    if before:
+        condition += " and receivedDateTime lt " + before.strftime("%Y-%m-%dT%H:%M:%SZ")
     data = await graph_get(
         access_token, "/me/mailFolders/inbox/messages",
-        params={"$filter": f"receivedDateTime ge {since}", "$top": str(min(int(limit), 100)),
+        params={"$filter": condition, "$top": str(min(int(limit), 100)),
                 "$select": "id", "$orderby": "receivedDateTime desc"})
     return [m["id"] for m in (data.get("value") or []) if m.get("id")]
 

@@ -46,12 +46,13 @@
    drafting in Settings once they've been through what's arriving. #}
 {% include "_backlog_status.html" %}
 <script src="/static/backlog_status.js?v={{ asset_rev }}" defer></script>
-<p class="mt-2 text-sm text-slate-500">Recent mail is filed without replying. Review your inbox and sending settings before enabling drafting.</p>
+<p class="mt-2 text-sm text-slate-500">Review your import choice and sending settings before enabling drafting. You can continue setup without importing historical mail.</p>
 <div class="mt-5 flex items-center justify-between">
   <a href="/onboarding/mailbox?change=1" class="text-sm text-slate-500 hover:text-navy transition">Use a different account</a>
   <a href="/onboarding/voice" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</a>
 </div>
 {% else %}
+<p class="mt-4 text-sm text-slate-600">Connecting enables ongoing retrieval and storage of new incoming mail, even while drafting is on hold. Historical messages are a separate optional import: after connecting, choose Import now, Skip import or Decide later before any past Inbox messages are imported. Connecting does not enable drafting or automatic sending.</p>
 {% if change and mailbox %}
 <p class="mt-4 text-sm text-slate-500">Connecting another account replaces <span class="font-medium text-slate-700">{{ mailbox }}</span>.</p>
 {% endif %}

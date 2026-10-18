@@ -508,14 +508,10 @@ def _ctx(active: str, ctx: TenantCtx, **extra) -> dict:
 
 
 @router.post("/settings/mailbox/backlog", dependencies=[Depends(require_csrf)])
-async def settings_mailbox_backlog(ctx: TenantCtx = Depends(require_onboarded)):
-    """Bring in the last two weeks of the default mailbox (src/app/backlog.py) —
-    for a mailbox connected before the import existed, or a connect-time run
-    that brought nothing. Detached; the Agent log records the outcome."""
+async def settings_mailbox_backlog(request: Request, ctx: TenantCtx = Depends(require_onboarded)):
+    """Explicit historical import choice; never infer the mailbox from ordering."""
     from app import backlog
-    conns = db.list_mailboxes(ctx.tenant_id, client=ctx.client)
-    if conns:
-        backlog.start_import(ctx.tenant_id, conns[0]["id"])
+    await backlog.choose_import(request, ctx)
     return RedirectResponse("/app/settings", status_code=303)
 
 

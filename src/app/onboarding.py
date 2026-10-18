@@ -544,15 +544,10 @@ def mailbox_get(request: Request, change: str = "", ctx: TenantCtx = Depends(req
 
 
 @router.post("/mailbox/backlog", dependencies=[Depends(require_csrf)])
-async def mailbox_backlog(ctx: TenantCtx = Depends(require_tenant)):
-    """Bring in the last two weeks now — the retry when the connect-time import
-    brought nothing (or ran before this feature existed). Detached, same as
-    the OAuth callback's; the page says it has started."""
+async def mailbox_backlog(request: Request, ctx: TenantCtx = Depends(require_tenant)):
+    """Record the explicit mailbox-specific import choice before starting work."""
     from app import backlog
-    conns = db.list_mailboxes(ctx.tenant_id, client=ctx.client)
-    if not conns:
-        return RedirectResponse("/onboarding/mailbox", status_code=303)
-    backlog.start_import(ctx.tenant_id, conns[0]["id"])
+    await backlog.choose_import(request, ctx)
     return RedirectResponse("/onboarding/mailbox", status_code=303)
 
 

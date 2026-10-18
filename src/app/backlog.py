@@ -1,4 +1,4 @@
-"""Import the recent backlog on connect — filed, never drafted, no contacts.
+"""Owner-chosen historical import — filed, never drafted, no contacts.
 
 Kris, stays run #10 (2026-09-13): "does the user have to wait for new
 inbound to be able to see anything in the inbox?" They did — a fresh
@@ -9,15 +9,14 @@ senders to ignore, then switch drafting on") could not happen on the day.
 "That's what we need, because then it really gives them a chance to
 ignore certain addresses."
 
-So a connect now brings in the last DAYS of the inbox (at most LIMIT
+After an explicit choice, bring in the DAYS before connection (at most LIMIT
 messages), each filed the way held mail is filed — an email_log row with
 status skipped, category fyi, and a reason that says it arrived before
 BLAM8 — so the conversation list fills at once and every sender can be
 ignored straight away. Nothing is drafted from it, no CRM contact is
 minted from it, and the pipeline's (tenant, source_message_id) uniqueness
 means push/poll can never draft one of these later by mistake (they are
-older than the watermark anyway). Runs as a background task off the OAuth
-callback; a failure is logged and the connection stands regardless.
+older than the watermark anyway). A failure never disconnects the mailbox.
 """
 from __future__ import annotations
 
@@ -26,6 +25,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from app import actor, db, gmail, graph, mailbox
+from fastapi import HTTPException
 
 log = logging.getLogger("blautom8.backlog")
 
@@ -35,6 +35,50 @@ REASON = ("Before BLAM8 — arrived before the mailbox was connected, so nothing
           "drafted to it. Ignore the sender if it's a robot or a newsletter.")
 
 _TASKS: set = set()
+
+
+async def choose_import(request, ctx):
+    """An authenticated explicit choice; OAuth and GET requests never call this."""
+    from app import people
+    if not ctx.user_id or getattr(ctx, "viewing_as", None):
+        raise HTTPException(403, "Choose import from your own account.")
+    try:
+        member = db.get_member(ctx.tenant_id, ctx.user_id)
+        if not people.can_do(people.member(member) if member else None, "settings", "change"):
+            raise HTTPException(403, "You cannot change mailbox import settings.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(503, "Your permission could not be verified. Nothing started.") from None
+    form = await request.form()
+    connection, decision = str(form.get("connection_id", "")), str(form.get("decision", ""))
+    if decision not in {"import", "skip", "later"} or not connection:
+        raise HTTPException(400, "Choose a mailbox and an import option.")
+    if not people.may_read_mailbox(people.member(member) if member else None, connection):
+        raise HTTPException(403, "You cannot import this mailbox.")
+    try:
+        # Tenant-scoped metadata read before using the privileged claim RPC.
+        db.mailbox_import_access(ctx.tenant_id, connection, client=ctx.client)
+        chosen = db.choose_mailbox_import(ctx.tenant_id, connection, ctx.user_id,
+                                         decision, str(form.get("expected_run", "")))
+    except Exception:
+        raise HTTPException(503, "The import choice could not be confirmed. Refresh before retrying.") from None
+    if not chosen:
+        raise HTTPException(409, "The import changed or this choice was already used. Refresh to check its status.")
+    if decision == "import" and not start_import(ctx.tenant_id, connection):
+        raise HTTPException(503, "The choice was recorded but a start could not be confirmed. Refresh to check its status.")
+
+
+def verified_run(tenant_id, conn_id, run):
+    """No provider access from a fabricated, stale, unapproved or expired run."""
+    access = db.mailbox_import_access(tenant_id, conn_id)
+    current = access.get("backlog_import") or {}
+    if (not run or current.get("run_id") != run.get("run_id") or current.get("state") != "running"
+            or current.get("approval", {}).get("decision") != "import"
+            or current.get("approval", {}).get("version") != 1
+            or datetime.fromisoformat(current["expires_at"].replace("Z", "+00:00")) <= datetime.now(timezone.utc)):
+        raise PermissionError("Historical import has no current approved run")
+    return current
 
 
 def start_import(tenant_id: str, conn_id: str) -> bool:
@@ -58,12 +102,12 @@ def start_import(tenant_id: str, conn_id: str) -> bool:
 
 
 async def recent_inbox_ids(conn: dict, provider: str, access: str,
-                           days: int = DAYS, limit: int = LIMIT) -> list[str]:
+                           days: int = DAYS, limit: int = LIMIT, before=None) -> list[str]:
     """Provider message ids for the last `days` of INBOX, newest first, at most
     `limit`."""
     if provider == "google":
-        return await gmail.list_recent_inbox_ids(access, days=days, limit=limit)
-    return await graph.list_recent_inbox_ids(access, days=days, limit=limit)
+        return await gmail.list_recent_inbox_ids(access, days=days, limit=limit, before=before)
+    return await graph.list_recent_inbox_ids(access, days=days, limit=limit, before=before)
 
 
 def _shape(msg: dict) -> dict:
@@ -89,8 +133,12 @@ async def import_recent(tenant_id: str, conn_id: str, *, days: int = DAYS,
         run = run or db.claim_mailbox_import(tenant_id, conn_id)
         if not run:
             return 0
+        run = verified_run(tenant_id, conn_id, run)
+        days, limit = run["days"], run["limit"]
+        if days != DAYS or limit != LIMIT:
+            raise PermissionError("Historical import scope changed")
         async with asyncio.timeout(600):
-            await _import_messages(tenant_id, conn_id, days, limit, counts)
+            await _import_messages(tenant_id, conn_id, days, limit, counts, run=run)
         state = "partial" if counts["fetch_failed"] or counts["filing_failed"] else "complete"
     except asyncio.CancelledError:
         state = "interrupted"
@@ -112,7 +160,7 @@ async def import_recent(tenant_id: str, conn_id: str, *, days: int = DAYS,
     return counts["review"] + counts["automated"]
 
 
-async def _import_messages(tenant_id, conn_id, days, limit, counts):
+async def _import_messages(tenant_id, conn_id, days, limit, counts, *, run):
     # Classification and filing policy are unchanged; outcome counters are separate.
     try:
         conn = db.get_connection_by_id(conn_id, tenant_id)
@@ -121,7 +169,8 @@ async def _import_messages(tenant_id, conn_id, days, limit, counts):
         provider = mailbox.connection_provider(conn, tenant_id)
         access = await mailbox.valid_access_token(conn, provider)
         own = (conn.get("mailbox") or conn.get("address") or "").strip().lower()
-        ids = await recent_inbox_ids(conn, provider, access, days=days, limit=limit)
+        before = datetime.fromisoformat(run["window_end"].replace("Z", "+00:00"))
+        ids = await recent_inbox_ids(conn, provider, access, days=days, limit=limit, before=before)
     except Exception:
         log.warning("backlog: listing failed (tenant=%s conn=%s)", tenant_id, conn_id, exc_info=True)
         raise
@@ -205,6 +254,8 @@ def status(tenant_id: str, conn_id: str, client=None) -> dict:
     """UI state is mailbox-scoped; a failed read never means an empty inbox."""
     try:
         run = db.get_mailbox_import(tenant_id, conn_id, client=client)
+        access = db.mailbox_import_access(tenant_id, conn_id, client=client)
+        choice = access.get("backlog_import_choice") or {}
         if run["state"] == "running" and datetime.fromisoformat(
                 run["expires_at"].replace("Z", "+00:00")) <= datetime.now(timezone.utc):
             run = {**run, "state": "interrupted"}
@@ -217,7 +268,9 @@ def status(tenant_id: str, conn_id: str, client=None) -> dict:
     if state == "running":
         message = "Getting your recent messages ready. We’ll file them without replying."
     elif state == "not_started":
-        message = "Import details for earlier messages are unavailable. You can import recent messages now."
+        message = ({"skip": "Historical import skipped. You can choose it later in Settings.",
+                    "later": "Historical import deferred. No historical import has started."}
+                   .get(choice.get("decision"), "Historical mail has not been imported. Choose whether to import it."))
     elif state in {"failed", "interrupted"}:
         message = "The recent-message import did not finish. You can try importing again."
     elif ready:
@@ -240,7 +293,10 @@ def status(tenant_id: str, conn_id: str, client=None) -> dict:
     if c.get("selected", 0) >= run.get("limit", LIMIT):
         details.append(f"Checked up to {run.get('limit', LIMIT)} recent Inbox messages.")
     return {"state": state, "message": message, "details": details, "ready": ready,
-            "retry": state in {"not_started", "failed", "partial", "interrupted"}}
+            "retry": state in {"not_started", "failed", "partial", "interrupted"},
+            "connection_id": conn_id, "address": access.get("address", ""),
+            "window_end": access.get("created_at", ""), "expected_run": run.get("run_id", ""),
+            "choice": choice.get("decision")}
 
 
 def count_rows(tenant_id: str, client=None, *, mailbox_id=None, strict=False) -> int:
