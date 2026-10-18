@@ -113,7 +113,7 @@ def validate(card, evidence, raw):
             raise setup_cards.Invalid('The corrected note is too long; review it manually.')
         checked_citations=[]
         for citation in citations:
-            if not isinstance(citation,dict) or set(citation)!={'claim','reference'} or citation.get('reference') not in allowed_refs:
+            if not isinstance(citation,dict) or set(citation)!={'claim','reference'} or not isinstance(citation.get('reference'),str) or citation['reference'] not in allowed_refs:
                 raise setup_cards.Invalid('Citations must name a complete retained source passage.')
             claim = citation['claim']
             if not isinstance(claim,str) or not claim.strip() or claim not in line['content']:

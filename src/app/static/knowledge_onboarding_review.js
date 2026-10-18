@@ -6,6 +6,18 @@
   function ready(){window.dispatchEvent(new Event('blam8:onboarding-readiness'));}
   function notice(form,text){if(!form)return;var el=form.querySelector('[data-review-status]');if(el)el.textContent=text;}
   function signature(form){return ['contentVersion','evidenceVersion','contextVersion'].map(function(k){return form.dataset[k] || '';}).join('/');}
+  function showStored(old,next){
+    var previous=old.querySelector('[data-review-incoming]');if(previous)previous.remove();
+    var detail=document.createElement('details');detail.dataset.reviewIncoming='1';detail.open=true;
+    var title=document.createElement('summary');title.textContent='Stored version changed — compare before reconciling local edits';detail.appendChild(title);
+    next.querySelectorAll('[data-draft]').forEach(function(d){
+      var id=d.dataset.draft,p=document.createElement('p');
+      p.textContent=next.elements['label_'+id].value+': '+next.elements['content_'+id].value;detail.appendChild(p);
+    });
+    var button=document.createElement('button');button.type='button';button.textContent='Use stored version and replace my local review edits';
+    button.addEventListener('click',function(){old.replaceWith(next);notice(next,'Stored version loaded by your choice. Review its decisions before saving.');ready();});
+    detail.appendChild(button);old.prepend(detail);
+  }
   function replace(data, checkedId) {
     var parser=new DOMParser(), incoming=parser.parseFromString(data.review_html || '', 'text/html');
     var holder=document.getElementById('knowledge-pending-reviews');
@@ -23,6 +35,7 @@
           old.replaceWith(next);notice(next,'Review updated from the stored drafts. Nothing saved to Knowledge.');
         }else{
           notice(old,changed?'Stored review or evidence changed. Your local edits are preserved; check changes and overlaps before saving.':'Review refreshed: no new evidence or draft changes. Your edits are preserved.');
+          if(changed)showStored(old,next);
         }
       }else if(holder){holder.appendChild(next);}
     });
@@ -50,14 +63,15 @@
     lifecycle.querySelector('[data-site-description]').textContent=state.message || (state.state==='pending' ? state.pending_notes+' drafts pending. Nothing from these drafts is saved to Knowledge.' : state.state==='saved' ? state.saved_notes+' notes saved to Knowledge.' : 'Read key pages and prepare notes for your review.');
     var link=lifecycle.querySelector('[data-site-review]');
     link.hidden=!state.pending_notes;link.textContent='Review '+(state.pending_notes || 0)+' drafts';link.href=state.review_href || '#knowledge-pending-reviews';
-    if(go){go.disabled=state.state==='reading';go.textContent=state.state==='reading'?'Reading…':state.state==='unconfirmed'?'Reload to check':state.state==='error'?'Try again':state.state==='idle'?'Read my site':'Read again';}
+    if(go){go.disabled=state.state==='reading';go.textContent=state.state==='reading'?'Reading…':state.state==='unconfirmed'?'Check stored drafts':state.state==='error'?'Try again':state.state==='idle'?'Read my site':'Read again';}
   }
   window.Blam8KnowledgeReview={replace:replace,signature:signature};
   document.addEventListener('submit',async function(event){
     var form=event.target, button=event.submitter;
     if(!form.matches('[data-knowledge-review]') || !button || button.value!=='preview')return;
+    if(event.defaultPrevented)return;
     event.preventDefault();
-    if(busy || window.blam8KnowledgeImportBusy)return;
+    if(busy || window.blam8KnowledgeImportBusy || window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working())return;
     var body=new FormData(form);body.set('operation','preview');
     var controls=Array.from(form.querySelectorAll('input,textarea,select,button'));
     var disabled=controls.map(function(el){return el.disabled;});
@@ -82,7 +96,10 @@
   function say(text){status.hidden=false;status.textContent=text;}
   function announce(ok){window.blam8SiteRead={done:true,ok:ok};document.dispatchEvent(new CustomEvent('blam8:site-read',{detail:{ok:ok}}));ready();}
   async function read(){
-    if(lifecycle && lifecycle.dataset.state==='unconfirmed'){window.location.reload();return;}
+    if(lifecycle && lifecycle.dataset.state==='unconfirmed'){
+      try{var stored=await fetch('/onboarding/knowledge/reviews',{cache:'no-store'});if(!stored.ok)throw new Error();replace(await stored.json());say('Stored reviews checked. Compare any changed version before starting another read.');}
+      catch(e){say('Stored drafts could not be checked. Your local edits remain; do not repeat the read yet.');}return;
+    }
     if(busy || window.blam8KnowledgeImportBusy || (window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working()))return;
     if(!input.value.trim()){say('Paste your website address first.');return;}
     busy=true;window.blam8KnowledgeImportBusy=true;

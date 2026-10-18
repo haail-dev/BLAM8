@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const events={}, requests=[], tokens=new Map();
 function el(){return {dataset:{},hidden:false,disabled:false,textContent:'',value:'',listeners:{},
-  addEventListener(n,f){this.listeners[n]=f;},focus(){},querySelectorAll(){return [];}};}
+  addEventListener(n,f){this.listeners[n]=f;},appendChild(){},prepend(){},focus(){},querySelectorAll(){return [];}};}
 let active;
 function form(content='c1', evidence='e1', context='v1'){
   const f=el(),status=el();
@@ -20,7 +20,7 @@ lifecycle.dataset.state='idle';lifecycle.querySelector=s=>s==='[data-site-headin
 const go=el(), input=el(), status=el(),box=el();input.value='https://example.invalid';box.dataset={scope:'tenant'};
 const document={getElementById:id=>({'site-go':go,'site-url':input,'site-lifecycle':lifecycle,'site-status':status,'site-box':box,'knowledge-pending-reviews':holder,'knowledge-review-csrf':{value:'csrf'}}[id]),
   querySelectorAll:()=>[active],querySelector:()=>active,
-  addEventListener(n,f){(events[n]??=[]).push(f);},dispatchEvent(){}};
+  addEventListener(n,f){(events[n]??=[]).push(f);},createElement:el,dispatchEvent(){}};
 class Parser{parseFromString(s){return {querySelectorAll:()=>tokens.get(s)||[],getElementById:()=>null};}}
 class FD{constructor(){this.values={};}set(k,v){this.values[k]=v;}append(k,v){this.values[k]=v;}}
 const window={location:{reload(){throw Error('Unexpected reload');}},addEventListener(){},dispatchEvent(){}};

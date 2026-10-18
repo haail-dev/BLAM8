@@ -106,8 +106,9 @@
   }, true);
   document.addEventListener('submit', function (event) {
     if (!event.target.matches('[data-knowledge-review],#kb-note,form[action="/onboarding/knowledge/upload"]')) return;
+    if (event.defaultPrevented) return;
     if (busy || submitting || window.blam8KnowledgeImportBusy) { event.preventDefault(); event.stopImmediatePropagation(); return; }
-    if (event.defaultPrevented || event.submitter && event.submitter.value === 'preview') return;
+    if (event.submitter && event.submitter.value === 'preview') return;
     submitting = true;
   }, true);
   window.addEventListener('pageshow', function () { submitting = false; });
