@@ -3,7 +3,7 @@
 Debt is an exact occurrence, not permission for a word, file or module. This is
 a deliberately conservative vocabulary detector, not a semantic proof. Python
 strings (including local strings), f-strings, folded concatenation, comments,
-docstrings and every text asset under app are inspected. Tests are tenant data,
+docstrings and supported text assets under src are inspected. Tests are tenant data,
 and are outside the runtime source root. Presets/marketing are inside it.
 """
 from __future__ import annotations
@@ -156,14 +156,14 @@ def scan_source(path, source):
 
 
 def not_ignored_files(root):
-    """Files git would track or add under app/ (tracked, plus untracked-but-not-ignored),
+    """Files git would track or add under src/ (tracked, plus untracked-but-not-ignored),
     or None when root is not itself a git checkout or git is unavailable.
     Git-ignored build output (compiled CSS, bundled JS) is not source."""
     if not (root / ".git").exists():
         return None
     try:
         out = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--cached", "--others",
-                              "--exclude-standard", "--", "src/app"],
+                              "--exclude-standard", "--", "src"],
                              capture_output=True, check=True, timeout=60).stdout
     except (OSError, subprocess.SubprocessError):
         return None
@@ -174,11 +174,17 @@ def source_inventory(root=ROOT):
     # No module allowlist: additions are automatically in scope, including
     # catalogues, recipes, specialist desks, public pages and UI defaults.
     # In a git checkout, git-ignored files are out of scope; without git, scan all.
+    source_root = root / "src"
+    if not source_root.is_dir():
+        raise ValueError(f"Agnostic source root is missing: {source_root}")
     allowed = not_ignored_files(root)
-    return sorted(p for p in (root / "src/app").rglob("*") if p.is_file()
+    paths = sorted(p for p in source_root.rglob("*") if p.is_file()
                   and (allowed is None or p in allowed)
                   and p.suffix.lower() in {".py", ".html", ".jinja", ".jinja2", ".js", ".mjs",
                                            ".json", ".css", ".txt", ".yaml", ".yml"})
+    if not paths:
+        raise ValueError(f"Agnostic source inventory is empty: {source_root}")
+    return paths
 
 
 def scan_sources(root=ROOT):
@@ -226,6 +232,7 @@ def reconcile(actual, debt):
     expected = {key(h): h for h in debt}
     observed = {key(h): h for h in actual}
     assert len(expected) == len(debt), "Duplicate debt entries"
+    assert len(observed) == len(actual), "Duplicate observed occurrences"
     new, stale = observed.keys() - expected.keys(), expected.keys() - observed.keys()
     assert not new and not stale, (
         "New/changed agnostic leaks:\n" + "\n".join(str(k) for k in sorted(new))

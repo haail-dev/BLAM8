@@ -28,10 +28,19 @@ def cluster(tmp_path_factory):
     def command(name, *args):
         # Windows postgres inherits pipe handles; capture_output would wait for
         # the long-lived server to close them even after pg_ctl has exited.
-        with (root / "commands.log").open("a", encoding="utf-8") as output:
-            return subprocess.run([str(Path(binaries) / (name + suffix)), *map(str, args)],
-                                  stdout=output, stderr=subprocess.STDOUT, check=True, timeout=60, **flags)
+        try:
+            with (root / "commands.log").open("a", encoding="utf-8") as output:
+                return subprocess.run([str(Path(binaries) / (name + suffix)), *map(str, args)],
+                                      stdout=output, stderr=subprocess.STDOUT, check=True, timeout=60, **flags)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            logs = "\n".join(f"{p.name}:\n{p.read_text(encoding='utf-8', errors='replace')[-8000:]}"
+                             for p in (root / "commands.log", root / "server.log") if p.exists())
+            raise RuntimeError(f"Disposable PostgreSQL {name} failed:\n{logs}") from exc
     command("initdb", "-D", data, "-A", "trust", "-U", "postgres", "--encoding=UTF8", "--no-locale")
+    # All clients use the random loopback TCP port. Linux packages may default
+    # their Unix socket to /var/run/postgresql, which the CI user cannot write.
+    with (data / "postgresql.conf").open("a", encoding="utf-8") as config:
+        config.write("\nunix_socket_directories = ''\n")
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]

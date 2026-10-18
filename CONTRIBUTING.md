@@ -20,3 +20,40 @@ Do not invent a business configuration value when the owner has not chosen one.
 Use `python tests/run_offline.py ...` for tests. Database changes should include a
 rollback and disposable-database verification where the migration permits rollback.
 Deployment and live data changes are separate from local source development.
+
+## What CI does here
+
+Continuous integration (CI) automatically checks a proposed change in a fresh
+environment. GitHub Actions runs this repository's offline checks on pull
+requests and pushes to `main`. A green result applies to the tested commit;
+changing the code requires new checks.
+
+The offline workflow runs the business-agnostic guard first, then verifies that
+designated disposable-database tests actually execute, then runs the complete
+offline suite (including speech protocol tests). Dependencies are cached; obsolete
+runs for the same PR are cancelled and each job has a 30-minute timeout. Main
+runs are allowed to finish. The focused checks intentionally overlap the full
+suite to give early, clear failures and then test everything together.
+
+For an ordinary change:
+
+1. Start a feature branch from current `main` and make one coherent change.
+2. Run the relevant local tests. Run the complete agnostic guard when changing
+   business defaults, prompts, templates, configuration or booking behaviour.
+   See [the test guide](tests/README.md#business-agnostic-guard).
+3. Review `git diff` and `git status` before committing. Include the relevant
+   regression tests and documentation; keep credentials and generated files out.
+4. Open a PR explaining the problem, change and validation. Inspect the diff and
+   checks before merging. A skipped, cancelled or unavailable run is not a pass.
+5. Merge the reviewed change, then validate and tag an intentional release.
+   Deployments and migrations are separate decisions.
+
+If Actions minutes are unavailable, run the same commands locally and record the
+commit and results in the PR. That is useful evidence, but does not make a missing
+required GitHub check green. Resume checks before merging when they are required;
+do not weaken the guard to work around billing. Actions usage is charged to the
+repository owner (`haail-dev`), and the organisation billing page is the place to
+check its allowance.
+
+The initial baseline history replacement was a one-off migration. Normal changes
+add commits through PRs; do not rewrite shared `main` to tidy up ordinary work.

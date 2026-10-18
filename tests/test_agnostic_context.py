@@ -217,12 +217,45 @@ def test_inventory_without_git_scans_everything(tmp_path):
     assert [p.name for p in source_inventory(tmp_path)] == ["a.py"]
 
 
+def test_inventory_covers_workers_new_packages_and_untracked_source(tmp_path):
+    root = tmp_path / "repo"
+    for package in ("app", "speech_service", "future_worker"):
+        folder = root / "src" / package
+        folder.mkdir(parents=True)
+        (folder / "new.py").write_text('PROMPT = "ask the plumber"\n')
+    _vcs(root, "init", "-q")
+    _vcs(root, "add", "src/app")  # Workers are not staged yet, but still covered.
+    paths = {h["path"] for h in scan_sources(root)}
+    assert paths == {f"src/{p}/new.py" for p in ("app", "speech_service", "future_worker")}
+    with pytest.raises(AssertionError, match="New/changed"):
+        reconcile(scan_sources(root), [])
+
+
+def test_ignored_pattern_cannot_hide_a_force_tracked_source_file(tmp_path):
+    root = tmp_path / "repo"
+    (root / "src/app").mkdir(parents=True)
+    (root / ".gitignore").write_text("src/app/tracked.py\n")
+    (root / "src/app/tracked.py").write_text('PROMPT = "ask the plumber"\n')
+    _vcs(root, "init", "-q")
+    _vcs(root, "add", "-f", "src/app/tracked.py")
+    assert {h["path"] for h in scan_sources(root)} == {"src/app/tracked.py"}
+
+
+@pytest.mark.parametrize("empty_source_dir", [False, True])
+def test_missing_or_empty_source_inventory_fails(tmp_path, empty_source_dir):
+    if empty_source_dir:
+        (tmp_path / "src").mkdir()
+    with pytest.raises(ValueError, match="Agnostic source"):
+        source_inventory(tmp_path)
+
+
 def test_source_inventory_includes_previously_omitted_surfaces():
     paths = {p.relative_to(ROOT).as_posix() for p in source_inventory()}
     assert {f"src/app/{m}.py" for m in ("settings_recommend", "portal_data", "kb_website", "industry_lingo",
             "setup_held", "setups", "agents/field_service", "agents/tms")} <= paths
     assert any(p.startswith("src/app/templates/") for p in paths)
     assert any(p.startswith("src/app/jobs/") for p in paths)
+    assert "src/speech_service/server.py" in paths
 
 
 @pytest.mark.parametrize("path,source", [
@@ -251,6 +284,13 @@ def test_changed_and_stale_debt_fail():
     for current in ([], scan_source("app/new.py", 'x = "boiler service"')):
         with pytest.raises(AssertionError, match="Stale/changed"):
             reconcile(current, debt)
+
+
+def test_duplicate_observed_identities_cannot_collapse_into_existing_debt():
+    hit = scan_source("src/app/new.py", 'x = "boiler"')[0]
+    debt = [{**hit, "owner": "U01", "closure_step": "S1b", "reason": "Review"}]
+    with pytest.raises(AssertionError, match="Duplicate observed"):
+        reconcile([hit, dict(hit)], debt)
 
 
 @pytest.mark.parametrize("before,after", [
