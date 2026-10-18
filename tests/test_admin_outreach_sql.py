@@ -69,6 +69,9 @@ def cluster(tmp_path_factory):
             migration = Path("db/migrations/20261010_admin_outreach.sql").read_text(encoding="utf-8")
             cur.execute(migration)
             cur.execute(migration)  # redeploy/apply twice is safe
+            egress = Path("db/migrations/20261018_admin_outreach_egress.sql").read_text(encoding="utf-8")
+            cur.execute(egress)
+            cur.execute(egress)
         yield conn
         conn.close()
     finally:
@@ -92,7 +95,7 @@ def setup_send(cur):
                            "end_time": "23:59", "daily_cap": 100, "plan": {"2000-01-01": 100}, "mode": "draft"})
     token, pid, mid = (str(uuid.uuid4()) for _ in range(3))
     cur.execute("delete from admin_outreach_messages")
-    cur.execute("update admin_outreach_config set enabled=true,config=%s::jsonb,last_sync_at=now(),last_attempt_at=null", (json.dumps(cfg),))
+    cur.execute("update admin_outreach_config set enabled=true,config=%s::jsonb,last_sync_at=now(),last_attempt_at=null,lease_token=null,lease_until=null", (json.dumps(cfg),))
     cur.execute("select admin_outreach_lock(%s)", (token,))
     assert cur.fetchone()[0] is True
     cur.execute("""insert into vcrm_prospects(id,email,status,company_number,email_source,email_verified,soft_match)
@@ -212,3 +215,32 @@ def test_concurrent_reservations_send_only_once(cluster):
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         outcomes = list(pool.map(lambda _: reserve(), range(2)))
     assert sorted(outcomes) == [False, True]
+
+
+def test_stale_drafts_compare_jsonb_without_returning_templates(sql):
+    cfg, token, mid, pid = setup_send(sql)
+    # JSON object order is irrelevant; array order and actual content are not.
+    reordered = dict(reversed(list(cfg.items())))
+    sql.execute("select * from admin_outreach_stale_drafts(%s::jsonb)", (json.dumps(reordered),))
+    assert sql.fetchall() == []
+    changed = cfg | {"name": "Changed settings", "fallback_line": "x" * 20000}
+    sql.execute("set local role service_role")
+    sql.execute("select * from admin_outreach_stale_drafts(%s::jsonb)", (json.dumps(changed),))
+    assert [str(r[0]) for r in sql.fetchall()] == [mid]
+    assert [c.name for c in sql.description] == ["id"]
+    sql.execute("update admin_outreach_messages set status='sent' where id=%s", (mid,))
+    sql.execute("select * from admin_outreach_stale_drafts(%s::jsonb)", (json.dumps(changed),))
+    assert sql.fetchall() == []
+
+
+def test_stale_drafts_is_service_only_and_rollback_is_repeatable(sql):
+    for role in ("anon", "authenticated"):
+        sql.execute("select has_function_privilege(%s,'admin_outreach_stale_drafts(jsonb)','EXECUTE')", (role,))
+        assert sql.fetchone()[0] is False
+    rollback = Path("db/migrations/20261018_admin_outreach_egress_rollback.sql").read_text(encoding="utf-8")
+    # Keep the fixture's transaction intact (the deployed file is transactional).
+    rollback = rollback.replace("begin;", "").replace("commit;", "")
+    sql.execute(rollback)
+    sql.execute(rollback)
+    sql.execute("select to_regprocedure('admin_outreach_stale_drafts(jsonb)')")
+    assert sql.fetchone()[0] is None

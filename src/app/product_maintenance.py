@@ -14,6 +14,32 @@ SHARED = ('src/app/product_inventory.py','src/app/product_maintenance.py','src/a
           'src/app/main.py','src/app/pages_index.py','src/app/templating.py','src/app/setup_catalogue.py','src/app/setup_rows.py',
           'src/app/people.py','src/app/config.py')
 CURRENT_DOCS = {'README.md','docs/product-knowledge.md','docs/verified-behaviours.md'}
+# Internal tools need review evidence without becoming public capabilities.
+OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
+    'tests/test_admin_outreach.py', 'tests/test_admin_outreach_sql.py',
+    'docs/operations/founder-outreach.md',
+    'db/migrations/20261018_admin_outreach_egress.sql',
+    'db/migrations/20261018_admin_outreach_egress_rollback.sql')}
+
+
+def operator_signature(source, root=ROOT):
+    files = (source, *OPERATOR_SOURCES[source])
+    return sha256(json.dumps({name: (root/name).read_text(encoding='utf-8-sig').replace('\r\n','\n')
+                             for name in files}, sort_keys=True).encode()).hexdigest()
+
+
+def validate_operator_reviews(receipt, root=ROOT):
+    records = receipt.get('operator_sources', {})
+    errors = []
+    if set(records) != set(OPERATOR_SOURCES):
+        errors.append('Operator source review coverage changed.')
+    for source in OPERATOR_SOURCES:
+        record = records.get(source, {})
+        if record.get('signature') != operator_signature(source, root):
+            errors.append('Stale operator source review: ' + source)
+        if len(record.get('reason', '').strip()) < 30:
+            errors.append('Explain the operator source disposition: ' + source)
+    return errors
 
 
 def source_files(row, root=ROOT):
@@ -92,10 +118,10 @@ def validate_receipts(receipt, root=ROOT):
 
 
 def check_change(paths, receipt, root=ROOT):
-    errors=validate_receipts(receipt,root)
+    errors=validate_receipts(receipt,root) + validate_operator_reviews(receipt,root)
     owned={name for row in product_inventory.entries() for name in source_files(row,root)}
     for name in paths:
-        if name.startswith('src/app/') and name.endswith(('.py','.html','.json')) and name not in owned:
+        if name.startswith('src/app/') and name.endswith(('.py','.html','.json')) and name not in owned and name not in OPERATOR_SOURCES:
             errors.append('Map changed runtime source to a capability: '+name)
     return errors
 
@@ -117,6 +143,7 @@ def report(root=ROOT):
     if set(product_guides.GUIDES)!={r['id'] for r in product_inventory.entries()}:
         errors.append('Authored guide coverage differs from the capability inventory.')
     errors.extend(validate_receipts(receipt,root))
+    errors.extend(validate_operator_reviews(receipt,root))
     docs=document_inventory(root)
     return {'capabilities':len(product_inventory.entries()),'errors':errors,
             'documents':{status:sum(d['status']==status for d in docs)
