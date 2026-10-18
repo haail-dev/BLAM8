@@ -368,7 +368,7 @@ def test_the_prose_no_dependants_verdict_closes_the_step_and_names_it(client, mo
     # and only a literal true reads as the verdict
     assert "no_dependants" in concierge.HELP_SCHEMA["required"]
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "`no_dependants` to true" in prompt and "Never set it true while you are proposing a kind" in prompt
+    assert "Set no_dependants=true only when the owner explicitly says" in prompt and "while proposing a subject kind" in prompt
     assert concierge._help_no_dependants('{"reply": "x", "no_dependants": true}') is True
     assert concierge._help_no_dependants('{"reply": "x", "no_dependants": "true"}') is False
     assert concierge._help_no_dependants("not json") is False

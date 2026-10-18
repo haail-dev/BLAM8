@@ -1,0 +1,594 @@
+[
+  {
+    "id": "kb.001",
+    "kind": "kb",
+    "title": "BLAM8 — what it is and who it's for",
+    "paragraphs": [
+      "BLAM8 is the inbox that books the job and fills the CRM — a UK subscription service that gives a business an AI agent for its email. You connect your own Outlook or Gmail mailbox, teach the agent your voice and your facts, and it runs one loop on every inbound email: it drafts the reply in your voice with your real prices, holds the slot so your diary can't double-book, drops the confirmed job into your calendar, and writes the CRM record — contact, deal, promises — straight from the thread, with no typing. Draft-first by default, so a human approves everything before it sends. The Starter plan covers replies and booking; the self-filling CRM completes the loop on the Pro plan; and the Pro + Concierge plan adds the Concierge, an assistant that knows your business and acts for you once you confirm. Any business can use it — if your sector isn't listed you still get the full platform, tailored by the knowledge and voice you give it during onboarding."
+    ]
+  },
+  {
+    "id": "kb.002",
+    "kind": "kb",
+    "title": "Email automation — the base module",
+    "paragraphs": [
+      "Email automation is the core of BLAM8. When a message arrives in a connected mailbox, the agent drafts a reply in your business's voice using the facts you've taught it. It triages incoming mail and threads conversations, remembering the whole exchange so replies have context. It only ever uses your approved knowledge for concrete facts like prices, dates and policies — if it doesn't know something it says a colleague will follow up rather than guessing. You can set escalation keywords so sensitive emails are always held for a human."
+    ]
+  },
+  {
+    "id": "kb.003",
+    "kind": "kb",
+    "title": "Draft-first, approval and auto-send",
+    "paragraphs": [
+      "BLAM8 is draft-first by default: every reply waits in your approval queue, where you can approve and send, edit then send, or skip it. Nothing reaches a customer without you. When you're confident, you can switch on auto-send per inbox so routine replies go out automatically — escalation matches are always held, and mail from your own connected mailboxes is drafted but never auto-sent so the agents can't loop. The inbox and conversation views always show exactly what the agent did."
+    ]
+  },
+  {
+    "id": "kb.004",
+    "kind": "kb",
+    "title": "Teaching the agent — the knowledge base",
+    "paragraphs": [
+      "The knowledge base is how the agent learns your facts. Upload files (PDF, Word, Excel, CSV), paste notes, or add a web link, and BLAM8 turns them into searchable knowledge it retrieves while drafting. Add the things customers ask about: pricing, policies, opening hours, delivery areas, FAQs. If the agent has to defer a fact it didn't have, it flags it as a knowledge gap so you can add it in one click. If a draft ever gets a fact wrong, you can trace it back to the source knowledge and correct it."
+    ]
+  },
+  {
+    "id": "kb.005",
+    "kind": "kb",
+    "title": "Scheduling — the capacity diary",
+    "paragraphs": [
+      "The Scheduling module gives the agent a real diary to book against, so 'can you do Friday?' becomes an actual booking instead of a deferral. You set your capacity — whole-day, morning/afternoon, or real time slots — and the agent checks availability and places a real hold before confirming, so racing emails can't double-book. You can add and manage bookings yourself in the month/day Diary, and connect Outlook or Google Calendar so confirmed bookings appear there and your existing calendar events block out capacity."
+    ]
+  },
+  {
+    "id": "kb.006",
+    "kind": "kb",
+    "title": "Field OS · Transport and Fleet",
+    "paragraphs": [
+      "For hauliers and distribution, Field OS · Transport models your branches and vehicles (pallet spaces and weight limits) and books each order onto a specific vehicle-day with real capacity enforcement — racing emails can't overload a van, and the agent never promises a split it can't do. It includes a fleet board, route capacity, a customer tracking portal, and a rate card that turns a booking into a quote. The agent talks to customers in dates and capacity only; how you organise vehicles stays internal. IMPORTANT: Field OS and the other industry OS modules are NOT on public sale — they are developed hands-on with founding partners, one industry at a time. Never pitch them or promise availability; a business that needs this depth should email hello@blam8.com. The core loop is what the public plans sell today: replies and live-diary booking on Starter, with the self-filling CRM on Pro, and the Concierge on Pro + Concierge."
+    ]
+  },
+  {
+    "id": "kb.007",
+    "kind": "kb",
+    "title": "Connecting your mailbox",
+    "paragraphs": [
+      "You connect your own mailbox with one click using Microsoft (Outlook / Microsoft 365) or Google (Gmail) sign-in — BLAM8 never sees or stores your password, and the access tokens are encrypted at rest. Microsoft mailboxes receive new mail through a secure push notification; Gmail is polled regularly. You can be live on a real inbox in days, in draft-only mode, and disconnect at any time. A new account holds drafting until you've checked the setup: drafts start the moment you say go (Settings). Email hosted with a web host (IONOS, GoDaddy, 123-reg — IMAP only) cannot connect directly: either set up forwarding from the host into a Gmail/Outlook account and connect that, or move the domain's email to Google Workspace / Microsoft 365 for the native setup."
+    ]
+  },
+  {
+    "id": "kb.008",
+    "kind": "kb",
+    "title": "The self-filling CRM",
+    "paragraphs": [
+      "BLAM8 includes a CRM that fills itself in from your email — no data entry, nothing to import. New enquiries become contacts; several people at the same firm roll up into one company; phone numbers, postcodes and the fields you choose to track are read straight out of the thread. Related quotes cluster into deals with a stage and a value, and every promise — what you owe them and what they owe you — is logged the moment it's written down, with one-click follow-ups. When a lead goes quiet, the cold deal is flagged and a check-in is drafted for you. The agent also reads each customer's mood from their own words: frustrated customers are flagged before it costs the account, replies change register to match, and a heated thread always waits for human approval, even on auto-send. The CRM is included on the Pro and Pro + Concierge plans, and the free trial opens it too (the trial is the full product). On a paid Starter plan it quietly pre-fills from the first email — so when that business upgrades, the CRM opens already populated — but it cannot be opened or used until then."
+    ]
+  },
+  {
+    "id": "kb.009",
+    "kind": "kb",
+    "title": "Calendar connect and sync",
+    "paragraphs": [
+      "With Calendar Connect, confirmed bookings are pushed into your Outlook or Google calendar as real events, and your existing calendar events are imported as busy blocks so the agent won't book over them. It keeps the BLAM8 diary and your real calendar in step both ways."
+    ]
+  },
+  {
+    "id": "kb.010",
+    "kind": "kb",
+    "title": "Multiple mailboxes and enterprise",
+    "paragraphs": [
+      "A single BLAM8 account can run many mailboxes — for example orders@, sales@ and separate depot or branch inboxes — each with its own persona and rules while sharing company-wide knowledge. You can let one inbox run full-auto while another stays draft-only, and target knowledge to a specific mailbox or the whole company. This is how franchises and multi-branch operations run everything from one account."
+    ]
+  },
+  {
+    "id": "kb.011",
+    "kind": "kb",
+    "title": "Security and data handling",
+    "paragraphs": [
+      "Security is built in. Each company's data is isolated with row-level security, mailbox tokens are encrypted at rest, and you connect via Microsoft or Google sign-in rather than a password. Your data is stored in the UK (London database); the app is hosted in the EU (Frankfurt); AI drafting is done by a US sub-processor (Anthropic) under UK data-transfer safeguards — the full sub-processor list and locations are public in the privacy policy. Your data is never used to train the AI. The agent is draft-first by design, actions are auditable, and message and draft text are stored temporarily and purged on a retention schedule. Because the agent reads each incoming email in full, any sensitive personal data a customer includes (bank details, health details) is read, stored temporarily and sent to the AI sub-processor for drafting, like the rest of the message. Some details can also be picked out of emails and kept on the customer's record — see \"Health, allergy and other sensitive details\" for exactly what, and how to turn each off. Businesses handling payment, health or other special-category data should review the privacy policy and email hello@blam8.com with compliance questions before going live; escalation keywords flag matching emails for mandatory human review (the agent still drafts, but those replies never auto-send)."
+    ]
+  },
+  {
+    "id": "kb.012",
+    "kind": "kb",
+    "title": "Health, allergy and other sensitive details",
+    "paragraphs": [
+      "BLAM8 reads every email in full, so health details a customer writes are seen by the agent and sent to the AI sub-processor to draft the reply. Some of them can also be kept and used again. There are three ways this happens. 1. Your CRM fields (CRM → Fields). BLAM8 fills your fields in from emails and keeps the values on the customer's record. Those values go into every later reply draft for that customer. A field about health, medical details, medication or allergies is different. It is never filled in or suggested from an email, the agent never asks the customer for it, and it is never put into a reply draft, the customer's portal chat or the Concierge: the Concierge only says that a health detail is on record, and you read or change it on the customer's page. You type it in by hand. To stop a field being filled in, press Remove next to it. Values already stored stay on the records until you clear them. 2. What a booking is about (Diary → Dependants). If you name a kind of thing here and list what you need to know about each one, BLAM8 reads those facts from emails, and from documents kept on the record, and saves them on the customer's record. If one of your facts is a note such as a medication or an access need, it is read too. These facts go into later reply drafts and the portal chat, and the agent may say back in one short clause that a note is on record. To stop it, press Remove on the fact or Remove this kind. Tick You confirm on a fact and what the customer sends becomes a chip for you to accept, never a silent change. 3. Event guest lists (only when the events module is on your plan). Guests' dietary needs, including allergies, are read from emails and kept on that event's guest list, not on a customer record. They appear as counts on the event board and the run sheet. They are not put into reply drafts. This has no separate switch: email hello@blam8.com to have it turned off. Nothing here is used to train the AI."
+    ]
+  },
+  {
+    "id": "kb.013",
+    "kind": "kb",
+    "title": "Getting started — onboarding",
+    "paragraphs": [
+      "Setting up BLAM8 takes a few minutes: pick your industry (any sector works — the core platform is the same), connect your mailbox, teach the agent your voice (how it should sound and sign off), add some knowledge, and tell us which systems you run on. Every step after connecting your mailbox is optional and can be refined later in Settings. You'll land in draft-only mode on a real inbox, with drafting held until you've checked the setup and say go."
+    ]
+  },
+  {
+    "id": "kb.014",
+    "kind": "kb",
+    "title": "Usage and billing",
+    "paragraphs": [
+      "BLAM8 is a subscription with three plans: Starter, Pro and Pro + Concierge. Starter covers replies in your voice and scheduling with calendar sync; Pro adds the self-filling CRM (contacts, deals, promises, follow-up sequences and customer-mood flags) plus more monthly email volume and priority support; Pro + Concierge is everything in Pro plus the Concierge, with the same email allowance as Pro. One flat price per month; each plan includes one connected mailbox, and extra mailboxes are a flat monthly add-on that also raises the email allowance. There's a free 14-day trial of the FULL product — Pro + Concierge, every feature open, the CRM and the Concierge included — on one mailbox; it ends at 14 days or 100 handled emails, whichever comes first. No card to start, and no free-forever tier. Bigger operations (multiple sites, custom volumes) aren't sold self-serve — email hello@blam8.com. The Usage page shows how many emails you've handled against your allowance, and you can change or cancel your subscription (upgrade, downgrade, update card) through the secure Customer Portal from the billing page. For current prices, see the Plans page or just ask."
+    ]
+  },
+  {
+    "id": "kb.015",
+    "kind": "kb",
+    "title": "Customer portal — how customers book online",
+    "paragraphs": [
+      "Every BLAM8 business has a customer portal at blam8.com/c/{business-slug} — the exact link is shown in Settings under Customer portal. It is invite only: your customers, the ones your emails already reach, can check and move their bookings, book again and ask questions by conversation there. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away with 'This page is for your business's customers' and never reach the AI, and there are no 'Book now' buttons or snippets for a website. Booking is conversational: the AI checks the real diary, offers real slots, gathers the business's required intake details, holds the slot and creates the booking in the diary and CRM. No customer login is needed — the reference code from any BLAM8 email identifies the customer; a customer who has lost it can type the email address the business has for them and the code is emailed there. Someone who isn't a customer yet can't sign up on the portal — they email the business, and the reply carries their code and link. Anything the AI can't handle is passed to the business's inbox, and the business gets a push notification when a customer books, reschedules or escalates. The portal is customisable in Settings: business name, description, service area, welcome message, and a 'quote prices in the portal' toggle for businesses that would rather take details for a personal quote."
+    ]
+  },
+  {
+    "id": "kb.016",
+    "kind": "kb",
+    "title": "Sharing your customer portal link",
+    "paragraphs": [
+      "Your customer portal lives at blam8.com/c/{your-business-slug} — the exact link and slug are in Settings under Customer portal. The portal is invite only, so there's nothing to publish: every email BLAM8 sends already includes the portal link and the customer's reference code in the sign-off, and that is the invitation. Don't put the link on your website, Google Business Profile or social bios — a visitor without a code can't get in. New customers reach you by email as usual, and your reply invites them."
+    ]
+  },
+  {
+    "id": "kb.017",
+    "kind": "kb",
+    "title": "Reference codes — how customers access their bookings",
+    "paragraphs": [
+      "Every CRM contact gets a unique reference code, generated automatically from the business name plus four characters (for example ACME-7K2M). The code is included in the sign-off of every email BLAM8 sends, alongside the portal link. Customers use it on the customer portal (blam8.com/c/{business-slug}) to check their booking, reschedule, or ask questions — without calling the business and without any account or password. The code is the invitation: the portal is invite only. If a customer doesn't have their code, they type the email address the business has for them and it is emailed there."
+    ]
+  },
+  {
+    "id": "kb.018",
+    "kind": "kb",
+    "title": "Smart inbox labels — how emails are categorised",
+    "paragraphs": [
+      "Every incoming email is automatically categorised the moment BLAM8 ingests it — no rules to set up and no extra processing cost. The six labels: Needs Reply (a customer wrote something that needs an answer), Draft Ready (BLAM8 has drafted a reply, waiting for approval), Replied (approved and sent, awaiting the customer's response), Booked (a booking is held or confirmed on the thread), FYI (receipts, newsletters, confirmations — no action needed), and Automated (machine-generated system mail, correctly skipped). Labels transition automatically as the conversation progresses — a new enquiry starts as Needs Reply, becomes Draft Ready when a reply is drafted, then Replied when it's approved and sent, and flips back to Needs Reply if the customer answers. The inbox filter bar shows live counts per category, and clicking the category chip on any conversation changes the label manually."
+    ]
+  },
+  {
+    "id": "kb.019",
+    "kind": "kb",
+    "title": "The Concierge — the assistant that takes actions",
+    "paragraphs": [
+      "The Concierge is BLAM8's built-in AI assistant for the business owner and their team (not for customers). The person icon opens her; hold it for a second to talk. She answers from your records — look someone up by a dependant's name, which stays are in on a given day, which invoices are overdue, which documents are running out. She also sets up action cards: draft an email or send one that's waiting, block or reopen days, change a stay, update a dependant's details, ask a customer for a renewal, and hand a job to someone on your team. She can also move or cancel a booking, update a deal, add a follow-up, a contact or a knowledge entry, and chase quotes and invoices. Every action is confirm-first: she proposes, you see exactly what will happen, you confirm, it runs — nothing is sent, moved or created without your approval, and everything is audit-logged. A card you didn't answer waits with a ⏳ and comes back checked against today's data; what's done is listed with a ✓. She knows who is asking and what they may do. The morning brief opens straight into her. The Concierge is part of the Pro + Concierge plan, and open during the free trial. Starter and Pro don't include her; they keep App help, reached from the search box, for how-to-use-the-app questions."
+    ]
+  },
+  {
+    "id": "kb.020",
+    "kind": "kb",
+    "title": "Installable app and push notifications",
+    "paragraphs": [
+      "BLAM8 installs as an app — a Progressive Web App — on your phone, desktop or tablet, straight from the browser: no app store, no download page. In Chrome or Edge, open blam8.com, sign in, and use the 'Install BLAM8 on this device' card at the top of Settings (or the browser menu's own Install option); on iPhone/iPad Safari it's Share → Add to Home Screen. Once installed, BLAM8 opens in its own window, sits in your dock or taskbar with right-click shortcuts to Inbox, CRM, Diary and Concierge, and sends push notifications — when a draft is ready for your approval, and when a portal customer books, reschedules or escalates. Enable notifications from the prompt after logging in, or from Settings. The app shell loads from cache, so it opens instantly and shows a clear banner if you're offline."
+    ]
+  },
+  {
+    "id": "kb.021",
+    "kind": "kb",
+    "title": "Finding your way around the dashboard",
+    "paragraphs": [
+      "From the dashboard menu you can reach: your Inbox and approval queue (drafts waiting for you), Knowledge (teach the agent facts), the Diary (scheduling) and, with Field OS · Transport, its cockpit, transport board and Fleet, plus Mailboxes (on enterprise accounts), Usage, Settings (voice, rules, auto-send) and your Ignored-contacts list. Tell the assistant where you want to go and it can point you there."
+    ]
+  },
+  {
+    "id": "kb.022",
+    "kind": "kb",
+    "title": "Feature requests and reporting a problem",
+    "paragraphs": [
+      "You can ask for new features and report anything that isn't working right, straight from inside BLAM8. The quickest way is to tell the assistant (this chat): describe the idea or the problem and it drafts a feature request or an issue report for you — nothing is sent to the team until you press Submit on the draft. There is also a Requests & reports page in the dashboard menu with a form, and it lists everything you've sent with its status (new, reviewing, planned or done). The roadmap is built from what operators actually ask for, so both kinds of feedback go directly to the product team."
+    ]
+  },
+  {
+    "id": "kb.023",
+    "kind": "kb",
+    "title": "People — your team, with or without a login",
+    "paragraphs": [
+      "Adding staff, another team member, a partner or a helper happens in People (Settings → People), and it is free on every plan — it does NOT need another mailbox or a different plan. On the People page, 'Invite someone' sends a sign-in link (email, a copy-and-paste link or a QR code) for a person who will use BLAM8, and '+ Add a freelancer or helper' adds a person who just does the work and won't use the app — an external helper, a partner, a helper: name, what they do, and a mobile or email. Each job they're put on is sent to them as a job sheet (by text when the business has an SMS number, else by email) with a private link where they tap On my way (the customer is told the arrival time) and Done; if the job moves or is cancelled they're told. An extra mailbox is only for a separate email address customers write to (sales@, a second business), never for adding a person. People is where your team lives, on every plan, and seats are free. The team list can include people who never sign in: add their name and they can be put on a job, and what they do counts towards how much the diary lets happen at once. People who do sign in get a role — owner, manager, staff or accountant — and the owner chooses which parts of the app each person can open and what they can change there. 'View as' lets the owner see the app exactly as one of their people does, read-only, so they can check before relying on it. A job can have one person on it or several (one on the drop-off, another on the collection, say); which is a setting in the diary. Being on a job puts it on that person's Today and Diary."
+    ]
+  },
+  {
+    "id": "kb.024",
+    "kind": "kb",
+    "title": "Will the AI overload my team? Capacity, hours and who does what",
+    "paragraphs": [
+      "The AI does not take on more work than your team can do, because it books against the capacity you set, not against what customers ask for. In the diary you say how much can happen at once (how many jobs, how many people, or how many places), which days and hours you work, and how much notice you need. The agent checks that diary before it offers or confirms anything and places a real hold, so two customers can't both get the last slot. It never assumes nine-to-five: a business that works seven days a week, split shifts or irregular hours sets exactly that. Days you're closed are treated as closed, not full. The people in your team count towards the capacity: what each person does adds to how much the diary lets happen at once. Every reply is draft-first by default, so nothing goes to a customer until you approve it; auto-send is something you switch on later, once you trust the setup. Who does which job stays in your hands. You put a person on a job (on the job page, or by asking the Concierge, for example 'put Em on Thursday's job'); BLAM8 does not pick the person for you. A job can have one person or several, which is a setting. Someone put on a job sees it on their own Today and Diary, and can be sent a job sheet by text or email with a link to tap On my way and Done. The real risk is not that the AI overloads your team but that it fills your diary faster than you're used to, if the capacity numbers are set too generously. Set them honestly, start with drafts you approve, and loosen it as you gain confidence."
+    ]
+  },
+  {
+    "id": "kb.025",
+    "kind": "kb",
+    "title": "When the diary is full — other dates and the waiting list",
+    "paragraphs": [
+      "When a customer asks for a date or time that is full, the agent does not overbook and does not just say no. What it does is the business's choice, in the diary settings under 'When it's full'. Other dates has three options: off, offer, or offer and hold. 'Offer' names the nearest free dates and holds nothing, so they may be gone by the time the customer says yes. 'Offer and hold' names them and holds them for a limited time; this is the default. The waiting list can be switched on separately: the customer is put on a list for the dates they asked for, and when a place frees up (a cancellation, or a held offer that lapses) the business either approves the offer first or lets it go out automatically, and the place is held for a set number of hours. With both on, one reply offers the waiting list first and the other dates second. A customer who says they're flexible ('any weekend works') skips the list and is simply offered dates. With both off, the reply says you're full and offers nothing else. The agent tells 'full' apart from 'closed', 'too soon' (past your cut-off or notice time) and 'too far ahead' (beyond how far ahead the diary opens), and says the true one; bank holidays close normal work. While the agent is still gathering a missing detail, the slot is held for that customer so someone else can't take it in the meantime."
+    ]
+  },
+  {
+    "id": "kb.026",
+    "kind": "kb",
+    "title": "What BLAM8 does not do for your team",
+    "paragraphs": [
+      "BLAM8's People area is for delegating work, keeping records and sharing information about jobs. It is deliberately not an HR or workforce tool. It does not build rotas or plan shifts, has no clock-in or timesheets, does not calculate holiday entitlement or track absence, does not run payroll, does not do performance reviews and does not give employment-law advice. It does not automatically choose which team member gets a job; the owner or manager puts people on jobs. Team members are free on every plan and are not counted as extra seats. If a question is about something in that list, the honest answer is that BLAM8 doesn't do it and you'd keep using whatever you use today alongside it. What it does do for a team: give each person their own sign-in with only the parts of the app the owner chooses, show each person their own jobs, let people who never sign in still be put on jobs and sent a job sheet, let you leave a note for a colleague attached to a particular job or customer, and record who did what in the activity log."
+    ]
+  },
+  {
+    "id": "kb.027",
+    "kind": "kb",
+    "title": "Stays that change — extend, shorten or move",
+    "paragraphs": [
+      "A stay can be extended, shortened or moved after it's booked. The price follows the nights: an extra night raises its own draft invoice, and shortening back cancels that invoice. The owner can do it from the job page on any plan, and on Pro + Concierge by asking the Concierge, who sets up a card to confirm."
+    ]
+  },
+  {
+    "id": "kb.028",
+    "kind": "kb",
+    "title": "Getting paid — quotes, invoices and payment settings",
+    "paragraphs": [
+      "Quotes and invoices are included on every plan. Card payments go through the business's own Stripe account (Stripe Connect), so a customer can pay straight from the invoice, and unpaid invoices are chased at 7, 14 and 30 days. There are settings a business can choose: a deposit to secure a booking, a higher deposit on peak dates, billing the balance the day before collection (off by default), and no separate quote when the diary has already set the price. Describe these as settings the business can switch on, not as something every account does."
+    ]
+  },
+  {
+    "id": "kb.029",
+    "kind": "kb",
+    "title": "Phone calls and SMS",
+    "paragraphs": [
+      "BLAM8 doesn't answer phone calls. It answers email and runs the diary. The Concierge can be spoken to, but her voice is for the owner and their team, not for callers. SMS and missed-call text-back are built and being tested; they switch on when testing is done. There is no date to give, so never promise one, and never describe SMS as live or rolling out."
+    ]
+  },
+  {
+    "id": "kb.030",
+    "kind": "kb",
+    "title": "Common questions",
+    "paragraphs": [
+      "Yes, BLAM8 works with both Outlook and Gmail. No, it won't send anything without you unless you turn on auto-send for an inbox — it is draft-first by default. Yes, you can edit any draft before it sends. Yes, you can run multiple branches or inboxes from one account. No, your data is never used to train the AI. You can usually be live on a real inbox within days, with no IT project."
+    ]
+  },
+  {
+    "id": "kb.031",
+    "kind": "kb",
+    "title": "Where to point people — key pages on blam8.com",
+    "paragraphs": [
+      "When someone asks how BLAM8 works, wants the short version in writing, or asks for 'the two-minute version', share these public pages. https://blam8.com/how-it-works walks through onboarding end to end: sign in, a short interview instead of a settings maze, pick your industry, connect the mailbox (Outlook or Gmail), teach it your business, then approve drafts from the queue — plus what BLAM8 needs access to and how heated emails get escalated to a human. https://blam8.com/security covers data handling and security. https://blam8.com/help is the help centre, with one-page answers to common questions. https://blam8.com/capabilities lists what the platform can do, and current pricing is public on https://blam8.com. Share these links freely — they are public pages and the fastest way to give someone a straight answer they can read in their own time."
+    ]
+  },
+  {
+    "id": "help.what-is-blam8",
+    "kind": "help",
+    "title": "What is BLAM8?",
+    "paragraphs": [
+      "BLAM8 turns a business email address into a knowledgeable AI agent. It reads every inbound customer email, drafts a reply in the business's own voice grounded in the business's own knowledge — real prices, real policies — gathers the booking details, and, with Scheduling on, books the job into a live diary that can never double-book. A CRM fills itself in from the mail flow as a side effect: contacts, companies, deals, promises, and each customer's mood.",
+      "It runs on the mailbox and calendar the business already has (Microsoft 365 / Outlook or Gmail) — no migration, no new inbox — and it is draft-only by default: a human approves every reply until the business chooses to switch on auto-send, per mailbox. Replies and booking are included from {{product:price.email}} a month; the self-filling CRM unlocks on Pro ({{product:price.starter}}/month) — and it pre-fills quietly on every account, so it opens already populated the day you upgrade. Pro + Concierge ({{product:price.concierge}}/month) adds the Concierge, an assistant that knows your business and acts once you confirm."
+    ],
+    "slug": "what-is-blam8",
+    "related": [
+      [
+        "What BLAM8 does — and doesn't",
+        "/capabilities"
+      ],
+      [
+        "How onboarding works",
+        "/how-it-works"
+      ]
+    ]
+  },
+  {
+    "id": "help.who-is-blam8-for",
+    "kind": "help",
+    "title": "Who is BLAM8 for?",
+    "paragraphs": [
+      "UK small businesses that run on email and a diary. If customers email you asking \"can you do Tuesday?\", BLAM8 is built for you.",
+      "The common shape: enquiries arrive by email all day, each one needs a knowledgeable reply and often a booking, and the owner is doing that admin at 9pm. BLAM8 is for the business that wants that handled without ripping anything out — it is not an ERP, not a marketing platform, and not a workflow-integration toolkit."
+    ],
+    "slug": "who-is-blam8-for",
+    "related": [
+      [
+        "For trades",
+        "/for/trades"
+      ],
+      [
+        "For haulage & logistics",
+        "/for/logistics"
+      ]
+    ]
+  },
+  {
+    "id": "help.how-much-does-blam8-cost",
+    "kind": "help",
+    "title": "How much does BLAM8 cost?",
+    "paragraphs": [
+      "All prices are public, in GBP, billed monthly with no annual lock-in. Starter is {{product:price.email}}/month: AI-drafted replies grounded in your knowledge, plus scheduling with the capacity diary and calendar sync — on 1 mailbox with 300 emails/month. Pro is {{product:price.starter}}/month: everything in Starter plus the self-filling CRM — contacts, deals, promises, follow-up sequences and customer-mood flags — with 750 emails/month, additional mailboxes at {{product:addon.mailbox}}/month each (each adding 300 emails/month), and priority support. Pro + Concierge is {{product:price.concierge}}/month: everything in Pro plus the Concierge — ask her anything about your business (\"who owes me money?\", \"what's on tomorrow?\") and she drafts emails, changes stays, blocks days and hands jobs to your team once you confirm; hold the person icon to talk to her. Same allowance as Pro.",
+      "The CRM pre-fills quietly on every account from day one, so upgrading to Pro opens a CRM that is already populated. Every account starts with a free {{product:trial.days}}-day trial of the full product, the Concierge included, no card to start. Need something bigger — multiple sites, custom volumes? Email hello@blam8.com."
+    ],
+    "slug": "how-much-does-blam8-cost",
+    "related": [
+      [
+        "Full pricing",
+        "/#pricing"
+      ],
+      [
+        "Payments, billing & Stripe",
+        "/stripe"
+      ],
+      [
+        "What each OS module does",
+        "/capabilities"
+      ]
+    ]
+  },
+  {
+    "id": "help.what-does-blam8-need",
+    "kind": "help",
+    "title": "What data and access does BLAM8 need?",
+    "paragraphs": [
+      "Two things. First, revocable OAuth consent to the one mailbox you choose — read incoming mail, send the replies you approve — granted on Microsoft's or Google's own consent screen, never via a password. Second, your business knowledge: prices, policies, services and FAQs, pasted or uploaded, so replies quote your real numbers instead of inventing.",
+      "Optionally, calendar access for the Scheduling tier, so confirmed bookings land in Outlook or Google Calendar and your busy times block the diary. That is the whole list: no access to other systems, no data migration, and disconnecting a mailbox deletes its tokens and stops all processing."
+    ],
+    "slug": "what-does-blam8-need",
+    "related": [
+      [
+        "How onboarding works",
+        "/how-it-works"
+      ],
+      [
+        "Security & data handling",
+        "/security"
+      ]
+    ]
+  },
+  {
+    "id": "help.what-does-blam8-integrate-with",
+    "kind": "help",
+    "title": "What does BLAM8 integrate with?",
+    "paragraphs": [
+      "Today: Microsoft 365 / Outlook and Gmail for email, Outlook and Google Calendar for bookings, Stripe for billing, and CSV/Excel import/export for your records. Within its own suite the chain is fully connected — email to diary to job to invoice, with an audit log.",
+      "Deliberately not: Notion, Slack, third-party CRMs, or build-your-own pipelines. BLAM8 is not a workflow-integration platform — if you need app-to-app plumbing, that is Zapier's category. The design is to run on the tools you already have, not to wire together everything you might ever use."
+    ],
+    "slug": "what-does-blam8-integrate-with",
+    "related": [
+      [
+        "BLAM8 vs Zapier",
+        "/vs/zapier"
+      ],
+      [
+        "What BLAM8 does — and doesn't",
+        "/capabilities"
+      ]
+    ]
+  },
+  {
+    "id": "help.who-approves-what-the-ai-sends",
+    "kind": "help",
+    "title": "Does a human approve what the AI sends?",
+    "paragraphs": [
+      "By default, yes — every reply. BLAM8 is draft-only until you decide otherwise: drafts wait in an approval queue where you approve, tweak or skip in a click. Auto-send is an explicit opt-in, per mailbox, for when the queue has earned your trust.",
+      "Even in full-auto, these still pull a conversation back to a person: the escalation rules you set for sensitive topics, the agent deferring when it doesn't know something, and on Pro and above the mood read (a heated thread is always held for human approval). Every reply the agent sends by itself carries an AI disclosure, in line with EU AI Act Article 50 — replies you approve are your own communication."
+    ],
+    "slug": "who-approves-what-the-ai-sends",
+    "related": [
+      [
+        "Security & data handling",
+        "/security"
+      ],
+      [
+        "How the mood read works",
+        "/help/how-does-mood-tracking-work"
+      ]
+    ]
+  },
+  {
+    "id": "help.how-does-mood-tracking-work",
+    "kind": "help",
+    "title": "How does BLAM8's customer mood tracking work?",
+    "paragraphs": [
+      "Every contact carries a live emotional temperature, read from their own words across the whole conversation — not a black-box score. The read spans the relationship, so a polite email after two unanswered chasers registers differently from a polite first email, and the trend (improving or worsening) is tracked alongside the current state, with the trigger shown in the customer's own words.",
+      "When a customer turns frustrated, they are flagged in the inbox and on the dashboard before it costs you the account, and the agent's replies change register to match — no breezy cheerfulness at an angry customer. A heated thread is always held for human approval, even on a mailbox running full-auto. It is a safety and relationship feature: automation that can't tell when someone is upset shouldn't be answering your customers."
+    ],
+    "slug": "how-does-mood-tracking-work",
+    "related": [
+      [
+        "The self-filling CRM",
+        "/#crm"
+      ],
+      [
+        "BLAM8 vs HubSpot",
+        "/vs/hubspot"
+      ]
+    ]
+  },
+  {
+    "id": "help.what-happens-to-my-data",
+    "kind": "help",
+    "title": "What happens to my data?",
+    "paragraphs": [
+      "It is used to run your service, and nothing else — never sold, never used to train AI models (BLAM8's AI providers don't train on API data either). Your database lives in the UK (London); the application runs in the EU (Frankfurt); AI drafting is performed by Anthropic in the US under UK data-transfer safeguards. Every sub-processor is listed publicly in the Privacy Policy.",
+      "Each company is an isolated tenant enforced with database row-level security. The content of handled emails is automatically redacted after 90 days, leaving only the audit record. Your operational records export as CSV/Excel any time, and a verified deletion request to hello@blam8.com removes the lot."
+    ],
+    "slug": "what-happens-to-my-data",
+    "related": [
+      [
+        "Security & data handling",
+        "/security"
+      ],
+      [
+        "Privacy Policy & sub-processors",
+        "/privacy"
+      ]
+    ]
+  },
+  {
+    "id": "help.how-do-i-cancel",
+    "kind": "help",
+    "title": "How do I cancel or leave BLAM8?",
+    "paragraphs": [
+      "Self-serve, from inside the app: billing runs on Stripe's customer portal, where you can upgrade, downgrade or cancel without talking to anyone. Plans are monthly with no annual lock-in, so cancelling simply stops the next renewal.",
+      "Your data stays yours on the way out: export your records as CSV/Excel first, disconnect the mailbox (which deletes its access tokens and stops all processing), and request full deletion at hello@blam8.com if you want the account gone rather than dormant. Your Outlook or Gmail is untouched throughout — BLAM8 never owned your inbox, so there is nothing to migrate back."
+    ],
+    "slug": "how-do-i-cancel",
+    "related": [
+      [
+        "Payments, billing & Stripe",
+        "/stripe"
+      ],
+      [
+        "Security & data handling",
+        "/security"
+      ],
+      [
+        "Pricing",
+        "/#pricing"
+      ]
+    ]
+  },
+  {
+    "id": "help.does-blam8-work-with-outlook-and-gmail",
+    "kind": "help",
+    "title": "Does BLAM8 work with Outlook and Gmail?",
+    "paragraphs": [
+      "Yes — both, connected in one click using secure OAuth consent rather than a password. Drafts start the moment you say go: a new account holds them until you've checked the setup. Confirmed bookings sync to Outlook or Google Calendar. New mail is pushed to BLAM8 as it arrives, so drafts appear while the enquiry is still warm.",
+      "There is no new inbox to adopt: your team keeps using Outlook or Gmail exactly as before, and BLAM8's replies thread into the same conversations your customers already see."
+    ],
+    "slug": "does-blam8-work-with-outlook-and-gmail",
+    "related": [
+      [
+        "How onboarding works",
+        "/how-it-works"
+      ]
+    ]
+  },
+  {
+    "id": "help.why-is-google-sign-in-invite-only",
+    "kind": "help",
+    "title": "Why is connecting a Gmail inbox invite-only?",
+    "paragraphs": [
+      "Signing in to BLAM8 is open to everyone — Google or Microsoft, no invite needed. Sign-in only asks Google who you are (basic profile scopes), which Google doesn't limit. The limit applies one step later: reading and sending mail in a Gmail inbox uses Google's restricted scopes, which Google fully verifies only after a paid, independent security assessment. BLAM8 is self-funded and is completing that assessment once its first founding customers are aboard rather than before — we'd rather be honest about the order of operations than pretend otherwise. Until it completes, Google allows only 100 people to grant BLAM8 Gmail access, behind an \"unverified app\" notice — so connecting a Gmail inbox is invite-only, and the limited places are saved for founding users. The connect step shows exactly how many places remain, and has a \"Request access\" form if you don't have a code; Microsoft 365 / Outlook inboxes connect instantly with no cap.",
+      "None of this changes what BLAM8 can access. Consent still happens on Google's own screen, scoped to the mailbox and calendar you choose, revocable from your Google account at any time — and draft-only by default applies exactly as everywhere else. When you connect a Gmail mailbox you may see \"Google hasn't verified this app\": continuing via the Advanced link is Google's standard route for apps at this stage. If you'd rather not, Microsoft 365 / Outlook works identically, with no notice and no cap."
+    ],
+    "slug": "why-is-google-sign-in-invite-only",
+    "related": [
+      [
+        "What data and access BLAM8 needs",
+        "/help/what-does-blam8-need"
+      ],
+      [
+        "Security & data handling",
+        "/security"
+      ]
+    ]
+  },
+  {
+    "id": "help.can-blam8-book-jobs-automatically",
+    "kind": "help",
+    "title": "Can BLAM8 book appointments and jobs automatically?",
+    "paragraphs": [
+      "Yes. When an email asks for a date, the agent checks live availability, places a hold that can never double-book — two requests in the same second cannot take the same slot — and confirms the booking the moment the reply is approved. It handles timed slots, whole days and multi-day stays, and refuses to confirm until the details you require are gathered: you define what \"ready to book\" means.",
+      "Capacity is real, not a shared calendar: the diary knows how much work fits in a day, and a hold takes real capacity off the board until it's confirmed or released. Confirmed jobs land in Outlook or Google Calendar, and your calendar's busy times block the diary in return."
+    ],
+    "slug": "can-blam8-book-jobs-automatically",
+    "related": [
+      [
+        "For trades",
+        "/for/trades"
+      ],
+      [
+        "For haulage & logistics",
+        "/for/logistics"
+      ],
+      [
+        "BLAM8 vs Calendly",
+        "/vs/calendly"
+      ]
+    ]
+  },
+  {
+    "id": "help.does-blam8-send-marketing-emails",
+    "kind": "help",
+    "title": "Can BLAM8 send marketing campaigns or newsletters?",
+    "paragraphs": [
+      "No. BLAM8 answers inbound email; it doesn't broadcast outbound campaigns to a list. If you want newsletters, promotional blasts and marketing journeys, use a marketing platform like Mailchimp — many businesses run both, because the two don't overlap.",
+      "What BLAM8 does send proactively is operational, one customer at a time and tied to real work: booking confirmations and reminders, follow-ups on promises, check-ins on deals that went quiet — in your voice, under the same draft-first approval model as everything else."
+    ],
+    "slug": "does-blam8-send-marketing-emails",
+    "related": [
+      [
+        "BLAM8 vs Mailchimp",
+        "/vs/mailchimp"
+      ]
+    ]
+  },
+  {
+    "id": "help.does-blam8-hallucinate",
+    "kind": "help",
+    "title": "Will the AI make things up to my customers?",
+    "paragraphs": [
+      "Nobody selling AI can honestly promise \"no hallucinations\", so BLAM8 doesn't. What it builds instead is structural: replies are grounded in your own uploaded knowledge via retrieval, so the agent quotes your actual prices and policies; it says what it doesn't know instead of inventing; and it flags the gap so you can fill it.",
+      "On top of the grounding sit the human controls: nothing sends without approval until you switch full-auto on, escalation rules and the mood read pull risky conversations back to a person, and any wrong line becomes a standing never-rule in one click — the agent won't write it again. Edit a draft in a way that matters and, once it has sent, you are offered the chance to save the change as knowledge or as an always/never rule. Grounding, approval, escalation, correction: that is the real safety story."
+    ],
+    "slug": "does-blam8-hallucinate",
+    "related": [
+      [
+        "What BLAM8 does — and doesn't",
+        "/capabilities"
+      ],
+      [
+        "Security & data handling",
+        "/security"
+      ]
+    ]
+  },
+  {
+    "id": "help.what-is-an-os-module",
+    "kind": "help",
+    "title": "What is a BLAM8 OS module?",
+    "paragraphs": [
+      "The product every business buys is the loop: email replies in your voice and scheduling into a live diary from {{product:price.email}} a month, with the self-filling CRM completing the loop on Pro ({{product:price.starter}}/month) and the Concierge on Pro + Concierge ({{product:price.concierge}}/month). OS modules are deeper, industry-specific operations tooling built on the same agent — things like run boards, industry-shaped capacity and operational paperwork for sectors such as a range of booking and service businesses.",
+      "OS modules are not on public sale. They are being developed hands-on with a small group of founding partners, one industry at a time, and they'll be announced properly when they're ready. If your business needs that kind of depth, email hello@blam8.com and tell us what you run — the loop works today, and founding-partner conversations start from there."
+    ],
+    "slug": "what-is-an-os-module",
+    "related": [
+      [
+        "What BLAM8 does today",
+        "/capabilities"
+      ],
+      [
+        "Pricing",
+        "/#pricing"
+      ]
+    ]
+  },
+  {
+    "id": "help.does-blam8-answer-phone-calls",
+    "kind": "help",
+    "title": "Does BLAM8 answer phone calls?",
+    "paragraphs": [
+      "No. BLAM8 answers your email and runs your diary: it replies to customers in your voice, gathers the booking details and books the job. It doesn't pick up the phone, and it doesn't take calls for you.",
+      "The Concierge, on Pro + Concierge ({{product:price.concierge}}/month), can be spoken to, but her voice is for you, the owner, not your callers: hold the person icon and ask what's on tomorrow or who owes you money. SMS and missed-call text-back are built and being tested; they switch on when testing is done. If you need your phone answered today, an answering service does that job, and BLAM8 runs happily alongside one."
+    ],
+    "slug": "does-blam8-answer-phone-calls",
+    "related": [
+      [
+        "What BLAM8 does — and doesn't",
+        "/capabilities"
+      ],
+      [
+        "Pricing",
+        "/#pricing"
+      ]
+    ]
+  },
+  {
+    "id": "help.can-staff-use-blam8-without-a-login",
+    "kind": "help",
+    "title": "Can my staff use BLAM8 without a login?",
+    "paragraphs": [
+      "Yes. Add them in People as a freelancer or helper: they can be put on a job and count towards how much the diary lets happen at once, without an account of their own. Give them a mobile or an email and each job is sent to them as a job sheet, with a link to tap On my way and Done. People who do sign in get a role (owner, manager, staff or accountant), and you choose which parts of the app each of them can open and what they can change there. Check what a role sees with View as before you rely on it.",
+      "\"View as\" lets you see the app exactly as one of your people does, so you can check what they'll see before you rely on it. You can put one person on a job, or several, say one on the drop-off and another on the collection: that's a setting. People is on every plan, and seats are free."
+    ],
+    "slug": "can-staff-use-blam8-without-a-login",
+    "related": [
+      [
+        "What BLAM8 does — and doesn't",
+        "/capabilities"
+      ],
+      [
+        "Pricing",
+        "/#pricing"
+      ]
+    ]
+  }
+]

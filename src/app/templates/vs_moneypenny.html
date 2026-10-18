@@ -19,7 +19,7 @@
         {
           "@type": "Question",
           "name": "How much does Moneypenny cost?",
-          "acceptedAnswer": { "@type": "Answer", "text": "On 25 September 2026 Moneypenny's UK AI Receptionist page said from £25 a month. Its human call answering is priced by quote, and its own blog says UK answering services typically charge 60p to £1.50 a minute. For comparison, Answer.co.uk listed human answering at £2.20 a call plus VAT and AI answering at £10 a month plus 85p a call plus VAT on the same day. BLAM8 is priced per business for email: Starter £39, Pro £99 and Pro + Concierge £249 a month." }
+          "acceptedAnswer": { "@type": "Answer", "text": "On 25 September 2026 Moneypenny's UK AI Receptionist page said from £25 a month. Its human call answering is priced by quote, and its own blog says UK answering services typically charge 60p to £1.50 a minute. For comparison, Answer.co.uk listed human answering at £2.20 a call plus VAT and AI answering at £10 a month plus 85p a call plus VAT on the same day. BLAM8 is priced per business for email: Starter {{ product_price('email') }}, Pro {{ product_price('starter') }} and Pro + Concierge {{ product_price('concierge') }} a month." }
         },
         {
           "@type": "Question",
@@ -105,7 +105,7 @@
         <tr><td class="px-5 py-3.5 font-medium text-slate-800">Quotes, invoices, getting paid</td><td class="px-5 py-3.5">Outside what we compared</td><td class="px-5 py-3.5">On every plan: quotes, invoices chased at 7, 14 and 30 days, and card payments into your own Stripe account (Stripe Connect)</td></tr>
         <tr><td class="px-5 py-3.5 font-medium text-slate-800">Customer records</td><td class="px-5 py-3.5">Outside what we compared</td><td class="px-5 py-3.5">On Pro, a CRM that fills itself in from the email</td></tr>
         <tr><td class="px-5 py-3.5 font-medium text-slate-800">An assistant for you</td><td class="px-5 py-3.5">Not what it's for: it answers your callers</td><td class="px-5 py-3.5">The Concierge, on Pro + Concierge only. Ask and it looks it up; say it and it drafts a card; you confirm. By typing or live voice. It's for you, not your callers</td></tr>
-        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">AI Receptionist from £25 a month. Human answering by quote; Moneypenny's own blog puts UK answering services at 60p–£1.50 a minute</td><td class="px-5 py-3.5">Per business per month: Starter £39 · Pro £99 · Pro + Concierge £249. Free trial of the full product for 14 days or {{ trial_email_cap }} handled emails, whichever comes first, no card to start</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">AI Receptionist from £25 a month. Human answering by quote; Moneypenny's own blog puts UK answering services at 60p–£1.50 a minute</td><td class="px-5 py-3.5">Per business per month: Starter {{ product_price('email') }} · Pro {{ product_price('starter') }} · Pro + Concierge £249. Free trial of the full product for 14 days or {{ trial_email_cap }} handled emails, whichever comes first, no card to start</td></tr>
       </tbody>
     </table>
   </div>
@@ -146,7 +146,7 @@
     </details>
     <details class="group py-5">
       <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How much does Moneypenny cost?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
-      <p class="mt-3 text-slate-600 leading-relaxed">On 25 September 2026 Moneypenny's UK AI Receptionist page said from £25 a month. Its human call answering is priced by quote, and its own blog says UK answering services typically charge 60p to £1.50 a minute. For comparison, Answer.co.uk listed human answering at £2.20 a call plus VAT and AI answering at £10 a month plus 85p a call plus VAT on the same day. BLAM8 is priced per business for email: Starter £39, Pro £99 and Pro + Concierge £249 a month.</p>
+      <p class="mt-3 text-slate-600 leading-relaxed">On 25 September 2026 Moneypenny's UK AI Receptionist page said from £25 a month. Its human call answering is priced by quote, and its own blog says UK answering services typically charge 60p to £1.50 a minute. For comparison, Answer.co.uk listed human answering at £2.20 a call plus VAT and AI answering at £10 a month plus 85p a call plus VAT on the same day. BLAM8 is priced per business for email: Starter {{ product_price('email') }}, Pro {{ product_price('starter') }} and Pro + Concierge {{ product_price('concierge') }} a month.</p>
     </details>
     <details class="group py-5">
       <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is the Concierge a receptionist?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>

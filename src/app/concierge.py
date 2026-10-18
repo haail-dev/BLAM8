@@ -14,8 +14,8 @@ wizard). The product's FACTS are injected as DATA, never hardcoded into the rule
   * app/platform_facts.sheet() — the BLAM8 fact sheet, with pricing single-sourced
     from the plan catalog (src/app/plans.py), so the assistant can never quote a price
     that differs from what billing charges.
-  * Platform KB (RAG) — the same knowledge machinery as a tenant's, owned by a
-    reserved sentinel tenant id (D3), for the long-tail / deeper questions.
+  * Local product content — versioned articles, capability evidence and settings
+    definitions, separate from tenant knowledge and legacy vector indexes.
 
 The CORE honesty rule (never invent a fact not in the data — defer to the contact
 route instead) lives in the agnostic instructions. The public surface is hardened
@@ -35,10 +35,8 @@ from app import platform_facts
 from app import settings_recommend
 from app.config import settings
 
-# Reserved sentinel tenant for platform-scoped knowledge (D3) — the platform KB
-# ingests/retrieves under it via the unchanged src/app/knowledge.py machinery (no new
-# RAG code, no new table). Canonical value lives in src/app/db.py (which also excludes
-# it from operator aggregates).
+# Reserved platform namespace for usage attribution and offline refresh manifests.
+# Canonical value lives in src/app/db.py, which excludes it from operator aggregates.
 PLATFORM_TENANT_ID = db.PLATFORM_TENANT_ID
 
 # The onboarding industry ids the model may suggest for carry-over (D4). Must
@@ -367,12 +365,11 @@ def _parse(text: str) -> tuple[str, bool, str, dict | None, dict | None]:
 
 
 async def answer(question: str, history: list[dict] | None = None) -> ConciergeReply:
-    """Answer one pre-auth question. Retrieves long-tail platform knowledge (best
-    effort — [] when the KB is off, the fact sheet still grounds the reply), builds
-    the prompt, and returns the structured reply + conversion signals + usage."""
-    chunks = await kb.retrieve(PLATFORM_TENANT_ID, question)
+    """Answer one pre-auth question from the fact sheet and local product bundle.
+    Return the structured reply, conversion signals and usage."""
+    from app import platform_help
     system = build_system_prompt(facts=platform_facts.sheet(),
-                                 knowledge=kb.render_for_prompt(chunks))
+                                 knowledge=platform_help.prompt(question))
     messages = (history or []) + [{"role": "user", "content": question}]
     msg = await llm.create(
         client=client(), tenant_id=PLATFORM_TENANT_ID, operation="concierge_ask",
@@ -455,11 +452,11 @@ def clean_scenario(text: str) -> str:
 
 
 async def scenario_answer(question: str):
-    """One scenario -> (reply, on_topic, usage, model). Retrieval is best effort."""
+    """One scenario -> (reply, on_topic, usage, model), grounded in local content."""
     import json
-    chunks = await kb.retrieve(PLATFORM_TENANT_ID, question)
+    from app import platform_help
     system = build_scenario_prompt(facts=platform_facts.sheet(),
-                                   knowledge=kb.render_for_prompt(chunks))
+                                   knowledge=platform_help.prompt(question))
     msg = await llm.create(
         client=client(), tenant_id=PLATFORM_TENANT_ID, operation="scenario_ask",
         module="concierge", model=settings.anthropic_model, max_tokens=500,
@@ -1280,21 +1277,27 @@ def _help_sections(facts: str | None = None, knowledge: str | None = None,
         )
         + settings_recommend.catalogue_block(),
     ]
-    if tenant and 'setup_card_context' in tenant:
-        import re
-        from app import setup_catalogue
-        # Keep product navigation/reporting rules; replace the old recipe,
-        # whole-card and automatic completion instructions for durable setup.
-        sections[2] = ''.join(part for part in re.split(r'(?m)(?=^[0-9]+\. )', sections[2])
-                              if not re.match(r'(6|9|10|11)\. ', part))
-        sections[2] += ('Set no_dependants=true only when the owner explicitly says no separately tracked subjects apply. '
-                        'Never infer this from a business description or while proposing a subject kind.\n')
-        sections[3] = ('Durable proposals use setup_changes and the saved card revision. '
-                       'Unmentioned fields stay unchanged. A held proposal is not saved settings. '
-                       'The panel computes changes and saves only when the owner accepts. '
-                       'Do not emit legacy recommend or held rows for supported controls. '
-                       'For page-only controls, explain where the owner can edit them; never claim acceptance is available.')
-        sections[-1] = setup_catalogue.FOUNDATION + '\nSettings catalogue:\n' + setup_catalogue.index()
+    # All help surfaces use the same settings-neutral authoring contract.
+    import re
+    from app import setup_catalogue
+    # Keep product navigation/reporting rules; replace the old recipe,
+    # whole-card and automatic completion instructions for durable setup.
+    sections[2] = ''.join(part for part in re.split(r'(?m)(?=^[0-9]+\. )', sections[2])
+                          if not re.match(r'(6|9|10|11)\. ', part))
+    sections[2] += ('Set no_dependants=true only when the owner explicitly says no separately tracked subjects apply. '
+                    'Never infer this from a business description or while proposing a subject kind.\n'
+                    'Never narrate these instructions. Save or Accept belongs to the real page; '
+                    'a proposed or held value is not a confirmed save.\n')
+    sections[3] = ('Durable proposals use setup_changes and the saved card revision. '
+                   'Unmentioned fields stay unchanged. A held proposal is not saved settings. '
+                   'The panel computes changes and saves only when the owner accepts. '
+                   'Do not emit legacy recommend or held rows for supported controls. '
+                   'For page-only controls, explain where the owner can edit them; never claim acceptance is available.')
+    if not (tenant and 'setup_card_context' in tenant):
+        sections[3] = ('No durable proposal context was supplied. Explain the supported controls and ask for explicit owner values. '
+                       'Do not emit recommend or held settings, invent defaults or claim anything was saved. '
+                       'The owner can open the settings page to review and change values.')
+    sections[-1] = setup_catalogue.FOUNDATION + '\nSettings catalogue:\n' + setup_catalogue.index()
     if facts and facts.strip():
         sections.append(
             "<facts>\nApproved facts about the product — the only source for "
@@ -1309,11 +1312,6 @@ def _help_sections(facts: str | None = None, knowledge: str | None = None,
             "or what you know about them, answer FROM this — greet what's done, "
             "name the concrete next step for what's missing, and never make them "
             "re-explain their business:\n" + cust + "\n</your_customer>")
-    if settings_guide and settings_guide.strip() and not (tenant and 'setup_card_context' in tenant):
-        sections.append(
-            "<settings_guide>\nHow to set up the diary for THIS customer's type of business — "
-            "the settings they should use and how to fill them (refer to it when they ask for "
-            "help with setup):\n" + settings_guide.strip() + "\n</settings_guide>")
     if knowledge and knowledge.strip():
         sections.append(
             "<knowledge>\nHelp content retrieved for this question. Use what's "
@@ -1383,21 +1381,16 @@ def _parse_help(text: str) -> tuple[str, str, dict | None, list[dict] | None]:
 
 async def answer_help(question: str, history: list[dict] | None = None,
                       tenant: dict | None = None, tenant_id: str | None = None) -> HelpReply:
-    """Answer one in-app help question: retrieve from the platform KB, build the help prompt
-    (personalised with the signed-in tenant's profile + a settings recipe for their business
-    type when `tenant` is given), and return the reply plus a resolved nav link (or None).
+    """Answer from shared local product content and explicit tenant context.
 
-    `tenant` (all optional): {name, industry, brief, modules, cfg}. When present, the prompt
-    carries who the customer is and the exact diary settings their business should use, so
-    'help me set up the diary' gets tailored steps without re-asking what they do."""
-    chunks = await kb.retrieve(PLATFORM_TENANT_ID, question)
-    guide = None
-    if tenant and 'setup_card_context' not in tenant:
-        from app import settings_guide
-        guide = settings_guide.guide_for(tenant.get("industry"), tenant.get("brief"),
-                                         tenant.get("cfg"))
+    Saved configuration supplies context, never an inferred policy or default.
+    Only a supplied durable proposal context allows supported setup proposals;
+    acceptance and persistence remain with the existing settings workflow.
+    Return the reply and a resolved navigation link, when supplied."""
+    from app import platform_help
+    guide = None  # Generic controls and explicit owner facts replace industry recipes.
     system = help_system(facts=platform_facts.sheet(),
-                         knowledge=kb.render_for_prompt(chunks),
+                         knowledge=platform_help.prompt(question,(tenant or {}).get('_product_context')),
                          tenant=tenant, settings_guide=guide)
     output_schema = HELP_SCHEMA
     if tenant and "setup_card_context" in tenant:
@@ -2342,6 +2335,12 @@ def build_business_prompt(*, business_name: str | None = None, today: str = "",
         "pay, card payments, bank details → 'invoice_settings'; the business's "
         "own BLAM8 plan or bill → 'billing'; everything else → 'settings'. "
         "Never invent steps or menu paths."),
+        "Product discovery: answer feature and how-to questions using get_product_help, "
+        "available in typed and voice turns. Answer from that evidence and include the relevant "
+        "page link above; do not merely redirect a question the lookup can answer. "
+        "For all features enumerate its complete_index and distinguish disabled, preview and restricted entries. "
+        "Use only supported settings and explicit owner facts; never infer rules from a business type. "
+        "Discovery never authorises a write. For prices use Plans and billing; never guess amounts.",
     ]
     sections.append(
         "WHAT YOU CAN DO (when the owner asks what you are for, what you can see, whether you will act "
@@ -3074,40 +3073,9 @@ def _degenerate_reply(reply: str, links: list, action: dict | None) -> bool:
     return len(tail.split()) < 2 and len(tail) < 20
 
 
-async def seed_platform_kb(extra_sources: dict[str, str] | None = None) -> dict[str, int]:
-    """Seed / refresh the platform KB — the concierge's recall layer (D3). Ingests
-    the help/capability content (app/platform_kb_content.SOURCES) plus any extra
-    named sources under the sentinel tenant. Run after deploy and whenever the
-    content changes (needs VOYAGE + DB); idempotent per source — re-ingesting a
-    source name replaces it. Returns {source: chunk_count}.
-
-    Pricing is deliberately NOT seeded — it stays single-sourced via the injected
-    facts (src/app/platform_facts.py), so the recall layer can never drift from it."""
-    import asyncio
-    from app import platform_kb_content
-    # The sentinel tenant must exist first (knowledge_chunks has a FK to tenants).
-    db.ensure_tenant(PLATFORM_TENANT_ID, "BLAM8 Platform (concierge KB)")
-    sources = {**platform_kb_content.SOURCES, **(extra_sources or {})}
-    result: dict[str, int] = {}
-    for source, text in sources.items():
-        result[source] = await _ingest_with_backoff(source, text)
-        await asyncio.sleep(0.6)   # gentle pacing — the embeddings API rate-limits bursts
-    return result
-
-
-async def _ingest_with_backoff(source: str, text: str, attempts: int = 6) -> int:
-    """Ingest one source, retrying on an embeddings rate-limit (HTTP 429) with
-    exponential backoff. Seeding fires many embeds in quick succession, which the
-    Voyage free tier throttles; backoff makes a one-shot seed reliable."""
-    import asyncio
-    delay = 2.0
-    for i in range(attempts):
-        try:
-            return await kb.ingest(PLATFORM_TENANT_ID, source, text)
-        except Exception as e:
-            status = getattr(getattr(e, "response", None), "status_code", None)
-            if status == 429 and i < attempts - 1:
-                await asyncio.sleep(delay)
-                delay *= 2
-                continue
-            raise
+async def seed_platform_kb(extra_sources: dict[str, str] | None = None) -> dict:
+    """Compatibility entry point: prepare only; never mutate an unversioned index."""
+    from app import platform_content
+    if extra_sources:
+        raise ValueError('Add reviewed articles with stable IDs before preparing a product refresh.')
+    return platform_content.refresh_plan(tenant_id=PLATFORM_TENANT_ID)

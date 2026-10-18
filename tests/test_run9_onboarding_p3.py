@@ -75,8 +75,8 @@ def test_21_22_29_the_requirements_catalogue_defaults_and_forbids():
 
 def test_23_and_the_silent_change_rule_in_help_rule_9():
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "the CRM card APPLIES on press" in prompt and "never 'hit Save'" in prompt
-    assert "Every value you CHANGE from what is already set gets its own line" in prompt
+    assert "No durable proposal context" in prompt and "claim anything was saved" in prompt
+    assert "Preserve existing choices unless" in prompt
 
 
 def test_24_the_invoice_ask_covers_quote_defaults_from_the_kb():

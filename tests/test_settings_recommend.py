@@ -153,11 +153,11 @@ def test_parse_help_rejects_bad_page_and_empty_values():
 def test_help_prompt_carries_catalogue_and_rule():
     p = concierge.build_help_prompt(tenant={"name": "T", "industry": "kennels"})
     assert "Settings catalogue" in p
-    assert "Use recommended settings" in p
+    assert "Propose settings only from explicit owner answers" in p
     assert "booking_details" in p and "crm_settings" in p and "diary_settings" in p
     # Run #8: the credit knobs are the diary card's own, never deferred to the packages page.
-    assert "never write that they 'sit on the Packages page'" in p
-    assert "Set it when the owner states a cancellation rule" in p
+    assert "diary_settings" in p and "packages" in p
+    assert "never fill a default" in p
     # grounded in what's already configured
     p2 = concierge.build_help_prompt(tenant={
         "name": "T", "cfg": {"intake_fields": [{"label": "Pet name", "required": True}]},

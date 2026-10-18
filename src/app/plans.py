@@ -43,7 +43,7 @@ CATALOG = [
                   "Self-filling CRM: contacts, deals, promises",
                   "Follow-up sequences & customer-mood flags",
                   "Higher email volume — 750 emails/month",
-                  "Additional mailboxes £39/mo each (+300 emails/month)",
+                  "Additional mailboxes available; see the current add-on price and allowance",
                   "Priority support"]},
     # Pro + Concierge (Kris 2026-09-25): Pro plus the business Concierge — her
     # chat, cards and live voice. Below it there is no Concierge at all (App
@@ -492,47 +492,6 @@ def billing_plans(industry: str | None = None) -> list[dict]:
 
 
 def pricing_blurb() -> str:
-    """The pricing section for the concierge's injected facts — rendered from the
-    SAME catalog the billing page uses, so the assistant always quotes what we
-    actually charge. Public tiers only: the parked OS/Enterprise tiers must not
-    be quoted or sold — anything bigger than Pro + Concierge routes to
-    hello@blam8.com."""
-    lines = []
-    for p in CATALOG:
-        if not p.get("public"):
-            continue
-        inc = p.get("included_mailboxes")
-        mbx = f" {inc} mailbox{'es' if (inc or 0) != 1 else ''} included." if inc else ""
-        lines.append(f"- {p['name']}: {p['price']} {p['per']} — {p['summary']}."
-                     f"{mbx} {p['emails']}. {'; '.join(p['features'])}.")
-    lines.append(f"- Extra mailbox: {EXTRA_MAILBOX['price']} {EXTRA_MAILBOX['per']} "
-                 "(each mailbox beyond the plan's included allowance; each paid "
-                 "extra mailbox also adds 300 emails/month to the plan's allowance).")
-    lines.append(
-        "- Starter (£39) covers replies in the business's voice plus real-diary "
-        "booking with calendar sync. The self-filling CRM — contacts, deals, "
-        "promises, follow-up sequences and customer-mood flags — unlocks on Pro "
-        "(£99). The CRM quietly pre-fills from the mail flow on every account, "
-        "so upgrading opens a CRM that is already populated — but on Starter it "
-        "cannot be opened or used.")
-    lines.append(
-        "- The Concierge is the difference between Pro and Pro + Concierge "
-        "(£249): the in-app assistant that knows the business's own data. Ask "
-        "her anything (\"who owes me money?\", \"what's on tomorrow?\") and she "
-        "acts behind a confirm card — drafts replies, moves and books diary "
-        "slots, chases invoices, handles bulk jobs — with live hands-free voice, "
-        "and the morning brief opens straight into her. Starter and Pro have no "
-        "Concierge; they keep App help (how-to-use-the-app help from the search "
-        "box). Pro + Concierge has the same allowance as Pro.")
-    lines.append(
-        "- Bigger operations (multiple sites or depots, franchise groups, custom "
-        "volumes): not sold self-serve — the visitor should email hello@blam8.com "
-        "and the team will help directly. Never quote a price for these.")
-    header = ("Pricing (every account starts with a 14-day free trial of the "
-              "FULL product — Pro + Concierge, every feature open, CRM and the "
-              "Concierge included, on one mailbox; no card to start, no card "
-              "data ever touches BLAM8, cancel any time. The trial ends at 14 "
-              f"days or {settings.trial_email_cap} handled emails, whichever "
-              "comes first; there is no free-forever tier). Three public tiers, "
-              "one flat price per month each:")
-    return header + "\n" + "\n".join(lines)
+    """Current public commercial facts; shared with product help and public pages."""
+    from app.platform_public import pricing_copy
+    return pricing_copy()

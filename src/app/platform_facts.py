@@ -23,32 +23,16 @@ straight from the thread, with no typing. It is DRAFT-FIRST by default — a
 human approves everything before it sends; auto-send is opt-in, per inbox.
 Onboarding is configuration, never an IT project.
 
-What's included — Starter (£39) is replies + booking; Pro (£99) completes the
-loop with the self-filling CRM; Pro + Concierge (£249) adds the Concierge:
-- Email automation (every tier): triage + drafts every inbound, learns your
-  voice and facts (knowledge base), remembers conversation threads.
-- Scheduling (every tier): a real capacity diary the agent books against —
-  checks availability, places real holds that can never double-book (timed
-  slots, whole days, multi-day jobs), syncs to Outlook/Google calendar.
-- Self-filling CRM (Pro on paid plans; OPEN during the free trial): contacts,
-  companies and deals with pipeline stages fill themselves in from the mail
-  flow; tracked promises become follow-up tasks; multi-step follow-up
-  sequences; and the agent reads each customer's mood — heated conversations
-  are flagged and held for a human even when auto-send is on. The free trial
-  opens the FULL product, CRM included. On paid plans the CRM is on Pro and up:
-  it quietly PRE-FILLS on every account (including paid Starter), so upgrading
-  opens a CRM that is already populated — but a paid Starter plan cannot open
-  or use it. Never claim the CRM is included on the paid Starter tier.
-- The Concierge (Pro + Concierge only; OPEN during the free trial): the in-app
-  assistant that knows the business's own data. Ask her anything ("who owes me
-  money?", "what's on tomorrow?") and she acts behind a confirm card — drafts
-  or sends an email, blocks or reopens days, changes a stay, updates a dependant's
-  details, asks for a renewal, hands a job to a team
-  member; she can also move, cancel and chase. A card nobody answered waits and
-  comes back checked against today's data. She is the OWNER's assistant, not a
-  receptionist for customers: hold the person icon to talk to her, and the
-  morning brief opens straight into her. Starter and Pro have NO Concierge — they keep App help (how-to-use-the-app
-  help from the search box). Never claim the Concierge is on Starter or Pro.
+Capabilities follow actual module entitlements and configuration:
+- Email: triage, drafts, business knowledge, voice and thread context.
+- Scheduling: capacity, holds, services, configurable booking requirements and calendar sync.
+- CRM: contacts, companies, deals, promises, follow-ups, documents and mood flags.
+- The Concierge: the owner's typed or voice assistant for permitted business records,
+  with supported actions behind confirmation cards. It is not a receptionist for callers.
+  Pending cards and uncertain outcomes are not completed actions.
+- App help: product explanations and supported settings, separate from business actions.
+Exact plan entitlements and prices come only from the current catalogue below.
+Trial access never enables an unreleased, disabled or restricted feature.
 
 Industry Operating System modules (transport, trades, practices, shops, hire &
 lettings, wholesale, events) exist in the product but are NOT on public sale —
@@ -75,8 +59,8 @@ and raise compliance questions with hello@blam8.com before going live; escalatio
 keywords flag matching emails for mandatory human review (the agent still drafts,
 but those replies never auto-send).
 
-How it works: 1) start the free 14-day trial — the FULL product (Pro +
-Concierge), every feature open, no card to start; 2) connect your mailbox in one
+How it works: 1) start the free {{product:trial.days}}-day trial — the FULL product (Pro +
+Concierge), released core features open, no card to start; 2) connect your mailbox in one
 click — live on a real inbox in days, draft-only, with drafting held until the
 owner has checked the setup and says go; 3) pick Starter, Pro or Pro +
 Concierge, and add mailboxes as the team grows.
@@ -144,5 +128,6 @@ def sheet() -> str:
     """The full fact sheet injected into the concierge: product overview + live
     sign-up availability + the canonical pricing (single-sourced from the plan
     catalog)."""
-    return (PRODUCT_OVERVIEW + "\n\n" + _signup_availability()
+    from app.platform_public import resolve
+    return (resolve(PRODUCT_OVERVIEW) + "\n\n" + _signup_availability()
             + "\n\n" + plans.pricing_blurb())

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}BLAM8 Partner Programme — Earn 20% Recurring Commission, for Life{% endblock %}
-{% block meta_description %}Refer a business to BLAM8 and earn 20% of every subscription payment we collect from them — for life. Free to join: sign the agreement online and your referral code is issued instantly. Paid monthly, no cap on referrals or earnings.{% endblock %}
+{% block title %}BLAM8 Partner Programme — Earn {{ rate_pct }}% Recurring Commission, for Life{% endblock %}
+{% block meta_description %}Refer a business to BLAM8 and earn {{ rate_pct }}% of every subscription payment we collect from them — for life. Free to join: sign the agreement online and your referral code is issued instantly. Paid monthly, no cap on referrals or earnings.{% endblock %}
 
 {% block structured_data %}
 <script type="application/ld+json">
@@ -14,7 +14,7 @@
         {
           "@type": "Question",
           "name": "How much can I earn from a BLAM8 referral?",
-          "acceptedAnswer": { "@type": "Answer", "text": "20% of every subscription payment BLAM8 collects from each business you refer — for as long as they stay subscribed. A business on Pro at £99/month earns you £19.80 every month, for life. If they upgrade, your commission rises with them, and there's no cap on how many businesses you refer or how much you earn." }
+          "acceptedAnswer": { "@type": "Answer", "text": "{{ rate_pct }}% of every subscription payment BLAM8 collects from each business you refer — for as long as they stay subscribed. A business on Pro at {{ product_price('starter') }}/month earns you {{ product_commission('starter') }} every month, for life. If they upgrade, your commission rises with them, and there's no cap on how many businesses you refer or how much you earn." }
         },
         {
           "@type": "Question",
@@ -94,19 +94,19 @@
   <p class="mt-3 text-slate-600 max-w-2xl leading-relaxed">One referral, every month, for as long as they subscribe:</p>
   <div class="mt-8 grid sm:grid-cols-3 gap-5">
     <div class="rounded-xl border border-slate-200 p-6">
-      <p class="text-sm font-semibold text-slate-500">Starter · £39/mo</p>
-      <p class="mt-2 text-3xl font-bold text-navy">£7.80<span class="text-base font-semibold text-slate-400">/mo</span></p>
-      <p class="mt-2 text-sm text-slate-600 leading-relaxed">£93.60 a year, from one introduction.</p>
+      <p class="text-sm font-semibold text-slate-500">Starter · {{ product_price('email') }}/mo</p>
+      <p class="mt-2 text-3xl font-bold text-navy">{{ product_commission('email') }}<span class="text-base font-semibold text-slate-400">/mo</span></p>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">{{ product_commission('email',12) }} a year, from one introduction.</p>
     </div>
     <div class="rounded-xl border border-slate-200 p-6">
-      <p class="text-sm font-semibold text-slate-500">Pro · £99/mo</p>
-      <p class="mt-2 text-3xl font-bold text-navy">£19.80<span class="text-base font-semibold text-slate-400">/mo</span></p>
-      <p class="mt-2 text-sm text-slate-600 leading-relaxed">£237.60 a year — and it rises if they upgrade.</p>
+      <p class="text-sm font-semibold text-slate-500">Pro · {{ product_price('starter') }}/mo</p>
+      <p class="mt-2 text-3xl font-bold text-navy">{{ product_commission('starter') }}<span class="text-base font-semibold text-slate-400">/mo</span></p>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">{{ product_commission('starter',12) }} a year — and it rises if they upgrade.</p>
     </div>
     <div class="rounded-xl border border-slate-200 p-6">
-      <p class="text-sm font-semibold text-slate-500">Pro + 2 extra mailboxes · £177/mo</p>
-      <p class="mt-2 text-3xl font-bold text-navy">£35.40<span class="text-base font-semibold text-slate-400">/mo</span></p>
-      <p class="mt-2 text-sm text-slate-600 leading-relaxed">£424.80 a year. Ten of these is £4,248 a year, recurring.</p>
+      <p class="text-sm font-semibold text-slate-500">Pro + 2 extra mailboxes · {{ product_subscription_price('starter',2) }}/mo</p>
+      <p class="mt-2 text-3xl font-bold text-navy">{{ product_commission('starter',extra=2) }}<span class="text-base font-semibold text-slate-400">/mo</span></p>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">{{ product_commission('starter',12,extra=2) }} a year. Ten of these is {{ product_commission('starter',12,10,extra=2) }} a year, recurring.</p>
     </div>
   </div>
   <p class="mt-5 text-sm text-slate-500 leading-relaxed max-w-3xl">Commission is {{ rate_pct }}% of what BLAM8 actually collects — excluding any VAT and net of discounts, so a promo price earns proportionally until it ends. Payment-processor fees are never deducted, and there's no cap on referrals or total earnings.</p>
@@ -149,7 +149,7 @@
     <div class="mt-8 divide-y divide-slate-200">
       <details class="group py-5">
         <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How much can I earn from a referral?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
-        <p class="mt-3 text-slate-600 leading-relaxed">{{ rate_pct }}% of every subscription payment BLAM8 collects from each business you refer — for as long as they stay subscribed. A business on Pro at £99/month earns you £19.80 every month, for life. Upgrades raise your commission automatically, and there's no cap on referrals or total earnings.</p>
+        <p class="mt-3 text-slate-600 leading-relaxed">{{ rate_pct }}% of every subscription payment BLAM8 collects from each business you refer — for as long as they stay subscribed. A business on Pro at {{ product_price('starter') }}/month earns you {{ product_commission('starter') }} every month, for life. Upgrades raise your commission automatically, and there's no cap on referrals or total earnings.</p>
       </details>
       <details class="group py-5">
         <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">When and how do I get paid?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>

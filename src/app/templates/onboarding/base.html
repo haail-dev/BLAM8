@@ -30,6 +30,14 @@
        on half-width windows. The remaining body width is the page column and
        the wizard card can size naturally within it. */
     header[data-bc-full-width] { padding-left: 1rem; padding-right: 1rem; }
+    @media (min-width: 768px) {
+      /* Match the dock's 1rem outside gutter above it, below the 3rem bar.
+         The bottom gutter stays 1rem; include the installed-app safe area. */
+      #blam8-concierge #bc-panel {
+        height: calc(100vh - 5rem - env(safe-area-inset-top, 0px)) !important;
+        max-height: calc(100vh - 5rem - env(safe-area-inset-top, 0px)) !important;
+      }
+    }
   </style>
 </head>
 <body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">

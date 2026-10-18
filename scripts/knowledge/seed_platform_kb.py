@@ -1,33 +1,21 @@
-"""Seed / refresh the platform knowledge base — the concierge's recall layer.
+"""Prepare a platform knowledge refresh offline. This command never publishes."""
+import argparse
+import json
+from pathlib import Path
+import sys
 
-Ingests app/platform_kb_content.SOURCES into the reserved sentinel platform tenant
-so the website + in-app assistant can answer "what can BLAM8 do?" and "how do I…?"
-from real retrieved knowledge.
-
-Run once after deploy, and again whenever src/app/platform_kb_content.py changes.
-Needs the environment's VOYAGE_API_KEY (embeddings) + Supabase service creds — so
-run it against the env whose KB you want seeded (e.g. prod). Idempotent: each
-source is replaced by name, so re-running is safe.
-
-    python scripts/knowledge/seed_platform_kb.py
-"""
-import asyncio
-
-from app import concierge, knowledge as kb
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
+from app import platform_content
+from app.db import PLATFORM_TENANT_ID
 
 
-async def main() -> None:
-    if not kb.is_configured():
-        print("Voyage embeddings are not configured (VOYAGE_API_KEY missing) — "
-              "cannot seed the platform KB. Set it in this environment and retry.")
-        return
-    print("Seeding the platform knowledge base…")
-    result = await concierge.seed_platform_kb()
-    total = sum(result.values())
-    print(f"\nDone — {len(result)} sources, {total} chunks under the platform tenant:")
-    for source, n in result.items():
-        print(f"  • {source}: {n} chunk{'' if n == 1 else 's'}")
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--current-manifest',type=Path)
+    args=parser.parse_args()
+    current=json.loads(args.current_manifest.read_text(encoding='utf-8')) if args.current_manifest else None
+    print(json.dumps(platform_content.refresh_plan(current,tenant_id=PLATFORM_TENANT_ID),indent=2))
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+if __name__=='__main__':
+    main()

@@ -135,7 +135,7 @@
             <tr class="border-b border-slate-100">
               <td class="py-2 pr-3 font-medium text-navy">{{ extra_mailbox.name }}</td>
               <td class="py-2 pr-3 whitespace-nowrap">{{ extra_mailbox.price }} {{ extra_mailbox.per }}</td>
-              <td class="py-2">Each additional mailbox, adding 300 emails/month</td>
+              <td class="py-2">Each additional mailbox, adding {{ product_value('allowance.email') }}</td>
             </tr>
             {% if topup_on %}
             <tr>

@@ -1,5 +1,13 @@
 # Concierge — the onboarding co-pilot (SCOPE — DRAFT)
 
+**Mobile panel height:** drag the blue Assistant header up or down below 768px.
+The sheet starts at 60% height and remembers the chosen proportion for the
+current tenant and browser tab. It clamps to 240px minimum (or the available
+height on a smaller viewport), leaving space below the page header at maximum.
+The grip is keyboard-accessible: Up/Down adjusts by 32px, Home/End use the limits.
+Clear/Close remain separate buttons; the page scroll spacer follows the panel.
+Offline browser interaction verification is maintained in the external release rig.
+
 > **Status (2026-09-27, confirmed by the clean-up pass):** BUILT (see Build progress). Steps 1–5, fix mode, recommended settings and the settings hand-off proven live (07-26 / 08-02). Voice shipped in the owner's Concierge (09-23), not in the onboarding widget. Step 6 (gap log to /admin) not built.
 
 **Status:** LOCKED 2026-06-29 — all three open decisions answered (voice deferred

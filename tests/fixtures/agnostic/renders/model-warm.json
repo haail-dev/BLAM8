@@ -1,4 +1,4 @@
 {
-  "sha256": "a877a56bff6aa98d6388a6b2794e26c7a26ccc3877b4fb5d1b8c2537a691944d",
+  "sha256": "b28102749714a12382897a90c80f94376fc96e4034319a3661e7f7432fd9e9cf",
   "excerpt": "[{\"messages\":[{\"content\":\"ok\",\"role\":\"user\"}],\"operation\":\"concierge_warm\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":false,\"properties\":{\"acti"
 }

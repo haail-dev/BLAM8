@@ -22,9 +22,9 @@ def _read(rel: str) -> str:
 # ── the assistant ────────────────────────────────────────────────────────────
 def test_diary_recommendation_asks_capacity_and_notice_before_guessing_and_corrects_as_a_diff():
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "TWO NUMBERS ARE NEVER GUESSED" in prompt
-    assert "capacity_per_window and min_notice_hours" in prompt
-    assert "A CORRECTION IS A DIFF" in prompt and "silently unsets it" in prompt
+    assert "never fill a default" in prompt
+    assert "diary_settings/capacity_per_window" in prompt and "diary_settings/min_notice_hours" in prompt
+    assert "Preserve existing choices unless" in prompt
 
 
 def test_catalogue_picks_one_diary_shape_and_never_rolls_a_passed_year_forward():
@@ -247,6 +247,6 @@ def test_the_invoice_step_never_promises_a_card_it_cannot_carry():
     # Since run log F6 (2026-09-26) Getting paid HAS a card for what the owner
     # told us; the promise rule still holds for any reply without one.
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "Getting paid (invoice_settings) has a card" in prompt
-    assert "address, logo and bank details have no card" in prompt
-    assert "Never write 'the card below', 'press it' or 'I've pre-filled' when this reply carries no card" in prompt
+    assert "invoice_settings/payment_terms" in prompt
+    assert "The owner can open the settings page to review and change values" in prompt
+    assert "No durable proposal context" in prompt and "claim anything was saved" in prompt

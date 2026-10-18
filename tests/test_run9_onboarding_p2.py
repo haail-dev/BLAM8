@@ -132,8 +132,8 @@ def test_the_diary_step_leads_with_the_card_and_the_prefill_opens_the_folds():
     collapsed faces still read the OLD receipts ("No buffer", "Recurring Off")
     over inputs that held the new values."""
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "LEAD WITH THE CARD on the first turn" in prompt
-    assert "list every number you ASSUMED in `reply`" in prompt
+    assert "Propose settings only from explicit owner answers" in prompt
+    assert "list every number you ASSUMED in `reply`" not in prompt
     assert "ask up to three short questions first and recommend on a later" not in prompt
     pf = JS.split("function pfEvents(el) {")[1].split("function pfNumber")[0]
     assert 'el.closest("details")' in pf and "fold.open = true;" in pf
@@ -145,8 +145,8 @@ def test_the_diary_page_ask_demands_the_card_and_the_snapshot_carries_the_diary_
     'not set yet' on a diary showing both. The page's own ask now demands the
     card in the first reply, and the customer block states what IS set."""
     html = (ROOT / "src/app" / "templates" / "app" / "_scheduling_settings.html").read_text(encoding="utf-8")
-    assert "put a full recommended diary settings card in your FIRST reply" in html
-    assert "list every number you assumed" in html
+    assert "using only my explicit answers and supplied source material" in html
+    assert "Ask about missing choices before proposing a change" in html
     cfg = carried_config({"working_days": "mon,tue,wed,thu,fri", "capacity_per_window": 3, "buffer_minutes": 30,
            "open_time": "08:00", "close_time": "17:00", "windows": "day", "slot_minutes": 60,
            "min_notice_hours": 72, "horizon_days": 60,
@@ -162,4 +162,4 @@ def test_the_diary_page_ask_demands_the_card_and_the_snapshot_carries_the_diary_
     block = concierge._customer_block({"name": "B", "cfg": cfg, "setup": {"diary_configured": True}})
     assert "Diary: configured — " in block and "recurring bookings ON" in block
     prompt = concierge.build_help_prompt(facts="", knowledge="")
-    assert "when the diary is ALREADY configured" in prompt
+    assert "Preserve existing choices unless" in prompt

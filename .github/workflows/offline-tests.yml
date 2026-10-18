@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -27,6 +29,8 @@ jobs:
             requirements-dev.txt
             pyproject.toml
       - run: python -m pip install -r requirements-dev.txt
+      - name: Product evidence, content and affected-surface coverage
+        run: python scripts/ci/check_product_change.py --base "${{ github.event.pull_request.base.sha || github.event.before }}"
       - name: Always run the agnostic guard
         run: python tests/run_offline.py tests/test_agnostic_context.py tests/test_agnostic_surfaces.py tests/test_agnostic_outcomes.py tests/test_agnostic_inventory.py -q --tb=short --basetemp=.cache/pytest-guard
       - name: Install and expose disposable PostgreSQL binaries

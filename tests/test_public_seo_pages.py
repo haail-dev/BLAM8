@@ -191,8 +191,11 @@ def test_homepage_prices_all_three_tiers_and_keeps_the_concierge_off_the_lower_t
     # and the JSON-LD offer carry it, and nothing says the Concierge is on
     # "both plans" any more.
     html = client.get("/").text
-    for price in ("&pound;39", "&pound;99", "&pound;249"):
-        assert price in html, price
+    from html import unescape
+    from app import plans
+    for plan in plans.CATALOG:
+        if plan.get('public'):
+            assert plan['price'] in unescape(html), plan['price']
     assert '"highPrice": "249"' in html and '"offerCount": "3"' in html
     assert "Pro + Concierge" in html
     assert "On both plans" not in html

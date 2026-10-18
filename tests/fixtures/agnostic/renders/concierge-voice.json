@@ -1,4 +1,4 @@
 {
-  "sha256": "f14f25605cc0d9bf7e322c2d6cbeb8c331877a96580db0518d9b91a79e90bc95",
+  "sha256": "6925fa444d08ecd1c2e3e2b04a0df5365d3fb381c8f9f1de634b3270a7b26a6c",
   "excerpt": "[{\"messages\":[{\"content\":\"Review the diary\",\"role\":\"user\"}],\"operation\":\"concierge_business\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":false,\""
 }
