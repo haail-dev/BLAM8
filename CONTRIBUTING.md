@@ -57,3 +57,43 @@ check its allowance.
 
 The initial baseline history replacement was a one-off migration. Normal changes
 add commits through PRs; do not rewrite shared `main` to tidy up ordinary work.
+
+## Automated PR review evidence
+
+The PR template asks for Purpose, Changes, Validation, and Risks and rollback.
+After the reporting workflow is merged into `main`, GitHub Actions maintains one
+"Automated review evidence" comment per open PR. It refreshes on PR changes and
+when either configured CI workflow finishes. Actions > PR review report > Run
+workflow refreshes reports manually, for example after resolving a temporary
+unknown mergeability result. Every invocation refreshes all open PRs, including
+after main advances, so reports can identify stale base commits.
+
+The report follows the five review steps: description completeness, changed-file
+scope, sensitive paths, CI evidence and the human merge decision. It checks the
+latest pull-request run for both `offline-tests.yml` and
+`review-automation-tests.yml`, matching the PR number, head SHA, base SHA and base
+branch. The named jobs must complete successfully; skipped, neutral, cancelled,
+pending, missing or older results do not count. Rerun CI after updating a stale
+branch. A report is a snapshot, so compare its head/base hashes with the current
+PR before relying on it.
+
+This is a deterministic evidence report, not an AI code review, secret scanner or
+approval. It flags changed snapshots and guard/CI code for human inspection but
+cannot decide whether a change weakens a rule or solves the right problem.
+"Evidence complete" still requires reviewing the actual diff and rollback plan.
+The report job going green means publishing succeeded, not merge approval.
+It never merges, approves, enables auto-merge, deploys or changes branch settings.
+Adding a new mandatory CI workflow requires updating `WORKFLOWS` in
+`scripts/ci/pr_review.cjs` and the reporting workflow's `workflow_run` triggers.
+
+The reporting workflow has a write token solely to maintain its PR comments.
+It executes the helper from the default branch, never PR code or downloaded PR
+artifacts, and uses no application secrets or paid AI APIs. Its own tests run in
+a separate read-only workflow against the PR code. Run those tests locally with:
+
+```sh
+node --test tests/ci/pr_review.test.cjs
+```
+
+GitHub Free private repositories cannot enforce this report as a branch-protection
+gate. Follow the review process even if the merge button is enabled.

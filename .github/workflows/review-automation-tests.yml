@@ -1,0 +1,25 @@
+name: Review automation tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review-automation-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  review-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      # GitHub's standard Ubuntu image includes Node; these tests need no npm
+      # dependencies, credentials, network access or application services.
+      - run: node --test tests/ci/pr_review.test.cjs
