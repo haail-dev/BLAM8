@@ -62,3 +62,14 @@ def test_commission_only_template_is_bound_to_source_review(tmp_path):
     path.write_text("{{ product_commission('starter') }}",encoding='utf-8')
     row={'implementation':[], 'documentation':[]}
     assert 'src/app/templates/commission.html' in maintenance.source_files(row,tmp_path)
+
+
+def test_operator_job_has_separate_bound_evidence_without_public_capability():
+    source = 'src/app/admin_outreach.py'
+    assert maintenance.check_change([source], receipt()) == []
+    assert not any(source in row['implementation'] for row in product_inventory.entries())
+    changed = receipt()
+    changed['operator_sources'][source]['signature'] = 'old'
+    assert any('Stale operator' in e for e in maintenance.check_change([source], changed))
+    changed['operator_sources'].clear()
+    assert maintenance.validate_operator_reviews(changed)

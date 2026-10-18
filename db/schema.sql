@@ -5518,6 +5518,17 @@ revoke all on function admin_outreach_complete(uuid,text,date) from public,anon,
 grant execute on function admin_outreach_lock(uuid) to service_role;
 grant execute on function admin_outreach_claim(uuid,uuid,jsonb,integer,text[]) to service_role;
 grant execute on function admin_outreach_complete(uuid,text,date) to service_role;
+
+-- Compact draft invalidation for the founder job (2026-10-18).
+create or replace function public.admin_outreach_stale_drafts(p_config jsonb)
+returns table(id uuid)
+language sql stable security invoker set search_path = public
+as $$
+  select m.id from public.admin_outreach_messages m
+  where m.status in ('draft', 'approved') and m.config_snapshot <> p_config;
+$$;
+revoke all on function public.admin_outreach_stale_drafts(jsonb) from public, anon, authenticated;
+grant execute on function public.admin_outreach_stale_drafts(jsonb) to service_role;
 commit;
 
 -- Phase 2: list/campaign policy around the existing CRM sequence engine.
