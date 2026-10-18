@@ -119,6 +119,10 @@
   /* Let assistant replies use the message column's equal side gutters. */
   #bc-messages [data-bc-role="assistant"] > div { max-width: 100%; }
 
+  /* Hide scrollbar chrome without disabling wheel, touch or keyboard scrolling. */
+  #bc-messages, #bc-input { scrollbar-width: none; }
+  #bc-messages::-webkit-scrollbar, #bc-input::-webkit-scrollbar { display: none; }
+
   /* Side dock: above the phone breakpoint the panel is a fixed card on the
      right edge, and on a
      half-snapped Chrome window (~960px on a 1920 monitor) it sat ON TOP of the

@@ -52,6 +52,14 @@ def test_public_fit_answers_separate_live_core_from_industry_specific_claims():
     assert concierge.REPLY_MAX_CHARS == 1400
 
 
+def test_public_answers_check_evidence_before_denial_and_use_customer_language():
+    prompt=build_system_prompt()
+    assert 'Missing evidence means unconfirmed, not unsupported' in prompt
+    assert 'conversation history is not product authority' in prompt
+    assert 'Cover every requirement' in prompt
+    assert 'Do not expose environment-variable names' in prompt
+
+
 def test_clamp_reply_holds_a_long_reply_to_the_limit_at_a_sentence():
     long = "This is a sentence about the product. " * 80
     out = concierge.clamp_reply(long)

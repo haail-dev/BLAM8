@@ -4,6 +4,56 @@ import pytest
 from app import platform_help, platform_capabilities as product, product_inventory, concierge, concierge_data, db
 
 
+@pytest.mark.parametrize('question', [
+    'Can it draft and email a quote using my approved prices, and does approving that email also mean the customer has authorised the work?',
+    'Can it handle replies, booking requests, quotes and inventory for my business?',
+    'And what happens when that expires?',
+])
+def test_single_pass_context_cannot_drop_core_guides_on_multi_part_or_followup_questions(question):
+    result=json.loads(platform_help.prompt(question))
+    assert {g['id'] for g in result['guides']}=={r['id'] for r in product_inventory.entries()}
+    assert all(g['availability']=='context_required' for g in result['guides'])
+    assert result['setup']==[] and result['reads']==[] and result['actions']==[]
+    assert not result['can_propose_settings']
+    # Keep this a compact guide catalogue, not an unbounded documentation dump.
+    assert sum(len(g['instructions']) for g in result['guides']) < 14000
+    assert len(result['articles'])<=6
+
+
+def test_signed_in_single_pass_coverage_preserves_permissions():
+    context=product.Context(active=frozenset(),member={'role':'staff','pages':[],'actions':{}})
+    result=json.loads(platform_help.prompt('What can I do?',context))
+    assert {g['id']:g['availability'] for g in result['guides']} == {
+        r['id']:r['availability'] for r in product.catalogue(context)['capabilities']}
+    assert result['actions']==[]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('surface',['public','scenario','help'])
+async def test_real_single_pass_callers_send_quote_and_retention_evidence(monkeypatch,surface):
+    from app import llm
+    captured=[]
+    monkeypatch.setattr(concierge,'client',lambda:None)
+    async def fake(**kw):
+        captured.append(kw)
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps({
+            'reply':'Example reply.','offer_signup':False,'suggested_industry':'','on_topic':True,
+            'nav':'','submit':None,'recommend':None}))],model='offline',usage=None)
+    monkeypatch.setattr(llm,'create',fake)
+    question='What about accepting it, or when the evidence expires?'
+    if surface=='public':await concierge.answer(question)
+    elif surface=='scenario':await concierge.scenario_answer(question)
+    else:await concierge.answer_help(question)
+    prompt=str(captured[0]['system'])
+    assert 'record acceptance received by phone or email' in prompt
+    assert 'does not delete approved Knowledge' in prompt
+    assert 'remain manually reviewable' in prompt
+    assert 'KNOWLEDGE_SOURCE_REVIEW_ENABLED' not in prompt
+    if surface=='public':
+        assert captured[0]['log_mode']=='meta'
+        assert 'tools' not in captured[0]  # Product evidence adds no public account access.
+
+
 def test_all_features_enumerates_every_family_and_actual_setup_definitions():
     result=platform_help.lookup('Show every feature',all_features=True)
     assert {r['id'] for r in result['complete_index']}=={r['id'] for r in product_inventory.entries()}
