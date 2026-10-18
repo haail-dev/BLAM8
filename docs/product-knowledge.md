@@ -62,9 +62,12 @@ No live publication mechanism is enabled by this work. Runtime product help uses
 the release's local bundle, so stale vector rows do not override current help.
 The catalogue describes the Knowledge admission review already present in this
 repository (`knowledge_review.py` and onboarding routes), conservatively marked
-restricted because discovery does not verify its database rollout. This port
-does not include the old branch's separate retained-source review redesign or
-its enablement flag. No Knowledge review settings or migrations are changed.
+restricted because discovery does not verify its database rollout. Source-backed
+corrections are now adapted to that admission pipeline, behind the disabled
+`KNOWLEDGE_SOURCE_REVIEW_ENABLED` flag. The existing admission migration stays
+in place; a separate source-snapshot migration and explicit release verification
+are required. See [Source-backed Knowledge corrections](operations/knowledge-source-review.md)
+for installation, retention and rollback. The catalogue does not claim enablement.
 
 ## Updating a feature
 

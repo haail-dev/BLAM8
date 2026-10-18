@@ -13,6 +13,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    # Enable after 20261018_knowledge_source_review.sql is installed.
+    knowledge_source_review_enabled: bool = False
+
     # Offline telephone pilot only. No real telephone transport is enabled here.
     telephone_pilot_enabled: bool = False
     telephone_pilot_provider: Literal["simulated"] = "simulated"

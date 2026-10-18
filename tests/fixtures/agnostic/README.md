@@ -1,5 +1,16 @@
 # S1a real-assembly baselines
 
+## Retained-source Knowledge corrections — 18 October 2026
+
+The platform-help record changes only its content and definition version hashes
+after the Knowledge evidence map and restricted guide were updated. Restoring
+the previous two version values makes the complete render match the previous
+record exactly. No prompt wording or permissions in that record changed. The
+complete source scan reports no added, removed or re-keyed wording debt; guard
+detectors are unchanged. The new source-correction caller has separate offline
+tests for the actual model request, strict output validation, source preservation
+and refusal to turn prose-only output into draft mutations.
+
 ## Link kinds: inbox, invoices, quotes, money — 16 October 2026
 
 Ten render records changed (`concierge-typed|voice|questions|task`, `nudge-concierge_action`, `route-concierge-typed|voice|staff|widget` and `model-warm`; each name is one record across its clock variants). A link labelled "Invoices" took the owner to Plans & billing (the BLAM8 subscription page) because the agent had no invoices kind to name. The prompt's LINKS clause now names four more kinds (`inbox`, `invoices`, `quotes`, `money`, each with id `''`) and says what they are and never to use `billing` for them; the `links` tool schema's `kind` enum gains the same four. `nudge-concierge_action` carries the sentence twice and `model-warm` only the enum.

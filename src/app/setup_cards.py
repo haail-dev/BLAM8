@@ -110,6 +110,10 @@ def change(page, current, revision, turn, changes, considered=None):
             line["status"] = "held" if patch["held"] else "proposed"
         line["fields"].update(deepcopy(fields))
         line["sources"].update(deepcopy(sources))
+        if page == 'knowledge' and 'content' in fields:
+            # Free-form edits supersede previous range attribution. Extractive
+            # source review attaches fresh ranges after this shared change.
+            card.get('knowledge_content_provenance', {}).pop(line['id'], None)
     if len(card["lines"]) > MAX_LINES:
         raise Invalid("This card has reached its line limit.")
     identities = set()

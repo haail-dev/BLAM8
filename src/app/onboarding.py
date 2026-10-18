@@ -33,6 +33,7 @@ from app import sign_off
 from app import storage
 from app import voice_learning
 from app.auth import require_tenant, TenantCtx
+from app.config import settings
 from app.security import require_csrf
 from app.templating import templates
 from fastapi.concurrency import run_in_threadpool
@@ -270,7 +271,7 @@ def _step_ctx(step: str, **extra) -> dict:
     stepper = step if step in STEPS else "interview"
     return {"steps": STEPS, "step": step, "stepper": stepper,
             "step_index": STEPS.index(stepper), "step_count": len(STEPS),
-            "tuning": tuning_steps(), **extra}
+            "tuning": tuning_steps(), "knowledge_source_review_enabled": settings.knowledge_source_review_enabled, **extra}
 
 
 def _kb_redirect(msg: str | None = None, err: str | None = None) -> RedirectResponse:
@@ -718,17 +719,12 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
 @router.post("/knowledge/text", dependencies=[Depends(require_csrf)])
 async def knowledge_text(request: Request, label: str = Form(""), content: str = Form(""),
                          then: str = Form(""), ctx: TenantCtx = Depends(require_tenant)):
-    """Add a pasted note. The wizard's Continue submits THIS form too (then=continue):
-    it used to be a bare link, so a typed-but-not-Added note was silently discarded on
-    the way out. Now a non-empty note is saved before moving on; an empty one just
-    moves on."""
+    """Stage a pasted note for review. Source-review mode requires an explicit
+    Review note action; Continue preserves unsaved text and pending drafts."""
     content = (content or "").strip()
     # Knowledge is the wizard's last step: Continue finishes setup (the
     # live-data step is off-flow since 2026-08-02).
     finishing = then == "continue"
-    if not content:
-        return (_finish(ctx) if finishing
-                else _kb_redirect(err="Type a note first, then Add note."))
 
     def stay(err: str):
         # Re-render with the note still in the box — an error must never eat typed work.
@@ -736,6 +732,17 @@ async def knowledge_text(request: Request, label: str = Form(""), content: str =
         return templates.TemplateResponse(request, "onboarding/knowledge.html", _step_ctx(
             "knowledge", sources=sources, configured=kb.is_configured(),
             msg=None, err=err, prefill_label=label, prefill_content=content))
+
+    if finishing and settings.knowledge_source_review_enabled:
+        if content:
+            return stay('Your pasted note is unsaved. Choose Review note, or clear the box before continuing. Your text is kept below.')
+        from app import knowledge_review
+        context = knowledge_review.load(ctx.tenant_id)
+        form = await request.form()
+        if any(r['state'] == 'pending' for r in context['reviews']) and form.get('knowledge_draft_decision') != 'keep':
+            return _kb_redirect(err='Knowledge drafts remain pending. Review them or explicitly leave them for later. Nothing was saved.')
+    if not content:
+        return (_finish(ctx) if finishing else _kb_redirect(err="Type a note first, then Add note."))
 
     if not kb.is_configured():
         return stay("Knowledge base is off — set VOYAGE_API_KEY to enable it. "
@@ -778,6 +785,9 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
     in-page review UI). Nothing is ingested here — the owner unticks/edits and
     Drafts and questions are stored for review; atomic admission writes facts
     only after evidence and overlap decisions are confirmed."""
+    if settings.knowledge_source_review_enabled:
+        from app.knowledge_source_routes import require_source_review
+        require_source_review(ctx)
     if not kb.is_configured():
         return JSONResponse({"error": "Knowledge base is off — set VOYAGE_API_KEY to enable it."},
                             status_code=400)
@@ -804,7 +814,12 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
                                       "upload a file or paste a few notes instead."},
                             status_code=422)
     from app import knowledge_review
-    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"))
+    evidence_pages = result.pop('evidence_pages', None)
+    if settings.knowledge_source_review_enabled:
+        if evidence_pages is None:
+            raise HTTPException(503, 'Source capture could not be confirmed. Nothing was staged.')
+    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"),
+        **({'evidence_pages': evidence_pages} if evidence_pages is not None else {}))
     fragments = _knowledge_review_fragments(request, ctx)
     return JSONResponse({**result, **fragments, "review_id": row["id"]})
 
@@ -874,6 +889,9 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
     context = knowledge_review.load(ctx.tenant_id)
     row = _knowledge_review_row(context,review_id)
     form = await request.form()
+    if row['payload'].get('source_snapshot') and form.get('operation') != 'preview':
+        from app.knowledge_source_routes import require_source_writer
+        require_source_writer(ctx)
     try:
         if form.get("operation") == "discard":
             result = db.db().rpc("admit_knowledge_review",{"p_tenant":ctx.tenant_id,"p_review":review_id,

@@ -1,1125 +1,1264 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port.",
   "capabilities": {
     "email": {
-      "signature": "44700171d78bfa6976c57c455d9fb7a94ddbcdf80220ea40ace96be8bd52cd77",
+      "signature": "8905a24acff267f697084c8683ec08ac22e9d926e9ba6a59fa95910cafefeee3",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "reason": "Email drafts and approval: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Email drafts and approval: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Email drafts and approval: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/how-it-works": {
           "disposition": "reviewed_unchanged",
-          "reason": "Email drafts and approval: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "reason": "Email drafts and approval: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/how_it_works.html",
-            "docs/product-knowledge.md"
+            "docs/product-knowledge.md",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "email: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "email: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:email": {
           "disposition": "updated",
-          "reason": "Email drafts and approval: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Email drafts and approval: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Email drafts and approval: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Email drafts and approval: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "knowledge": {
-      "signature": "2148b4e8f5110cf377ee5904136dc97e4b3dd17bad35ba4000451a06a21baf56",
+      "signature": "92cf5b8f2188ab333adad0cd9f560bb83e5cbcd21a17679a0caf7e6311b77edb",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Business knowledge: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Business knowledge: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Business knowledge: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Business knowledge: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "knowledge: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "knowledge: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:knowledge": {
           "disposition": "updated",
-          "reason": "Business knowledge: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Business knowledge: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Business knowledge: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Business knowledge: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "scheduling": {
-      "signature": "9bed39be77b70f293f01691d96235e9726664f39d3255f52a4900c07d7d24009",
+      "signature": "3fb6ea2146b9d9c1cdb2a495018fc317d6ac9de73645741f8cddb6967fa1797a",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Services, capacity and booking rules: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Services, capacity and booking rules: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/how-it-works": {
           "disposition": "reviewed_unchanged",
-          "reason": "Services, capacity and booking rules: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "reason": "Services, capacity and booking rules: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/how_it_works.html",
-            "docs/product-knowledge.md"
+            "docs/product-knowledge.md",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:scheduling": {
           "disposition": "updated",
-          "reason": "Services, capacity and booking rules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Services, capacity and booking rules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Services, capacity and booking rules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Services, capacity and booking rules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Services, capacity and booking rules: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Services, capacity and booking rules: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "calendar": {
-      "signature": "853bcf9ac64a9519a4ca9c171671bdf7bee9360ade991b18d5a1afdd579dcc2c",
+      "signature": "1e64ef63da69a68df6de342e6a97442ce39e4fc6d21d71ae24a744f3096ef701",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Calendar connection and sync: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Calendar connection and sync: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Calendar connection and sync: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Calendar connection and sync: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "calendar: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "calendar: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:calendar": {
           "disposition": "updated",
-          "reason": "Calendar connection and sync: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Calendar connection and sync: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Calendar connection and sync: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Calendar connection and sync: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "crm": {
-      "signature": "37163da14b2cbbd07dfc0a9de7828c6e147c9dc0f6df339d4bd1992bc7081fe5",
+      "signature": "8cfc350d1d46e873e8888697c1e150bc0f7d7bd58342752ae003841351d498ad",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Customer records and follow-ups: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Customer records and follow-ups: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Customer records and follow-ups: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Customer records and follow-ups: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:crm": {
           "disposition": "updated",
-          "reason": "Customer records and follow-ups: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Customer records and follow-ups: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Customer records and follow-ups: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Customer records and follow-ups: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Customer records and follow-ups: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Customer records and follow-ups: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "subjects": {
-      "signature": "9ca8a9fd6608eab5c2c306dd6ff6df04de1153ee7e611772a757644388096c4a",
+      "signature": "6742aba406af3573e56e9cfa4cfed41d44a1d0397a7d76375baabd7370bd48db",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Separately tracked subjects and evidence: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Separately tracked subjects and evidence: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:subjects": {
           "disposition": "updated",
-          "reason": "Separately tracked subjects and evidence: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Separately tracked subjects and evidence: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Separately tracked subjects and evidence: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Separately tracked subjects and evidence: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Separately tracked subjects and evidence: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Separately tracked subjects and evidence: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "packages": {
-      "signature": "7ff987adad018d5e99ac3e598956103bac4d8c1ae71b8a4b0c982745b4a2dfad",
+      "signature": "c9cf4844e264423ab6eebfc60df5fa2c3f989fede0ad80d0aef57193b6543153",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Packages and credits: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "reason": "Packages and credits: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Packages and credits: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Packages and credits: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Packages and credits: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Packages and credits: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:packages": {
           "disposition": "updated",
-          "reason": "Packages and credits: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Packages and credits: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Packages and credits: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Packages and credits: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Packages and credits: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Packages and credits: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "progress": {
-      "signature": "a37b35e42820a64a614ffa44f8768f7c0e7af94e0199b20701e950e429ed4880",
+      "signature": "105de69be7012aed26bbbe67946b2fd30bf288fd73944192091f6714dc70608e",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "Progress levels and prerequisites: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "reason": "Progress levels and prerequisites: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/landing.html",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Progress levels and prerequisites: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Progress levels and prerequisites: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Progress levels and prerequisites: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Progress levels and prerequisites: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:progress": {
           "disposition": "updated",
-          "reason": "Progress levels and prerequisites: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Progress levels and prerequisites: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Progress levels and prerequisites: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Progress levels and prerequisites: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Progress levels and prerequisites: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Progress levels and prerequisites: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "money": {
-      "signature": "ac452e8b3f24eecd967eff1ad4a7a41e5fbc8d401491062896f3d7347210a1e1",
+      "signature": "66404a1b0c3e98b3b1441cb0d2291310b49e6fc5a639c5341e461cf93f8a0945",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Quotes, invoices and payment records: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Quotes, invoices and payment records: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/stripe": {
           "disposition": "generated",
-          "reason": "Quotes, invoices and payment records: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "reason": "Quotes, invoices and payment records: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/stripe.html",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:money": {
           "disposition": "updated",
-          "reason": "Quotes, invoices and payment records: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Quotes, invoices and payment records: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Quotes, invoices and payment records: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Quotes, invoices and payment records: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Quotes, invoices and payment records: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Quotes, invoices and payment records: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "people": {
-      "signature": "eee671fc642b7dc563c1d23de4417338f5b8d6b52d9a7a68787a7dfb116a5a03",
+      "signature": "48489c5bf420b305f884a9e060c2e0091e43e310f95b035ec6bff74ef2f76d6f",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "People and permissions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "People and permissions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "People and permissions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "People and permissions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:people": {
           "disposition": "updated",
-          "reason": "People and permissions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "People and permissions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "People and permissions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "People and permissions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "People and permissions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "People and permissions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "portal": {
-      "signature": "26a02d27780a980993bb8da3da075e0d03593eb24441eb59e6808eba7157b7a2",
+      "signature": "9a3aa406c9ed37c0ca4094fb3f3511352c3a13b2aeb0568ca123bb2be9b45725",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Customer portal and job sheets: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Customer portal and job sheets: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/for-customers": {
           "disposition": "reviewed_unchanged",
-          "reason": "Customer portal and job sheets: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "reason": "Customer portal and job sheets: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/for_customers.html",
-            "docs/product-knowledge.md"
+            "docs/product-knowledge.md",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "portal: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "portal: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:portal": {
           "disposition": "updated",
-          "reason": "Customer portal and job sheets: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Customer portal and job sheets: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Customer portal and job sheets: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Customer portal and job sheets: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "mailboxes": {
-      "signature": "db0e136f79eb169c4aca0e862c0849ae1131a9a8fa261343368475fce9c3ea30",
+      "signature": "a4a3c1a158d9dd7b7f9a63acfefb4f1692498159b3335bf0bc74bd191606e6a0",
       "surfaces": {
         "/help": {
           "disposition": "generated",
-          "reason": "Mailbox connections and overrides: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Mailbox connections and overrides: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/how-it-works": {
           "disposition": "reviewed_unchanged",
-          "reason": "Mailbox connections and overrides: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "reason": "Mailbox connections and overrides: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/how_it_works.html",
-            "docs/product-knowledge.md"
+            "docs/product-knowledge.md",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "mailboxes: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "mailboxes: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:mailboxes": {
           "disposition": "updated",
-          "reason": "Mailbox connections and overrides: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Mailbox connections and overrides: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Mailbox connections and overrides: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Mailbox connections and overrides: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "owner.assistant": {
-      "signature": "eab57057cf9ffb96bc432b19d6f6aa06155ff67a4064c0d51496193b6d87b737",
+      "signature": "d080521b82892e70212b9fdf2e2e28f7b60c9b2d2b061de725df14e9485be547",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:owner.assistant": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "product.help": {
-      "signature": "a486d1da1548a17a1e7d9782ab7baf6627797dbbdd4b11c0b44e6a355c95808a",
+      "signature": "db4d1fdcfba6e7ca5dbbe8c4b817dfbbc53fa758c2ac6906ba18e1b2c80df235",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
+          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
             "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py"
+            "tests/test_assistant_glass_logo.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/pages": {
           "disposition": "reviewed_unchanged",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
+          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
             "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py"
+            "tests/test_assistant_glass_logo.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
+          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
             "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py"
+            "tests/test_assistant_glass_logo.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged.",
+          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
             "tests/test_onboarding_capture.py",
             "src/app/concierge.py",
             "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py"
+            "tests/test_assistant_glass_logo.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "billing": {
-      "signature": "f85d1a0be5d6fb1fa40b5ac90c29cdef23890f482798c4a72e53b45761789af2",
+      "signature": "0388d895f5d64fd83732ec3b7cea78a561955d223bec0e4631742ea97621a382",
       "surfaces": {
         "/": {
           "disposition": "generated",
-          "reason": "/: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/#pricing": {
           "disposition": "generated",
-          "reason": "Plans and billing: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "reason": "Plans and billing: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/_product_pricing.html",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/capabilities": {
           "disposition": "generated",
-          "reason": "/capabilities: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/capabilities: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/compare": {
           "disposition": "generated",
-          "reason": "/compare: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/compare: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/for-businesses": {
           "disposition": "generated",
-          "reason": "/for-businesses: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/for-businesses: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/for/logistics": {
           "disposition": "generated",
-          "reason": "/for/logistics: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/for/logistics: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/for/trades": {
           "disposition": "generated",
-          "reason": "/for/trades: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/for/trades: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Plans and billing: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred.",
+          "reason": "Plans and billing: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help/does-blam8-answer-phone-calls": {
           "disposition": "generated",
-          "reason": "/help/does-blam8-answer-phone-calls: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/help/does-blam8-answer-phone-calls: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help/how-much-does-blam8-cost": {
           "disposition": "generated",
-          "reason": "/help/how-much-does-blam8-cost: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/help/how-much-does-blam8-cost: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help/what-is-an-os-module": {
           "disposition": "generated",
-          "reason": "/help/what-is-an-os-module: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/help/what-is-an-os-module: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/help/what-is-blam8": {
           "disposition": "generated",
-          "reason": "/help/what-is-blam8: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/help/what-is-blam8: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/llms.txt": {
           "disposition": "generated",
-          "reason": "/llms.txt: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/llms.txt: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/pages": {
           "disposition": "generated",
-          "reason": "/pages: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/pages: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/partners": {
           "disposition": "generated",
-          "reason": "/partners: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/partners: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/stripe": {
           "disposition": "generated",
-          "reason": "Plans and billing: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits.",
+          "reason": "Plans and billing: public commercial values come from the plan catalogue; existing feature prose retains its current scope and the availability reference states its limits. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/stripe.html",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/calendly": {
           "disposition": "generated",
-          "reason": "/vs/calendly: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/calendly: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/fyxer": {
           "disposition": "generated",
-          "reason": "/vs/fyxer: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/fyxer: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/hubspot": {
           "disposition": "generated",
-          "reason": "/vs/hubspot: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/hubspot: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/jobber": {
           "disposition": "generated",
-          "reason": "/vs/jobber: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/jobber: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/mailchimp": {
           "disposition": "generated",
-          "reason": "/vs/mailchimp: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/mailchimp: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/moneypenny": {
           "disposition": "generated",
-          "reason": "/vs/moneypenny: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/moneypenny: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/podium": {
           "disposition": "generated",
-          "reason": "/vs/podium: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/podium: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/servicem8": {
           "disposition": "generated",
-          "reason": "/vs/servicem8: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/servicem8: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/tradify": {
           "disposition": "generated",
-          "reason": "/vs/tradify: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/tradify: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/vs/zapier": {
           "disposition": "generated",
-          "reason": "/vs/zapier: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises.",
+          "reason": "/vs/zapier: BLAM8 prices and plan amounts are rendered from the existing plan catalogue; comparison narrative and third-party amounts remain separately authored and are not generated as product promises. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/main.py",
             "src/app/platform_public.py",
-            "tests/test_platform_public.py"
+            "tests/test_platform_public.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "billing: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "billing: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:billing": {
           "disposition": "updated",
-          "reason": "Plans and billing: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Plans and billing: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Plans and billing: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Plans and billing: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "installable": {
-      "signature": "72a972ec745ec16a94617385db43410dde17fce03f891f3078de5f585b0b62b6",
+      "signature": "a54e5097f41222d2590795cca87a112f5e6e10b428d7786a3ce322202d8d2bc3",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Installable app and notifications: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Installable app and notifications: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "installable: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications.",
+          "reason": "installable: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "README.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:installable": {
           "disposition": "updated",
-          "reason": "Installable app and notifications: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Installable app and notifications: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Installable app and notifications: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Installable app and notifications: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "extensions": {
-      "signature": "5b671db5d69d85e03ff2a76cae6058c0af9b851ffbfdf4f06bf6fe367905724c",
+      "signature": "442978bc60e7c8954cad2385b2360317518ad7e707bcaff293fff02ef24f9ec1",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Restricted operational modules: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide.",
+          "reason": "Restricted operational modules: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/capabilities.html",
-            "src/app/product_guides.py"
+            "src/app/product_guides.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "/partners": {
           "disposition": "reviewed_unchanged",
-          "reason": "Restricted operational modules: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement.",
+          "reason": "Restricted operational modules: this explainer retains its existing audience and workflow; the product discovery change adds no provider access, business execution or new public entitlement. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/templates/partners.html",
-            "docs/product-knowledge.md"
+            "docs/product-knowledge.md",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:extensions": {
           "disposition": "updated",
-          "reason": "Restricted operational modules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Restricted operational modules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Restricted operational modules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Restricted operational modules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Restricted operational modules: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Restricted operational modules: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "automation.scheduled": {
-      "signature": "8f7d347358dbd90fb21297beafcb969a55cc4ed81f1aa8fe3d0f819ed82c24a3",
+      "signature": "89b84ffb64b4b09b4dd847882783a0d769e439d3572525653cb27eb77538efa9",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
-          "reason": "Scheduled plans: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor.",
+          "reason": "Scheduled plans: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/pages_index.py",
-            "tests/test_pages_index.py"
+            "tests/test_pages_index.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:automation.scheduled": {
           "disposition": "updated",
-          "reason": "Scheduled plans: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Scheduled plans: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Scheduled plans: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Scheduled plans: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Scheduled plans: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Scheduled plans: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "outreach": {
-      "signature": "d507b81e827d2b7787174d6d67c72ac4a556892984abaa4a8b4c6a7b90cacd3e",
+      "signature": "23a687fe3b2f99c31ceda7eb713cf571678671352bb7dd528455cc64b4a3c6db",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
-          "reason": "Tenant outreach: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor.",
+          "reason": "Tenant outreach: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/pages_index.py",
-            "tests/test_pages_index.py"
+            "tests/test_pages_index.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "agent:outreach": {
           "disposition": "updated",
-          "reason": "Tenant outreach: the current authored guide is returned with a complete index and separate availability state; discovery performs no work.",
+          "reason": "Tenant outreach: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Tenant outreach: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks.",
+          "reason": "Tenant outreach: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Tenant outreach: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed.",
+          "reason": "Tenant outreach: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md"
           ]
         }
       }
     },
     "knowledge.review": {
-      "signature": "aec6e5c56eac9f95667789bfa115618ffb2f51da8a19d698f3910a1f0e84076b",
+      "signature": "4ac943326864221ccada977ee589f2d00199147f0aaab128c6a6d6c37bbb6cc2",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
-          "reason": "Existing Knowledge admission review: the route inventory accounts for feature-gated pages and JSON adapters without claiming they are active or accessible to every visitor. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim.",
           "evidence": [
             "src/app/pages_index.py",
-            "tests/test_pages_index.py"
+            "tests/test_pages_index.py",
+            "docs/operations/knowledge-source-review.md",
+            "tests/test_knowledge_source_review.py",
+            "tests/test_knowledge_source_routes.py"
           ]
         },
         "agent:knowledge.review": {
           "disposition": "updated",
-          "reason": "Existing Knowledge admission review: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py"
+            "tests/test_platform_help.py",
+            "docs/operations/knowledge-source-review.md",
+            "tests/test_knowledge_source_review.py",
+            "tests/test_knowledge_source_routes.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Existing Knowledge admission review: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py"
+            "src/app/product_inventory.py",
+            "docs/operations/knowledge-source-review.md",
+            "tests/test_knowledge_source_review.py",
+            "tests/test_knowledge_source_routes.py"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Existing Knowledge admission review: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Evidence points to the existing onboarding implementation; the separate retained-source redesign and flag are excluded.",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim.",
           "evidence": [
             "docs/verified-behaviours.md",
-            "tests/test_platform_capabilities.py"
+            "tests/test_platform_capabilities.py",
+            "docs/operations/knowledge-source-review.md",
+            "tests/test_knowledge_source_review.py",
+            "tests/test_knowledge_source_routes.py"
+          ]
+        },
+        "docs/operations/knowledge-source-review.md": {
+          "disposition": "updated",
+          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The operations reference records retention and rollback.",
+          "evidence": [
+            "docs/operations/knowledge-source-review.md",
+            "tests/test_knowledge_source_database.py",
+            "tests/test_knowledge_source_review.py",
+            "tests/test_knowledge_source_routes.py"
           ]
         }
       }

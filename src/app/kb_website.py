@@ -291,4 +291,5 @@ async def build(tenant_id: str, url: str, *, business_name: str | None = None,
                             business_name=business_name, industry=industry)
     from app.knowledge_fidelity import inventory
     return {"site": site, "pages": [p["url"] for p in pages], "entries": entries,
-            "questions":getattr(entries,"questions",[]), "source_units":inventory(pages)}
+            "questions":getattr(entries,"questions",[]), "source_units":inventory(pages),
+            **({'evidence_pages': pages} if settings.knowledge_source_review_enabled else {})}

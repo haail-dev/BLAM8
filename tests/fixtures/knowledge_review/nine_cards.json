@@ -1,0 +1,36 @@
+{
+  "provenance": {
+    "kind": "synthetic_regression",
+    "historical_replay_verified": false,
+    "basis": "Synthetic regression contract adapted from original commit 32b41698",
+    "limitation": "Reconstructed test text, not the original website or nine-card payload. Exact historical replay requires archived originals. No live tenant data was read."
+  },
+  "pages": [
+    {"url": "https://example.invalid/", "text": "Fictional test profile only. We manage properties and coordinate maintenance reports. We do not promise attendance or completion dates."},
+    {"url": "https://example.invalid/prices", "text": "Fictional test profile only. Our management fee is £95 per property per month. Our setup fee is £180. Repair charges are separate. Bank details are not published."},
+    {"url": "https://example.invalid/payment", "text": "Fictional test profile only. Invoices are payable within 14 days by bank transfer. Estimates require written landlord approval."},
+    {"url": "https://example.invalid/start", "text": "Fictional test profile only. We agree the address, intended start date, authority, scope and fees in writing. A signed agreement and handover are required before the start date is confirmed."},
+    {"url": "https://example.invalid/ongoing", "text": "Fictional test profile only. We provide monthly service and landlord updates. Inspection intervals follow the agreement. We track completion and check repeat reports."},
+    {"url": "https://example.invalid/policies", "text": "Fictional test profile only. Maintenance reports include property, issue, urgency, photos and access. We distinguish stated facts from inference and ask for missing details. We do not diagnose or promise a visit. Written approval and authority must be checked. We do not make a legal determination from an email. Urgent safety guidance must not wait for an approval request."},
+    {"url": "https://example.invalid/safety", "text": "Fictional test profile only. We do not provide diagnosis or emergency dispatch through this site or BLAM8. There is no staffed out-of-hours repair service."},
+    {"url": "https://example.invalid/contact", "text": "Fictional test profile only. Our office hours are Monday to Friday, 09:00–17:00 UK time, excluding public holidays. Routine reports are reviewed next working day. Our service area is Camden, Islington, Hackney and Haringey; we check the postcode before agreeing coverage."}
+  ],
+  "entries": [
+    {"label": "What We Do", "content": "We manage properties and coordinate maintenance reports. We do not promise attendance or completion dates."},
+    {"label": "Prices and Fees", "content": "Our management fee is £95 per property per month. Our setup fee is £180. Repair charges are separate."},
+    {"label": "Payment Terms", "content": "Invoices are payable within 14 days by bank transfer. Estimates require written landlord approval."},
+    {"label": "Starting Management", "content": "We agree the address, intended start date, authority, scope and fees in writing. A signed agreement and handover are required before the start date is confirmed."},
+    {"label": "Ongoing Service", "content": "We provide monthly service and landlord updates. Inspection intervals follow the agreement. We track completion and check repeat reports."},
+    {"label": "Maintenance Reports", "content": "Maintenance reports include property, issue, urgency, photos and access. We distinguish stated facts from inference and ask for missing details. We do not diagnose or promise a visit. Written approval and authority must be checked."},
+    {"label": "Gas Safety Guidance", "content": "We do not provide diagnosis or emergency dispatch through this site or BLAM8."},
+    {"label": "Office Hours", "content": "Our office hours are Monday to Friday, 09:00–17:00 UK time, excluding public holidays. Routine reports are reviewed next working day."},
+    {"label": "Service Area", "content": "Our service area is Camden, Islington, Hackney and Haringey; we check the postcode before agreeing coverage."}
+  ],
+  "required_additions": [
+    {"label": "Maintenance Reports", "text": "We do not make a legal determination from an email.", "page": 5},
+    {"label": "Maintenance Reports", "text": "Urgent safety guidance must not wait for an approval request.", "page": 5},
+    {"label": "Gas Safety Guidance", "text": "There is no staffed out-of-hours repair service.", "page": 6}
+  ],
+  "overlap_labels": [["Prices and Fees", "Payment Terms", "Ongoing Service"], ["What We Do", "Maintenance Reports"]],
+  "forbidden_additions": ["10%", "£150", "£100", "$50", "one month's rent", "one-working-day acknowledgement", "How a First Report Works"]
+}

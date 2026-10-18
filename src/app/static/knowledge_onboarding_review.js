@@ -36,7 +36,9 @@
   function say(text){status.hidden=false;status.textContent=text;}
   function announce(ok){window.blam8SiteRead={done:true,ok:ok};document.dispatchEvent(new CustomEvent('blam8:site-read',{detail:{ok:ok}}));}
   async function read(){
+    if(window.blam8KnowledgeImportBusy || (window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working())) return;
     if(!input.value.trim()){say('Paste your website address first.');return;}
+    window.blam8KnowledgeImportBusy=true;
     go.disabled=true;go.textContent='Reading…';say('Reading your website and preparing drafts for review…');
     var ok=false;
     try{
@@ -46,7 +48,7 @@
       replace(data);ok=true;
       say('Read '+data.pages.length+' pages. Drafts are pending; review evidence, unanswered details and overlaps below. Nothing has been saved to Knowledge.');
     }catch(e){say((e.message || 'Could not read that site.')+' Your existing drafts are unchanged.');}
-    finally{go.disabled=false;go.textContent='Read my site';announce(ok);}
+    finally{window.blam8KnowledgeImportBusy=false;go.disabled=false;go.textContent='Read my site';announce(ok);}
   }
   go.addEventListener('click',read);
   input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();read();}});
