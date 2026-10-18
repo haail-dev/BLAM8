@@ -1,0 +1,39 @@
+name: PR review report
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited, ready_for_review, converted_to_draft, closed]
+  workflow_run:
+    workflows: [Platform tests and agnostic guard, Review automation tests]
+    types: [completed]
+  workflow_dispatch:
+
+# This job only reads PR metadata and writes a report. Never check out, install
+# dependencies from, or execute PR code with this token.
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+# Every invocation refreshes ALL open PRs. Serialising avoids competing comment
+# updates; replacing a pending invocation cannot lose another PR's refresh.
+concurrency:
+  group: pr-review-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          sparse-checkout: scripts/ci/pr_review.cjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { run } = require('./scripts/ci/pr_review.cjs');
+            await run({ github, context, core });
