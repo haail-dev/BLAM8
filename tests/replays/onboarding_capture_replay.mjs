@@ -23,6 +23,8 @@ for (const [step, held, fails] of [
     goals: 'Collect enquiries for human review; tutor schedules lessons.', website: 'example.test'};
   const context = vm.createContext({
     ONB_STEP: step, log, String, Object, Array, Event: class {},
+    // The widget also registers its Knowledge start hook on the browser global.
+    window: {},
     document: {getElementById() { return null; }},
     fieldEls: name => elements[name] ? [elements[name]] : [], flash() {}, readCurrent: () => ({}),
     async postJsonWithRetry(url, body) {
@@ -37,6 +39,7 @@ for (const [step, held, fails] of [
     // Unexpected navigation, record creation or submission has no fake implementation.
   });
   vm.runInContext(fill + '\n' + turn, context);
+  assert.equal(typeof context.window.blam8KnowledgeGuideStart, 'function');
   const spoke = await context.onboardTurn("I'll check it here first.", []);
   assert.equal(spoke, !fails);
   assert.equal(requests.length, 1);
