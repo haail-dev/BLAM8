@@ -10,9 +10,11 @@ function element() {
 const status=element(), box=element(), question=element(), later=element(), navigation=element();
 later.querySelector=()=>navigation;
 const form = element(); form.action='https://offline.invalid/onboarding/knowledge/review/review-id';
-form.elements={version:{value:'v1'},csrf_token:{value:'csrf'},label_note:{value:'Exact title'},content_note:{value:'Owner original.'},action_note:{value:'keep'}};
+form.dataset.knowledgeReview='review-id';
+form.elements={version:{value:'v1'},csrf_token:{value:'csrf'},label_note:{value:'Exact title'},content_note:{value:'Owner original.'},action_note:{value:'keep'},source_unit:{value:''}};
 form.querySelector=s=>s==='[data-source-preview]'?box:s==='[data-source-status]'?status:s==='[data-source-question]'?question:element();
-form.querySelectorAll=()=>[{dataset:{draft:'note'}}];
+form.querySelectorAll=s=>s==='[data-draft]'?[{dataset:{draft:'note'}}]:Object.values(form.elements);
+Object.entries(form.elements).forEach(([name,field])=>field.name=name);
 form.matches=()=>true;
 controls.push(...Object.values(form.elements)); controls.forEach(e=>Object.assign(e,{disabled:false,dataset:{}}));
 const note=element(); note.elements={content:{value:''}};
@@ -64,4 +66,22 @@ note.elements.content.value='';
 const pending=event(target('[data-onb-continue]'));events.click(pending);assert(pending.prevented);
 window.blam8KnowledgeImportBusy=true;
 await assert.rejects(window.Blam8KnowledgeSourceReview.ask('During website read'),/Wait/);
+
+window.blam8KnowledgeImportBusy=false;
+const third=window.Blam8KnowledgeSourceReview.ask('Check a citation after refresh.');finish(3,preview);await third;
+// An identical, live form can replace the original DOM node after preview.
+// Bind by batch + complete snapshot, not the detached node identity.
+const refreshed={...form,dataset:{...form.dataset},elements:Object.fromEntries(Object.entries(form.elements).reverse().map(([k,v])=>[k,{...v}]))};
+refreshed.querySelectorAll=s=>s==='[data-draft]'?[{dataset:{draft:'note'}}]:Object.values(refreshed.elements);
+targetButton.closest=()=>refreshed;
+events.click(event(target('[data-source-apply]')));await flush();
+assert.equal(requests.length,5);assert(requests[4].url.endsWith('/corrections/apply'));
+finish(4,{entries:[{id:'note',label:'Exact title',content:'Source caveat. Owner original.'}],summary:'Draft correction confirmed.'});await flush();
+events.click(event(target('[data-source-apply]')));await flush();
+assert.equal(requests.length,5);assert.match(status.textContent,/no current correction preview/i);
+const fourth=window.Blam8KnowledgeSourceReview.ask('Review before a local source choice changes.');finish(5,preview);await fourth;
+assert.equal(JSON.parse(requests[5].options.body).form.source_unit,'');
+refreshed.elements.source_unit.value='note:note';
+events.click(event(target('[data-source-apply]')));await flush();
+assert.equal(requests.length,6);assert.match(status.textContent,/changed/);
 console.log('Source-review serialization, stale-edit and navigation replay passed');

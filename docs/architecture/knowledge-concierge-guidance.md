@@ -7,6 +7,12 @@ Supporting source wording is handled with its note: the owner may explicitly
 retain the original wording together, or inspect the differences. This choice
 can preserve headings and repetition verbatim; it is not semantic deduplication.
 The guide never silently excludes source text or declares a paraphrase complete.
+Suggested source destinations consider labels, wording and citations across all
+drafts, including undecided notes. A shared page or the fact that a note was kept
+is not enough to assign unrelated wording to it. Short headings, navigation and
+ambiguous passages remain unresolved for an explicit destination or exclusion
+with the owner's reason. These suggestions are lexical hints, not semantic
+coverage certification. The first kept note is never the fallback destination.
 
 The `/onboarding/knowledge/review/{review_id}/guide` endpoint reads the same
 tenant-scoped, versioned review used by admission. It returns a bounded patch to
@@ -17,6 +23,12 @@ Owner answers and exclusion reasons must occur in the owner's message. Unknown
 details can remain unknown. Reopening a named note changes its review decision,
 not its text. Wording/source repairs still use the existing source-correction
 proposal flow and require review/application there.
+An owner can also undo the unsaved source-retention choices for a named note.
+This clears those local choices (including a matching legacy blanket default),
+not the note body, owner edits or shared qualification context. The affected
+source statements become unresolved again. It does not mark them excluded or
+silently redistribute them to other notes. Overlap comparisons are short excerpts;
+the full text remains in the form, and stale-item checks bind the full content.
 
 The guide handles original source wording, overlap acknowledgements and optional
 questions in plain language. It preserves shared qualifications and requires
@@ -38,3 +50,20 @@ change. Removing its visible block must preserve hidden `source_<id>`,
 should also carry `guided_unknown_<id>` and `guided_expand_<id>` hidden fields
 from the submitted review form to retain guide progress. These markers are only
 review navigation state, never evidence of a business fact.
+
+Correction requests include the current local form snapshot. The source reviewer
+sees editable note bodies and effective retained wording as separate states;
+local retention is not misrepresented as an already stored body edit. Source
+corrections remain additive: undoing local retention uses the guide, and local
+merges must be finished or undone before source corrections. Both preview and
+apply reject conflicting local/body snapshots. Applying a correction records a
+hash of its local review context without implicitly saving the source decisions.
+
+Empty model changes and already-recorded exact citations produce a visible no-op
+explanation. An identical citation does not suppress independent valid changes;
+invalid references, claims and versions still reject the proposal. Citation-only
+previews explicitly say they change no wording. A no-op cannot reach the draft
+writer. Apply resolves the batch by ID and compares the complete current snapshot,
+allowing an identical form refresh while rejecting changed choices. Busy, missing
+preview and stale snapshot states show recovery instructions rather than returning
+silently. None of these paths admits Knowledge or changes source-release flags.

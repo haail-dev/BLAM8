@@ -11,6 +11,10 @@ from tests.test_knowledge_source_review import seeded, corrections
 
 @pytest.fixture
 def source_client(monkeypatch):
+    from app import security
+    # Independent clients/tests must not inherit another test's per-IP budget.
+    # The actual limiter remains enabled within each test.
+    monkeypatch.setattr(security, '_BUCKETS', {})
     row, evidence = seeded(); context = {'version':'v1','reviews':[row], 'sources':[], 'brief':''}
     calls = []
     ctx = TenantCtx(tenant_id='tenant', user_id='owner', client=None)

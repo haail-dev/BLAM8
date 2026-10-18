@@ -15,7 +15,16 @@
       var id = section.dataset.draft;
       edits[id] = {label: form.elements['label_' + id].value, content: form.elements['content_' + id].value};
     });
-    return {version: form.elements.version.value, edits: edits};
+    var local = {version:form.elements.version.value};
+    Object.keys(edits).forEach(function(id){local['label_'+id]=edits[id].label;local['content_'+id]=edits[id].content;});
+    form.querySelectorAll('input,textarea,select').forEach(function(el){
+      if(el.name && el.name!=='csrf_token' && el.name!=='operation' &&
+          !((el.type==='checkbox' || el.type==='radio') && !el.checked))local[el.name]=el.value;
+    });
+    var orderedEdits={}, orderedLocal={};
+    Object.keys(edits).sort().forEach(function(id){orderedEdits[id]=edits[id];});
+    Object.keys(local).sort().forEach(function(name){orderedLocal[name]=local[name];});
+    return {version: form.elements.version.value, edits: orderedEdits, form:orderedLocal};
   }
   function lock(on) {
     busy = on;
@@ -47,7 +56,7 @@
     lock(true); say(form, 'Checking the retained source and these exact drafts…');
     try {
       var data = await request(form, '', Object.assign({question: question}, base));
-      preview = {form: form, base: base, review: data.review, question: question};
+      preview = {key:form.dataset.knowledgeReview, base: base, review: data.review, question: question};
       data.changes.forEach(function (change) {
         var detail = node('details', ''); detail.open = true;
         detail.appendChild(node('summary', change.label));
@@ -66,7 +75,14 @@
     finally { lock(false); }
   }
   async function apply(form) {
-    if (busy || submitting || window.blam8KnowledgeImportBusy || !preview || preview.form !== form) return;
+    form = form || targetForm();
+    if(!form)return;
+    if (busy || submitting || window.blam8KnowledgeImportBusy) {
+      say(form,'Another review operation is still active. Wait for it to finish; reload after preserving edits if it remains unconfirmed.'); return;
+    }
+    if(!preview || preview.key!==form.dataset.knowledgeReview){
+      say(form,'There is no current correction preview for this batch. Ask to review the correction again. Nothing changed.'); return;
+    }
     if (JSON.stringify(snapshot(form)) !== JSON.stringify(preview.base)) {
       clear(form); say(form, 'The draft text changed. Review it again before applying.'); return;
     }
