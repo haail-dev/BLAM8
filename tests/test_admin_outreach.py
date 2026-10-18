@@ -87,7 +87,10 @@ class Query:
         if self.bounds:
             matched = matched[self.bounds[0]:self.bounds[1]+1]
         if self.action == "select":
-            self.fake.reads.append((self.table, self.columns, [r.get("id") for r in matched]))
+            # Tenant outreach and scheduled-plan tests reuse this query helper;
+            # egress instrumentation is opt-in on the founder fake database.
+            if hasattr(self.fake, "reads"):
+                self.fake.reads.append((self.table, self.columns, [r.get("id") for r in matched]))
             if self.columns != "*":
                 def project(row):
                     result = {}
@@ -98,7 +101,8 @@ class Query:
                             result[field] = row.get(field)
                     return result
                 matched = [project(row) for row in matched]
-            self.fake.read_bytes += len(json.dumps(matched))
+            if hasattr(self.fake, "read_bytes"):
+                self.fake.read_bytes += len(json.dumps(matched))
         return SimpleNamespace(data=copy.deepcopy(matched))
 
 

@@ -1266,7 +1266,7 @@
   },
   "operator_sources": {
     "src/app/admin_outreach.py": {
-      "signature": "ac5d4d81e7339eadcb9a4f28d11f57676569d6cf87fb6b51ac0c6440e49e0a2e",
+      "signature": "4c18534a5ef62ff78fad68e7f127d3ccaba04a35460b47b270ba7dd9832bb9b6",
       "reason": "Founder outreach is an internal operator tool, excluded from public capabilities. Reviewed compact reads, durable reply detection, unchanged atomic send safeguards and the migration/rollback with offline and disposable PostgreSQL tests; deployment is a separate release step."
     }
   }
