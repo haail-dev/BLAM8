@@ -578,6 +578,16 @@
   var PENDING_KB_CARDS = [];
   var ADVANCE_WANTED = false;
   function showContinueHint() {
+    function notice(text, working) {
+      var line = document.createElement("p");
+      line.className = "bc-notice" + (working ? " bc-busy" : "");
+      line.setAttribute("role", "status");
+      var words = document.createElement("span");
+      words.className = "bc-notice-text" + (working ? " bc-busy-text" : "");
+      words.textContent = text;
+      line.appendChild(words);
+      return line;
+    }
     ADVANCE_WANTED = true;
     var btn = pageContinueBtn();
     var state = window.Blam8OnboardingJourney ? window.Blam8OnboardingJourney.read(PENDING_KB_CARDS.length) : {ready:!!btn, action:btn};
@@ -587,28 +597,15 @@
         var later = document.querySelector("[data-knowledge-later]");
         if (later && later.hidden) later.hidden = false; // reveal the existing explicit choice; never select it
       }
-      var reason = document.createElement("p");
-      reason.className = "text-xs text-slate-500 text-center";
-      reason.textContent = state.reason || "No Continue action is available on this page.";
-      if (state.blocker === "busy") {
-        reason.className = "bc-busy";
-        reason.setAttribute("role", "status");
-        var busyText = document.createElement("span");
-        busyText.className = "bc-busy-text";
-        busyText.textContent = reason.textContent;
-        reason.textContent = "";
-        reason.appendChild(busyText);
-      }
+      var reason = notice(state.reason || "No Continue action is available on this page.", state.blocker === "busy");
       cta.appendChild(reason);
       cta.classList.remove("hidden");
       return;
     }
     if (PENDING_KB_CARDS.length) {
-      var hold = document.createElement("p");
-      hold.className = "text-[11px] text-amber-700 text-center";
-      hold.textContent = PENDING_KB_CARDS.length === 1
+      var hold = notice(PENDING_KB_CARDS.length === 1
         ? "Save (or clear) the notes card above first — then Next."
-        : "Save (or clear) the " + PENDING_KB_CARDS.length + " notes cards above first — then Next.";
+        : "Save (or clear) the " + PENDING_KB_CARDS.length + " notes cards above first — then Next.");
       cta.appendChild(hold);
       cta.classList.remove("hidden");
       return;
@@ -638,14 +635,11 @@
         }, 4000);
       });
       cta.appendChild(go);
-      var p = document.createElement("p");
-      p.className = "mt-1.5 text-[11px] text-slate-400 text-center";
-      p.textContent = "Or check the form over first — it's filled in behind me.";
+      var p = notice("Or check the form over first — it's filled in behind me.");
+      p.className += " mt-1.5";
       cta.appendChild(p);
     } else {
-      var hint = document.createElement("p");
-      hint.className = "text-xs text-slate-500 text-center";
-      hint.textContent = "Looks good? Review the form and hit Continue.";
+      var hint = notice("Looks good? Review the form and hit Continue.");
       cta.appendChild(hint);
     }
     cta.classList.remove("hidden");
