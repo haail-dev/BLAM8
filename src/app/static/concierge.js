@@ -664,12 +664,113 @@
     pageSpacer.style.height = px + "px";
   }
   window.addEventListener("resize", syncPageSpace);
+  // Height transitions and the on-screen keyboard can change the sheet after
+  // an input event. Keep the page's scroll clearance tied to its actual size.
+  if (window.ResizeObserver) new ResizeObserver(syncPageSpace).observe(panel);
+  else panel.addEventListener("transitionend", syncPageSpace);
+
+  // On phones the blue header resizes the sheet; its buttons keep their taps.
+  // Keep a proportion per tenant/tab so navigation and rotation retain the choice.
+  var resizeHeader = panel.querySelector("[data-bc-resize]");
+  var resizeHandle = document.getElementById("bc-resize-handle");
+  var KEY_HEIGHT = k("blam8_concierge_height");
+  var heightRatio = null;
+  try {
+    var storedHeight = Number(sessionStorage.getItem(KEY_HEIGHT));
+    if (storedHeight > 0 && storedHeight <= 1) heightRatio = storedHeight;
+  } catch (e) {}
+  var sheetDrag = null;
+  function mobileSheetBounds() {
+    var viewport = window.visualViewport;
+    var height = viewport ? viewport.height : window.innerHeight;
+    var bar = document.querySelector("[data-pull-bar], body > header.sticky");
+    var top = bar ? Math.max(0, bar.getBoundingClientRect().bottom - (viewport ? viewport.offsetTop : 0)) : 48;
+    var max = Math.max(1, Math.floor(height - top - 16));
+    return { viewport: height, min: Math.min(240, max), max: max };
+  }
+  function sizeMobileSheet(height) {
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+    var bounds = mobileSheetBounds();
+    var next = Math.round(Math.max(bounds.min, Math.min(bounds.max,
+      height == null ? bounds.viewport * (heightRatio || 0.6) : height)));
+    var viewport = window.visualViewport;
+    var bottom = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+    panel.style.setProperty("--bc-mobile-bottom", bottom + "px");
+    panel.style.setProperty("--bc-mobile-limit", bounds.max + "px");
+    panel.style.setProperty("--bc-mobile-height", next + "px");
+    if (resizeHandle) {
+      resizeHandle.setAttribute("aria-valuemin", String(bounds.min));
+      resizeHandle.setAttribute("aria-valuemax", String(bounds.max));
+      resizeHandle.setAttribute("aria-valuenow", String(next));
+      resizeHandle.setAttribute("aria-valuetext", next + " pixels tall");
+    }
+    syncPageSpace();
+    return next;
+  }
+  function rememberSheetHeight(height) {
+    heightRatio = height / mobileSheetBounds().viewport;
+    try { sessionStorage.setItem(KEY_HEIGHT, String(heightRatio)); } catch (e) {}
+  }
+  function finishSheetDrag(event) {
+    if (!sheetDrag || (event && event.pointerId !== sheetDrag.id)) return;
+    var drag = sheetDrag;
+    sheetDrag = null;
+    panel.classList.remove("bc-resizing");
+    if (resizeHeader.hasPointerCapture(drag.id)) resizeHeader.releasePointerCapture(drag.id);
+    if (drag.changed) rememberSheetHeight(panel.getBoundingClientRect().height);
+  }
+  if (resizeHeader && resizeHandle) {
+    resizeHeader.addEventListener("pointerdown", function (event) {
+      if (!window.matchMedia("(max-width: 767px)").matches || !event.isPrimary || event.button !== 0 ||
+          sheetDrag || event.target.closest("button, a, input, textarea, select")) return;
+      event.preventDefault();
+      sheetDrag = { id: event.pointerId, y: event.clientY, height: panel.getBoundingClientRect().height, changed: false };
+      resizeHeader.setPointerCapture(event.pointerId);
+      panel.classList.add("bc-resizing");
+    });
+    resizeHeader.addEventListener("pointermove", function (event) {
+      if (!sheetDrag || event.pointerId !== sheetDrag.id) return;
+      sizeMobileSheet(sheetDrag.height + sheetDrag.y - event.clientY);
+      sheetDrag.changed = true;
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (name) {
+      resizeHeader.addEventListener(name, finishSheetDrag);
+    });
+    resizeHandle.addEventListener("keydown", function (event) {
+      if (!window.matchMedia("(max-width: 767px)").matches) return;
+      var bounds = mobileSheetBounds();
+      // Repeated keys build on the requested height, not an animation frame.
+      var height = Number(resizeHandle.getAttribute("aria-valuenow")) || panel.getBoundingClientRect().height;
+      if (event.key === "ArrowUp") height += 32;
+      else if (event.key === "ArrowDown") height -= 32;
+      else if (event.key === "Home") height = bounds.min;
+      else if (event.key === "End") height = bounds.max;
+      else return;
+      event.preventDefault();
+      rememberSheetHeight(sizeMobileSheet(height));
+    });
+    function resizeMobileViewport() {
+      // Rotation/keyboard changes invalidate a drag's starting coordinates.
+      if (sheetDrag) sheetDrag.changed = false;
+      finishSheetDrag();
+      sizeMobileSheet();
+    }
+    window.addEventListener("resize", resizeMobileViewport);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeMobileViewport);
+      window.visualViewport.addEventListener("scroll", resizeMobileViewport);
+    }
+    sizeMobileSheet();
+  }
 
   function setOpen(open) {
+    // Save the drag's actual height before display:none makes its bounds zero.
+    if (!open) finishSheetDrag();
     panel.classList.toggle("hidden", !open);
     panel.classList.toggle("flex", open);
     bubble.classList.toggle("hidden", open);   // panel replaces the bubble while open
     bubble.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open && resizeHeader && resizeHandle) sizeMobileSheet();
     if (!open && SCENARIO) { setScenario(false); clearThread(); }   // scenario mode ends when the panel closes
     syncPageSpace();
     try { sessionStorage.setItem(KEY_OPEN, open ? "1" : "0"); } catch (e) {}

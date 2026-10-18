@@ -24,7 +24,10 @@
   <section id="bc-panel" aria-live="polite" aria-label="BLAM8 assistant"
            class="hidden w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
            style="height: 32rem; max-height: calc(100vh - 6rem);">
-    <header class="flex items-center gap-2 bg-navy px-4 py-2 text-white flex-none">
+    <header data-bc-resize class="flex items-center gap-2 bg-navy px-4 py-2 text-white flex-none">
+      <span id="bc-resize-handle" role="separator" tabindex="0" aria-orientation="horizontal"
+            aria-label="Resize assistant height" aria-controls="bc-panel"
+            title="Drag to resize. Arrow keys adjust height; Home and End use the limits."></span>
       <span class="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-sm font-bold">B</span>
       {# One line only (Kris 2026-08-31): the subtitle went — the bar is thinner
          and the caveat line inside the history carries the honesty instead. #}
@@ -113,9 +116,8 @@
     #bc-bubble:hover { transform: scale(1.05); }
   }
 
-  /* Assistant replies carry the explanation; let them use nearly the full
-     message column. User bubbles keep their existing narrower measure. */
-  #bc-messages [data-bc-role="assistant"] > div { max-width: 95%; }
+  /* Let assistant replies use the message column's equal side gutters. */
+  #bc-messages [data-bc-role="assistant"] > div { max-width: 100%; }
 
   /* Side dock: above the phone breakpoint the panel is a fixed card on the
      right edge, and on a
@@ -188,18 +190,31 @@
      400px, so the sheet takes over there — the same edge the app shell's
      bottom strip already uses. concierge.js syncPageSpace() mirrors it. */
   @media (max-width: 767px) {
+    #bc-panel > header { position: relative; cursor: ns-resize; touch-action: none; user-select: none; }
+    #bc-panel > header button { cursor: pointer; touch-action: manipulation; }
+    #bc-resize-handle {
+      display: block;
+      position: absolute;
+      top: 2px;
+      left: calc(50% - 1.5rem);
+      width: 3rem;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.5);
+    }
+    #bc-resize-handle:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+    #bc-panel.bc-resizing { transition: none; }
     #bc-panel {
       position: fixed;
       left: 0;
       right: 0;
-      bottom: 0;
+      bottom: var(--bc-mobile-bottom, 0px);
       width: auto;
       max-width: none;
       margin: 0;
-      /* Full width, 60% height (Kris 2026-08-31, "75 too tall"): the page
-         above stays readable and navigable while talking. */
-      height: 60vh !important;
-      max-height: 60vh !important;
+      /* Start at 60%; the blue header adjusts the sheet within the viewport. */
+      height: var(--bc-mobile-height, 60vh) !important;
+      max-height: var(--bc-mobile-limit, calc(100dvh - 4rem)) !important;
       /* Docked, not floating: square bottom corners so no page shows through
          beneath it (Kris 2026-08-13). */
       border-left: 0;
@@ -208,6 +223,7 @@
       border-bottom-right-radius: 0;
     }
   }
+  @media (min-width: 768px) { #bc-resize-handle { display: none; } }
 
   /* Thinking bubble: the outline breathes baby blue and one blue dot cycles
      through the ellipsis — motion so it never reads as frozen. A status line

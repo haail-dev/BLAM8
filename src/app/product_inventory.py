@@ -27,7 +27,7 @@ _ENTRIES = [
     _entry('portal', 'Customer portal and job sheets', 'src/app/portal.py src/app/job_sheet_public.py', 'tests/test_pages_index.py', 'README.md', '/for-customers /capabilities'),
     _entry('mailboxes', 'Mailbox connections and overrides', 'src/app/mailbox.py src/app/oauth.py', 'tests/test_pages_index.py', 'README.md', '/help /how-it-works'),
     _entry('owner.assistant', 'Owner assistance, voice and confirmed actions', 'src/app/concierge_data.py src/app/concierge_actions.py src/app/concierge_tasks.py', 'tests/test_concierge_reads.py tests/test_concierge_confirm_first.py', 'docs/verified-behaviours.md', '/capabilities /help'),
-    _entry('product.help', 'Product help and setup proposals', 'src/app/concierge.py src/app/setup_catalogue.py src/app/setup_cards.py', 'tests/test_setup_catalogue.py', 'docs/product-knowledge.md', '/help /pages'),
+    _entry('product.help', 'Product help and setup proposals', 'src/app/concierge.py src/app/setup_catalogue.py src/app/setup_cards.py src/app/static/concierge.js src/app/templates/_concierge.html src/app/templates/onboarding/base.html', 'tests/test_setup_catalogue.py', 'docs/product-knowledge.md', '/help /pages'),
     _entry('billing', 'Plans and billing', 'src/app/plans.py src/app/billing.py src/app/usage.py', 'tests/test_plans_trial_banner.py', 'README.md', '/stripe /#pricing /help'),
     _entry('installable', 'Installable app and notifications', 'src/app/push.py src/app/main.py', 'tests/test_public_seo_pages.py', 'README.md', '/capabilities'),
     _entry('extensions', 'Restricted operational modules', 'src/app/operating_systems.py', 'tests/test_pages_index.py', 'docs/verified-behaviours.md', '/capabilities /partners', 'restricted'),
