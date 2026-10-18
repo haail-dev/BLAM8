@@ -1,0 +1,106 @@
+{% extends "app/base.html" %}
+{% block title %}Route · BLAM8{% endblock %}
+{% block heading %}Route{% endblock %}
+{% set back = ('/app/fleet/vehicles/' ~ m.vehicle.id ~ '/day/' ~ m.date, 'Manifest') %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm">
+    <p class="text-xs text-slate-400">
+      {{ m.vehicle.name }}{% if m.vehicle.registration %} · {{ m.vehicle.registration }}{% endif %}
+      · {{ '%g'|format(m.used_spaces) }}/{{ '%g'|format(m.total_spaces) }} spaces
+      · drops in board order — optimised stop order is the next slice
+    </p>
+  </div>
+
+  {% if m.unlocated or overflow %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+    {% if m.unlocated %}{{ m.unlocated }} booking{{ '' if m.unlocated == 1 else 's' }} on this van {{ 'has' if m.unlocated == 1 else 'have' }} no delivery postcode and can't be mapped — the manifest stays the complete picture.{% endif %}
+    {% if overflow %} Showing the first {{ stops|length }} stops — {{ overflow }} more are on the manifest.{% endif %}
+  </div>
+  {% endif %}
+
+  {% if not maps_key %}
+  <section class="rounded-xl border border-amber-300 bg-amber-50 p-5">
+    <p class="font-semibold text-navy text-sm">No Google Maps key configured</p>
+    <p class="mt-1 text-sm text-slate-600">Set <span class="font-mono text-xs">GOOGLE_PLACES_API_KEY</span> in the environment (with the Maps JavaScript API and Directions API enabled on the key) and this page draws the day's route.</p>
+  </section>
+  {% elif not stops %}
+  <section class="rounded-xl border border-slate-200 bg-white p-5">
+    <p class="text-sm text-slate-500">Nothing to map — no bookings on this van have postcodes yet. They're captured automatically from order emails when stated, or come in with an imported order book.</p>
+  </section>
+  {% else %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div id="map" class="w-full" style="height: 480px"></div>
+    <div id="route-stats" class="border-t border-slate-100 px-5 py-3 text-sm text-slate-600">Plotting route…</div>
+  </section>
+
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-navy">Stops</div>
+    <ol class="divide-y divide-slate-100">
+      {% if origin %}
+      <li class="px-5 py-2.5 text-sm text-slate-600 flex items-center gap-2">
+        <span class="rounded-full bg-navy text-white px-2 py-0.5 text-[11px] font-bold">Depot</span>
+        {{ origin }}{% if m.branch %} · {{ m.branch.name }}{% endif %}
+      </li>
+      {% endif %}
+      {% for s in stops %}
+      <li class="px-5 py-2.5 text-sm text-slate-600 flex items-center gap-2">
+        <span class="rounded-full {{ 'bg-blue-100 text-blue-700' if s.kind == 'collect' else 'bg-emerald-100 text-emerald-700' }} px-2 py-0.5 text-[11px] font-bold">{{ 'Collect' if s.kind == 'collect' else 'Deliver' }}</span>
+        <span class="font-mono text-xs">{{ s.postcode }}</span>
+        <span class="text-xs text-slate-400">{{ s.label }}</span>
+      </li>
+      {% endfor %}
+      {% if origin %}
+      <li class="px-5 py-2.5 text-sm text-slate-400 flex items-center gap-2">
+        <span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-[11px] font-bold">Return</span>
+        {{ origin }}
+      </li>
+      {% endif %}
+    </ol>
+  </section>
+
+  <script>
+    const ORIGIN = {{ origin|tojson }};
+    const STOPS = {{ stops|tojson }};
+    window.initRoute = function () {
+      const pts = STOPS.map(s => s.postcode + ", UK");
+      const origin = ORIGIN ? ORIGIN + ", UK" : pts[0];
+      const destination = ORIGIN ? ORIGIN + ", UK" : pts[pts.length - 1];
+      const middle = ORIGIN ? pts : pts.slice(1, -1);
+      const map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 53.8, lng: -1.55 }, zoom: 9, mapTypeControl: false, streetViewControl: false,
+      });
+      const renderer = new google.maps.DirectionsRenderer({ map: map });
+      new google.maps.DirectionsService().route({
+        origin: origin,
+        destination: destination,
+        waypoints: middle.map(p => ({ location: p, stopover: true })),
+        travelMode: google.maps.TravelMode.DRIVING,
+      }, function (res, status) {
+        const stats = document.getElementById("route-stats");
+        if (status !== "OK") {
+          stats.innerHTML = '<span class="text-rose-600 font-semibold">Couldn\'t plot the route (' + status +
+            ')</span> — if this says REQUEST_DENIED, enable the Maps JavaScript API and Directions API on the Google key.';
+          return;
+        }
+        renderer.setDirections(res);
+        const legs = res.routes[0].legs;
+        let metres = 0, secs = 0;
+        legs.forEach(l => { metres += l.distance.value; secs += l.duration.value; });
+        stats.textContent = legs.length + " leg" + (legs.length === 1 ? "" : "s") + " · " +
+          (metres / 1609.344).toFixed(1) + " miles · about " +
+          Math.round(secs / 60) + " min driving";
+      });
+    };
+    window.gm_authFailure = function () {
+      document.getElementById("route-stats").innerHTML =
+        '<span class="text-rose-600 font-semibold">Google rejected the key</span> — check the key and its API restrictions.';
+    };
+  </script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&callback=initRoute"></script>
+  {% endif %}
+
+  <p class="text-xs text-slate-400">Routes are an internal planning view — customers only ever hear dates and capacity. Stop order here is the booking order; smart sequencing lands in the next slice.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "app/base.html" %}
+{% block title %}Pricing · Field OS · Transport · BLAM8{% endblock %}
+{% block heading %}Pricing{% endblock %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set err = request.query_params.get('err') %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+  {% if msg %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">{{ 'Rate card saved.' if msg=='saved' else 'Quote saved to the job.' if msg=='quoted' else msg }}</div>{% endif %}
+  {% if err %}<div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">{{ 'That amount was not a number.' if err=='badamount' else err }}</div>{% endif %}
+
+  <p class="text-sm text-slate-500 max-w-2xl">Your rate card prices every job automatically — base + miles + pallets + drop, then a fuel surcharge, floored at a minimum. Miles are the straight-line collection→delivery distance from the postcodes the agent captured.</p>
+
+  <!-- Rate card -->
+  <form method="post" action="/app/tms/pricing/rate" class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rate card — {{ rate.name or 'Standard' }}</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      {% for f, label, prefix in [
+        ('base_charge','Base charge','£'), ('per_mile','Per mile','£'),
+        ('per_pallet','Per pallet space','£'), ('per_drop','Per drop','£'),
+        ('min_charge','Minimum charge','£'), ('fuel_pct','Fuel surcharge','%')] %}
+      <label class="block">
+        <span class="text-xs font-medium text-slate-500">{{ label }}</span>
+        <div class="mt-1 flex items-center rounded-lg border border-slate-300 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20">
+          <span class="pl-3 text-slate-400 text-sm">{{ prefix }}</span>
+          <input type="number" step="0.01" min="0" name="{{ f }}" value="{{ '%.2f'|format(rate[f]|float) }}"
+                 class="w-full rounded-lg px-2 py-2 text-sm text-slate-700 outline-none bg-transparent">
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+    <button data-save-row class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save rate card</button>
+  </form>
+
+  <!-- Quoted jobs -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Jobs &amp; live quotes</h2>
+      <span class="text-xs text-slate-400">{{ located }}/{{ total_rows }} have postcodes for mileage</span>
+    </div>
+    {% if rows %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+            <th class="py-2 pr-3">Ref</th><th class="py-2 pr-3">Date</th>
+            <th class="py-2 pr-3">Route</th><th class="py-2 pr-3 text-right">Miles</th>
+            <th class="py-2 pr-3 text-right">Pallets</th><th class="py-2 pr-3 text-right">Quote</th>
+            <th class="py-2 pl-3 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for r in rows %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 font-medium text-navy">{{ r.ref }}</td>
+            <td class="py-2 pr-3 text-slate-500">{{ r.date }}</td>
+            <td class="py-2 pr-3 text-slate-600">{{ r.collection }} → {{ r.delivery }}</td>
+            <td class="py-2 pr-3 text-right text-slate-600">{{ r.miles if r.miles is not none else '—' }}</td>
+            <td class="py-2 pr-3 text-right text-slate-600">{{ r.spaces }}</td>
+            <td class="py-2 pr-3 text-right font-semibold text-navy">
+              £{{ '%.2f'|format(r.quote.total) }}
+              {% if r.quote.min_applied %}<span class="ml-1 text-[10px] text-amber-600">min</span>{% endif %}
+            </td>
+            <td class="py-2 pl-3 text-right">
+              <form method="post" action="/app/tms/pricing/quote/{{ r.id }}" class="inline-flex items-center gap-2 justify-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="amount" value="{{ '%.2f'|format(r.quote.total) }}">
+                {% if r.stored is not none %}
+                <span class="text-xs text-emerald-600">saved £{{ '%.2f'|format(r.stored|float) }}</span>
+                {% endif %}
+                <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Use quote</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">No jobs to price yet — they'll appear here as the agent books them.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

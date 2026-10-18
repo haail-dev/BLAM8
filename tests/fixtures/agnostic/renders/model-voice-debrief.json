@@ -1,0 +1,4 @@
+{
+  "sha256": "9d54e4ddb2c7950e55945e5da866e7aa8a04a0c96e7ab2d5253f2aa99a5a1b6e",
+  "excerpt": "[{\"messages\":[{\"content\":\"The debrief transcript:\\n\\nThe customer asked for information.\",\"role\":\"user\"}],\"operation\":\"vcrm_debrief\",\"output_config\":{\"format\":{"
+}

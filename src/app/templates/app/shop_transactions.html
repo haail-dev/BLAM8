@@ -1,0 +1,93 @@
+{% extends "app/base.html" %}
+{% block title %}Orders · Storefront OS{% endblock %}
+{% block heading %}Orders{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'reserved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Held — the stock's reserved.</div>{% endif %}
+  {% if msg == 'created' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Enquiry logged.</div>{% endif %}
+  {% if msg == 'oos' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">Out of stock — not enough available to reserve that.</div>{% endif %}
+  {% if msg in ('completed','ready','cancelled','declined') %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Order updated.</div>{% endif %}
+  {% if msg == 'err' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">Pick a product and try again.</div>{% endif %}
+
+  <!-- New counter order -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold text-navy mb-3">New counter order</h2>
+    <form method="post" action="/app/shop/transactions" class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label class="col-span-2 text-xs text-slate-500">Product ID
+        <input name="product_id" required class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="paste from catalogue">
+      </label>
+      <label class="text-xs text-slate-500">Qty
+        <input name="qty" value="1" inputmode="decimal" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+      </label>
+      <label class="text-xs text-slate-500">Collect on
+        <input name="ready_date" type="date" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+      </label>
+      <label class="text-xs text-slate-500">Customer email
+        <input name="customer_email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="optional">
+      </label>
+      <div class="flex gap-2">
+        <button name="reserve" value="1" class="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand/90 transition">Reserve</button>
+        <button name="reserve" value="0" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Log</button>
+      </div>
+    </form>
+    <p class="text-xs text-slate-400 mt-2">Reserve atomically holds the stock (never over-reserves). Log records an enquiry without holding.</p>
+  </div>
+
+  <!-- Filter -->
+  <div class="flex items-center gap-2 text-xs">
+    {% for s in ['', 'reserved', 'ready', 'completed', 'cancelled'] %}
+    <a href="/app/shop/transactions{% if s %}?status={{ s }}{% endif %}"
+       class="rounded-full px-3 py-1 font-semibold {% if status == s %}bg-brand text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">{{ s or 'All' }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Orders -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-navy">Orders</h2>
+      <span class="text-xs text-slate-400">{{ txns|length }}</span>
+    </div>
+    {% if txns %}
+    <ul class="divide-y divide-slate-50">
+      {% for t in txns %}
+      <li class="px-5 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-slate-700 truncate">
+                {% for it in t.shop_transaction_items %}{{ it.qty|int }}× {{ it.product_name }}{% if not loop.last %}, {% endif %}{% else %}Order{% endfor %}
+              </span>
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold
+                {% if t.status == 'completed' %}bg-slate-100 text-slate-500
+                {% elif t.status == 'ready' %}bg-emerald-100 text-emerald-700
+                {% elif t.status == 'reserved' %}bg-amber-100 text-amber-700
+                {% elif t.status in ('cancelled','declined') %}bg-red-100 text-red-700
+                {% else %}bg-brand-50 text-brand{% endif %}">{{ t.status }}</span>
+            </div>
+            <div class="text-xs text-slate-400 truncate mt-0.5">
+              {% if t.total_amount %}£{{ '%.2f'|format(t.total_amount|float) }}{% endif %}
+              {% if t.ready_date %} · collect {{ t.ready_date | pretty_date }}{% endif %}
+              · {{ t.channel }}
+            </div>
+          </div>
+          {% if t.status not in ('completed','cancelled','declined') %}
+          <form method="post" action="/app/shop/transactions/{{ t.id }}/status" class="shrink-0 flex items-center gap-1">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            {% if t.status != 'ready' %}<button name="status" value="ready" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Ready</button>{% endif %}
+            <button name="status" value="completed" class="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Complete</button>
+            <button name="status" value="cancelled" class="rounded-lg border border-red-300 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition">Cancel</button>
+          </form>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400 text-center">No orders{% if status %} in that state{% endif %} yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

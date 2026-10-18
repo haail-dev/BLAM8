@@ -1,0 +1,10 @@
+begin;
+drop function if exists concierge_live_status(uuid,uuid,date,integer);
+drop function if exists concierge_live_close(uuid,uuid,uuid);
+drop function if exists concierge_live_heartbeat(uuid,uuid,uuid,integer,integer);
+drop function if exists concierge_live_reserve(uuid,uuid,uuid,date,integer,integer);
+drop function if exists concierge_live_used_seconds(uuid,uuid,date);
+drop table if exists concierge_live_sessions;
+drop table if exists concierge_live_rollout;
+drop table if exists concierge_live_tier_limits;
+commit;

@@ -1,0 +1,210 @@
+{% extends "admin/base.html" %}
+{% block title %}Call debrief · Voice CRM{% endblock %}
+{% block content %}
+<a href="/admin/voice-crm" class="text-sm text-slate-500 hover:text-navy">← Voice CRM</a>
+<h1 class="text-xl font-bold text-navy mt-2 mb-1">Call debrief</h1>
+<p class="text-sm text-slate-500 mb-4">{% if existing %}Logging another call to <span class="font-semibold text-navy">{{ existing.business_name }}</span>.{% else %}Paste the Maps link (Google or Apple), then talk through the call. Nothing is saved until you approve.{% endif %}</p>
+
+{% if not whisper_ready %}
+<div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+  <span class="font-semibold">Transcription isn't configured</span> — configure the selected speech provider before recording a debrief.
+</div>
+{% endif %}
+
+<div id="vc-error" class="hidden mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+
+{# ── Step 1: the Maps link ─────────────────────────────────────────────── #}
+{% if not existing %}
+<div class="rounded-xl bg-white border border-slate-200 p-4 mb-4">
+  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1.5">Maps link — Google or Apple <span class="normal-case font-normal">(optional — you can just record)</span></label>
+  <div class="flex gap-2">
+    <input id="vc-maps-url" type="url" inputmode="url" placeholder="https://maps.app.goo.gl/… or https://maps.apple.com/…" autocomplete="off"
+           class="flex-1 min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-navy">
+    <button id="vc-resolve" type="button" class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition whitespace-nowrap">Look up</button>
+  </div>
+  <div id="vc-resolved" class="hidden mt-3 text-sm text-slate-600"></div>
+</div>
+{% endif %}
+
+{# ── Step 2: record ────────────────────────────────────────────────────── #}
+<div class="rounded-xl bg-white border border-slate-200 p-4 mb-4 text-center">
+  <button id="vc-record" type="button"
+          class="inline-flex flex-col items-center justify-center h-28 w-28 rounded-full bg-rose-500 text-white shadow-lg hover:opacity-90 active:scale-95 transition select-none">
+    <svg class="h-9 w-9" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0H3a9 9 0 0 0 8 8.94V22h2v-2.06A9 9 0 0 0 21 11h-2z"/></svg>
+    <span id="vc-record-label" class="mt-1 text-xs font-bold tracking-wide">RECORD</span>
+  </button>
+  <p id="vc-record-hint" class="mt-3 text-xs text-slate-400">Tap, talk through the call, tap again to finish.</p>
+</div>
+
+{# ── Step 3: review + approve ──────────────────────────────────────────── #}
+<form id="vc-review" method="post" action="/admin/voice-crm/approve" class="hidden rounded-xl bg-white border border-slate-200 p-4 space-y-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <input type="hidden" name="prospect_id" id="f-prospect_id" value="{{ existing.id if existing else '' }}">
+  <input type="hidden" name="maps_url" id="f-maps_url" value="{{ existing.maps_url or '' if existing else '' }}">
+  <input type="hidden" name="lat" id="f-lat" value="{{ existing.lat if existing and existing.lat is not none else '' }}">
+  <input type="hidden" name="lng" id="f-lng" value="{{ existing.lng if existing and existing.lng is not none else '' }}">
+  <input type="hidden" name="extraction_json" id="f-extraction_json" value="">
+  <input type="hidden" name="transcript" id="f-transcript" value="">
+
+  <h2 class="text-sm font-bold text-navy">Review — nothing is saved yet</h2>
+  {% set inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-navy" %}
+  {% set lbl = "block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1" %}
+  {% macro val(field) %}{{ existing[field] or '' if existing else '' }}{% endmacro %}
+
+  <div><label class="{{ lbl }}">Business name</label>
+    <input class="{{ inp }}" name="business_name" id="f-business_name" required value="{{ val('business_name') }}"></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Status</label>
+      <select class="{{ inp }}" name="status" id="f-status">
+        {% for s in statuses %}<option value="{{ s }}" {{ 'selected' if existing and existing.status == s }}>{{ s }}</option>{% endfor %}
+      </select></div>
+    <div><label class="{{ lbl }}">Call outcome</label>
+      <select class="{{ inp }}" name="outcome" id="f-outcome">
+        {% for o in outcomes %}<option value="{{ o }}">{{ o.replace('_', ' ') }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <div><label class="{{ lbl }}">Call summary</label>
+    <textarea class="{{ inp }}" name="summary" id="f-summary" rows="2"></textarea></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Next action</label>
+      <input class="{{ inp }}" name="next_action" id="f-next_action" value="{{ val('next_action') }}"></div>
+    <div><label class="{{ lbl }}">By date</label>
+      <input class="{{ inp }}" type="date" name="next_action_date" id="f-next_action_date" value="{{ val('next_action_date') }}"></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Contact name</label>
+      <input class="{{ inp }}" name="contact_name" id="f-contact_name" value="{{ val('contact_name') }}"></div>
+    <div><label class="{{ lbl }}">Phone</label>
+      <input class="{{ inp }}" name="phone" id="f-phone" value="{{ val('phone') }}"></div>
+  </div>
+  <div><label class="{{ lbl }}">What they do</label>
+    <input class="{{ inp }}" name="description" id="f-description" value="{{ val('description') }}"></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Location</label>
+      <input class="{{ inp }}" name="location" id="f-location" value="{{ val('location') }}"></div>
+    <div><label class="{{ lbl }}">Website</label>
+      <input class="{{ inp }}" name="website" id="f-website" value="{{ val('website') }}"></div>
+  </div>
+  <div><label class="{{ lbl }}">Address</label>
+    <input class="{{ inp }}" name="address" id="f-address" value="{{ val('address') }}"></div>
+  <div><label class="{{ lbl }}">Notes</label>
+    <textarea class="{{ inp }}" name="notes" id="f-notes" rows="2">{{ val('notes') }}</textarea></div>
+
+  <details class="text-sm">
+    <summary class="cursor-pointer text-slate-500 font-medium">Transcript</summary>
+    <p id="vc-transcript-view" class="mt-2 whitespace-pre-wrap text-slate-600 text-sm bg-slate-50 rounded-lg p-3"></p>
+  </details>
+
+  <div class="flex items-center gap-3 pt-1">
+    <button type="submit" class="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 transition">Approve &amp; save</button>
+    <a href="/admin/voice-crm" class="rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-400 hover:text-rose-500 transition">Discard</a>
+  </div>
+</form>
+
+<script>
+(function () {
+  var CSRF = {{ csrf_token(request) | tojson }};
+  var err = document.getElementById('vc-error');
+  function showError(msg) { err.textContent = msg; err.classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'}); }
+  function clearError() { err.classList.add('hidden'); }
+  function set(id, v) { var el = document.getElementById(id); if (el && v != null && v !== '') el.value = v; }
+
+  // ── Step 1: resolve the Maps link ──
+  var resolveBtn = document.getElementById('vc-resolve');
+  if (resolveBtn) resolveBtn.addEventListener('click', function () {
+    clearError();
+    var url = (document.getElementById('vc-maps-url').value || '').trim();
+    if (!url) return showError('Paste a Google Maps link first.');
+    resolveBtn.disabled = true; resolveBtn.textContent = 'Looking…';
+    fetch('/admin/voice-crm/resolve', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({maps_url: url, csrf_token: CSRF})
+    }).then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
+      .then(function (res) {
+        resolveBtn.disabled = false; resolveBtn.textContent = 'Look up';
+        if (!res.ok) return showError(res.j.detail || 'Lookup failed.');
+        var p = res.j.parsed, ex = res.j.existing, box = document.getElementById('vc-resolved');
+        set('f-maps_url', p.maps_url); set('f-lat', p.lat); set('f-lng', p.lng);
+        set('f-business_name', p.business_name); set('f-address', p.address);
+        if (ex) {
+          document.getElementById('f-prospect_id').value = ex.id;
+          ['business_name', 'contact_name', 'description', 'location', 'address',
+           'phone', 'website', 'next_action', 'next_action_date', 'notes'].forEach(function (k) { set('f-' + k, ex[k]); });
+          var st = document.getElementById('f-status'); if (ex.status) st.value = ex.status;
+          box.innerHTML = '<span class="font-semibold text-navy"></span> — already in the pipeline (' + ex.status + '); this call will attach to it.';
+          box.querySelector('span').textContent = ex.business_name;
+        } else {
+          box.textContent = (p.business_name || 'Pin') + (p.lat ? ' · ' + p.lat.toFixed(4) + ', ' + p.lng.toFixed(4) : '') + ' — new prospect.';
+        }
+        box.classList.remove('hidden');
+      }).catch(function () { resolveBtn.disabled = false; resolveBtn.textContent = 'Look up'; showError('Lookup failed — check the connection.'); });
+  });
+
+  // ── Step 2: record → transcribe → extract ──
+  var recBtn = document.getElementById('vc-record'), recLabel = document.getElementById('vc-record-label');
+  var recHint = document.getElementById('vc-record-hint');
+  var recorder = null, chunks = [], timerId = null, t0 = 0, busy = false;
+  var MIME = (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm')) ? 'audio/webm'
+           : (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/mp4')) ? 'audio/mp4' : '';
+
+  function tick() {
+    var s = Math.floor((Date.now() - t0) / 1000);
+    recLabel.textContent = Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  recBtn.addEventListener('click', function () {
+    if (busy) return;
+    clearError();
+    if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+    if (!navigator.mediaDevices || !window.MediaRecorder) return showError('This browser cannot record audio.');
+    navigator.mediaDevices.getUserMedia({audio: true}).then(function (stream) {
+      chunks = [];
+      recorder = new MediaRecorder(stream, MIME ? {mimeType: MIME} : undefined);
+      recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      recorder.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        clearInterval(timerId);
+        upload(new Blob(chunks, {type: recorder.mimeType || MIME || 'audio/webm'}));
+      };
+      recorder.start();
+      t0 = Date.now(); timerId = setInterval(tick, 250); tick();
+      recBtn.classList.add('animate-pulse');
+      recHint.textContent = 'Recording — tap again to finish.';
+    }).catch(function () { showError('Microphone blocked — allow mic access for this site and try again.'); });
+  });
+
+  function upload(blob) {
+    busy = true;
+    recBtn.classList.remove('animate-pulse'); recBtn.classList.add('opacity-60');
+    recLabel.textContent = '…'; recHint.textContent = 'Transcribing and structuring — a few seconds.';
+    var ext = (blob.type.indexOf('mp4') > -1) ? 'm4a' : 'webm';
+    var fd = new FormData();
+    fd.append('csrf_token', CSRF);
+    fd.append('prospect_id', document.getElementById('f-prospect_id').value || '');
+    fd.append('audio', blob, 'debrief.' + ext);
+    fetch('/admin/voice-crm/debrief', {method: 'POST', body: fd})
+      .then(function (r) { return r.json().then(function (j) { return {ok: r.ok, j: j}; }); })
+      .then(function (res) {
+        busy = false; recBtn.classList.remove('opacity-60');
+        recLabel.textContent = 'RECORD'; recHint.textContent = 'Tap to record again (replaces this debrief).';
+        if (!res.ok) return showError(res.j.detail || 'Transcription failed.');
+        var f = res.j.fields;
+        document.getElementById('f-transcript').value = res.j.transcript;
+        document.getElementById('vc-transcript-view').textContent = res.j.transcript;
+        document.getElementById('f-extraction_json').value = JSON.stringify(res.j.raw);
+        ['business_name', 'contact_name', 'next_action', 'next_action_date',
+         'description', 'location', 'phone', 'website', 'notes', 'summary'].forEach(function (k) { set('f-' + k, f[k]); });
+        if (f.status) document.getElementById('f-status').value = f.status;
+        if (f.outcome) document.getElementById('f-outcome').value = f.outcome;
+        document.getElementById('vc-review').classList.remove('hidden');
+        document.getElementById('vc-review').scrollIntoView({behavior: 'smooth'});
+      }).catch(function () {
+        busy = false; recBtn.classList.remove('opacity-60');
+        recLabel.textContent = 'RECORD'; recHint.textContent = 'Tap, talk through the call, tap again to finish.';
+        showError('Upload failed — check the connection and try again.');
+      });
+  }
+})();
+</script>
+{% endblock %}

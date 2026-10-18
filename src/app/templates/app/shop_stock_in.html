@@ -1,0 +1,168 @@
+{% extends "app/base.html" %}
+{% block title %}Photograph delivery · Storefront OS{% endblock %}
+{% block heading %}Photograph delivery{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+
+  <p class="text-sm text-slate-500">
+    Photograph a delivery note, invoice, shelf or chalkboard. BLAM8 reads the lines,
+    you check the ones it got right, and the shelf numbers go up — no typing.
+  </p>
+
+  <!-- Upload / camera -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <form id="ocr-form" class="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
+      <label class="text-xs text-slate-500">Photo
+        <input id="ocr-image" name="image" type="file" accept="image/*" capture="environment" required
+               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-slate-600">
+      </label>
+      <label class="text-xs text-slate-500">Kind
+        <select id="ocr-kind" name="kind" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <option value="delivery_note">Delivery note</option>
+          <option value="invoice">Supplier invoice</option>
+          <option value="shelf">Shelf</option>
+          <option value="chalkboard">Chalkboard</option>
+        </select>
+      </label>
+      <button id="ocr-submit" type="submit"
+              class="sm:col-span-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90 transition">
+        Read the delivery
+      </button>
+    </form>
+    <p id="ocr-status" class="mt-3 text-sm text-slate-400 hidden"></p>
+  </div>
+
+  <!-- Review table (JS-populated) -->
+  <div id="ocr-review" class="bg-white rounded-xl border border-slate-200 overflow-hidden hidden">
+    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Review the lines</h2>
+      <p class="text-xs text-slate-400 mt-0.5">
+        <span class="text-emerald-600 font-semibold">Green</span> lines are pre-checked;
+        <span class="text-amber-600 font-semibold">amber</span> need a glance;
+        greyed are low-confidence and not applied. Nothing hits stock until you tap apply.
+      </p>
+    </div>
+    <form id="apply-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <table class="w-full text-sm">
+        <thead class="text-[11px] uppercase tracking-wide text-slate-400">
+          <tr class="border-b border-slate-100">
+            <th class="px-3 py-2 text-left w-8"></th>
+            <th class="px-3 py-2 text-left">Product</th>
+            <th class="px-3 py-2 text-right w-20">Qty</th>
+            <th class="px-3 py-2 text-left w-24">Unit</th>
+            <th class="px-3 py-2 text-left w-32">Best before</th>
+            <th class="px-3 py-2 text-right w-24">Confidence</th>
+          </tr>
+        </thead>
+        <tbody id="ocr-rows" class="divide-y divide-slate-50"></tbody>
+      </table>
+      <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-between">
+        <span id="apply-note" class="text-xs text-slate-400"></span>
+        <button type="submit"
+                class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
+          Apply to stock
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div id="ocr-done" class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 hidden"></div>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById('ocr-form');
+  const statusEl = document.getElementById('ocr-status');
+  const review = document.getElementById('ocr-review');
+  const rowsEl = document.getElementById('ocr-rows');
+  const applyForm = document.getElementById('apply-form');
+  const applyNote = document.getElementById('apply-note');
+  const done = document.getElementById('ocr-done');
+  const csrf = applyForm.querySelector('input[name=csrf_token]').value;
+  let jobId = null;
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+  const BANDS = {
+    apply:  { badge: 'bg-emerald-100 text-emerald-700', label: 'High',  row: '' },
+    review: { badge: 'bg-amber-100 text-amber-700',     label: 'Check', row: 'bg-amber-50/40' },
+    skip:   { badge: 'bg-slate-100 text-slate-500',     label: 'Low',   row: 'opacity-60' },
+  };
+
+  function renderRows(lines) {
+    rowsEl.innerHTML = '';
+    lines.forEach((ln, i) => {
+      const b = BANDS[ln.band] || BANDS.skip;
+      const pct = Math.round((ln.confidence || 0) * 100);
+      const tr = document.createElement('tr');
+      tr.className = 'align-middle ' + b.row;
+      tr.innerHTML =
+        '<td class="px-3 py-2">' +
+          '<input type="checkbox" name="line_checked_' + i + '" ' + (ln.checked ? 'checked' : '') + '></td>' +
+        '<td class="px-3 py-2">' +
+          '<input name="line_name_' + i + '" value="' + esc(ln.name) + '" class="w-full rounded border border-slate-200 px-2 py-1 text-sm"></td>' +
+        '<td class="px-3 py-2 text-right">' +
+          '<input name="line_qty_' + i + '" value="' + esc(ln.qty) + '" inputmode="decimal" class="w-16 rounded border border-slate-200 px-2 py-1 text-sm text-right"></td>' +
+        '<td class="px-3 py-2">' +
+          '<input name="line_unit_' + i + '" value="' + esc(ln.unit || 'each') + '" class="w-20 rounded border border-slate-200 px-2 py-1 text-sm"></td>' +
+        '<td class="px-3 py-2">' +
+          '<input name="line_best_before_' + i + '" type="date" value="' + esc(ln.best_before || '') + '" class="w-full rounded border border-slate-200 px-2 py-1 text-sm"></td>' +
+        '<td class="px-3 py-2 text-right">' +
+          '<span class="rounded-full px-2 py-0.5 text-[11px] font-semibold ' + b.badge + '">' + b.label + ' ' + pct + '%</span></td>' +
+        '<input type="hidden" name="line_unit_price_' + i + '" value="' + esc(ln.unit_price == null ? '' : ln.unit_price) + '">';
+      rowsEl.appendChild(tr);
+    });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const file = document.getElementById('ocr-image').files[0];
+    if (!file) return;
+    statusEl.textContent = 'Reading the delivery…';
+    statusEl.classList.remove('hidden');
+    document.getElementById('ocr-submit').disabled = true;
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('kind', document.getElementById('ocr-kind').value);
+    fd.append('csrf_token', csrf);
+    try {
+      const r = await fetch('/api/shop/ocr', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.detail || 'Extraction failed');
+      jobId = data.job_id;
+      if (!data.lines.length) {
+        statusEl.textContent = 'No product lines read — try a clearer, closer photo.';
+        document.getElementById('ocr-submit').disabled = false;
+        return;
+      }
+      statusEl.classList.add('hidden');
+      renderRows(data.lines);
+      const n = data.lines.filter(l => l.checked).length;
+      applyNote.textContent = n + ' of ' + data.lines.length + ' lines ready to apply.';
+      review.classList.remove('hidden');
+    } catch (err) {
+      statusEl.textContent = 'Could not read that photo — ' + err.message;
+    } finally {
+      document.getElementById('ocr-submit').disabled = false;
+    }
+  });
+
+  applyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!jobId) return;
+    const r = await fetch('/api/shop/ocr/' + jobId + '/apply', {
+      method: 'POST', body: new FormData(applyForm),
+    });
+    const data = await r.json();
+    if (r.ok && data.ok) {
+      review.classList.add('hidden');
+      const a = data.applied || {};
+      done.textContent = 'Stocked in — ' + (a.created || 0) + ' new, ' + (a.updated || 0) +
+                         ' topped up. The shelf numbers are live.';
+      done.classList.remove('hidden');
+    }
+  });
+})();
+</script>
+{% endblock %}

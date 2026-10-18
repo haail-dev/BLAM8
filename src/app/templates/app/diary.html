@@ -1,0 +1,741 @@
+{% extends "app/base.html" %}
+{% block title %}Diary · BLAM8{% endblock %}
+{% block heading %}{{ 'Office diary' if fleet_on else 'Diary' }}{% endblock %}
+{% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
+{% block content %}
+
+{# Month-grid day cells (Kris 2026-09-13, replacing the 08-31 border-only
+   states): the box is split into one bar per diary type the day serves —
+   the spaces first, then each appointment service in its own colour — each
+   growing from the bottom as the day fills and reaching the top when that
+   type is full. The border still pulses amber while something on the day
+   is offered to a customer who hasn't picked yet; the offered share of a
+   bar is drawn amber too. Solid text-on-colour "Full" only when EVERY type
+   is full. #}
+<style>
+  @keyframes cal-pulse-amber {
+    0%, 100% { border-color: rgb(251 191 36); box-shadow: 0 0 0 0 rgb(245 158 11 / 0); }
+    50%      { border-color: rgb(245 158 11); box-shadow: 0 0 8px 1px rgb(245 158 11 / 0.45); }
+  }
+  .cal-day-offered { border-color: rgb(251 191 36); animation: cal-pulse-amber 2.4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    .cal-day-offered { animation: none; }
+  }
+</style>
+
+{# A STAYS diary's month cell (Kris 2026-09-13: "make the Diary view smart,
+   especially if it's acting as a couple of diary types"): who is in against
+   the spaces, then each appointment service's count on the day —
+   "3 in · 27 free · 2 meet & greets". Nothing in reads as it always did. #}
+{% macro stay_cell(d) -%}
+  {%- set bits = [] -%}
+  {%- set full_appts = d.types[1:]|selectattr('full')|map(attribute='key')|list -%}
+  {%- if d.full %}{% set _ = bits.append('spaces full') %}
+  {%- elif d.stay_used %}{% set _ = bits.append(d.stay_used ~ ' in · ' ~ d.free ~ ' free') %}
+  {%- elif not d.working %}{% set _ = bits.append('closed') %}
+  {%- elif d.notice_blocked %}{% set _ = bits.append('needs ' ~ d.notice_hours ~ 'h notice') %}
+  {%- elif not d.appts %}{% set _ = bits.append('free') %}{% endif -%}
+  {%- for a in d.appts %}{% set _ = bits.append((a.name|lower ~ 's full') if a.name in full_appts else (a.count ~ ' ' ~ (a.name|lower) ~ ('' if a.count == 1 else 's'))) %}{% endfor -%}
+  {%- if d.offered_count %}{% set _ = bits.append(d.offered_count ~ ' offered') %}{% endif -%}
+  {{ bits|join(' · ') }}
+{%- endmacro %}
+
+{# One kind's month cell (docs/plan-diary-multiview.md stage 3): the Stays
+   view says who comes and goes; an appointment view says how many of its day
+   are taken — "3 of 4" when it has a max a day — or that it isn't on today. #}
+{% macro kind_cell(d) -%}
+  {%- set bits = [] -%}
+  {%- if d.show_kind == 'stays' -%}
+    {%- if d.all_full %}{% set _ = bits.append('spaces full') %}
+    {%- elif d.stay_in or d.stay_out or d.stay_used %}{% set _ = bits.append(d.stay_in ~ ' in · ' ~ d.stay_out ~ ' out · ' ~ d.free ~ ' free') %}
+    {%- elif not d.working %}{% set _ = bits.append('closed') %}
+    {%- else %}{% set _ = bits.append('free') %}{% endif -%}
+  {%- else -%}
+    {%- set t = d.kind_type -%}
+    {%- if not t %}{% set _ = bits.append('—') %}
+    {%- elif t.off %}{% set _ = bits.append('not on today') %}
+    {%- elif t.max %}{% set _ = bits.append(('full · ' if t.full else '') ~ t.used ~ ' of ' ~ t.max) %}
+    {%- elif t.full %}{% set _ = bits.append('full') %}
+    {%- elif t.used %}{% set _ = bits.append(t.used ~ ' booked') %}
+    {%- else %}{% set _ = bits.append('free') %}{% endif -%}
+  {%- endif -%}
+  {%- if d.offered_count %}{% set _ = bits.append(d.offered_count ~ ' offered') %}{% endif -%}
+  {{ bits|join(' · ') }}
+{%- endmacro %}
+
+{% macro booking_row(b) %}
+{# The row reads top to bottom (Kris 2026-09-21: "make the Diary booking chip
+   a little cleaner"): what's booked, when, who booked it, then the links on
+   a line of their own — they used to wrap through the address — and a footer
+   with the status chip at the left edge and its button at the right. #}
+<li class="py-3" id="bk-{{ b.id }}">
+  <p class="font-medium text-navy text-sm">
+    {% if b.dot %}<span class="inline-block h-2 w-2 rounded-full mr-1.5 align-middle {{ b.dot }}" aria-hidden="true"></span>{% endif -%}
+    {% if mode != 'slots' and b.window != 'day' and not b.is_stay %}<span class="text-slate-400 font-semibold uppercase text-xs mr-1.5">{{ b.window }}</span>{% endif -%}
+    {{ b.summary }}
+  </p>
+  {% if b.is_stay and b.stay_label %}<p class="mt-0.5 text-xs font-medium text-emerald-700">{{ b.stay_label }}</p>
+  {% elif b.time_label %}<p class="mt-0.5 text-xs font-medium text-emerald-700">{{ b.time_label }}</p>{% endif %}
+  <p class="mt-0.5 text-xs text-slate-500 break-words">
+    {% if b.source == 'calendar' %}from your calendar{% elif b.source == 'manual' %}added manually{% else %}booked by the agent{% endif %}
+    {%- if b.contact %} · {{ b.contact }}{% endif %}
+  </p>
+  {#- The gathered details fold behind a "details" link (Kris 2026-09-20):
+      a day of subjects, care notes and drop-off times read as a wall; the paragraph
+      opens on demand. -#}
+  {%- set detail_keys = (b.details or {}).keys() | reject('equalto', 'calendar_event_missing_at') | list %}
+  <p class="mt-0.5 text-xs text-slate-500" data-booking-links>
+    {% if b.source == 'email' and b.contact %}<a class="text-brand hover:underline" href="/app/conversations/view?{{ {'contact': b.contact}|urlencode }}{% if b.email_log_id %}#log-{{ b.email_log_id }}{% endif %}">view conversation</a> · {% endif -%}
+    <a class="text-brand hover:underline" href="/app/diary/{{ b.id }}">job page</a>
+    {%- if detail_keys %} · <button type="button" class="text-brand hover:underline" data-details-toggle aria-expanded="false" aria-controls="details-{{ b.id }}">details</button>{% endif %}
+  </p>
+  {% if detail_keys %}
+  <p class="mt-0.5 text-xs text-slate-400" id="details-{{ b.id }}" data-booking-details hidden>
+    {% for k in detail_keys %}{{ k }}: {{ b.details[k] }}{% if not loop.last %} · {% endif %}{% endfor %}
+  </p>
+  {% endif %}
+  <div class="mt-2 flex items-center justify-between gap-2 flex-wrap">
+    {# The chips take the left edge, the buttons the right (Kris 2026-09-21:
+       "keep the cancel button bottom right, move the confirmed chip to the
+       left side") — two groups, so a wrapped line never mixes them. #}
+    <div class="flex items-center gap-2 flex-wrap min-w-0" data-booking-status>
+      {# The event behind this booking was deleted BY HAND in the connected
+         calendar (busy-sync flags it; Julius 2026-09-03). The booking is never
+         auto-cancelled — the chip surfaces the mismatch instead. #}
+      {% if b.details and b.details.calendar_event_missing_at %}
+      <span class="rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold"
+            title="The calendar event behind this booking was deleted in your connected calendar. The booking still stands — if the visit is off, cancel it here; otherwise re-add it to your calendar.">Calendar event missing</span>
+      {% endif %}
+      {% if b.status == 'offered' %}
+      <span class="rounded-full bg-slate-200 text-slate-600 px-2.5 py-0.5 text-xs font-semibold"
+            {% if b.offer_until_label %}title="Offered to the customer — releases {{ b.offer_until_label }}"{% endif %}>
+        Offered{% if b.offer_countdown %} · {{ b.offer_countdown }}{% elif b.offer_until_label %} · until {{ b.offer_until_label }}{% endif %}
+      </span>
+      {% elif b.status == 'proposed' %}
+      <span class="rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">Proposed</span>
+      {% else %}
+      <span class="rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold">Confirmed</span>
+      {% endif %}
+    </div>
+    <div class="ml-auto flex items-center gap-2 flex-none" data-booking-actions>
+      {% if b.status == 'offered' %}
+      <form method="post" action="/app/diary/{{ b.id }}/status"
+            onsubmit="return confirm('Release this offered slot? The customer will no longer be able to pick it.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="cancelled">
+        <button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Release</button>
+      </form>
+      {% elif b.status == 'proposed' %}
+      <form method="post" action="/app/diary/{{ b.id }}/status">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="confirmed">
+        <button class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition">Confirm</button>
+      </form>
+      <form method="post" action="/app/diary/{{ b.id }}/status">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="declined">
+        <button class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Decline</button>
+      </form>
+      {% else %}
+      {#- Cancelling a confirmed booking with a contact also drafts the customer
+          a note (src/app/hand_cancel.py) — the prompt says so (Kris 2026-09-20: "it
+          doesn't say anything about it writing a draft for you to send"). -#}
+      <form method="post" action="/app/diary/{{ b.id }}/status"
+            onsubmit="return confirm('Cancel this booking? It frees the slot in the diary{% if b.contact %} and drafts a message to the customer for you to check, edit and send{% endif %}.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="cancelled">
+        <button class="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition">Cancel booking</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</li>
+{% endmacro %}
+
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4" data-tour-diary="{{ 'stays' if is_stay else mode }}" data-tour-types="{{ 1 + (service_types|length if is_mixed else 0) }}">
+
+  {% if msg == 'added' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Booking added to the diary.</div>
+  {% elif msg == 'full' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">That window is already at capacity — the booking was not added.</div>
+  {% elif msg == 'baddate' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That date didn't look right — use the date picker.</div>
+  {% elif msg == 'cancelled_all' %}
+  <div data-flash data-flash-hold class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Every live booking cancelled{% if request.query_params.get('n') %} ({{ request.query_params.get('n') }}){% endif %} — the calendar events went with them.</div>
+  {% elif msg == 'badwindow' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That window isn't part of your current diary set-up — pick one from the list. (If you just changed diary settings, the form may have been stale; try again.)</div>
+  {% endif %}
+
+  {# The toolbar went (Kris 2026-09-13: "all of this doesn't need to be
+     displayed" — the settings receipt, the cancel-all control, + Add
+     booking). Settings sit behind the masthead cog, the reset lives on the
+     settings page, and a day panel's "+ Add here" is the way to add by hand. #}
+
+  {% if not calendar_connected %}
+  <!-- Calendar Connect — first-open ask: connect, then the busy-sync merges -->
+  {% set cal_name = 'Outlook' if provider == 'microsoft' else 'Google' %}
+  <section class="rounded-xl border border-brand/30 bg-brand-50 p-5 flex items-center justify-between gap-4 flex-wrap">
+    <div class="min-w-0">
+      <p class="font-semibold text-navy text-sm">Keep your {{ cal_name }} calendar in step with BLAM8</p>
+      <p class="mt-1 text-sm text-slate-600">Connect it and we'll merge your existing appointments in as busy time (so the agent can never double-book you), and every confirmed booking will appear in your calendar. You can remove any merged block below afterwards.</p>
+    </div>
+    <a href="/oauth/connect?provider={{ provider }}"
+       class="flex-none rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Connect calendar</a>
+  </section>
+  {% endif %}
+
+  <!-- Manual add (standalone v1 — works without the email module). Opened by
+       a day panel's "+ Add here"; closes with its own × . -->
+  {% if series_preview %}
+  {# A standing series to confirm (Kris 2026-09-21): every date to the
+     horizon as a tickable chip, closed days greyed, full days flagged; the
+     times editable; one button books the ticked ones. #}
+  <section id="lockin" class="bg-white rounded-xl border border-emerald-200 scroll-mt-20" data-series-preview>
+    <form method="post" action="/app/diary/add" class="p-5 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {% if add_prefill.promise %}<input type="hidden" name="promise_id" value="{{ add_prefill.promise }}">{% endif %}
+      <input type="hidden" name="summary" value="{{ series_preview.title }}">
+      <input type="hidden" name="contact" value="{{ add_prefill.contact }}">
+      <input type="hidden" name="subjects_text" value="{{ add_prefill.subjects }}">
+      {% if add_prefill.service %}<input type="hidden" name="service" value="{{ add_prefill.service }}">{% endif %}
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-navy">{{ series_preview.title }}</p>
+          <p class="mt-0.5 text-sm text-slate-600">{{ series_preview.line }}</p>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <label class="text-slate-500" for="series_from">Drop-off</label>
+          <input id="series_from" name="series_from" type="time" value="{{ series_preview.from }}" class="rounded-lg border-slate-300 border px-2 py-1 text-sm">
+          <label class="text-slate-500" for="series_to">Collection</label>
+          <input id="series_to" name="series_to" type="time" value="{{ series_preview.to }}" class="rounded-lg border-slate-300 border px-2 py-1 text-sm">
+        </div>
+      </div>
+      {% for month, items in series_preview.months %}
+      <div>
+        <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{{ month }}</p>
+        <div class="flex flex-wrap gap-1.5">
+          {% for it in items %}
+          <label class="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-sm {% if it.ok %}border-slate-300 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 has-[:checked]:text-emerald-800{% else %}border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed{% endif %}" data-series-day="{{ it.date }}"{% if it.closed %} data-closed{% elif not it.fits %} data-full{% endif %}>
+            <input type="checkbox" name="dates" value="{{ it.date }}" class="accent-emerald-600"{% if it.ok %} checked{% else %} disabled{% endif %}>{{ it.label }}{% if it.closed %} <span class="text-xs">· closed</span>{% elif not it.fits %} <span class="text-xs text-rose-500">· full</span>{% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      <div class="flex items-center gap-3 flex-wrap pt-1">
+        <button type="submit" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition" data-series-submit>Book these <span data-series-count>{{ series_preview.n_ok }}</span> days</button>
+        <button type="button" data-series-adjust class="text-sm font-semibold text-brand hover:underline">Adjust by hand &rarr;</button>
+        <span class="text-xs text-slate-400">Untick any day that won't happen.{% if series_preview.n_closed %} {{ series_preview.n_closed }} closed.{% endif %}{% if series_preview.n_full %} {{ series_preview.n_full }} full.{% endif %}</span>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+  <div id="addform" class="{% if not add_prefill or series_preview %}hidden {% endif %}bg-white rounded-xl border border-slate-200"{% if add_prefill %} data-prefilled{% endif %}>
+    <div class="flex items-center justify-between px-5 pt-4">
+      <p class="text-sm font-semibold text-navy">Add by hand</p>
+      <button type="button" data-addform-close aria-label="Close"
+              class="inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">×</button>
+    </div>
+    <form method="post" action="/app/diary/add" class="px-5 pb-5 pt-3 grid sm:grid-cols-2 gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {% if add_prefill and add_prefill.promise %}<input type="hidden" name="promise_id" value="{{ add_prefill.promise }}">{% endif %}
+      {% if is_stay %}
+      {% if is_mixed %}
+      {# A stays diary with appointments (Kris 2026-09-13): say which you are
+         adding — the stay fields or the appointment fields post, never both. #}
+      <div class="sm:col-span-2 flex items-center gap-5 text-sm text-navy" data-add-kind>
+        {% set _appt_view = show_kind and show_kind not in ('all', 'stays') %}
+        <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="radio" name="add_kind" value="stay" {{ '' if _appt_view else 'checked' }} class="accent-blue-600">A stay</label>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer"><input type="radio" name="add_kind" value="appointment" {{ 'checked' if _appt_view else '' }} class="accent-blue-600">An appointment</label>
+      </div>
+      <div class="sm:col-span-2 grid sm:grid-cols-3 gap-4 hidden" data-appointment-fields>
+        <div>
+          <label class="block text-sm font-medium text-navy mb-1" for="appt_service">Appointment</label>
+          <select id="appt_service" name="service" disabled class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+            {% for s in service_types %}<option value="{{ s.name }}" {{ 'selected' if show_service == s.name }}>{{ s.name }} · {{ s.minutes }} min</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-navy mb-1" for="appt_date">Date</label>
+          <input id="appt_date" name="booking_date" type="date" disabled class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-navy mb-1" for="appt_time">Time</label>
+          <input id="appt_time" name="window" type="time" step="900" min="{{ open_time }}" max="{{ close_time }}" disabled class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        </div>
+      </div>
+      <script>
+        (function () {
+          var kind = document.querySelector("[data-add-kind]"); if (!kind) return;
+          var appt = document.querySelector("[data-appointment-fields]");
+          var stayInputs = [document.getElementById("arrival"), document.getElementById("departure")];
+          function apply() {
+            var isAppt = (kind.querySelector("input:checked") || {}).value === "appointment";
+            appt.classList.toggle("hidden", !isAppt);
+            appt.querySelectorAll("select, input").forEach(function (el) { el.disabled = !isAppt; el.required = isAppt; });
+            stayInputs.forEach(function (el) { if (el) { el.disabled = isAppt; el.required = !isAppt; el.closest("div").classList.toggle("hidden", isAppt); } });
+          }
+          kind.addEventListener("change", apply);
+          apply();
+        })();
+      </script>
+      {% endif %}
+      {# Stay diaries book arrival→departure spans — same shape the agent and
+         portal use (a same-day span is a day visit; overnight runs on). #}
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="arrival">Drop-off / check-in</label>
+        <input id="arrival" name="arrival" type="datetime-local" required{% if add_prefill and add_prefill.arrival %} value="{{ add_prefill.arrival }}"{% endif %}
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="departure">Collection / check-out</label>
+        <input id="departure" name="departure" type="datetime-local" required{% if add_prefill and add_prefill.departure %} value="{{ add_prefill.departure }}"{% endif %}
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      {% if recurring and recurring.enabled %}
+      {# A standing series of stays (Kris 2026-09-21): the same drop-off and
+         collection on the ticked days, every week, so many times — one series
+         per day, each under its own reference. #}
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="stay_repeat">Repeat</label>
+        <select id="stay_repeat" name="repeat" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          <option value="">Just this once</option>
+          {% for f in recurring.frequencies %}
+          <option value="{{ f }}"{% if add_prefill and add_prefill.repeat == f %} selected{% endif %}>{{ freq_label(f) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="stay_occurrences">Times <span class="text-slate-400 font-normal">(up to {{ recurring.max_occurrences }})</span></label>
+        <input id="stay_occurrences" name="occurrences" type="number" min="1" max="{{ recurring.max_occurrences }}" value="{{ (add_prefill.occurrences if add_prefill and add_prefill.occurrences else recurring.max_occurrences) }}"
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2" data-weekdays>
+        <span class="block text-sm font-medium text-navy mb-1">On these days <span class="text-slate-400 font-normal">(leave clear for the drop-off day only)</span></span>
+        <div class="flex flex-wrap gap-1.5">
+          {% for w, lbl in [('mon', 'Mon'), ('tue', 'Tue'), ('wed', 'Wed'), ('thu', 'Thu'), ('fri', 'Fri'), ('sat', 'Sat'), ('sun', 'Sun')] %}
+          <label class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1 text-sm cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-blue-50 has-[:checked]:text-brand"><input type="checkbox" name="weekdays" value="{{ w }}" class="accent-blue-600"{% if add_prefill and w in add_prefill.weekdays %} checked{% endif %}>{{ lbl }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      {% elif is_service %}
+      {# Services diaries (Kris 2026-09-03): pick the service, then the shape its
+         timing kind asks for — an exact time, a morning/afternoon, or the day.
+         Only the control that applies is enabled (disabled inputs don't post), so
+         `window` always arrives in the form the service expects. #}
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-navy mb-1" for="svc_pick">Service</label>
+        <select id="svc_pick" name="service" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          {% for s in service_types %}
+          <option value="{{ s.name }}" data-timing="{{ s.timing }}">{{ s.name }} · {{ s.minutes }} min{% if s.timing == 'half' %} · morning or afternoon{% elif s.timing == 'day' %} · whole day{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="booking_date">Date</label>
+        <input id="booking_date" name="booking_date" type="date" required
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" id="svc_when_label" for="svc_time">Start time</label>
+        <input id="svc_time" name="window" type="time" step="900" min="{{ open_time }}" max="{{ close_time }}" required
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        <select id="svc_half" name="window" disabled hidden class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          <option value="am">Morning</option>
+          <option value="pm">Afternoon</option>
+        </select>
+        <p id="svc_day_note" hidden class="text-sm text-slate-500 py-2">Whole day — no time to pick.</p>
+        <input id="svc_day" name="window" type="hidden" value="day" disabled>
+      </div>
+      {% if recurring and recurring.enabled %}
+      {# A standing series by hand (run #7, 2026-09-05): the same slot every
+         week for a term. Blackout dates and closed days are skipped and the
+         series extends, so a term keeps all its sessions. #}
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="repeat">Repeat</label>
+        {# Make-ups (src/app/makeups.py): arrived from a missed class's job page. #}
+        <input type="hidden" name="makeup_for" value="{{ request.query_params.get('makeup_for', '') }}">
+        <select id="repeat" name="repeat" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          <option value="">Just this once</option>
+          {% for f in recurring.frequencies %}
+          <option value="{{ f }}">{{ freq_label(f) }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="occurrences">Times <span class="text-slate-400 font-normal">(up to {{ recurring.max_occurrences }})</span></label>
+        <input id="occurrences" name="occurrences" type="number" min="1" max="{{ recurring.max_occurrences }}" value="{{ recurring.max_occurrences }}"
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      {% endif %}
+      <script>
+        (function () {
+          var pick = document.getElementById('svc_pick');
+          var t = document.getElementById('svc_time'), h = document.getElementById('svc_half');
+          var d = document.getElementById('svc_day'), note = document.getElementById('svc_day_note');
+          var lbl = document.getElementById('svc_when_label');
+          if (!pick) return;
+          function sync() {
+            var kind = pick.options[pick.selectedIndex] ? pick.options[pick.selectedIndex].dataset.timing : 'time';
+            t.disabled = kind !== 'time'; t.hidden = kind !== 'time'; t.required = kind === 'time';
+            h.disabled = kind !== 'half'; h.hidden = kind !== 'half';
+            d.disabled = kind !== 'day'; note.hidden = kind !== 'day';
+            lbl.textContent = kind === 'half' ? 'Arrival window' : kind === 'day' ? 'Timing' : 'Start time';
+            lbl.htmlFor = kind === 'half' ? 'svc_half' : 'svc_time';
+          }
+          pick.addEventListener('change', sync); sync();
+        })();
+      </script>
+      {% else %}
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="booking_date">Date</label>
+        <input id="booking_date" name="booking_date" type="date" required
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="window">{{ 'Time' if mode == 'slots' else 'Window' }}</label>
+        <select id="window" name="window" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          {% for value, label in window_options %}
+          <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-navy mb-1" for="summary_field">What's the job?</label>
+        <input id="summary_field" name="summary" type="text" required placeholder="Scoping call — Acme Ltd"{% if add_prefill and add_prefill.summary %} value="{{ add_prefill.summary }}"{% endif %}
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-navy mb-1" for="contact">Customer email <span class="text-slate-400 font-normal">(optional)</span></label>
+        <input id="contact" name="contact" type="email" placeholder="ops@customer.co.uk"{% if add_prefill and add_prefill.contact %} value="{{ add_prefill.contact }}"{% endif %}
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      {% if dep_groups %}
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-navy mb-1" for="subjects_text">About <span class="text-slate-400 font-normal">(their {{ dep_groups|map(attribute='label_plural')|map('lower')|join(' / ') }} — names, comma-separated; needs the customer email)</span></label>
+        <input id="subjects_text" name="subjects_text" type="text"{% if add_prefill and add_prefill.subjects %} value="{{ add_prefill.subjects }}"{% endif %} placeholder="{{ 'e.g. The Byre, The Dairy' if dep_groups[0].label|lower == 'hot tub' else 'e.g. Murphy, Tilly' }}"
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      {% endif %}
+      {# The tenant's booking requirements, expandable (Kris 2026-07-04): the same
+         fields the agent collects by email, fillable on a manual add. Values land
+         in bookings.details keyed by label — identical to the agent's bookings.
+         Nothing is enforced here: it's the owner's diary, blanks simply drop. #}
+      {% if req_fields %}
+      <details class="sm:col-span-2 rounded-lg border border-slate-200 bg-slate-50/60">
+        <summary class="cursor-pointer select-none px-4 py-2.5 text-sm font-semibold text-brand">+ Requirements <span class="text-slate-400 font-normal text-xs">— what the agent asks every customer</span></summary>
+        <div class="px-4 pb-4 pt-1 grid sm:grid-cols-2 gap-4">
+          {% for f in req_fields %}
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="req-{{ loop.index }}">{{ f.label }}{% if not f.required %} <span class="text-slate-400 font-normal">(optional)</span>{% endif %}</label>
+            <input type="hidden" name="req_label" value="{{ f.label }}">
+            <input id="req-{{ loop.index }}" name="req_value" type="text"
+                   {% if f.hint %}placeholder="{{ f.hint }}"{% endif %}
+                   class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
+      <div class="sm:col-span-2 flex items-center gap-3">
+        <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Add booking</button>
+        <span class="text-xs text-slate-400">Added by you, so it goes in as confirmed.</span>
+      </div>
+    </form>
+  </div>
+
+  {# The filter (docs/plan-diary-multiview.md stage 3, Kris 2026-09-23: "the view
+     mode becomes more of a filter"): All, Stays, then each appointment — only
+     on a diary that holds more than one kind. It changes the view, never the
+     bookings; the pick rides in the link and each device remembers its last. #}
+  {% if diary_kinds %}
+  <nav class="flex flex-wrap items-center gap-1.5" data-diary-filter aria-label="Show in the diary">
+    {% for k in diary_kinds %}
+    {% set on = (show_kind or 'all') == k.key %}
+    <a href="?show={{ k.key }}" data-show="{{ k.key }}" {% if on %}aria-current="true"{% endif %}
+       class="rounded-full border px-3 py-1 text-xs font-semibold transition {{ 'border-brand bg-brand text-white' if on else 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand' }}">{{ k.label }}</a>
+    {% endfor %}
+  </nav>
+  <script>
+    (function () {
+      var nav = document.querySelector("[data-diary-filter]"); if (!nav) return;
+      var KEY = "blam8.diary.show", q = new URLSearchParams(location.search);
+      // The last pick on this device — unless the link names one, or opens a
+      // particular booking (a meet & greet must not vanish under "Stays").
+      try {
+        var saved = localStorage.getItem(KEY);
+        if (!q.has("show") && !q.has("booking") && saved && saved !== "all"
+            && nav.querySelector('[data-show="' + saved + '"]')) {
+          q.set("show", saved); location.replace(location.pathname + "?" + q.toString()); return;
+        }
+      } catch (e) {}
+      nav.addEventListener("click", function (e) {
+        var a = e.target.closest("[data-show]"); if (!a) return;
+        e.preventDefault();
+        try { localStorage.setItem(KEY, a.getAttribute("data-show")); } catch (_) {}
+        var p = new URLSearchParams(location.search);
+        p.set("show", a.getAttribute("data-show")); p.delete("msg"); p.delete("booking");
+        location.href = location.pathname + "?" + p.toString();
+      });
+    })();
+  </script>
+  {% endif %}
+
+  <!-- Month → week → day calendar -->
+  {# The walk's second stop (src/app/static/tour.js, page "diary"): the first day
+     that is offered or booked, else the first plain free day after today. #}
+  {% set tn = namespace(colour='', free='') %}
+  {% for week in weeks %}{% for d in week.days if d.in_diary %}
+    {% if not tn.colour and (d.booked_count or d.offered_count) %}{% set tn.colour = d.date %}{% endif %}
+    {% if not tn.free and not d.today and d.working and not d.notice_blocked and not d.booked_count and not d.offered_count %}{% set tn.free = d.date %}{% endif %}
+  {% endfor %}{% endfor %}
+  {% set tour_colour = tn.colour or tn.free %}
+  {% set ns = namespace(month='') %}
+  {% for week in weeks %}
+    {% if week.days[0].month_label != ns.month %}
+      {% set ns.month = week.days[0].month_label %}
+      <div class="pt-2 {% if not loop.first %}mt-2{% endif %}">
+        <p class="font-semibold text-navy">{{ ns.month }}</p>
+        <div class="mt-2 grid grid-cols-7 gap-1.5 text-center text-xs text-slate-400">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-7 gap-1.5">
+      {% for d in week.days %}
+        {% if d.filler %}
+        {# A neighbouring month's day. Blank, not muted-with-a-number: this grid
+           is September, and a greyed "1" in the corner reads as a September day
+           that is somehow unavailable. #}
+        <div class="min-h-[64px]" aria-hidden="true"></div>
+        {% elif d.in_diary %}
+        <button type="button" data-day="{{ d.date }}"{% if d.today %} data-tour="today"{% elif d.date == tour_colour %} data-tour="colour"{% endif %}
+                class="cal-day relative overflow-hidden text-left rounded-lg border p-2 min-h-[64px] transition hover:border-brand bg-white
+                       {% if d.offered_count %}cal-day-offered{% else %}border-slate-200{% endif %}
+                       {% if d.today %}ring-2 ring-brand{% endif %}">
+          {# One bar per diary type, growing from the bottom; the offered share amber. #}
+          <span class="absolute inset-0 flex items-stretch gap-px px-px pb-px" aria-hidden="true">
+            {% for t in d.types %}
+            <span class="relative flex-1" data-bar-type="{{ t.key }}" title="{{ t.label }}: {{ 'full' if t.full else (t.pct ~ '%') }}">
+              <span class="absolute inset-x-0 bottom-0 rounded-t-sm {{ t.bar if t.full else t.soft }}" style="height:{{ t.pct }}%"></span>
+              {% if t.soft_pct %}<span class="absolute inset-x-0 rounded-t-sm bg-amber-400/70" style="bottom:{{ t.pct - t.soft_pct }}%; height:{{ t.soft_pct }}%"></span>{% endif %}
+            </span>
+            {% endfor %}
+          </span>
+          <span class="relative text-xs font-semibold {% if d.all_full %}text-white{% elif d.booked_count %}text-emerald-700{% elif d.offered_count %}text-amber-700{% else %}text-navy{% endif %}">{{ d.dom }}</span>
+          <span class="relative block mt-1 text-[10px] leading-tight {% if d.all_full %}text-white/90 font-semibold{% elif d.booked_count %}text-emerald-700 font-semibold{% elif d.offered_count %}text-amber-700 font-semibold{% else %}text-slate-400{% endif %}">
+            {%- if d.show_kind %}{{ kind_cell(d) }}{% elif d.all_full %}Full{% elif d.stay_mode %}{{ stay_cell(d) }}{% elif d.booked_count %}{{ d.booked_count }} booked{% if d.offered_count %} · {{ d.offered_count }} offered{% endif %}{% elif d.offered_count %}{{ d.offered_count }} offered{% elif not d.working %}closed · booked{% elif d.notice_blocked %}needs {{ d.notice_hours }}h notice{% else %}free{% endif -%}
+          </span>
+        </button>
+        {% else %}
+        <div class="rounded-lg p-2 min-h-[64px] {% if d.out %}bg-slate-50 text-slate-300{% else %}bg-slate-100/70 text-slate-400{% endif %}">
+          <span class="text-xs">{{ d.dom }}</span>
+          {% if not d.out %}<span class="block mt-1 text-[10px]">closed</span>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Day panels for this week -->
+    {% for d in week.days if d.in_diary %}
+    <section id="panel-{{ d.date }}" class="cal-panel hidden bg-white rounded-xl border border-slate-200 p-5 space-y-3 scroll-mt-20">
+      {# The date and its chips take the left, the two buttons the top-right
+         corner (Kris 2026-09-21): on a phone the buttons used to drop to a
+         second line under the date. The "1 of 30" capacity chip went with
+         the same ask — the month cell already says how full the day is. A
+         hairline under the row splits the header from the bookings below,
+         matching the dividers between them (Kris 2026-09-21). #}
+      <div class="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-1.5 flex-wrap min-w-0" data-day-chips>
+          <span class="font-semibold text-navy">{{ d.label }}</span>
+          {% if not d.working %}
+          <span class="rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-xs font-semibold">Closed</span>
+          {% endif %}
+          {% if d.offered_count %}
+          <span class="rounded-full bg-slate-200 text-slate-600 px-2.5 py-0.5 text-xs font-semibold"
+                title="Slots reserved as options for customers who haven't picked yet — they count against capacity until they release">{{ d.offered_count }} offered</span>
+          {% endif %}
+          {% if waiting_by_day and waiting_by_day.get(d.date) %}
+          {# The waiting list (src/app/courses.py, 3b nit): who is waiting for a class on this day. #}
+          <span class="rounded-full bg-amber-50 text-amber-700 px-2.5 py-0.5 text-xs font-semibold"
+                title="{% for w in waiting_by_day.get(d.date) %}{{ w.participant or w.contact_email }} · {{ w.label }}{{ ' · offered' if w.status == 'offered' }}{{ '; ' if not loop.last }}{% endfor %}">{{ waiting_by_day.get(d.date)|length }} waiting</span>
+          {% endif %}
+        </div>
+        <div class="ml-auto flex items-center gap-1.5 flex-none" data-day-actions>
+          {% if my_can is not defined or my_can.get('diary:add', True) %}<button type="button" data-addday="{{ d.date }}" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-50 transition">+ Add</button>{% endif %}
+          <button type="button" data-close="{{ d.date }}" aria-label="Close day view"
+                  class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">✕ Close</button>
+        </div>
+      </div>
+
+      {% if mode == 'slots' %}
+      {# Occupancy bar chart for ANY slots diary — appointments and stays alike: lanes across
+         (one per parallel space/slot, overlapping bookings packed into separate lanes), time
+         of day down. Each booking on the day is a bar over the hours it covers; click a bar to
+         load its details into the panel below. #}
+      {% if d.chart and d.chart.bars %}
+      <div class="flex gap-2">
+        <div class="relative w-9 flex-none" style="height:240px">
+          {% for a in d.chart.axis %}<span class="absolute right-1 -translate-y-1/2 text-[10px] text-slate-400" style="top:{{ a.pct }}%">{{ a.label }}</span>{% endfor %}
+        </div>
+        <div class="relative flex-1 flex gap-1 rounded-lg border border-slate-200 bg-slate-50/50 p-1" style="height:240px">
+          {% for a in d.chart.axis %}<div class="absolute inset-x-0 border-t border-slate-100 pointer-events-none" style="top:{{ a.pct }}%"></div>{% endfor %}
+          {% for lane in range(d.chart.lanes) %}
+          <div class="relative flex-1 min-w-[8px]">
+            {# EVERY bar in this lane, not just the first: a lane is one space over the
+               whole day, so two bookings that don't overlap in TIME share lane 0 (live
+               e2e 2026-09-01: a day holding 09:00 + 11:00 drew one bar and said
+               "2 bookings", and the 11:00 hold's details card was unreachable because
+               only its bar could reveal it). #}
+            {% for bar in d.chart.bars if bar.lane == lane %}<button type="button" data-bar="{{ bar.booking_id }}" data-day="{{ d.date }}" title="{{ bar.summary }} · {{ bar.start_label }}–{{ bar.end_label }}{% if bar.status == 'offered' %} · offered, awaiting the customer's pick{% endif %}" class="stay-bar absolute inset-x-0.5 rounded transition {{ 'bg-slate-400 hover:bg-slate-500' if bar.status == 'offered' else (bar.cls or 'bg-emerald-500 hover:bg-emerald-600') }}" style="top:{{ bar.top_pct }}%; height:{{ bar.height_pct }}%"></button>{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% if d.chart.groups %}
+      {# Two or more diary types on the day (Kris 2026-09-13): each group of lanes named in its colour. #}
+      <p class="text-xs text-slate-400 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1" data-chart-legend>
+        {% for g in d.chart.groups %}<span class="inline-flex items-center gap-1.5"><span class="inline-block h-2.5 w-2.5 rounded-sm {{ g.colour.bar }}"></span>{{ g.used }} of {{ g.lanes }} {{ g.label }}{{ ' in use' if loop.first }}</span>{% endfor %}
+        <span>· click a bar for details</span>
+      </p>
+      {% else %}
+      <p class="text-xs text-slate-400 mt-1.5">{% if d.stay_mode %}{{ d.chart.used }} of {{ d.chart.lanes }} space{{ '' if d.chart.lanes == 1 else 's' }} in use{% else %}{{ d.chart.bars|length }} booking{{ '' if d.chart.bars|length == 1 else 's' }}{% endif %} · click a bar for details</p>
+      {% endif %}
+      <div class="stay-details mt-2" data-day="{{ d.date }}">
+        {% for b in d.bookings %}
+        <ul class="stay-detail divide-y divide-slate-100 rounded-lg bg-slate-50/60 px-3" data-detail="{{ b.id }}" {% if not loop.first %}hidden{% endif %}>{{ booking_row(b) }}</ul>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-slate-400">Nothing booked for this day.</p>
+      {% endif %}
+      {% else %}
+        {% if d.bookings %}
+        <ul class="divide-y divide-slate-100">
+          {% for b in d.bookings %}{{ booking_row(b) }}{% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-slate-400">Nothing yet.</p>
+        {% endif %}
+      {% endif %}
+    </section>
+    {% endfor %}
+  {% endfor %}
+
+  {% if not weeks %}
+  <section class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+    <p class="font-medium text-navy">No working days in the booking horizon</p>
+    <p class="mt-1 text-sm text-slate-500">Check your working days and horizon in <a href="/app/diary/settings" class="text-brand hover:underline">Diary settings</a>.</p>
+  </section>
+  {% endif %}
+
+  <details class="text-xs">
+    <summary class="cursor-pointer select-none text-slate-400 hover:text-navy transition font-medium">How the diary works</summary>
+    <p class="mt-1.5 text-slate-400 leading-relaxed">Click a day to see its bookings; ✕ Close takes you back to the month. Proposed holds are placed by the agent and count against capacity until you (or an approved reply) confirm them — stale ones are released automatically after 7 days. Grey <span class="font-semibold">Offered</span> slots are options the agent has put in front of a customer: each is reserved exclusively for them (so nobody is double-offered) until they pick one or the stated deadline passes, when it frees itself.</p>
+  </details>
+</div>
+
+<script>
+  (function () {
+    function hideAll() { document.querySelectorAll('.cal-panel').forEach(function (e) { e.classList.add('hidden'); }); }
+    document.querySelectorAll('.cal-day').forEach(function (el) {
+      el.addEventListener('click', function () {
+        hideAll();
+        var p = document.getElementById('panel-' + el.dataset.day);
+        if (p) { p.classList.remove('hidden'); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+    document.querySelectorAll('[data-close]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        hideAll();
+        var c = document.querySelector('.cal-day[data-day="' + el.dataset.close + '"]');
+        if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+    var addform = document.getElementById('addform');
+    // The landing panel of a standing series (2026-09-21): the button counts
+    // the ticked days; "Adjust by hand" unfolds the prefilled form.
+    var lockin = document.getElementById('lockin');
+    if (lockin) {
+      var cnt = lockin.querySelector('[data-series-count]');
+      var recount = function () { if (cnt) cnt.textContent = lockin.querySelectorAll('input[name=dates]:checked').length; };
+      lockin.addEventListener('change', recount); recount();
+      var adj = lockin.querySelector('[data-series-adjust]');
+      if (adj) adj.addEventListener('click', function () {
+        if (addform) { addform.classList.remove('hidden'); addform.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    }
+    // Opened by a day panel's "+ Add here" only (Kris 2026-09-13: the
+    // toolbar's Add-booking pill went with the rest of the header).
+    document.querySelectorAll('[data-addform-close]').forEach(function (el) {
+      el.addEventListener('click', function () { if (addform) addform.classList.add('hidden'); });
+    });
+    document.querySelectorAll('[data-addday]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var dt = document.getElementById('booking_date');
+        if (dt) dt.value = el.dataset.addday;
+        // Stay form: preset an editable same-day span on the clicked date.
+        var arr = document.getElementById('arrival'), dep = document.getElementById('departure');
+        if (arr && !dt) { arr.value = el.dataset.addday + 'T09:00'; }
+        if (dep && !dt) { dep.value = el.dataset.addday + 'T17:00'; }
+        if (addform) { addform.classList.remove('hidden'); addform.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+    // Occupancy chart: clicking a bar swaps the details paragraph for that booking, and
+    // highlights the active bar within its day panel.
+    document.querySelectorAll('.stay-bar').forEach(function (bar) {
+      bar.addEventListener('click', function () {
+        var panel = document.querySelector('.stay-details[data-day="' + bar.dataset.day + '"]');
+        if (panel) panel.querySelectorAll('.stay-detail').forEach(function (d) {
+          d.hidden = (d.dataset.detail !== bar.dataset.bar);
+        });
+        bar.closest('.cal-panel').querySelectorAll('.stay-bar').forEach(function (b) {
+          b.classList.remove('ring-2', 'ring-emerald-400', 'ring-offset-1');
+        });
+        bar.classList.add('ring-2', 'ring-emerald-400', 'ring-offset-1');
+      });
+    });
+    // The row's "details" link opens (and closes) its gathered details.
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-details-toggle]');
+      if (!t) return;
+      var p = document.getElementById(t.getAttribute('aria-controls'));
+      if (!p) return;
+      var open = p.hasAttribute('hidden');
+      if (open) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+      t.textContent = open ? 'hide details' : 'details';
+    });
+    // Deep-link a day open and a booking lit (?day=YYYY-MM-DD&booking=<id>):
+    // the thread's "Booked slot · 7th Oct 26" line lands here (Kris
+    // 2026-09-20), and Today's booking rows (?date=) open their day the same
+    // way — the fleet board has taken ?day= since the planner.
+    var openDay = {{ (open_day or '')|tojson }}, focus = {{ (focus_booking or '')|tojson }};
+    if (openDay) {
+      var op = document.getElementById('panel-' + openDay);
+      if (op) { hideAll(); op.classList.remove('hidden'); op.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+    // A promise's door lands on what it brought (the series panel, or the
+    // prefilled form), not on the day panel above which they sit.
+    var landing = document.getElementById('lockin') || (addform && !addform.classList.contains('hidden') ? addform : null);
+    if (landing) landing.scrollIntoView({ behavior: 'auto', block: 'start' });
+    if (focus) {
+      var row = document.getElementById('bk-' + focus);
+      if (row) {
+        // A stay's details sit behind its bar: bring its own card forward.
+        var det = row.closest('.stay-detail');
+        if (det) {
+          det.parentNode.querySelectorAll('.stay-detail').forEach(function (d) { d.hidden = (d !== det); });
+          var fb = document.querySelector('.stay-bar[data-bar="' + focus + '"]');
+          if (fb) fb.classList.add('ring-2', 'ring-emerald-400', 'ring-offset-1');
+        }
+        row.classList.add('ring-2', 'ring-inset', 'ring-brand', 'rounded-lg', 'px-2', 'bg-brand-50');
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  })();
+</script>
+{% endblock %}

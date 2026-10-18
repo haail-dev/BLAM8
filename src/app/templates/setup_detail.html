@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}{{ s.title }} — BLAM8 for {{ s.trade|lower_trade }}{% endblock %}
+{% block meta_description %}{{ s.hook }} What BLAM8 hands a {{ s.trade|lower_trade }} business on day one — diary shape, services and timing, booking requirements, CRM pipeline, knowledge rules — and the customer journey proven end to end on {{ s.proven }}.{% endblock %}
+
+{# The film's poster is the share card: a frame of the real product beats the site-wide card. #}
+{% block og_image %}{% if film %}{{ base_url }}{{ film.poster }}{% else %}{{ super() }}{% endif %}{% endblock %}
+{% block og_image_alt %}{% if film %}{{ film.summary }}{% else %}{{ super() }}{% endif %}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "@id": "{{ base_url }}/setups/{{ s.slug }}",
+  "headline": {{ s.title|tojson }},
+  "description": {{ s.hook|tojson }},
+  "about": {{ s.trade|tojson }},
+  "publisher": {"@type": "Organization", "name": "BLAM8"}{% if film %},
+  "video": {
+    "@type": "VideoObject",
+    "name": {{ (s.trade ~ ": a day in BLAM8, from the owner's seat")|tojson }},
+    "description": {{ film.summary|tojson }},
+    "thumbnailUrl": {{ (base_url ~ film.poster)|tojson }},
+    "contentUrl": {{ (base_url ~ film.src)|tojson }},
+    "uploadDate": {{ film.filmed|tojson }},
+    "duration": "PT{{ film.seconds }}S"
+  }{% endif %}
+}
+</script>
+{% if s.faq %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "{{ base_url }}/setups/{{ s.slug }}#faq",
+  "mainEntity": [{% for qa in s.faq %}
+    {"@type": "Question", "name": {{ qa.q|tojson }},
+     "acceptedAnswer": {"@type": "Answer", "text": {{ qa.a|tojson }}}}{% if not loop.last %},{% endif %}{% endfor %}
+  ]
+}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-12 md:pt-24 md:pb-16">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> <a href="/setups" class="hover:text-brand">Worked setups</a> · {{ s.trade }}
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">{{ s.title }}</h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">{{ s.hook }}</p>
+    <div class="mt-6 rounded-xl border border-slate-200 bg-white p-5 max-w-2xl">
+      <p class="text-sm text-slate-500"><span class="font-semibold text-navy">Worked example: {{ s.business }}.</span> {{ s.business_blurb }}</p>
+      <p class="mt-2 text-xs text-slate-400">Proven in a full run on the live system on {{ s.proven }}. {{ disclaimer }}</p>
+    </div>
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Set mine up like this</a>
+      {% if film %}<a href="#film" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-400 transition">Watch the {{ film.seconds }}-second film</a>{% endif %}
+      <a href="#journey" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-400 transition">See the customer journey</a>
+    </div>
+
+    {% if film %}
+    {# ── The film (docs/video-playbook.md): the real product doing the day, cut
+          from a take on the live system. The desktop film carries the journey;
+          the phone clip beside it is the same day from the owner's phone and
+          comes first on a phone, where a 16:9 frame of a desktop is too small
+          to read. No autoplay: the viewer presses play. ── #}
+    <div id="film" class="mt-12 scroll-mt-24">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">The film · {{ film.seconds }} seconds, from the owner's seat</p>
+      <div class="mt-4 grid gap-5 md:grid-cols-3 md:items-start">
+        <figure class="md:col-span-2 min-w-0">
+          <video id="setup-film" class="w-full rounded-xl border border-slate-200 bg-slate-900 shadow-sm" controls playsinline preload="metadata"
+                 poster="{{ film.poster }}?v={{ asset_rev }}" aria-label="{{ film.summary }}">
+            <source src="{{ film.src }}?v={{ asset_rev }}" type="video/mp4">
+            <a href="{{ film.src }}">Download the film</a>
+          </video>
+          <figcaption class="mt-3 text-sm text-slate-600 leading-relaxed">{{ film.summary }}</figcaption>
+          <ol class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {% for ch in film.chapters %}
+            <li><button type="button" class="film-seek text-slate-500 hover:text-brand" data-seek="{{ ch.t }}"><span class="font-mono text-xs text-slate-400">{{ ch.t|clock }}</span> {{ ch.text }}</button></li>
+            {% endfor %}
+          </ol>
+        </figure>
+        {% if film.phone %}
+        <figure class="order-first md:order-none min-w-0 flex flex-col items-center">
+          <video class="max-h-[70svh] md:max-h-[420px] w-auto max-w-full rounded-xl border border-slate-200 bg-slate-900 shadow-sm" controls playsinline preload="metadata"
+                 poster="{{ film.phone.poster }}?v={{ asset_rev }}" aria-label="{{ film.phone.summary }}">
+            <source src="{{ film.phone.src }}?v={{ asset_rev }}" type="video/mp4">
+            <a href="{{ film.phone.src }}">Download the phone clip</a>
+          </video>
+          <figcaption class="mt-3 text-sm text-slate-600 leading-relaxed text-center md:text-left"><span class="font-semibold text-navy">From the owner's phone · {{ film.phone.seconds }} s.</span> {{ film.phone.summary }}</figcaption>
+        </figure>
+        {% endif %}
+      </div>
+      <p class="mt-4 text-xs text-slate-400 max-w-3xl">Filmed on the live system on {{ film.filmed|longdate }} on {{ film.business }}, a fictional business of the same kind set up the way this page describes, from the owner's seat. Nothing is staged: every draft, booking and payment in the film happened during the take. Only the machine's waits are cut.</p>
+    </div>
+    <script>
+      // The cue sheet under the film seeks the player: tap a chapter, the film
+      // jumps there and plays. Without JS the list is still the film's summary.
+      (function () {
+        var v = document.getElementById('setup-film');
+        if (!v) return;
+        document.querySelectorAll('.film-seek').forEach(function (b) {
+          b.addEventListener('click', function () {
+            v.currentTime = Number(b.getAttribute('data-seek')) || 0;
+            v.play();
+            v.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          });
+        });
+      })();
+    </script>
+    {% endif %}
+  </div>
+</section>
+
+{# ── Diary ── #}
+<section class="mx-auto max-w-6xl px-5 py-14 md:py-16">
+  <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">1 · The diary</p>
+  <h2 class="mt-2 text-3xl font-bold tracking-tight text-navy">Diary shape: {{ s.diary.shape }}</h2>
+  <p class="mt-3 text-slate-600 leading-relaxed max-w-3xl">{{ s.diary.shape_why }}</p>
+  <div class="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for svc in s.diary.services %}
+    <div class="rounded-xl border border-slate-200 p-6">
+      <div class="flex items-baseline justify-between gap-3">
+        <h3 class="font-semibold text-navy">{{ svc.name }}</h3>
+        <span class="text-xs font-semibold text-slate-400 whitespace-nowrap">{{ svc.minutes|duration }}</span>
+      </div>
+      <p class="mt-1 text-xs font-semibold uppercase tracking-wider {{ 'text-brand' if svc.timing != 'time' else 'text-slate-400' }}">{{ timing_words[svc.timing] }}</p>
+      {% if svc.note %}<p class="mt-2 text-sm text-slate-600 leading-relaxed">{{ svc.note }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <p class="mt-5 text-sm text-slate-500 max-w-3xl">Timing is what the customer is offered: an <em>exact time</em> for an appointment they come to; <em>morning or afternoon</em> for work at their address where you manage the hour; a <em>whole day</em> for a day-long job. The diary reserves the real length either way, so it can never double-book.</p>
+</section>
+
+{# ── Requirements ── #}
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-14 md:py-16">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">2 · Before a booking is made</p>
+    <h2 class="mt-2 text-3xl font-bold tracking-tight text-navy">Booking requirements</h2>
+    <p class="mt-3 text-slate-600 leading-relaxed max-w-3xl">{{ s.requirements.intro }}</p>
+    <div class="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <table class="w-full text-sm">
+        <thead class="text-left text-xs font-semibold uppercase tracking-wider text-slate-400">
+          <tr><th class="px-4 py-3">Detail</th><th class="px-4 py-3">Needed</th><th class="px-4 py-3">How it's gathered</th><th class="px-4 py-3">Note</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for f in s.requirements.fields %}
+          <tr>
+            <td class="px-4 py-3 font-medium text-navy">{{ f.label }}</td>
+            <td class="px-4 py-3 text-slate-600">{{ 'Required' if f.required else 'Optional' }}</td>
+            <td class="px-4 py-3 text-slate-600">{% if f.kind == 'document' %}As an attachment — a photo or scan{% elif f.kind == 'toggle' %}Asked when the booking is overnight{% else %}Asked in the reply, or reused if already known{% endif %}</td>
+            <td class="px-4 py-3 text-slate-500">{{ f.note or '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if s.requirements.no_document %}<p class="mt-2 text-sm text-slate-500">{{ s.requirements.no_document }}</p>{% endif %}
+    </div>
+    <p class="mt-4 text-sm text-slate-500 max-w-3xl">The agent asks only for what is genuinely missing, never re-asks something already in the thread or on the customer's record, and refuses to book until every required detail is present. Documents are requested as attachments and their contents are never claimed as checked — a human reviews them.</p>
+  </div>
+</section>
+
+{# ── CRM ── #}
+<section class="mx-auto max-w-6xl px-5 py-14 md:py-16">
+  <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">3 · The CRM that fills itself</p>
+  <h2 class="mt-2 text-3xl font-bold tracking-tight text-navy">Pipeline and remembered facts</h2>
+  <div class="mt-8 grid md:grid-cols-2 gap-8">
+    <div>
+      <h3 class="font-semibold text-navy">Pipeline</h3>
+      <ol class="mt-3 space-y-2">
+        {% for st in s.crm.stages %}
+        <li class="flex items-center gap-3 text-slate-700"><span class="h-6 w-6 rounded-full bg-brand-50 text-brand text-xs font-bold inline-flex items-center justify-center">{{ loop.index }}</span>{{ st }}</li>
+        {% endfor %}
+      </ol>
+      <p class="mt-4 text-sm text-slate-500">Plus Won and Lost. A contact quiet for {{ s.crm.quiet_days }} days is flagged for a nudge.</p>
+    </div>
+    <div>
+      <h3 class="font-semibold text-navy">Facts remembered per customer</h3>
+      <ul class="mt-3 space-y-3">
+        {% for f in s.crm.fields %}
+        <li class="rounded-lg border border-slate-200 p-4"><p class="font-medium text-navy">{{ f.label }}</p><p class="mt-1 text-sm text-slate-600">{{ f.why }}</p></li>
+        {% endfor %}
+      </ul>
+      <p class="mt-4 text-sm text-slate-500">Extracted from the emails as they arrive, plus the contact's phone number. A returning customer is never asked for any of it again — by email or on the portal.</p>
+    </div>
+  </div>
+</section>
+
+{# ── Knowledge ── #}
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-14 md:py-16">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">4 · What the agent knows</p>
+    <h2 class="mt-2 text-3xl font-bold tracking-tight text-navy">Rules and rates it enforces unprompted</h2>
+    <p class="mt-3 text-slate-600 leading-relaxed max-w-3xl">{{ s.knowledge.intro }}</p>
+    <ul class="mt-8 grid md:grid-cols-2 gap-4">
+      {% for r in s.knowledge.rules %}
+      <li class="rounded-xl border border-slate-200 bg-white p-5 flex gap-4">
+        <span class="mt-0.5 shrink-0 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-slate-500">{{ r.kind }}</span>
+        <p class="text-slate-700 leading-relaxed">{{ r.text }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+{# ── Journey ── #}
+<section id="journey" class="mx-auto max-w-4xl px-5 py-14 md:py-16">
+  <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">5 · The journey we proved</p>
+  <h2 class="mt-2 text-3xl font-bold tracking-tight text-navy">From the first email to the paid deposit</h2>
+  <p class="mt-3 text-slate-600 leading-relaxed">{{ s.journey.intro }}</p>
+  <ol class="mt-8 relative border-l border-slate-200 ml-3 space-y-6">
+    {% for st in s.journey.steps %}
+    <li class="pl-7 relative">
+      <span class="absolute -left-[7px] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-white {{ 'bg-brand' if st.who == 'BLAM8' else 'bg-slate-300' }}"></span>
+      <p class="text-xs font-semibold uppercase tracking-wider {{ 'text-brand' if st.who == 'BLAM8' else 'text-slate-400' }}">{{ st.who }}</p>
+      <p class="mt-1 text-slate-700 leading-relaxed">{{ st.what }}</p>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+{# ── Proven since the run (optional): each line a verified behaviour ── #}
+{% if s.since %}
+<section id="since" class="mx-auto max-w-4xl px-5 pb-14" data-setup-since>
+  <div class="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-7">
+    <p class="text-sm font-semibold uppercase tracking-wider text-emerald-700">Proven on a live {{ s.trade.split(',')[0]|lower_trade }} since</p>
+    <p class="mt-1 text-sm text-slate-500">Watched working end to end on our own rig after the run above, each with a test that fails if it breaks.</p>
+    <ul class="mt-4 space-y-3">
+      {% for it in s.since %}
+      <li class="flex gap-3">
+        <span class="mt-0.5 flex-none text-xs font-semibold text-emerald-700 w-28">{{ it.on }}</span>
+        <span class="text-slate-700 leading-relaxed">{{ it.text }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
+{# ── Honest gaps ── #}
+<section class="mx-auto max-w-4xl px-5 pb-14">
+  <div class="rounded-2xl border border-amber-200 bg-amber-50/60 p-7">
+    <p class="text-sm font-semibold uppercase tracking-wider text-amber-700">What this run showed us we still owe this trade</p>
+    <ul class="mt-3 space-y-3 text-slate-700 leading-relaxed list-disc pl-5">
+      {% for g in s.gaps %}
+      {% if g is string %}<li>{{ g }}</li>
+      {% else %}
+      <li>{{ g.text }}
+        {% if g.built %}<p class="mt-1 text-sm text-emerald-800"><span class="font-semibold uppercase tracking-wider text-xs text-emerald-700">Built since{% if g.built_on %} · {{ g.built_on }}{% endif %}</span> — {{ g.built }}</p>{% endif %}
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+{% if s.faq %}
+<section id="faq" class="mx-auto max-w-4xl px-5 pb-14">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Questions owners ask</h2>
+  <div class="mt-6 space-y-6">
+    {% for qa in s.faq %}
+    <div>
+      <h3 class="font-semibold text-navy text-lg">{{ qa.q }}</h3>
+      <p class="mt-2 text-slate-700 leading-relaxed">{{ qa.a }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Your version of this page, by lunchtime.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Connect your mailbox and tell the setup assistant what you do. It proposes the diary, the services, the checklist and the pipeline for you to confirm — nothing is saved until you press Save. Free 14-day pilot, no card.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free pilot</a>
+      <a href="/setups" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">Other business types</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

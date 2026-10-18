@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% block title %}Live voice allowance{% endblock %}
+{% block content %}
+<a href="/admin" class="text-sm text-slate-500 hover:text-navy">← Overview</a>
+<h1 class="mt-4 text-2xl font-bold text-navy">Concierge live voice allowance</h1>
+<p class="mt-2 max-w-2xl text-sm text-slate-600">Set the daily connection time each plan receives per authenticated user. Time counts while a listening connection is open, including while muted. The counter resets at midnight Europe/London and stays separate from the Concierge question allowance. Enter 0 for unlimited.</p>
+<form method="post" action="/admin/live-allowance" class="mt-6 max-w-2xl rounded-xl border border-slate-200 bg-white p-5 space-y-5">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <label class="flex items-center gap-3 text-sm font-semibold text-navy">
+    <input type="checkbox" name="enabled" class="h-4 w-4" {% if enabled %}checked{% endif %}>
+    Enable live allowance enforcement and indicator
+  </label>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {% for tier, label in [('starter','Starter'),('pro','Pro'),('core','Core'),('enterprise','Enterprise')] %}
+    <label class="block text-sm font-medium text-navy">{{ label }} tier
+      <span class="mt-1 flex items-center gap-2"><input type="number" name="{{ tier }}" min="0" max="1440" step="1" required value="{{ limits.get(tier, 10) }}" class="w-32 rounded-lg border border-slate-300 px-3 py-2">
+      <span class="text-xs text-slate-500">minutes per user per London day</span></span>
+    </label>
+    {% endfor %}
+  </div>
+  <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:opacity-90">Save allowance</button>
+</form>
+{% endblock %}

@@ -1,0 +1,98 @@
+/* /architecture — the n8n-style canvas. Everything is scoped under .arch so
+   none of these names (.bar, .tile, .pill …) can leak into base.html's
+   Tailwind page around it. External file on purpose: the CSP's style-src
+   allows 'self', and this page must not depend on 'unsafe-inline'. */
+
+.arch{
+  --bg:#0e1a2c;--dot:#1e3252;--tile:#182b46;--line:#31507a;
+  --ink:#e6edf7;--sub:#8ba3c2;--edge:#4a6d9c;
+  --trg:#3ddc97;--ai:#7c8cff;--dia:#4ecdc4;--crm:#c084fc;--mon:#5fd3c4;
+  --grd:#e8705a;--gate:#ffb547;--loop:#8b6bd6;--cross:#3f8f97;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+.arch *{box-sizing:border-box;margin:0;padding:0}
+
+/* editor chrome */
+.arch .bar{height:50px;display:flex;align-items:center;gap:14px;padding:0 16px;
+  background:#0b1b34;border-bottom:1px solid #23385a}
+.arch .bar .nm{font-size:13.5px;font-weight:600;white-space:nowrap}
+.arch .bar .nm span{color:var(--sub);font-weight:400}
+
+/* stage = the positioning context for the viewport + floating controls.
+   base.html's sticky header is h-16 (64px); the bar above is 50px. */
+.arch .stage{position:relative}
+.arch .vp{position:relative;height:calc(100dvh - 64px - 50px);min-height:420px;
+  overflow:hidden;cursor:grab;touch-action:none;outline:none;
+  background:var(--bg);background-image:radial-gradient(var(--dot) 1.3px,transparent 1.3px);
+  background-size:20px 20px}
+.arch .vp:focus-visible{box-shadow:inset 0 0 0 2px #2563eb}
+.arch .vp.drag{cursor:grabbing}
+.arch .cv{position:absolute;left:0;top:0;transform-origin:0 0}
+.arch .cv svg{position:absolute;left:0;top:0;overflow:visible}
+
+/* groups */
+.arch .grp{position:absolute;border-radius:12px;border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.018);z-index:1}
+.arch .grp>b{position:absolute;top:-11px;left:16px;background:var(--bg);padding:0 10px;
+  font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:#6d90bd;
+  white-space:nowrap}
+.arch .grp>i{position:absolute;top:14px;left:18px;font-style:normal;font-size:11px;color:#4a6c96;
+  white-space:nowrap}
+
+/* nodes */
+.arch .nd{position:absolute;z-index:5}
+.arch .tile{width:100px;height:100px;border-radius:9px;background:var(--tile);border:1.5px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:31px;
+  box-shadow:0 3px 10px rgba(0,0,0,.45);position:relative}
+.arch .nd.trg .tile{border-radius:50px 9px 9px 50px;border-color:#2c6b54}
+.arch .nd.ai .tile{border-color:#4a4f96}
+.arch .nd.dia .tile{border-color:#2f7d78}
+.arch .nd.crm .tile{border-color:#6b4a8c}
+.arch .nd.mon .tile{border-color:#2f7d78}
+.arch .nd.grd .tile{border-color:#8a4436}
+.arch .nd.gate .tile{border-color:var(--gate);box-shadow:0 0 0 3px rgba(255,181,71,.14),0 3px 10px rgba(0,0,0,.45)}
+.arch .nd.off{opacity:.4}
+.arch .nd.off .tile{border-style:dashed;box-shadow:none}
+.arch .port{position:absolute;width:9px;height:9px;border-radius:50%;background:#0e1a2c;
+  border:1.5px solid var(--line);top:50%;margin-top:-4.5px}
+.arch .port.l{left:-5px}.arch .port.r{right:-5px}
+.arch .lbl{position:absolute;left:-52px;top:108px;width:204px;text-align:center}
+.arch .lbl .t{font-size:11.5px;font-weight:600;line-height:1.25}
+.arch .lbl .s{font-size:9.5px;color:var(--sub);line-height:1.28;margin-top:2px}
+.arch .pill{position:absolute;top:-9px;right:-6px;font-size:7.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:2px 6px;border-radius:4px;z-index:7;white-space:nowrap;
+  background:#33496b;color:#a8bdd8}
+.arch .pill.gate{background:var(--gate);color:#2a1a00}
+.arch .pill.dia{background:var(--dia);color:#042523}
+.arch .pill.warn{background:var(--grd);color:#2b0d07}
+
+/* sticky notes */
+.arch .sn{position:absolute;background:#f5e39a;color:#3a3208;border-radius:5px;padding:14px 16px;
+  font-size:12.5px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.4);z-index:3}
+.arch .sn b{display:block;font-size:13px;margin-bottom:5px}
+
+/* zoom controls + legend float over the viewport */
+.arch .zm{position:absolute;left:16px;bottom:16px;z-index:20;display:flex;align-items:center;gap:5px;
+  background:#0b1b34;border:1px solid #29405f;border-radius:8px;padding:6px 8px}
+.arch .zm button{background:#17293f;color:var(--ink);border:1px solid #2c4463;border-radius:5px;
+  font:600 12px/1 inherit;padding:7px 10px;cursor:pointer}
+.arch .zm button:hover{background:#1f3554}
+.arch .zm span{font-size:11px;color:var(--sub);min-width:38px;text-align:right;padding-right:3px}
+.arch .lg{position:absolute;right:16px;bottom:16px;z-index:20;background:#0b1b34;border:1px solid #29405f;
+  border-radius:8px;padding:9px 13px;font-size:11px;color:var(--sub);display:flex;gap:16px}
+.arch .lg i{font-style:normal;display:inline-block;width:18px;height:2px;vertical-align:middle;
+  margin-right:6px;border-radius:2px}
+/* The yellow run — one email's journey, marching dashes show direction.
+   The path carries vector-effect:non-scaling-stroke (set in JS), so width and
+   dashes are SCREEN pixels: the thread stays bold at the 17% fit view where a
+   scaled stroke would vanish, and stays calm when zoomed right in. */
+.arch .run{stroke:#ffb547;stroke-width:3.2;fill:none;stroke-dasharray:13 9;
+  animation:arch-run 1.1s linear infinite}
+@keyframes arch-run{to{stroke-dashoffset:-22}}
+@media (prefers-reduced-motion:reduce){.arch .run{animation:none}}
+.arch .lg .k-run{background:#ffb547}
+.arch .lg .k-flow{background:#4a6d9c}
+.arch .lg .k-fb{background:#8b6bd6}
+.arch .lg .k-one{background:#3f8f97}
+@media (max-width:640px){.arch .lg{display:none}}

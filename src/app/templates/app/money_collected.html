@@ -1,0 +1,109 @@
+{% extends "app/base.html" %}
+{% block title %}Collected · Money · BLAM8{% endblock %}
+{% block heading %}Collected{% endblock %}
+{% set back = ('/app/money/collected', 'All collections') if c.mode == 'month' else ('/app/money', 'Money') %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{# The Collected rows' own page. All-time: the collection story month by month
+   plus who pays you most. Month: that month's payments one by one, with how
+   long each took to arrive. Same maths as the Money hub's row. #}
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if c.mode == 'month' %}
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
+    <div class="px-4 py-2.5 flex items-baseline gap-3">
+      <span class="text-sm font-medium text-navy">{{ c.label }}</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ c.totals.count }} payment{{ '' if c.totals.count == 1 else 's' }}{% if c.totals.avg_days is not none %} · paid in {{ c.totals.avg_days|round|int }} days avg{% endif %}</span>
+      <span class="text-xl font-bold font-display text-emerald-700">£{{ '%.2f'|format(c.totals.collected) }}</span>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Payments received</h2>
+      <span class="flex gap-3 text-xs font-semibold">
+        {% if c.prev %}<a href="/app/money/collected?month={{ c.prev }}" class="text-brand">&larr; earlier</a>{% endif %}
+        {% if c.next %}<a href="/app/money/collected?month={{ c.next }}" class="text-brand">later &rarr;</a>{% endif %}
+      </span>
+    </div>
+    {% if c.rows %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Paid</th><th class="py-2 pr-3">Ref</th><th class="py-2 pr-3">Customer</th>
+          <th class="py-2 pr-3 text-right">Time to pay</th><th class="py-2 pr-3 text-right">Amount</th><th></th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for r in c.rows %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 text-slate-500 whitespace-nowrap">{{ r.paid_on | pretty_date }}</td>
+            <td class="py-2 pr-3 font-medium text-navy whitespace-nowrap">{{ r.invoice_ref }}</td>
+            <td class="py-2 pr-3 text-slate-600">{{ r.customer }}</td>
+            <td class="py-2 pr-3 text-right {{ 'text-emerald-700 font-medium' if r.days_to_pay is not none and r.days_to_pay <= 7 else 'text-slate-500' }}">{% if r.days_to_pay is not none %}{{ r.days_to_pay }}d{% else %}—{% endif %}</td>
+            <td class="py-2 pr-3 text-right font-semibold text-emerald-700">£{{ '%.2f'|format(r.amount) }}</td>
+            <td class="py-2 text-right"><a href="/app/invoices/{{ r.id }}" class="text-brand text-xs font-semibold whitespace-nowrap">View &rarr;</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">No payments landed in {{ c.label }}.</p>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
+    <div class="px-4 py-2.5 flex items-baseline gap-3">
+      <span class="text-sm font-medium text-navy">Collected all time</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ c.totals.count }} payment{{ '' if c.totals.count == 1 else 's' }}</span>
+      <span class="text-xl font-bold font-display text-navy">£{{ '%.2f'|format(c.totals.collected) }}</span>
+    </div>
+    {% if c.totals.avg_days is not none %}
+    <div class="px-4 py-2.5 flex items-baseline gap-3">
+      <span class="text-sm font-medium text-navy">Typical time to get paid</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">from sending the invoice to the money landing</span>
+      <span class="text-xl font-bold font-display text-navy">{{ c.totals.avg_days|round|int }} days</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Month by month</h2>
+    </div>
+    {% if c.months %}
+    <div class="divide-y divide-slate-200">
+      {% for mo in c.months %}
+      <a href="/app/money/collected?month={{ mo.key }}" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy">{{ mo.label }}</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ mo.count }} payment{{ '' if mo.count == 1 else 's' }}{% if mo.avg_days is not none %} · paid in {{ mo.avg_days|round|int }}d avg{% endif %}</span>
+        <span class="text-base font-semibold font-display text-emerald-700">£{{ '%.2f'|format(mo.collected) }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">Nothing collected yet — the first paid invoice starts the story.</p>
+    {% endif %}
+  </div>
+
+  {% if c.top_payers %}
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Who pays you most</h2>
+    <ul class="space-y-1.5 text-sm">
+      {% for p in c.top_payers %}
+      <li class="flex items-center gap-2.5">
+        <span class="flex-1 min-w-0 truncate text-slate-600">{{ p.customer }}
+          <span class="text-slate-400">· {{ p.count }} payment{{ '' if p.count == 1 else 's' }}</span>
+        </span>
+        <span class="shrink-0 font-semibold text-navy">£{{ '%.2f'|format(p.collected) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <p class="text-xs text-slate-400 leading-relaxed">
+    Payments are dated by when the invoice was settled. A part-payment shows here once its invoice is fully paid — until then it counts in the Money page&rsquo;s owed figures.
+  </p>
+</div>
+{% endblock %}

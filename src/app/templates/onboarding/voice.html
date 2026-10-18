@@ -1,0 +1,147 @@
+{% extends "onboarding/base.html" %}
+{% block title %}Voice · Set up BLAM8{% endblock %}
+{% block heading %}{% if learning_status in ("ready", "accepted") and profile %}Here's how I'll sound{% elif learning_status == "running" %}Learning your voice{% else %}Teach it your voice{% endif %}{% endblock %}
+{% block subheading %}{% if learning_status in ("ready", "accepted") and profile %}Learned from your sent emails — confirm it, or adjust anything. You can refine all of this later in Settings.{% elif learning_status == "running" %}Reading how you write your emails — this usually takes under a minute.{% else %}How should the agent sound and sign off? You can refine all of this later in Settings.{% endif %}{% endblock %}
+{% block content %}
+{% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+{% set label = "block text-sm font-semibold text-navy" %}
+
+{% if learning_status == "running" %}
+<!-- Analysis in flight: poll until it lands, then reload into the review. -->
+<div class="rounded-xl border border-slate-200 bg-white p-6 text-center space-y-4">
+  <div class="mx-auto h-8 w-8 rounded-full border-2 border-brand border-t-transparent animate-spin"></div>
+  <p class="text-sm font-semibold text-navy">Analysing your sent emails…</p>
+  <p class="text-sm text-slate-500">I'm learning your greeting, tone and sign-off from how you already write. Nothing is stored — only the style profile you'll review next.</p>
+  <a href="/onboarding/voice?manual=1" class="inline-block text-sm font-medium text-slate-500 hover:text-navy transition">Set it up manually instead</a>
+</div>
+<div class="flex items-center justify-between pt-4">
+  <a href="/onboarding/mailbox" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
+  <a href="/onboarding/knowledge" class="text-sm font-medium text-slate-500 hover:text-navy transition">Skip</a>
+</div>
+<script>
+  (function poll() {
+    setTimeout(function () {
+      fetch("/onboarding/voice/status").then(function (r) { return r.json(); })
+        .then(function (d) { d.status === "running" ? poll() : window.location.replace("/onboarding/voice"); })
+        .catch(poll);
+    }, 2500);
+  })();
+</script>
+
+{% else %}
+
+{% if learning_status in ("ready", "accepted") and profile %}
+<!-- Review: the learned profile + a sample draft. The form below starts hidden. -->
+<div id="voice-review" class="space-y-4">
+  <div class="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+    <p class="text-sm text-navy font-semibold">I've analysed {{ analysed }} of your sent emails.</p>
+    {% if soft %}
+    <p class="text-sm text-slate-500">This is a starting point — I'll refine it as you approve more drafts.</p>
+    {% endif %}
+    <dl class="text-sm space-y-2">
+      <div class="flex gap-2"><dt class="w-24 shrink-0 font-semibold text-slate-500">Tone</dt><dd class="text-slate-700">{{ profile.example_tone_description or profile.tone }}</dd></div>
+      {% if profile.greeting_style %}<div class="flex gap-2"><dt class="w-24 shrink-0 font-semibold text-slate-500">Greeting</dt><dd class="text-slate-700">{{ profile.greeting_style }}</dd></div>{% endif %}
+      {% if profile.sign_off %}<div class="flex gap-2"><dt class="w-24 shrink-0 font-semibold text-slate-500">Sign-off</dt><dd class="text-slate-700 whitespace-pre-line">{{ profile.sign_off }}</dd></div>{% endif %}
+      {% if profile.sentence_style %}<div class="flex gap-2"><dt class="w-24 shrink-0 font-semibold text-slate-500">Style</dt><dd class="text-slate-700">{{ profile.sentence_style }}{% if profile.average_length %} · usually {{ profile.average_length }} replies{% endif %}</dd></div>{% endif %}
+    </dl>
+  </div>
+
+  {% if sample %}
+  <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+    <p class="text-xs font-semibold uppercase tracking-wide text-brand mb-2">Sample draft</p>
+    <p class="text-xs text-slate-400 mb-3">A customer asks: “Could you let me know your availability next week?”</p>
+    <div class="rounded-lg bg-white border border-slate-200 p-4 text-sm text-slate-700 whitespace-pre-wrap">{{ sample }}</div>
+  </div>
+  {% endif %}
+
+  <div class="flex items-center justify-between pt-1">
+    <a href="/onboarding/mailbox" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
+    <div class="flex items-center gap-3">
+      <button type="button" id="voice-adjust" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-navy hover:bg-slate-50 transition">Adjust settings</button>
+      <form method="post" action="/onboarding/voice/accept">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Looks good — continue</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% elif offer %}
+<!-- Opt-in: nothing reads their sent mail until they say yes here. -->
+<div class="mb-4 rounded-xl border border-brand/30 bg-blue-50/60 p-5 space-y-3">
+  <p class="text-sm font-semibold text-navy">Want me to learn your voice automatically?</p>
+  <p class="text-sm text-slate-600">I can read your recent sent emails and learn your greeting, tone and sign-off from how you already write — then show you the result to approve. Your emails are analysed, never stored; the style profile is all that's kept, and you can discard it any time from Settings.</p>
+  <form method="post" action="/onboarding/voice/learn">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <button type="submit" class="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Learn my voice from my sent emails</button>
+    <span class="ml-3 text-xs text-slate-500">or fill in the form below instead</span>
+  </form>
+</div>
+{% elif learning_status == "insufficient" %}
+<div class="mb-4 rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-900">
+  Not enough sent emails to learn from yet — I'll learn your voice as you approve drafts over the first few weeks. For now, set it up below.
+</div>
+{% elif learning_status == "failed" %}
+<div class="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center justify-between gap-3">
+  <span>I couldn't analyse your sent emails just now — set your voice below, or try again.</span>
+  <form method="post" action="/onboarding/voice/learn">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <button type="submit" class="shrink-0 rounded-lg border border-amber-300 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition">Try again</button>
+  </form>
+</div>
+{% endif %}
+
+<form method="post" action="/onboarding/voice" class="space-y-4 {% if learning_status in ('ready', 'accepted') and profile %}hidden{% endif %}" id="voice-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  {% if held_filled %}
+  {# Held for later (src/app/setup_held.py): what they said at an earlier step,
+     already in the boxes — theirs to check, nothing saved until Continue. #}
+  <p class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800" data-held-prefill>From what you told me earlier — {{ held_filled_labels | join(', ') }} — filled in for you to check.</p>
+  {% endif %}
+  {# From step 1 — folded away (run #10: shown again, editable, one step
+     after they wrote it, it read as something to do again). Still posted. #}
+  <details class="rounded-lg border border-slate-200 px-3 py-2">
+    <summary class="cursor-pointer text-sm text-slate-500">What your business does <span class="text-slate-400">(from step 1 — open to edit)</span></summary>
+    <textarea id="business_brief" name="business_brief" rows="3" class="{{ field }}" placeholder="A line or two on what your business does and who you help.">{{ cfg.business_brief or '' }}</textarea>
+  </details>
+  <div>
+    <label class="{{ label }}" for="agent_name">What the agent calls itself</label>
+    <input id="agent_name" name="agent_name" class="{{ field }}" value="{{ cfg.agent_name or '' }}" placeholder="the office team">
+  </div>
+  <div>
+    <label class="{{ label }}" for="tone">Tone of voice</label>
+    <input id="tone" name="tone" class="{{ field }}" value="{{ cfg.tone or '' }}" placeholder="warm and professional">
+  </div>
+  <div>
+    <label class="{{ label }}" for="sign_off">Sign-off</label>
+    <textarea id="sign_off" name="sign_off" rows="3" class="{{ field }}" placeholder="Kind regards,&#10;The team">{{ cfg.sign_off or '' }}</textarea>
+  </div>
+  <div>
+    <label class="{{ label }}" for="voice_notes">How you write <span class="font-normal text-slate-400">({% if profile %}learned from your sent emails{% else %}style only{% endif %})</span></label>
+    <textarea id="voice_notes" name="voice_notes" rows="4" class="{{ field }}" placeholder="e.g. Short and friendly, first names, gets straight to the point.">{{ cfg.voice_notes or '' }}</textarea>
+    <p class="mt-1 text-xs text-slate-400">Rules the agent must follow — a trial day before a first stay, a price it must never quote — belong in Knowledge, the next step; the assistant keeps any you mention for you.</p>
+  </div>
+  <div class="flex items-center justify-between pt-1">
+    <a href="/onboarding/mailbox" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
+    <div class="flex items-center gap-4">
+      <a href="/onboarding/knowledge" class="text-sm font-medium text-slate-500 hover:text-navy transition">Skip</a>
+      <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</button>
+    </div>
+  </div>
+</form>
+
+{% if learning_status in ("ready", "accepted") and profile %}
+<script>
+  document.getElementById("voice-adjust").addEventListener("click", function () {
+    document.getElementById("voice-review").classList.add("hidden");
+    document.getElementById("voice-form").classList.remove("hidden");
+    // Now they're measurable: let the base auto-grow size the prefilled
+    // textareas (it skipped them while the form was display:none).
+    document.querySelectorAll("#voice-form textarea").forEach(function (el) {
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  });
+</script>
+{% endif %}
+
+{% endif %}
+{% endblock %}

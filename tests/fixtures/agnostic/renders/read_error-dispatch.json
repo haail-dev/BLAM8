@@ -1,0 +1,4 @@
+{
+  "sha256": "7e544de9e7a2abe3449a5b1b67c152956f18708b1281e790f6f65cc0925431b0",
+  "excerpt": "{\"error\":\"could_not_verify\",\"held\":false,\"message\":\"Could not verify booking settings. Hold for owner review.\",\"outcome\":\"could_not_verify\",\"owner_review\":true}"
+}

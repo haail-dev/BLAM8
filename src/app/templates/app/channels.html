@@ -1,0 +1,96 @@
+{% extends "app/base.html" %}
+{% block title %}Text messaging · BLAM8{% endblock %}
+{% block heading %}Text messaging{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'live' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Your text number is live — customers can text it now, and missed calls text back automatically.</div>{% endif %}
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>{% endif %}
+  {% if msg == 'optedout' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Number added to the opt-out list — no further texts will be sent to it.</div>{% endif %}
+  {% if msg == 'badnumber' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">That doesn't look like a phone number — try the 07… or +44… form.</div>{% endif %}
+  {% if msg == 'nocreds' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Text messaging isn't fully set up on the platform yet — we've been notified. Try again shortly.</div>{% endif %}
+  {% if msg == 'err' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">That didn't work — try again, or get in touch if it keeps failing.</div>{% endif %}
+
+  <p class="text-sm text-slate-500">
+    Customers text your BLAM8 number and get replies drafted in your voice through the same
+    inbox as email. Miss a call and the caller gets a text back within seconds — the job
+    carries on by message.
+  </p>
+
+  <!-- Your number -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+    <h2 class="text-sm font-semibold text-navy">Your text number</h2>
+    {% if number %}
+    <p class="text-2xl font-semibold text-navy tracking-wide">{{ number }}</p>
+    <p class="text-xs text-slate-500">Texts to this number land in your <a href="/app/conversations" class="text-brand font-medium hover:underline">Inbox</a> with a drafted reply waiting — the same approvals as email.</p>
+    {% else %}
+    <p class="text-sm text-slate-600">Activate to get your own UK mobile number. Customers text it; you approve the replies.</p>
+    <form method="post" action="/app/channels/activate">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button type="submit" {% if not twilio_ready %}disabled title="Platform SMS credentials not configured yet"{% endif %}
+              class="rounded-lg bg-brand text-white px-4 py-2 text-sm font-semibold hover:bg-brand/90 transition disabled:opacity-50 disabled:cursor-not-allowed">
+        Activate text messaging
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if number %}
+  <!-- Missed-call text-back -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-sm font-semibold text-navy">Missed-call text-back</h2>
+      <form method="post" action="/app/channels/textback" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="enabled" value="{{ 'off' if text_back_on else 'on' }}">
+        <button type="submit" class="rounded-full px-3 py-1 text-xs font-semibold transition {{ 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' if text_back_on else 'bg-slate-100 text-slate-500 hover:bg-slate-200' }}">
+          {{ 'On — tap to turn off' if text_back_on else 'Off — tap to turn on' }}
+        </button>
+      </form>
+    </div>
+    <p class="text-xs text-slate-500 leading-relaxed">
+      Keep your existing number. On your business phone, dial the code below once — it
+      forwards <span class="font-semibold">only the calls you don't answer</span> to your
+      BLAM8 number, which apologises briefly and texts the caller back. Dial
+      <span class="font-mono">##61#</span> any time to switch it off.
+    </p>
+    <p class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 font-mono text-lg text-navy select-all">{{ divert_code }}</p>
+    <p class="text-xs text-slate-400">
+      Test it: dial the code on your business phone, then call that phone from another one
+      and don't answer — the text should arrive within seconds, and the thread appears in
+      your Inbox.
+    </p>
+  </div>
+
+  <!-- Opt-outs -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Opted-out numbers</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Anyone who texts STOP lands here automatically and never gets another text. Only their own START opts them back in.</p>
+    </div>
+    <div class="p-5 space-y-3">
+      <form method="post" action="/app/channels/optout" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="tel" name="phone" required placeholder="07700 900123"
+               class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm w-48 focus:outline-none focus:ring-2 focus:ring-brand/30">
+        <button type="submit" class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Add opt-out</button>
+      </form>
+      {% if opt_outs %}
+      <ul class="divide-y divide-slate-50 text-sm">
+        {% for o in opt_outs %}
+        <li class="flex items-center justify-between py-2">
+          <span class="font-mono text-navy">{{ o.phone }}</span>
+          <span class="text-xs text-slate-400">{{ o.opted_out_at | pretty_date }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-xs text-slate-400">No opt-outs yet.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "app/base.html" %}
+{% block title %}Modules · BLAM8{% endblock %}
+{% block heading %}Modules{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-8">
+  <p class="text-sm text-slate-500 max-w-2xl">Email and scheduling are the core every business runs. Bolt on the toolkit for your industry — for logistics that's Field OS · Transport, the whole transport operation — and everything shares what it learns when you run it together.</p>
+
+  {% macro card(m) %}
+    {% if m.state == 'active' %}
+    <a href="{{ m.href }}" class="group rounded-xl border-2 border-brand/20 bg-white p-6 hover:border-brand/40 hover:shadow-md transition block">
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-navy text-lg">{{ m.name }}</span>
+        <span class="rounded-full bg-brand px-2.5 py-0.5 text-xs font-semibold text-white">Live</span>
+      </div>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">{{ m.blurb }}</p>
+      {% if m.id == 'email' %}
+      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        {% if email_connected %}
+        <span class="inline-flex items-center gap-1.5 font-medium text-emerald-600">&#9679; {{ email_mailbox or 'Mailbox connected' }}</span>
+        {% else %}
+        <span class="inline-flex items-center gap-1.5 font-medium text-amber-600">&#9675; No mailbox connected</span>
+        {% endif %}
+        {% if draft_count %}
+        <span class="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 font-semibold">{{ draft_count }} draft{{ '' if draft_count == 1 else 's' }} awaiting approval</span>
+        {% endif %}
+      </div>
+      {% endif %}
+      <p class="mt-4 text-sm font-semibold text-brand">Open <span class="inline-block transition group-hover:translate-x-0.5">&rarr;</span></p>
+    </a>
+    {% elif m.state == 'preview' %}
+    <a href="{{ m.href }}" class="group rounded-xl border-2 border-dashed border-brand/40 bg-brand-50/40 p-6 hover:border-brand/60 hover:shadow-md transition block">
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-navy text-lg">{{ m.name }}</span>
+        <span class="rounded-full border border-brand/40 bg-white px-2.5 py-0.5 text-xs font-semibold text-brand">Previewing</span>
+      </div>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">{{ m.blurb }}</p>
+      <p class="mt-4 text-sm font-semibold text-brand">Look around <span class="inline-block transition group-hover:translate-x-0.5">&rarr;</span></p>
+      <p class="mt-1 text-xs text-slate-400">The agent runs this once you're a founding partner — <span class="underline">request access from Plans</span>.</p>
+    </a>
+    {% else %}
+    <div class="rounded-xl border border-slate-200 bg-white/60 p-6">
+      <div class="flex items-center justify-between">
+        <span class="font-semibold text-slate-600 text-lg">{{ m.name }}</span>
+        <span class="rounded-full {{ 'bg-navy text-white' if m.badge == 'Next up' else 'bg-slate-100 text-slate-500' }} px-2.5 py-0.5 text-xs font-semibold">{{ m.badge or 'Off' }}</span>
+      </div>
+      <p class="mt-2 text-sm text-slate-500 leading-relaxed">{{ m.blurb }}</p>
+      {# The CRM teaser: it pre-fills for every tenant, so the locked card shows
+         what it already knows — see a little, use nothing (Julius 2026-07-25). #}
+      {% if m.id == 'crm' and crm_teaser %}
+      <p class="mt-3 rounded-lg bg-brand-50 border border-brand/20 px-3 py-2 text-xs text-slate-600">
+        Already filling itself in from your inbox:
+        <span class="font-semibold text-navy">{{ crm_teaser.contacts }} contact{{ '' if crm_teaser.contacts == 1 else 's' }}</span>{% if crm_teaser.companies %}
+        across <span class="font-semibold text-navy">{{ crm_teaser.companies }} compan{{ 'y' if crm_teaser.companies == 1 else 'ies' }}</span>{% endif %}
+        so far — unlock on Pro to open them.
+      </p>
+      {% endif %}
+      {# Bundled (e.g. Invoicing) → comes with a vertical, not bought on its own. Buyable but
+         inactive → self-serve path to enable it. Roadmap items can't be bought yet. #}
+      {% if m.coming_soon %}
+      <p class="mt-4 text-xs font-medium text-slate-400">Invoicing for appointments &amp; stays — coming soon.</p>
+      {% elif m.bundled %}
+      <p class="mt-4 text-xs font-medium text-slate-400">Included with every plan — on for you already.</p>
+      {% elif m.group != 'soon' %}
+      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <a href="/billing/plans" class="inline-flex items-center gap-1 text-sm font-semibold text-brand hover:text-blue-700 transition">Add this — see plans <span>&rarr;</span></a>
+        {% if m.previewable %}
+        <form method="post" action="/app/os/preview" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-navy transition underline decoration-dotted underline-offset-2">Preview it first — look inside</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+  {% endmacro %}
+
+  {% set core = modules | selectattr('group', 'equalto', 'core') | list %}
+  {% set addons = modules | selectattr('group', 'equalto', 'addon') | list %}
+  {% set soon = modules | selectattr('group', 'equalto', 'soon') | list %}
+
+  <section>
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Core · every business</h2>
+    <div class="grid sm:grid-cols-2 gap-5">{% for m in core %}{{ card(m) }}{% endfor %}</div>
+  </section>
+
+  {% if addons %}
+  <section>
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Vertical add-ons</h2>
+    <div class="grid sm:grid-cols-2 gap-5">{% for m in addons %}{{ card(m) }}{% endfor %}</div>
+  </section>
+  {% endif %}
+
+  {% if soon %}
+  <section>
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3">Roadmap</h2>
+    <div class="grid sm:grid-cols-2 gap-5">{% for m in soon %}{{ card(m) }}{% endfor %}</div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

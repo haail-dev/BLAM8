@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Operator login · BLAM8</title>
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/tw-plain.css?v={{ asset_rev }}">
+</head>
+<body class="h-full font-sans bg-slate-900 text-slate-100 antialiased flex items-center justify-center">
+  <div class="w-full max-w-sm p-8">
+    <div class="mb-6 text-center">
+      <div class="font-bold text-xl tracking-tight">BLAM8 <span class="text-amber-400">Operator</span></div>
+      <p class="text-sm text-slate-400 mt-1">Platform admin access</p>
+    </div>
+    {% if error %}<div class="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{{ error }}</div>{% endif %}
+    <form method="post" action="/admin/login" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input name="email" type="email" required placeholder="Email" value="{{ email or '' }}"
+             class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-brand">
+      <input name="password" type="password" required placeholder="Password"
+             class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-brand">
+      <button class="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Sign in</button>
+    </form>
+    <p class="mt-6 text-center text-xs text-slate-500">Tenant dashboard is at <a href="/app" class="underline hover:text-slate-300">/app</a></p>
+  </div>
+  <script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+{
+  "sha256": "4a6c8e4ddfe71311303a3c09e9a1a8380cfdcd392c2c87e11921d503533ab171",
+  "excerpt": "{\"calls\":[{\"messages\":[{\"content\":\"Write the message now.\",\"role\":\"user\"}],\"operation\":\"offer_nudge\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\""
+}

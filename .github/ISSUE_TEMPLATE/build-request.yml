@@ -1,0 +1,30 @@
+name: Build request
+description: A feature request approved in /admin/requests, dispatched to the builder
+labels: ["build-request"]
+body:
+  - type: input
+    id: reference
+    attributes:
+      label: Request reference
+      description: The BLAM8-XXXX reference from /admin/requests
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Source
+      description: Decides review depth. owner builds straight away; tenant and agent get a plan step first.
+      options: [tenant, agent, owner]
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: Request (sanitised, no personal data)
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Owner notes
+      description: Scope limits, where it should live, anything the builder must not touch

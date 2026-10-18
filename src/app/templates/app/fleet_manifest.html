@@ -1,0 +1,89 @@
+{% extends "app/base.html" %}
+{% block title %}Manifest · BLAM8{% endblock %}
+{% block heading %}Manifest{% endblock %}
+{% set back = ('/app/board', 'Board') %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm">
+    <span class="flex items-center gap-2">
+      <a href="/app/fleet/vehicles/{{ m.vehicle.id }}/day/{{ m.date }}/route" class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">View route →</a>
+      <a href="/app/fleet/vehicles/{{ m.vehicle.id }}/day/{{ m.date }}/manifest.csv" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Download CSV</a>
+      <a href="/app/fleet/vehicles/{{ m.vehicle.id }}/day/{{ m.date }}/manifest.xlsx" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Download Excel</a>
+    </span>
+  </div>
+
+  <!-- Vehicle + load summary -->
+  <section class="bg-white rounded-xl border border-slate-200 px-5 py-4">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <p class="font-semibold text-navy">
+          {{ m.vehicle.name }}
+          {% if m.vehicle.registration %}<span class="ml-2 rounded-md bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs font-bold tracking-wider text-amber-900">{{ m.vehicle.registration }}</span>{% endif %}
+          {% if not m.vehicle.active %}<span class="ml-1.5 rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-[11px] font-semibold">Inactive</span>{% endif %}
+        </p>
+        <p class="text-xs text-slate-500 mt-0.5">
+          {{ m.label }}
+          {% if m.branch %} · {{ m.branch.name }} branch{% if m.branch.postcode %} ({{ m.branch.postcode }}){% endif %}{% endif %}
+        </p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-semibold {{ 'text-rose-600' if m.total_spaces and m.used_spaces >= m.total_spaces else 'text-navy' }}">
+          {{ '%g'|format(m.used_spaces) }} / {{ '%g'|format(m.total_spaces) }} spaces
+          {%- if m.max_kg %} · {{ '%g'|format(m.used_kg) }} / {{ '%g'|format(m.max_kg) }} kg{% elif m.used_kg %} · {{ '%g'|format(m.used_kg) }} kg{% endif %}
+        </p>
+        <p class="text-xs text-slate-400">{{ m.drops }} booking{{ '' if m.drops == 1 else 's' }}
+          {%- if m.unlocated %} · <span class="text-amber-600 font-semibold">{{ m.unlocated }} without a delivery postcode</span>{% endif %}
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The manifest -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    {% if m.rows %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100 text-left text-xs text-slate-400">
+          <th class="px-5 py-2.5 font-semibold">Booking</th>
+          <th class="px-3 py-2.5 font-semibold">Job</th>
+          <th class="px-3 py-2.5 font-semibold">Collection</th>
+          <th class="px-3 py-2.5 font-semibold">Delivery</th>
+          <th class="px-3 py-2.5 font-semibold text-right">Load</th>
+          <th class="px-5 py-2.5 font-semibold text-right">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for r in m.rows %}
+        <tr>
+          <td class="px-5 py-3 align-top">
+            {% if r.booking_ref %}<span class="font-mono text-xs font-semibold text-navy">{{ r.booking_ref }}</span>
+            {% else %}<span class="text-slate-300">—</span>{% endif %}
+            {% if r.reference %}<span class="block text-[11px] text-slate-400 font-mono mt-0.5">their ref {{ r.reference }}</span>{% endif %}
+          </td>
+          <td class="px-3 py-3 align-top">
+            <p class="text-slate-700">{{ r.summary }}</p>
+            {% if r.contact %}<p class="text-xs text-slate-400">{{ r.contact }}</p>{% endif %}
+          </td>
+          <td class="px-3 py-3 align-top text-slate-600">{{ r.collection_postcode or '—' }}</td>
+          <td class="px-3 py-3 align-top {{ 'text-slate-600' if r.delivery_postcode else 'text-amber-600' }}">
+            {{ r.delivery_postcode or 'no postcode' }}
+          </td>
+          <td class="px-3 py-3 align-top text-right text-slate-600 whitespace-nowrap">
+            {{ '%g'|format(r.spaces) }} sp{% if r.weight_kg %} · {{ '%g'|format(r.weight_kg) }} kg{% endif %}
+          </td>
+          <td class="px-5 py-3 align-top text-right">
+            <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {{ 'bg-emerald-100 text-emerald-700' if r.status == 'confirmed' else 'bg-blue-100 text-blue-700' }}">{{ r.status|title }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400 text-center">Nothing on this vehicle for {{ m.label }}.</p>
+    {% endif %}
+  </section>
+
+  <p class="text-xs text-slate-400">Postcodes and references are captured from the customer's email when stated — older bookings made before route planning was switched on won't have them. Customers never see which vehicle a job rides on.</p>
+</div>
+{% endblock %}

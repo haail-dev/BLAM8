@@ -1,0 +1,64 @@
+{% extends "app/base.html" %}
+{% block title %}Engineers · Field OS · Trades · BLAM8{% endblock %}
+{% block heading %}Engineers{% endblock %}
+{% block menu_sections %}{% include "app/_fsm_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set inp = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand" %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>{% endif %}
+  {% if msg == 'deleted' %}<div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">Engineer removed.</div>{% endif %}
+
+  {% if not engineers %}
+  <div class="rounded-xl bg-brand-50 border border-brand/30 px-5 py-4">
+    <p class="text-sm font-semibold text-brand">Set up your field service · Step 1</p>
+    <p class="mt-1 text-sm text-slate-600">Add your engineers and the skills they hold (e.g. <span class="font-medium">gas</span>, <span class="font-medium">electrical</span>). The assistant matches each job to a free, suitably-skilled engineer — so it never books a gas job to someone who can't do it. Then set your <a href="/app/fsm/job-types" class="text-brand underline">job types</a> and <a href="/app/fsm/pricing" class="text-brand underline">rates</a>.</p>
+  </div>
+  {% endif %}
+
+  <!-- Add -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Add an engineer</h2>
+    <form method="post" action="/app/fsm/engineers" class="grid sm:grid-cols-4 gap-3 items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label class="block sm:col-span-1"><span class="text-xs font-medium text-slate-500">Name</span>
+        <input name="name" required placeholder="e.g. Sam Doyle" class="{{ inp }}"></label>
+      <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">Skills (comma-separated)</span>
+        <input name="skills" placeholder="Skill A, Skill B" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Hours / day</span>
+        <input name="hours" type="number" step="0.5" min="1" value="8" class="{{ inp }}"></label>
+      {% if branches and branches|length > 1 %}
+      <label class="block sm:col-span-3"><span class="text-xs font-medium text-slate-500">Area</span>
+        <select name="branch_id" class="{{ inp }}"><option value="">Any</option>
+          {% for b in branches %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select></label>
+      {% endif %}
+      <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Add engineer</button>
+    </form>
+  </div>
+
+  <!-- List -->
+  {% for e in engineers %}
+  <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-3 {{ '' if e.active else 'opacity-70' }}">
+    <form method="post" action="/app/fsm/engineers/{{ e.id }}" class="grid sm:grid-cols-4 gap-3 items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label class="block"><span class="text-xs font-medium text-slate-500">Name</span>
+        <input name="name" value="{{ e.name }}" class="{{ inp }}"></label>
+      <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">Skills</span>
+        <input name="skills" value="{{ e.skills|join(', ') }}" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Hours / day</span>
+        <input name="hours" type="number" step="0.5" min="1" value="{{ (e.daily_minutes / 60)|round(1) }}" class="{{ inp }}"></label>
+      <label class="flex items-center gap-2 text-sm text-slate-600 sm:col-span-3">
+        <input type="checkbox" name="active" value="1" {{ 'checked' if e.active else '' }} class="rounded border-slate-300"> Active (takes new jobs)</label>
+      <div class="flex justify-end">
+        <button data-save-row class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
+      </div>
+    </form>
+    <form method="post" action="/app/fsm/engineers/{{ e.id }}/delete" class="flex justify-end border-t border-slate-50 pt-2"
+          onsubmit="return confirm('Remove {{ e.name }}? Their jobs keep their date but show unassigned.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="text-xs font-semibold text-red-500 hover:text-red-700 transition">Delete engineer</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

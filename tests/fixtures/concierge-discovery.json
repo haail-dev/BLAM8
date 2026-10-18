@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "revision": "fixture-revision",
+  "source": "generated",
+  "expires_at": "2099-01-01T00:00:00Z",
+  "groups": [
+    {
+      "id": "inbox",
+      "title": "Inbox",
+      "requests": [
+        {
+          "id": "request-0",
+          "text": "Check my inbox for unanswered replies",
+          "capability_ids": [
+            "read:get_inbox_overview"
+          ]
+        },
+        {
+          "id": "request-1",
+          "text": "Find correspondence about a customer",
+          "capability_ids": [
+            "read:search_conversations"
+          ]
+        },
+        {
+          "id": "request-2",
+          "text": "Summarise a customer's correspondence",
+          "capability_ids": [
+            "read:get_conversation"
+          ]
+        },
+        {
+          "id": "request-3",
+          "text": "Draft a reply to an existing conversation",
+          "capability_ids": [
+            "action:draft_reply"
+          ]
+        },
+        {
+          "id": "request-4",
+          "text": "Show my requests waiting for approval",
+          "capability_ids": [
+            "read:list_awaiting_approval"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "customers",
+      "title": "Customers",
+      "requests": [
+        {
+          "id": "request-5",
+          "text": "Find customer contact details",
+          "capability_ids": [
+            "read:search_contacts"
+          ]
+        },
+        {
+          "id": "request-6",
+          "text": "Review a customer's history",
+          "capability_ids": [
+            "read:get_contact_timeline"
+          ]
+        },
+        {
+          "id": "request-7",
+          "text": "Check a customer's outstanding promises",
+          "capability_ids": [
+            "read:get_contact_record"
+          ]
+        },
+        {
+          "id": "request-8",
+          "text": "Find customers with no recent booking",
+          "capability_ids": [
+            "read:list_dormant_contacts"
+          ]
+        },
+        {
+          "id": "request-9",
+          "text": "Create a new customer contact record",
+          "capability_ids": [
+            "action:create_contact"
+          ]
+        },
+        {
+          "id": "request-10",
+          "text": "Update a customer's contact details",
+          "capability_ids": [
+            "action:update_contact"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sales",
+      "title": "Sales",
+      "requests": [
+        {
+          "id": "request-11",
+          "text": "Review my sales opportunities",
+          "capability_ids": [
+            "read:list_deals"
+          ]
+        },
+        {
+          "id": "request-12",
+          "text": "Summarise my sales pipeline",
+          "capability_ids": [
+            "read:get_pipeline_summary"
+          ]
+        },
+        {
+          "id": "request-13",
+          "text": "Check outstanding customer follow-ups",
+          "capability_ids": [
+            "read:list_followups"
+          ]
+        },
+        {
+          "id": "request-14",
+          "text": "Create a customer follow-up reminder",
+          "capability_ids": [
+            "action:create_followup"
+          ]
+        },
+        {
+          "id": "request-15",
+          "text": "Change a sales opportunity's stage",
+          "capability_ids": [
+            "action:update_deal_stage"
+          ]
+        },
+        {
+          "id": "request-16",
+          "text": "Update a sales opportunity's recorded value",
+          "capability_ids": [
+            "action:update_deal_value"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "diary",
+      "title": "Diary",
+      "requests": [
+        {
+          "id": "request-17",
+          "text": "Show my upcoming diary bookings",
+          "capability_ids": [
+            "read:list_bookings"
+          ]
+        },
+        {
+          "id": "request-18",
+          "text": "Check available diary capacity",
+          "capability_ids": [
+            "read:get_availability"
+          ]
+        },
+        {
+          "id": "request-19",
+          "text": "Reschedule an existing booking",
+          "capability_ids": [
+            "action:move_booking"
+          ]
+        },
+        {
+          "id": "request-20",
+          "text": "Cancel an existing booking",
+          "capability_ids": [
+            "action:cancel_booking"
+          ]
+        },
+        {
+          "id": "request-21",
+          "text": "Confirm a proposed booking",
+          "capability_ids": [
+            "action:confirm_booking"
+          ]
+        },
+        {
+          "id": "request-22",
+          "text": "Block a diary date",
+          "capability_ids": [
+            "action:block_date"
+          ]
+        },
+        {
+          "id": "request-23",
+          "text": "Reopen a blocked diary date",
+          "capability_ids": [
+            "action:unblock_date"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "invoices",
+      "title": "Invoices",
+      "requests": [
+        {
+          "id": "request-25",
+          "text": "Summarise recorded invoice information for my accountant",
+          "capability_ids": [
+            "read:list_invoices"
+          ]
+        },
+        {
+          "id": "request-26",
+          "text": "Prepare a new invoice",
+          "capability_ids": [
+            "action:invoice_create"
+          ]
+        },
+        {
+          "id": "request-29",
+          "text": "Prepare an invoice payment reminder",
+          "capability_ids": [
+            "action:invoice_reminder_draft"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "quotes",
+      "title": "Quotes",
+      "requests": [
+        {
+          "id": "request-30",
+          "text": "Check outstanding quotes",
+          "capability_ids": [
+            "read:list_quotes"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "title": "Knowledge",
+      "requests": [
+        {
+          "id": "request-34",
+          "text": "Explain my business's documented policies",
+          "capability_ids": [
+            "read:search_knowledge_base"
+          ]
+        },
+        {
+          "id": "request-35",
+          "text": "Prepare a new business knowledge note",
+          "capability_ids": [
+            "action:add_kb_entry"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "options",
+      "title": "Options",
+      "requests": [
+        {
+          "id": "guide-0",
+          "text": "Explain my diary setup requirements",
+          "capability_ids": [
+            "guide:diary_setup"
+          ]
+        },
+        {
+          "id": "guide-1",
+          "text": "Suggest gaps between bookings for my working day",
+          "capability_ids": [
+            "guide:booking_spacing"
+          ]
+        },
+        {
+          "id": "guide-2",
+          "text": "Compare repeat bookings with individual bookings",
+          "capability_ids": [
+            "guide:repeat_bookings"
+          ]
+        },
+        {
+          "id": "guide-3",
+          "text": "Explain waiting list options",
+          "capability_ids": [
+            "guide:waiting_lists"
+          ]
+        },
+        {
+          "id": "guide-4",
+          "text": "Compare deposits on quote acceptance and booking confirmation",
+          "capability_ids": [
+            "guide:deposit_choices"
+          ]
+        },
+        {
+          "id": "guide-5",
+          "text": "Compare prepaid packages with paying per booking",
+          "capability_ids": [
+            "guide:prepaid_packages"
+          ]
+        }
+      ]
+    }
+  ]
+}

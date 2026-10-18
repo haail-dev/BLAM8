@@ -1,0 +1,8 @@
+<div class="grid sm:grid-cols-2 gap-3">
+<label>Reason for contacting<select name="basis" class="block w-full rounded border p-2"><option value="permission" {% if t.basis=='permission' %}selected{% endif %}>Recorded permission</option><option value="corporate" {% if t.basis=='corporate' %}selected{% endif %}>Verified corporate recipient</option></select></label>
+<label>Company registration number (corporate recipients)<input name="company_number" value="{{ t.company_number or '' }}" class="block w-full rounded border p-2"></label>
+<label>Published email source or permission source<input name="email_source" required value="{{ t.email_source or '' }}" class="block w-full rounded border p-2"></label>
+<label>Permission or company evidence<input name="evidence" required value="{{ t.evidence or '' }}" class="block w-full rounded border p-2"></label>
+</div>
+<label class="block"><input type="checkbox" name="email_verified" {% if t.email_verified %}checked{% endif %}> I checked this email address against the source</label>
+<label class="block"><input type="checkbox" name="identity_confirmed" {% if t and not t.soft_match %}checked{% endif %}> I confirmed the recipient's identity; this is not a possible match</label>

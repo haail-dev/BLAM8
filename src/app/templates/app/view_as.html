@@ -1,0 +1,41 @@
+{% extends "app/base.html" %}
+{% block title %}View as · BLAM8{% endblock %}
+{% block heading %}View as{% endblock %}
+{% block content %}
+{# View as (src/app/viewas.py; Kris 2026-09-24): the owner sees BLAM8 exactly as one
+   of their people does — their doors, their jobs, their customers, what the
+   Concierge offers them. Read-only. From the account menu until People is
+   rebuilt, then it moves onto each person's page. #}
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-4" data-view-as-page>
+  <section class="rounded-xl border border-slate-200 bg-white p-5">
+    <p class="text-sm font-semibold text-navy">See BLAM8 as one of your people</p>
+    <p class="mt-1 text-sm text-slate-500">Every page shows what they would see — the doors they have, the jobs that are theirs, the customers they can open, and what the Concierge will do for them. Nothing can be changed while you're viewing, and nothing is saved under their name.</p>
+    {% if viewing %}
+    <form method="post" action="/app/view-as/exit" class="mt-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Leave View as</button>
+    </form>
+    {% endif %}
+  </section>
+
+  {% if others %}
+  <ul class="space-y-2">
+    {% for m in others %}
+    <li class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-navy truncate">{{ m.display_name or m.email or 'Someone' }}</p>
+        <p class="text-xs text-slate-500">{{ role_labels.get(m.role, m.role) }}</p>
+      </div>
+      <form method="post" action="/app/view-as/start">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="user_id" value="{{ m.user_id }}">
+        <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-navy hover:border-brand hover:text-brand">View as {{ (m.display_name or m.email or 'them').split(' ')[0] }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-sm text-slate-500">There's nobody else on the account yet — invite someone from <a href="/app/people" class="text-brand">People</a>.</p>
+  {% endif %}
+</div>
+{% endblock %}

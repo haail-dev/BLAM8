@@ -1,0 +1,4 @@
+{
+  "sha256": "d667e3ef70b9132726341b3f5a6b6de83431b701f9d7ad46f4aee93533e46afd",
+  "excerpt": "{\"bookings\":[],\"policy\":{\"message\":\"\",\"ready\":true,\"revision\":7,\"states\":{\"capacity\":\"set\",\"opening_hours\":\"set\",\"timezone\":\"set\",\"working_days\":\"set\"},\"unresol"
+}

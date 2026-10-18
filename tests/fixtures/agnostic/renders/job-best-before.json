@@ -1,0 +1,4 @@
+{
+  "sha256": "ff6be5dafd8f76466c91328c3c6cd3486cc161e92e867952f61d991aceff52af",
+  "excerpt": "{\"calls\":[{\"messages\":[{\"content\":\"Write the message now.\",\"role\":\"user\"}],\"operation\":\"special\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":fal"
+}

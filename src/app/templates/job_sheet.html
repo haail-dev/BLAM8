@@ -1,0 +1,293 @@
+{# The job sheet — /j/{token} (src/app/job_sheet_public.py). Opened from a text or
+   an email by someone on the team who doesn't sign in: one job, big taps,
+   nothing else. No app chrome, noindex, no referrer.
+
+   Redesign 2026-09-30 (Kris, from the long-form film footage: "how tacky the
+   job sheet looks"): phone-first, BLAM8's own look (Schibsted Grotesk on the
+   title, Inter for the rest, cobalt #1D4FD7 on ink #101A26, hairline cards,
+   the same dark field as the app), light and dark by the device's setting.
+   Behaviour is unchanged: same three forms, same posts, same states after
+   each tap. Everything on the page is data (title, labels, notes), nothing
+   here names a trade. No framework, one tiny script. #}
+{% macro ico(n) -%}
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if n == 'pin' %}<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+{%- elif n == 'phone' %}<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>
+{%- elif n == 'nav' %}<polygon points="3 11 22 2 13 21 11 13 3 11"/>
+{%- elif n == 'check' %}<path d="M20 6 9 17l-5-5"/>
+{%- elif n == 'camera' %}<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/>
+{%- elif n == 'cal' %}<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+{%- elif n == 'alert' %}<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/>
+{%- elif n == 'notes' %}<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>
+{%- elif n == 'user' %}<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+{%- elif n == 'hash' %}<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>
+{%- elif n == 'lock' %}<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+{%- endif %}</svg>
+{%- endmacro %}
+{% macro flash(kind) -%}
+<div class="flash {{ kind }}" role="status">{{ ico('check' if kind == 'ok' else 'alert') }}<span>{{ caller() }}</span></div>
+{%- endmacro %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F3F5F9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B1220" media="(prefers-color-scheme: dark)">
+  <title>{% if closed %}Job sheet{% else %}{{ f.what }} — {{ biz }}{% endif %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Schibsted+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --brand:#1D4FD7;--brand-ink:#1D4FD7;--brand-tint:rgba(29,79,215,.09);--on-brand:#fff;
+      --ink:#101A26;--muted:#5B6878;--line:rgba(16,26,38,.10);--line-strong:rgba(16,26,38,.18);
+      --bg:#F3F5F9;--card:#fff;--field:#F7F8FB;
+      --done:#047857;--done-tint:rgba(4,120,87,.10);
+      --ok-bg:#E5F5EC;--ok-ink:#0B5C3C;--warn-bg:#FFF3D6;--warn-ink:#7A4A05;
+      --shadow:0 1px 2px rgba(16,26,38,.05),0 10px 28px -14px rgba(16,26,38,.16);
+      --glow:0 6px 18px -6px rgba(29,79,215,.55);
+      --display:"Schibsted Grotesk",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+      --text:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+    }
+    @media (prefers-color-scheme: dark){:root{
+      --brand-ink:#8FAAF5;--brand-tint:rgba(126,158,242,.13);
+      --ink:#E8ECF3;--muted:#98A3B5;--line:rgba(255,255,255,.09);--line-strong:rgba(255,255,255,.18);
+      --bg:#0B1220;--card:#111B2E;--field:#0D1626;
+      --done:#047857;--done-tint:rgba(52,211,153,.13);
+      --ok-bg:rgba(52,211,153,.13);--ok-ink:#7EE7B9;--warn-bg:rgba(251,191,36,.13);--warn-ink:#FCD46B;
+      --shadow:inset 0 1px 0 rgba(255,255,255,.05),0 12px 30px -16px rgba(0,0,0,.7);
+      --glow:0 6px 20px -6px rgba(29,79,215,.75);
+    }}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html{-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased}
+    body{margin:0;font-family:var(--text);font-size:1rem;background:var(--bg);color:var(--ink);line-height:1.5;touch-action:manipulation}
+    main{max-width:32rem;margin:0 auto;padding:max(1.25rem,env(safe-area-inset-top)) 1rem calc(2.5rem + env(safe-area-inset-bottom))}
+    .i{width:1.25em;height:1.25em;flex:none}
+
+    /* Head: who it's from, what the job is, when. */
+    .biz{display:flex;align-items:center;gap:.5rem;margin:.25rem 0 .9rem;font-size:.78rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .biz::before{content:"";width:.5rem;height:.5rem;border-radius:50%;background:var(--brand);flex:none;box-shadow:0 0 0 4px var(--brand-tint)}
+    h1{font-family:var(--display);font-weight:700;font-size:1.9rem;line-height:1.12;letter-spacing:-.02em;margin:0 0 .8rem;overflow-wrap:anywhere}
+    .when{display:inline-flex;align-items:center;gap:.5rem;margin:0 0 1.25rem;padding:.5rem .85rem .5rem .7rem;border-radius:16px;line-height:1.35;background:var(--brand-tint);color:var(--brand-ink);font-weight:600;font-size:.98rem}
+
+    /* Cards. */
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:1rem 1.1rem;margin:0 0 .75rem;box-shadow:var(--shadow)}
+    .eyebrow{display:flex;align-items:center;gap:.45rem;margin:0 0 .35rem;font-size:.75rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+    .eyebrow .i{width:1.1em;height:1.1em}
+    .big{font-size:1.15rem;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+    .sub{color:var(--muted);font-size:.9rem;margin:.15rem 0 0}
+    .split{display:flex;align-items:center;gap:.75rem;justify-content:space-between}
+    .split>div{min-width:0}
+    hr{border:0;border-top:1px solid var(--line);margin:.95rem 0}
+    .notes{margin:0;padding:0;list-style:none}
+    .notes li{position:relative;padding:.1rem 0 .1rem 1.1rem;overflow-wrap:anywhere}
+    .notes li+li{margin-top:.35rem}
+    .notes li::before{content:"";position:absolute;left:.1rem;top:.65em;width:.38rem;height:.38rem;border-radius:50%;background:var(--brand)}
+    .ref{font-variant-numeric:tabular-nums;font-weight:600}
+
+    /* Buttons. One shape: tall, rounded, full width unless it sits in a pair. */
+    a.btn,button,summary{font-family:inherit}
+    .btn,button{display:flex;align-items:center;justify-content:center;gap:.6rem;width:100%;min-height:3.4rem;padding:.8rem 1rem;border:0;border-radius:14px;font-size:1.05rem;font-weight:700;text-align:center;text-decoration:none;cursor:pointer;transition:transform .08s ease,filter .15s ease,opacity .15s ease}
+    .btn:active,button:active{transform:scale(.985)}
+    :is(a,button,summary,input,textarea,label.pick):focus-visible{outline:3px solid var(--brand-ink);outline-offset:2px}
+    .primary{background:var(--brand);color:var(--on-brand);box-shadow:var(--glow)}
+    .primary:hover{filter:brightness(1.07)}
+    .done{background:var(--done);color:#fff;box-shadow:0 6px 18px -8px rgba(4,120,87,.7)}
+    .ghost{background:var(--brand-tint);color:var(--brand-ink);min-height:3rem;margin-top:.85rem;font-size:1rem}
+    .ghost.call{margin-top:0;width:auto;flex:none;padding:.6rem 1.05rem;min-height:2.9rem;border-radius:999px}
+    button:disabled{cursor:default;box-shadow:none;filter:none}
+    button.dim{opacity:.5}
+    button.busy{opacity:1}
+
+    /* On my way. */
+    .go-head{margin:0 0 .15rem;font-family:var(--display);font-weight:700;font-size:1.2rem;letter-spacing:-.01em}
+    .etas{display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem;margin:.75rem 0 .6rem}
+    .etas button{flex-direction:column;gap:0;min-height:3.6rem;padding:.4rem 0;border-radius:14px;background:var(--brand);color:var(--on-brand);box-shadow:var(--glow);font-size:1.3rem;font-weight:700;line-height:1.1}
+    .etas button small{font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.85}
+    .etas button.busy{color:transparent;position:relative}
+    .etas button.busy small{color:transparent}
+    .etas button.busy::after,button.busy.spin::before{content:"";position:absolute;width:1.3rem;height:1.3rem;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+    button.busy.spin{position:relative}
+    button.busy.spin::before{position:static}
+    .status{margin:.5rem 0 0;font-weight:600;color:var(--brand-ink)}
+    .status[hidden]{display:none}
+    .sent-btn{background:var(--ok-bg);color:var(--ok-ink);box-shadow:none;margin-top:.6rem}
+    details{margin-top:.8rem;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding-top:.15rem;padding-bottom:.15rem;margin-bottom:.95rem}
+    details+hr{display:none}
+    summary{display:flex;align-items:center;min-height:2.9rem;color:var(--brand-ink);font-weight:600;cursor:pointer;list-style:none}
+    summary::-webkit-details-marker{display:none}
+    summary::after{content:"";margin:-.25rem .3rem 0 auto;width:.55rem;height:.55rem;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .15s ease}
+    details[open] summary::after{margin-top:.25rem;transform:rotate(-135deg)}
+    details[open] summary{margin-bottom:.35rem}
+    .finish{margin-top:.25rem}
+
+    /* Banners after a tap. */
+    .flash{display:flex;gap:.65rem;align-items:flex-start;border-radius:14px;padding:.8rem 1rem;margin:0 0 .75rem;font-weight:600;line-height:1.4}
+    .flash .i{margin-top:.1rem}
+    .ok{background:var(--ok-bg);color:var(--ok-ink)}
+    .warn{background:var(--warn-bg);color:var(--warn-ink)}
+    .card>.flash{margin:0 0 .9rem}
+
+    /* The way back: photos and a note. */
+    .pick{display:flex;align-items:center;gap:.8rem;padding:.85rem 1rem;margin:.75rem 0 .6rem;border:1.5px dashed var(--line-strong);border-radius:14px;background:var(--field);cursor:pointer;min-height:3.6rem}
+    .pick:hover{border-color:var(--brand-ink)}
+    .pick .i{width:1.6rem;height:1.6rem;color:var(--brand-ink)}
+    .pick b{display:block;font-weight:600}
+    .pick span.n{display:block;font-size:.85rem;color:var(--muted)}
+    .pick.has span.n{color:var(--brand-ink);font-weight:600}
+    .pick input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
+    .pick:has(input:focus-visible){outline:3px solid var(--brand-ink);outline-offset:2px}
+    textarea{display:block;width:100%;min-height:6rem;resize:vertical;padding:.8rem .9rem;border:1.5px solid var(--line-strong);border-radius:14px;background:var(--field);color:var(--ink);font:inherit;font-size:1rem;line-height:1.45}
+    textarea::placeholder{color:var(--muted);opacity:.85}
+    textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-tint)}
+    .send{margin-top:.75rem}
+
+    .foot{display:flex;align-items:center;justify-content:center;gap:.4rem;margin:1.5rem 0 0;color:var(--muted);font-size:.82rem;text-align:center}
+    .foot .i{width:1em;height:1em}
+    .word{margin:.6rem 0 0;text-align:center;font-family:var(--display);font-weight:800;letter-spacing:.14em;font-size:.72rem;color:var(--muted);opacity:.7}
+    .closed{margin-top:3rem;text-align:center;padding:2rem 1.25rem}
+    .closed h1{font-size:1.5rem;margin:.6rem 0 .5rem}
+    .closed p{margin:0;color:var(--muted)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @media (prefers-reduced-motion: reduce){*{transition:none!important}.etas button.busy::after,button.busy.spin::before{animation-duration:1.6s}}
+    @media (max-width:360px){h1{font-size:1.65rem}.etas button{font-size:1.15rem}}
+  </style>
+</head>
+<body>
+<main>
+{% if closed %}
+  <div class="card closed">
+    <h1>This job sheet has closed</h1>
+    <p>You've been taken off the job, it was cancelled, or it's finished. If you weren't expecting that, give the office a ring.</p>
+  </div>
+{% else %}
+  <p class="biz">{{ biz }} · job for {{ person.name.split(' ')[0] if person.name else 'you' }}</p>
+  <h1>{{ f.what }}</h1>
+  <p class="when">{{ ico('cal') }}{{ f.when }}</p>
+
+  {% if msg == 'omw' %}{% call flash('ok') %}{% if goes %}Your on-my-way message was sent to the customer.{% else %}Thanks — the office knows you're on the way.{% endif %}{% endcall %}{% endif %}
+  {% if goes and omw_action and omw_action.state == 'unknown' and not omw_action.hide_historical %}{% call flash('warn') %}We couldn't confirm the customer got it. {% if omw_action.notice_id %}The office has been told.{% else %}Please tell the office.{% endif %}{% endcall %}{% endif %}
+  {% if omw_action and omw_action.state == 'unavailable' %}{% call flash('warn') %}We couldn't check whether your message was sent. Please tell the office.{% endcall %}{% endif %}
+  {% if msg in ('omw_pre_send_failure', 'omw_no_recipient') or omw_action and omw_action.state == 'pre_send_failure' %}{% call flash('warn') %}The customer message was not sent. Check the details, then retry.{% endcall %}{% endif %}
+  {% if msg in ('omw_in_progress', 'omw_stale_action', 'omw_stale_attempt') %}{% call flash('warn') %}Someone's sending this right now — refresh in a moment.{% endcall %}{% endif %}
+  {% if msg == 'omw_untold' %}{% call flash('warn') %}The office knows you're on the way, but the customer couldn't be messaged — maybe give them a call.{% endcall %}{% endif %}
+  {% if msg == 'omw_already' %}{% call flash('ok') %}You're already on the way. Already sent — tapping again won't send another.{% endcall %}{% endif %}
+  {% if msg == 'bad_eta' %}{% call flash('warn') %}Pick how long you'll be.{% endcall %}{% endif %}
+  {% if msg == 'done' %}{% call flash('ok') %}Marked done — thanks. The office has been told.{% endcall %}{% endif %}
+
+  {% if f.where %}
+  <section class="card">
+    <p class="eyebrow">{{ ico('pin') }}Where</p>
+    <div class="big">{{ f.where }}</div>
+    {% if map_url %}<a class="btn ghost" href="{{ map_url }}" target="_blank" rel="noopener noreferrer">{{ ico('nav') }}Map</a>{% endif %}
+  </section>
+  {% endif %}
+
+  {% if not s.done_at %}
+  <section class="card">
+    {% if not goes and s.on_my_way_at %}
+      <p class="sub" style="margin:0 0 .8rem">You're on the way.</p>
+    {% elif goes and (not omw_action or omw_action.state in ('sent', 'pre_send_failure', 'preparing')) %}
+      {% if omw_action and omw_action.state == 'sent' %}
+      <p class="big" style="margin:0">The customer message was sent: {{ omw_action.receipt.eta }}.</p>
+      <button class="sent-btn" disabled>{{ ico('check') }}On my way sent</button>
+      <details><summary>Send ETA correction</summary>
+      {% endif %}
+      <form method="post" action="/j/{{ token }}/on-my-way">
+        <input type="hidden" name="action_key" value="{{ 'after:' ~ omw_action.id if omw_action and omw_action.state == 'sent' else (omw_action.action_key if omw_action else 'initial') }}">
+        <p class="go-head">{{ 'Send ETA correction — there in…' if omw_action and omw_action.state == 'sent' else 'On my way — there in…' }}</p>
+        <div class="etas">{% for m in etas %}<button name="eta" value="{{ m }}" aria-label="{{ m }} minutes">{{ m }}<small>min</small></button>{% endfor %}</div>
+        <p class="status" role="status" hidden></p>
+        <p class="sub">The customer gets a message saying when you'll arrive.</p>
+      </form>
+      {% if omw_action and omw_action.state == 'sent' %}</details>{% endif %}
+    {% elif not goes %}
+      <form method="post" action="/j/{{ token }}/on-my-way"><button class="primary">{{ ico('nav') }}On my way</button></form>
+    {% endif %}
+    <hr>
+    <form class="finish" method="post" action="/j/{{ token }}/done"><button class="done">{{ ico('check') }}Done</button></form>
+  </section>
+  {% endif %}
+
+  {% if f.who.name or f.who.phone %}
+  <section class="card">
+    <div class="split">
+      <div>
+        <p class="eyebrow">{{ ico('user') }}Who</p>
+        <div class="big">{{ f.who.name or '' }}{% if f.who.label %} <span class="sub">({{ f.who.label }})</span>{% endif %}</div>
+        {% if f.who.phone %}<div class="sub">{{ f.who.phone }}</div>{% endif %}
+      </div>
+      {% if f.who.phone %}<a class="btn ghost call" href="tel:{{ f.who.phone | replace(' ', '') }}">{{ ico('phone') }}Call {{ (f.who.name or 'them').split(' ')[0] }}</a>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if f.notes or f.ref %}
+  <section class="card">
+    {% if f.notes %}
+    <p class="eyebrow">{{ ico('notes') }}Notes</p>
+    <ul class="notes">{% for n in f.notes %}<li>{{ n }}</li>{% endfor %}</ul>
+    {% endif %}
+    {% if f.notes and f.ref %}<hr>{% endif %}
+    {% if f.ref %}<p class="eyebrow">{{ ico('hash') }}Ref</p><div class="ref">{{ f.ref }}</div>{% endif %}
+  </section>
+  {% endif %}
+
+  {# The way back (Kris 2026-09-26): photos and a note from the job. #}
+  <section class="card" id="back">
+    {% if msg == 'sent_back' %}{% call flash('ok') %}Sent — the office has them.{% endcall %}{% endif %}
+    {% if msg == 'nothing' %}{% call flash('warn') %}Add a photo or a note first.{% endcall %}{% endif %}
+    <form method="post" action="/j/{{ token }}/photos" enctype="multipart/form-data">
+      <p class="go-head">Photos or a note for the office</p>
+      <label class="pick" id="pick">
+        {{ ico('camera') }}
+        <span><b>Add photos</b><span class="n" id="pickn">Take one or choose from your phone</span></span>
+        <input type="file" name="photo" multiple accept="image/*">
+      </label>
+      <textarea name="note" rows="3" placeholder="What you found, what's needed, anything they should know"></textarea>
+      <button class="primary send">Send to the office</button>
+    </form>
+  </section>
+
+  <p class="foot">{{ ico('lock') }}This link is just for you and this job — please don't share it.</p>
+  <p class="word" aria-hidden="true">BLAM8</p>
+{% endif %}
+</main>
+<script>
+  // One tap, visibly (Kris 2026-09-26: the page sat still while the message
+  // was written, so he tapped six times). Every button greys out at once and
+  // the tapped one says so; the server refuses a repeat anyway.
+  document.querySelectorAll("form").forEach(function (f) {
+    f.addEventListener("submit", function (e) {
+      if (f.dataset.sent) { e.preventDefault(); return; }
+      f.dataset.sent = "1";
+      var hit = e.submitter;
+      if (hit && hit.name) {           // keep the chosen ETA in the post
+        var h = document.createElement("input");
+        h.type = "hidden"; h.name = hit.name; h.value = hit.value; f.appendChild(h);
+      }
+      document.querySelectorAll("button").forEach(function (b) { b.disabled = true; b.classList.add("dim"); });
+      if (hit) {
+        var say = f.action.indexOf("/done") > -1 || f.action.indexOf("/photos") > -1 ? "Sending…" : "Telling them…";
+        hit.classList.remove("dim"); hit.classList.add("busy");
+        var st = f.querySelector(".status");
+        if (st) { st.textContent = say; st.hidden = false; }   // a small ETA button has no room for words
+        else { hit.classList.add("spin"); hit.textContent = say; }
+      }
+    });
+  });
+  // Say what was picked, since the native "Choose files" is hidden.
+  var pk = document.getElementById("pick");
+  if (pk) pk.querySelector("input").addEventListener("change", function () {
+    var n = this.files.length;
+    document.getElementById("pickn").textContent = n ? n + (n === 1 ? " photo ready to send" : " photos ready to send") : "Take one or choose from your phone";
+    pk.classList.toggle("has", n > 0);
+  });
+</script>
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

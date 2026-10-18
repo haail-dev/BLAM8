@@ -1,0 +1,14 @@
+{# The settings-page preview fragment — swapped into #inv-preview by the
+   debounced fetch. Renders the SAME macro as the real invoice page, so what
+   you preview is by construction what the customer gets. #}
+{% import "app/_invoice_sections.html" as sections %}
+<div class="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+  {{ sections.invoice_card(inv, lines, s, editable=False) }}
+</div>
+{# "PDF invoice" is a submit of the settings form (form= reaches it from out
+   here), so the PDF carries the unsaved changes too — the caption's promise
+   holds for both. Kris 2026-09-05: the separate "Sample PDF" button went. #}
+<p class="mt-2 text-center text-xs text-slate-400">Sample invoice &amp;
+  <button type="submit" form="inv-settings-form" formaction="/app/invoices/settings/preview.pdf" formtarget="_blank"
+          class="underline decoration-slate-300 underline-offset-2 hover:text-slate-600 transition">PDF invoice</button>
+  — reflects the form as it stands, including unsaved changes.</p>

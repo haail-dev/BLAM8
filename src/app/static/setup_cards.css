@@ -1,0 +1,24 @@
+.bc-setup-dots{display:flex;gap:4px;align-self:flex-end;margin-left:5px;flex-shrink:0}
+.bc-setup-dot{width:2rem;height:2rem;border-radius:50%;border:2px dashed #3b82f6;color:#1d4ed8;background:#eff6ff;font-size:12px;font-weight:700}
+.bc-setup-dot.held{border-color:#f59e0b;color:#92400e;background:#fffbeb}
+.bc-setup-dot[aria-expanded=true]{border-style:solid;background:#dbeafe}
+.bc-setup-dot.held[aria-expanded=true]{background:#fef3c7}
+.bc-setup-tray{flex:none;max-height:40vh;overflow:auto;background:white;border:1px solid #cbd5e1;border-radius:12px;margin:4px 8px;padding:10px;font-size:12px;box-shadow:0 3px 12px #0f172a18}
+.bc-setup-heading,.bc-setup-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.bc-setup-line{border-top:1px solid #e2e8f0;padding:10px 0}
+.bc-setup-line p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.bc-setup-line details{font-size:11px;color:#475569;margin:6px 0}
+.bc-setup-tray button,.bc-setup-error button{border:1px solid #cbd5e1;background:#f8fafc;border-radius:6px;padding:5px 8px;cursor:pointer}
+.bc-setup-tray button:disabled{opacity:.45;cursor:default}
+.bc-setup-tray button:focus-visible,.bc-setup-dot:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
+.bc-setup-problem,.bc-setup-error{color:#92400e}
+.bc-setup-error{background:#fffbeb;padding:8px;font-size:12px;flex:none}
+.bc-setup-editor{display:grid;gap:8px}
+.bc-setup-editor>label{display:grid;gap:3px;text-transform:none}
+.bc-setup-editor input:not([type=checkbox]),.bc-setup-editor select,.bc-setup-editor textarea{width:100%;border:1px solid #cbd5e1;border-radius:5px;padding:5px;background:white;font:inherit}
+.bc-setup-days{display:flex;gap:8px;flex-wrap:wrap}
+.bc-setup-days label{display:flex;gap:3px;align-items:center}
+.bc-setup-applied{font-size:11px;color:#475569;padding:5px}
+.bc-setup-applied pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.bc-setup-tray[hidden],.bc-setup-dots[hidden],.bc-setup-error[hidden]{display:none}
+[data-bc-setup-host]>div:not(.bc-setup-dots){min-width:0;max-width:calc(100% - 76px)}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Track your delivery · BLAM8</title>
+  <meta name="robots" content="noindex" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/tw-plain.css?v={{ asset_rev }}">
+  <style>
+    /* iOS Safari auto-zooms any focused input under 16px — bump form controls to
+       16px on small screens only so tapping any field never zooms. */
+    @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
+  </style>
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<div class="max-w-md mx-auto p-6">
+  {% if not t %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
+    <h1 class="text-lg font-bold text-navy">Delivery not found</h1>
+    <p class="text-sm text-slate-500 mt-2">This tracking link isn't recognised. Please check the link in your email.</p>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <p class="text-xs uppercase tracking-wide text-slate-400">{{ t.carrier }}</p>
+    <h1 class="text-xl font-bold text-navy mt-1">Track your delivery</h1>
+    <p class="text-sm text-slate-500 mt-1">{{ t.ref }}{% if t.summary %} · {{ t.summary }}{% endif %}</p>
+    {% if t.destination %}<p class="text-sm text-slate-500">Delivering to {{ t.destination }}</p>{% endif %}
+
+    <ol class="mt-6 space-y-4">
+      {% for s in t.steps %}
+      <li class="flex items-center gap-3">
+        <span class="h-6 w-6 flex-none rounded-full flex items-center justify-center text-xs font-bold {{ 'bg-emerald-500 text-white' if s.done else 'bg-slate-200 text-slate-400' }}">{{ '✓' if s.done else loop.index }}</span>
+        <span class="{{ 'text-navy font-semibold' if s.current else ('text-slate-600' if s.done else 'text-slate-400') }}">{{ s.label }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+
+    {% if t.failed %}
+    <div class="mt-5 rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">Delivery attempt unsuccessful — your carrier will be in touch to rearrange.</div>
+    {% elif t.delivered %}
+    <div class="mt-5 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Delivered{% if t.signed_by %}, signed for by <span class="font-medium">{{ t.signed_by }}</span>{% endif %}.</div>
+    {% endif %}
+    {% if t.updated %}<p class="mt-4 text-xs text-slate-400">Last update {{ t.updated }}</p>{% endif %}
+  </div>
+  {% endif %}
+  <p class="text-center text-xs text-slate-400 mt-4">Powered by BLAM8</p>
+</div>
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

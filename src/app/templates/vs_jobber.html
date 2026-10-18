@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 vs Jobber — Who Answers the Email That Starts the Job?{% endblock %}
+{% block meta_description %}Honest comparison: Jobber runs the job after it exists (quotes, crews, invoices) but doesn't read inbound customer email, and bills UK businesses in USD, per user. BLAM8 starts at the inbox: enquiries answered in your voice and booked into the diary, priced in GBP per business. Prices checked September 2026.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/vs/jobber#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can Jobber answer my customer emails?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Jobber sends emails out (quotes, invoices, reminders) and logs them on the client record, but replies go to your ordinary company inbox and aren't pulled back into Jobber. There's no two-way email inbox, and no AI that answers inbound enquiries from your business knowledge. Jobber's AI helps the owner (Copilot, quote drafts, message polish), and its AI Receptionist add-on answers phone calls and texts. BLAM8 starts exactly where Jobber stops: it reads every inbound email, drafts a reply in your voice from your own prices and policies, and books the job." }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Jobber pricing work for UK businesses?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Jobber's pricing page says all prices are in USD, and its /uk address leads there. For one user: Core $49/month ($29 billed annually), Connect $139 ($99 annually) and Grow $199 ($149 annually). First-year promos run lower. Prices rise as you add users, so the bill grows with the crew. Add-ons include the AI Receptionist at $29/month for 30 conversations, then $0.79 each. There's no GBP price list, so UK businesses carry the exchange rate, and UK needs like CIS and MTD VAT still need Xero or QuickBooks alongside. BLAM8 is priced in GBP per business, not per user: £39, £99 or £249 per month. Prices checked September 2026." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Jobber book jobs automatically?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Through self-serve: customers can pick a slot on an online booking form or request work through the Client Hub, and the AI Receptionist add-on can book from a phone call or text. Nothing books from an email conversation. If the enquiry arrives as an email, a person reads it, replies, and either sends a form link or keys the job in. BLAM8 books from the email itself: it checks the live diary, holds a slot that can't be double-booked, and confirms in the same thread once you approve. It never books a date or a time nobody chose." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8 a Jobber alternative?",
+          "acceptedAnswer": { "@type": "Answer", "text": "For a UK trades business whose work arrives by email, yes. BLAM8 covers the front of the job: the enquiry answered in your voice and the job booked into a live diary from £39/month in GBP, with quotes and invoices on every plan and the self-filling CRM on the £99/month Pro plan. Jobber stays deeper on field operations at scale, like batch invoicing, crew GPS and payments hardware, and if those are your bottleneck it's a fine tool. The difference is who answers the email that starts the job." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8 as deep on field operations as Jobber?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Honestly: no, and it doesn't try to be. Jobber has a decade of dispatch, payments and client-portal depth, and BLAM8 doesn't match that. What BLAM8 does is answer the enquiry, book the job and fill in the CRM. That's the front door Jobber doesn't have at any tier: the inbox, answered." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use BLAM8 with Jobber?",
+          "acceptedAnswer": { "@type": "Answer", "text": "There's no direct integration today, but nothing stops BLAM8 answering the inbox while Jobber runs your field operations. If you need the full job lifecycle, like dispatch, invoicing at scale and in-field payments, run both. If what you need is the inbox answered and the diary filled, BLAM8 on its own may be enough. SMS and missed-call text-back are built and being tested; they switch on when testing is done." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Honest comparison · prices checked September 2026
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      BLAM8 vs Jobber: who answers the email that starts the job?
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Jobber is a serious field service platform: quotes, crews, invoices, payments and a client portal. But it manages the job <em>after it exists</em>. The enquiry that starts it lands in your inbox, and Jobber doesn't read your inbox: <span class="font-semibold text-navy">replies to its emails go back to your ordinary mailbox and stay there.</span> BLAM8 starts at that inbox: every enquiry answered in your voice, triaged, quoted off your rate card, and booked.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 grid md:grid-cols-2 gap-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When Jobber is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You run big crews and your bottleneck is dispatch: drag-and-drop calendars, GPS routing, a field app for the team</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want a mature payments stack: card on file, in-field collection, batch invoicing, a self-serve client portal</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>Enquiries mostly arrive by phone or web form, not email, and the AI Receptionist add-on covers calls and texts (US and Canada-centred)</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">Jobber has a polished scheduling-to-invoice flow and over a decade of field-ops depth. This page won't pretend otherwise.</p>
+    </div>
+    <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When BLAM8 is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>Your jobs start as <span class="font-semibold text-navy">emails</span>, and answering them evenings and weekends is the real admin burden</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want the reply drafted in your voice, priced off your rate card, and the job booked in the same thread, approval-first</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You're a UK business and want GBP pricing per business, not per user, so the bill doesn't grow with the crew</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">BLAM8 books the job from the email itself and keeps the CRM written: the front door Jobber doesn't have.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Side by side</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl">Jobber prices from <a href="https://www.getjobber.com/pricing/" rel="nofollow" class="text-brand hover:underline">getjobber.com/pricing</a>, as shown to UK visitors. The page states all prices are in USD (no GBP subscription pricing). Figures are for one user, monthly vs annual billing; plan prices rise with team size, and first-year promos run lower. Checked September 2026.</p>
+  <div class="mt-8 overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-navy">
+        <tr>
+          <th class="px-5 py-3.5 font-semibold w-1/3"></th>
+          <th class="px-5 py-3.5 font-semibold">Jobber</th>
+          <th class="px-5 py-3.5 font-semibold">BLAM8</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-slate-600">
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">What it is</td><td class="px-5 py-3.5">Field service management: runs the job once it exists, with quotes, scheduling, invoicing, payments and a client portal</td><td class="px-5 py-3.5">An AI agent on your mailbox: answers the enquiry, books the job into a live diary, and fills the CRM by itself</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Inbound customer email</td><td class="px-5 py-3.5">Not handled: replies to Jobber's emails go to your ordinary inbox and aren't pulled back in; no AI answering enquiries from your business knowledge</td><td class="px-5 py-3.5">The whole point: every inbound email drafted in your voice from your own prices and policies, approval-first, with full conversation memory</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Whose address it comes from</td><td class="px-5 py-3.5">Jobber's emails are sent through its own mail service</td><td class="px-5 py-3.5">Replies go from your own mailbox, in the same thread the customer started</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">How jobs get booked</td><td class="px-5 py-3.5">The customer self-serves on an online booking form or the Client Hub; the AI Receptionist add-on books from calls and texts ($29/mo for 30 conversations, then $0.79 each; phone coverage US and Canada-centred)</td><td class="px-5 py-3.5">Booked from the email conversation against the live diary: a held slot that can't double-book, confirmed in the thread. It never books a date or a time nobody chose</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">AI</td><td class="px-5 py-3.5">Helps the owner: Copilot, AI quote drafts, message polish, a campaign generator, plus the Receptionist add-on for calls and texts</td><td class="px-5 py-3.5">Is the worker: reads, drafts, triages emergencies, quotes, books and chases, and fills in the CRM by itself</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Concierge: your own assistant</td><td class="px-5 py-3.5">Copilot answers questions about your business and helps draft; it doesn't work across your inbox</td><td class="px-5 py-3.5">Yes, on Pro + Concierge: chat or talk to it and it answers from your records, then drafts an email, blocks days, changes a booking's dates or hands a job to your team, every action a card you confirm first</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Customer-facing side</td><td class="px-5 py-3.5">Client Hub: clients approve quotes, pay invoices and request work</td><td class="px-5 py-3.5">Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Smart inbox labels</td><td class="px-5 py-3.5">No: the inbox isn't Jobber's territory</td><td class="px-5 py-3.5">Yes: six categories (needs reply, draft ready, replied, booking pending, FYI, automated) that update themselves as the conversation moves</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">On your phone</td><td class="px-5 py-3.5">Native mobile app (App Store / Google Play), genuinely good in the field</td><td class="px-5 py-3.5">Installable app (PWA) from the browser, with push notifications when drafts are ready; no app store</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">SMS channel</td><td class="px-5 py-3.5">Two-way texting on higher tiers; the AI Receptionist add-on covers calls and texts</td><td class="px-5 py-3.5">SMS and missed-call text-back are built and being tested; they switch on when testing is done</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Field operations depth</td><td class="px-5 py-3.5">Deep: crew dispatch, GPS and routing views, job forms, batch invoicing, card-on-file payments, field app, QuickBooks/Xero sync</td><td class="px-5 py-3.5">Intentionally shallower: BLAM8 covers the front of the job (enquiry answered, job booked, quote and invoice sent, CRM filled) and doesn't try to match Jobber's dispatch or payments depth</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">UK fit</td><td class="px-5 py-3.5">Works in the UK (payments at 1.4% + 20p, UK SMS) but subscriptions are billed in USD, and CIS and MTD stay in Xero or QuickBooks</td><td class="px-5 py-3.5">UK-built, GBP pricing, designed around how UK trades actually quote and book</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">One user: Core $49/mo ($29 annual) · Connect $139 ($99 annual) · Grow $199 ($149 annual) · more per extra user · AI Receptionist $29/mo add-on · all USD</td><td class="px-5 py-3.5">Starter £39/mo (replies, booking, diary, quotes and invoices, 300 emails) · Pro £99/mo (adds the self-filling CRM, 750 emails) · Pro + Concierge £249/mo (adds the Concierge, 750 emails) · no per-user seats · 14-day free trial of the full product, the Concierge included, no card to start</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">The same email, through both</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl">A customer writes: <span class="italic">"Our equipment stopped working last night — any chance someone could come out tomorrow morning? What would a visit cost?"</span></p>
+    <div class="mt-8 grid md:grid-cols-2 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy">With Jobber</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">The email sits in your inbox, where Jobber can't see it. That evening, off the tools, you read it, reply with the visit price, and either send a booking-form link or key the job into Jobber yourself. Jobber then runs everything beautifully: the quote, the visit, the invoice. But the first hour of admin was all yours, and the customer waited all day.</p>
+      </div>
+      <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+        <h3 class="font-semibold text-navy">With BLAM8</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">Read as an emergency and flagged ahead of the queue. A reply in your voice quotes the visit off your rate card and offers tomorrow 8–10, with the slot held so nobody double-books it. You approve from your phone; it's sent and in the diary, and on Pro the customer, the job and the promise are already on the CRM record.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">What Jobber reviewers raise, and how BLAM8 differs</h2>
+  <div class="mt-6 max-w-3xl space-y-4 text-slate-600 leading-relaxed">
+    <p><span class="font-semibold text-navy">The bill grows with the crew.</span> Reviewers say per-user pricing punishes growth and that price rises outpace new features. BLAM8 is one price per business: add your team, including people who never sign in, and the plan doesn't change.</p>
+    <p><span class="font-semibold text-navy">Silence on critical bugs.</span> Some reviewers say support went quiet when something important broke. You don't have to take our word for how we'd do: the trial is the full product for 14 days, with no card.</p>
+    <p><span class="font-semibold text-navy">The front door.</span> Jobber's Client Hub lets clients approve quotes, pay invoices and request work. BLAM8 answers the email before any of that exists, and books the job in the thread. Your existing customers can also check, move and pay their bookings on their own page with the reference code from any BLAM8 email.</p>
+  </div>
+</section>
+
+<section id="faq" class="mx-auto max-w-3xl px-5 pb-16 md:pb-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+  <div class="mt-8 divide-y divide-slate-200">
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can Jobber answer my customer emails?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">No. Jobber sends emails out (quotes, invoices, reminders) and logs them on the client record, but replies go to your ordinary company inbox and aren't pulled back into Jobber. There's no two-way email inbox, and no AI that answers inbound enquiries from your business knowledge. Jobber's AI helps the owner (Copilot, quote drafts, message polish), and its AI Receptionist add-on answers phone calls and texts. BLAM8 starts exactly where Jobber stops: it reads every inbound email, drafts a reply in your voice from your own prices and policies, and books the job.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How does Jobber pricing work for UK businesses?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Jobber's pricing page says all prices are in USD, and its /uk address leads there. For one user: Core $49/month ($29 billed annually), Connect $139 ($99 annually) and Grow $199 ($149 annually). First-year promos run lower. Prices rise as you add users, so the bill grows with the crew. Add-ons include the AI Receptionist at $29/month for 30 conversations, then $0.79 each. There's no GBP price list, so UK businesses carry the exchange rate, and UK needs like CIS and MTD VAT still need Xero or QuickBooks alongside. BLAM8 is priced in GBP per business, not per user: £39, £99 or £249 per month. Prices checked September 2026.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Does Jobber book jobs automatically?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Through self-serve: customers can pick a slot on an online booking form or request work through the Client Hub, and the AI Receptionist add-on can book from a phone call or text. Nothing books from an email conversation. If the enquiry arrives as an email, a person reads it, replies, and either sends a form link or keys the job in. BLAM8 books from the email itself: it checks the live diary, holds a slot that can't be double-booked, and confirms in the same thread once you approve. It never books a date or a time nobody chose.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8 a Jobber alternative?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">For a UK trades business whose work arrives by email, yes. BLAM8 covers the front of the job: the enquiry answered in your voice and the job booked into a live diary from £39/month in GBP, with quotes and invoices on every plan and the self-filling CRM on the £99/month Pro plan. Jobber stays deeper on field operations at scale, like batch invoicing, crew GPS and payments hardware, and if those are your bottleneck it's a fine tool. The difference is who answers the email that starts the job.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8 as deep on field operations as Jobber?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Honestly: no, and it doesn't try to be. Jobber has a decade of dispatch, payments and client-portal depth, and BLAM8 doesn't match that. What BLAM8 does is answer the enquiry, book the job and fill in the CRM. That's the front door Jobber doesn't have at any tier: the inbox, answered.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can I use BLAM8 with Jobber?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">There's no direct integration today, but nothing stops BLAM8 answering the inbox while Jobber runs your field operations. If you need the full job lifecycle, like dispatch, invoicing at scale and in-field payments, run both. If what you need is the inbox answered and the diary filled, BLAM8 on its own may be enough. SMS and missed-call text-back are built and being tested; they switch on when testing is done.</p>
+    </details>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">The job starts in the inbox. Start there.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Free 14-day trial of the full product, no card. Connect the mailbox tonight; tomorrow's "can you come out?" gets answered, quoted and booked.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/for/trades" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">BLAM8 for trades</a>
+    </div>
+  </div>
+  <p class="mt-8 text-center text-xs text-slate-400 max-w-2xl mx-auto leading-relaxed">Jobber is a trademark of Octopusapp Inc. BLAM8 is not affiliated with or endorsed by Jobber. Competitor details and prices were checked against public sources in September 2026 and may have changed — see <a href="https://www.getjobber.com/pricing/" rel="nofollow" class="hover:underline">Jobber's pricing page</a> for current rates.</p>
+</section>
+
+{% endblock %}

@@ -1,0 +1,581 @@
+{% extends "app/base.html" %}
+{% block title %}{{ contact_name or contact }} · BLAM8{% endblock %}
+{% set back = ('/app/conversations', 'Inbox') %}
+{# The masthead is the way to their card (Kris 2026-09-21) — the name when
+   the CRM has one, the address underneath the pointer. #}
+{% block heading %}<a data-thread-contact-name href="{{ contact_crm_href or ('/app/crm/open?email=' ~ (contact | urlencode)) }}" title="{{ contact }}" class="hover:underline decoration-white/40 underline-offset-4">{{ contact_name or contact }}</a>{% endblock %}
+{% block content %}
+<style>
+  /* History as pages (Kris 2026-09-20): one round per page, each LOCKED to
+     the blind's height and snapping, so a scroll or swipe lands on the next
+     round. Long messages scroll inside their box, the way the stage's own
+     bubble does — the page never grows. */
+  .thread-history { scroll-snap-type: y mandatory; }
+  /* The pages container takes the blind's (definite) height so each page's
+     100% is the blind, not its own content — an auto-height parent would
+     leave the pages content-sized (live 2026-09-20: 741, 761, 386). */
+  .thread-pages { height: 100%; }
+  .thread-pages > .round-page { height: 100%; flex: none; scroll-snap-align: start; scroll-snap-stop: always; display: flex; flex-direction: column; overflow: hidden; }
+  .round-body { max-height: 27vh; overflow-y: auto; }
+  @media (min-height: 900px) { .round-body { max-height: 32vh; } }
+  /* The customer's bubble is capped shorter than the reply (Kris 2026-09-21:
+     "the customer message bubble should be a little smaller, it's already
+     scrollable") — a long message scrolls inside it, and the round's reply
+     and reasoning get the room back. */
+  .round-body-in { max-height: 17vh; }
+  @media (min-height: 900px) { .round-body-in { max-height: 21vh; } }
+
+  /* ── The Duet stage (layout ported from OurTab, Kris 2026-08-31) ──────────
+     The thread is a fixed viewport: newest message top-left, the draft docked
+     at the bottom, and history a full-size layer ABOVE the stage, pulled down
+     over it like a blind. --pull (0→1) is the one knob: parked fully off the
+     top at 0, covering the stage at 1. Dragging drives it live (transitions
+     off); release snaps it. Opaque bg or the stage reads through. */
+  .thread-history {
+    --pull: 0;
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateY(calc((var(--pull) - 1) * 101%));
+    opacity: calc(0.35 + 0.65 * var(--pull));
+    pointer-events: none;
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+  .thread-history.open { --pull: 1; pointer-events: auto; }
+  .thread-history.dragging { transition: none; }
+  /* While a pull is in progress, don't let the drag smear a text selection. */
+  #thread-stage.pulling, #thread-stage.pulling * {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  /* The newest-message bubble collapses to its header line on tap — and rests
+     collapsed. Expanding it fades the ghost text out of the middle (the two
+     would otherwise compete for the eye); collapsing fades it back. */
+  .stage-bubble.collapsed .stage-bubble-body { display: none; }
+  .stage-bubble.collapsed .stage-bubble-caret { transform: rotate(180deg); }
+  /* 180ms, matching GHOST_FADE_MS below: the bubble waits for this fade to
+     finish before it expands, so a slower one would read as a laggy tap. */
+  #stage-decision { transition: opacity 180ms ease; }
+  #thread-stage.bubble-open #stage-decision { opacity: 0; pointer-events: none; }
+  /* The draft's glass wears a whisper of brand — approval surface, same
+     material as everything else (two classes outrank .glass-card). */
+  .glass-card.draft-glass { border-color: rgb(46 91 255 / 0.3); background: rgb(240 244 255 / 0.62); }
+  html[data-theme="dark"] .glass-card.draft-glass { border-color: rgb(46 91 255 / 0.35); background: rgb(24 32 52 / 0.62); }
+  /* The recall viewer: while open it IS the dock — everything else steps
+     aside, and the dock sheds its fixed draft height so the panel sits only
+     as tall as its text (capped so an expanded chunk can't outgrow the stage). */
+  #thread-stage-dock.showing-matches > :not(#matches-panel) { display: none; }
+  #thread-stage-dock.showing-matches { height: auto; min-height: 0; max-height: 70%; }
+  #matches-panel:not(.hidden) { display: flex; flex-direction: column; }
+  /* A thread that needs a human BREATHES (Kris 2026-09-01) — it replaced the
+     warning sign in the corner. The colour is the stage's own background, so
+     it paints behind every child and nothing has to move or restack; the page
+     gradient shows through at the trough. Rose = needs you / the customer is
+     hot, amber = merely concerned (the tones the reasons already carry). */
+  @keyframes needs-eyes-breathe {
+    0%, 100% { background-color: rgb(225 29 72 / 0); }
+    50%      { background-color: rgb(225 29 72 / 0.12); }
+  }
+  @keyframes needs-eyes-breathe-amber {
+    0%, 100% { background-color: rgb(245 158 11 / 0); }
+    50%      { background-color: rgb(245 158 11 / 0.12); }
+  }
+  #thread-stage.needs-eyes-rose  { animation: needs-eyes-breathe 3.2s ease-in-out infinite; }
+  #thread-stage.needs-eyes-amber { animation: needs-eyes-breathe-amber 3.2s ease-in-out infinite; }
+  /* Reduced motion still has to SAY "this one needs you" — it just says it
+     without moving. */
+  @media (prefers-reduced-motion: reduce) {
+    #thread-stage.needs-eyes-rose  { animation: none; background-color: rgb(225 29 72 / 0.08); }
+    #thread-stage.needs-eyes-amber { animation: none; background-color: rgb(245 158 11 / 0.08); }
+  }
+</style>
+{# The stage + history both live in the shared _thread.html partial:
+   /app/conversations/view/fragment returns the same include, and live.js swaps
+   this container's innerHTML (then re-runs blam8ThreadInit, which re-binds the
+   stage and reapplies the history-open state) the moment the SSE stream
+   reports activity for this contact. h-full: the stage owns the viewport —
+   the page itself never scrolls. #}
+<div id="thread-live" class="h-full min-h-0" data-contact="{{ contact }}"
+     data-fragment-url="/app/conversations/view/fragment?contact={{ contact | urlencode }}">
+{% include "app/_thread.html" %}
+</div>
+
+{% include "app/_booking_copy_modal.html" %}
+
+<script>
+(function () {
+  // Bindings for the thread content — exposed as window.blam8ThreadInit so
+  // live.js can re-run it after swapping #thread-live's innerHTML (the swap
+  // replaces every element, so re-binding never doubles a listener).
+  function autosize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
+  // The stage draft grows with what you write (Kris 2026-09-01): one line to
+  // start, a line taller per line typed, stopping at the height the dock used
+  // to claim outright — 55% of the stage — where it scrolls instead.
+  //
+  // The ceiling is MEASURED rather than a constant: everything in the dock
+  // that isn't the textarea (the action row, the glass padding, the skip panel
+  // when it's open) is subtracted from that 55%, so the draft stops exactly at
+  // the stage's edge on any viewport and whatever else is on screen.
+  function fitStageDraft(ta) {
+    if (!ta) return;
+    ta.style.height = 'auto';           // measure the content, not the old box
+    var dock = document.getElementById('thread-stage-dock');
+    var stage = document.getElementById('thread-stage');
+    var want = ta.scrollHeight;
+    if (dock && stage) {
+      var chrome = dock.offsetHeight - ta.offsetHeight;
+      var cap = Math.round(stage.clientHeight * 0.55) - chrome;
+      if (cap > 0 && want > cap) want = cap;
+    }
+    ta.style.height = want + 'px';
+    fadeIfMore(ta);
+  }
+  // The fade at the draft's foot (Kris 2026-09-27) shows only while there is
+  // more text below the fold; scrolled to the end, the last line is clear.
+  function fadeIfMore(ta) {
+    ta.classList.toggle('draft-more', ta.scrollHeight - ta.scrollTop - ta.clientHeight > 4);
+  }
+  document.addEventListener('scroll', function (e) {
+    var t = e.target;
+    if (t && t.matches && t.matches('textarea[data-stage-draft]')) fadeIfMore(t);
+  }, true);
+  function fitStageDrafts() {
+    document.querySelectorAll('textarea[data-stage-draft]').forEach(fitStageDraft);
+  }
+  // Bound once, out here: blam8ThreadInit re-runs on every SSE swap, and a
+  // listener added in there would stack a copy per swap.
+  window.addEventListener('resize', fitStageDrafts);
+
+  // History-open state survives the SSE swap: the swap replaces the elements,
+  // blam8ThreadInit re-binds them, and this flag puts the blind back where the
+  // reader left it.
+  var historyOpen = false;
+
+  // ── The pull gesture (constants and behaviour ported from OurTab's duet).
+  var PULL_DISTANCE = 140;      // px of travel = a full pull
+  var COMMIT_THRESHOLD = 0.35;  // opening commits past this…
+  var DISMISS_THRESHOLD = 0.75; // …but closing needs a deliberate pull
+  var FLICK_VELOCITY = 0.4;     // px/ms — decisive movement wins outright
+  var FLICK_MAX_AGE = 100;      // ms — a flick is movement JUST before release
+  var WHEEL_THRESHOLD = 60;     // accumulated wheel px past the scroll end
+  // The ghost's fade. Short on purpose: the bubble waits for it before
+  // expanding, so this is also the delay between tapping the message and
+  // seeing it open. Keep it in step with the #stage-decision transition.
+  var GHOST_FADE_MS = 180;
+
+  // History pages (Kris 2026-09-20): a wheel notch is one page, because a
+  // mandatory snap on its own hands a small wheel scroll straight back to the
+  // page it left. A wheel over a message box that still has room scrolls the
+  // box (its overscroll is contained, so it never bleeds into the pager); at
+  // the first or last page the stage's own wheel rule takes over and closes
+  // the blind. Touch swipes snap natively.
+  var pageUntil = 0;
+  function bindHistoryPages() {
+    var history = document.getElementById('thread-history');
+    if (!history || history.dataset.pagerBound) return;
+    history.dataset.pagerBound = '1';
+    history.addEventListener('wheel', function (ev) {
+      if (!historyOpen) return;
+      var dir = ev.deltaY > 0 ? 1 : -1;
+      var box = ev.target.closest ? ev.target.closest('.round-body') : null;
+      if (box && (dir > 0 ? box.scrollHeight - box.scrollTop - box.clientHeight > 1
+                          : box.scrollTop > 1)) return;                    // the box scrolls
+      var atEnd = history.scrollHeight - history.scrollTop - history.clientHeight < 2;
+      var atStart = history.scrollTop < 2;
+      if ((dir > 0 && atEnd) || (dir < 0 && atStart)) return;             // the stage's wheel rule takes it from here
+      ev.preventDefault();
+      var now = Date.now();
+      if (now < pageUntil) return;
+      pageUntil = now + 550;
+      history.scrollBy({ top: dir * history.clientHeight, behavior: 'smooth' });
+    }, { passive: false });
+  }
+
+  function bindStage() {
+    var stage = document.getElementById('thread-stage');
+    var history = document.getElementById('thread-history');
+    if (!stage || !history) return;
+
+    var progress = historyOpen ? 1 : 0;
+
+    function apply(p, opts) {
+      var clamped = Math.max(0, Math.min(1, p));
+      if (opts && opts.commit) {
+        clamped = clamped > (historyOpen ? DISMISS_THRESHOLD : COMMIT_THRESHOLD) ? 1 : 0;
+        if (opts.force !== undefined) clamped = opts.force ? 1 : 0;
+        historyOpen = clamped === 1;
+        history.classList.toggle('open', historyOpen);
+        // History opens at its newest turn — you re-enter the chat from the bottom.
+        if (historyOpen) requestAnimationFrame(function () { history.scrollTop = history.scrollHeight; });
+      }
+      progress = clamped;
+      history.style.setProperty('--pull', String(clamped));
+      history.classList.toggle('dragging', Boolean(opts && opts.dragging));
+      history.setAttribute('aria-hidden', clamped > 0 ? 'false' : 'true');
+    }
+    apply(progress, { commit: true, force: historyOpen });
+
+    stage.querySelectorAll('[data-history-open]').forEach(function (b) {
+      b.addEventListener('click', function () { apply(1, { commit: true, force: true }); });
+    });
+    // The ghost's "Add it below" points at the inline knowledge box in the dock.
+    stage.querySelectorAll('[data-focus-kb]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        var t = document.getElementById('kb-inline');
+        if (t) t.focus();
+      });
+    });
+
+    // The rose bubble and its swap are gone (Kris 2026-09-01): the stage
+    // pulses, and "why you're needed" opens the ghost by itself.
+
+    // Tap the newest-message bubble to collapse it to its header line.
+    var bubble = document.getElementById('stage-bubble');
+    if (bubble) {
+      // The open path waits on the ghost's fade, so for those few frames the
+      // bubble's class still says "collapsed" — a second tap would read that
+      // as another open and swallow the close the reader asked for.
+      var bubbleBusy = false;
+      bubble.addEventListener('click', function (e) {
+        if (dragMoved || bubbleBusy) return;
+        if (e.target.closest('a, button, input, textarea, form')) return;
+        var sel = window.getSelection && window.getSelection();
+        if (sel && !sel.isCollapsed) return;
+        // Ghost text fades while reading — driven inline as well as by the
+        // class rule, so the fade never hangs on a stylesheet's vintage. The
+        // attention lines ride inside the ghost now, so they fade with it.
+        var ghost = document.getElementById('stage-decision');
+        var fading = ghost && !ghost.classList.contains('hidden');
+        var opening = bubble.classList.contains('collapsed');
+
+        function setBubble(open) {
+          bubble.classList.toggle('collapsed', !open);
+          bubble.setAttribute('aria-expanded', open ? 'true' : 'false');
+          stage.classList.toggle('bubble-open', open);
+        }
+
+        // ORDER MATTERS (Kris 2026-09-01: the ghost "gets pushed down screen
+        // before flash disappearing"). Expanding the bubble grows the top of
+        // the stage instantly, which drags the centred ghost down the screen
+        // and then clips it as the middle collapses — all while it is still
+        // half-visible mid-fade. So on the way OPEN the ghost fades FIRST and
+        // the bubble grows into space nothing is standing in; on the way BACK
+        // the bubble collapses first, and the ghost returns into settled
+        // layout. Either way the ghost only ever fades — it never travels.
+        if (opening) {
+          if (fading) {
+            ghost.style.opacity = '0';
+            ghost.style.pointerEvents = 'none';
+            bubbleBusy = true;
+            setTimeout(function () { setBubble(true); bubbleBusy = false; }, GHOST_FADE_MS);
+          } else setBubble(true);
+        } else {
+          setBubble(false);
+          if (fading) {
+            // One frame for the collapsed layout to settle, so the ghost
+            // fades up already standing where it belongs.
+            requestAnimationFrame(function () {
+              ghost.style.opacity = '1';
+              ghost.style.pointerEvents = '';
+            });
+          }
+        }
+      });
+    }
+
+    // Pull the stage down — as if overscrolling past the top — to bring history
+    // into view; pull back up from the bottom of history to dismiss it.
+    var tracking = false, engaged = false, dragMoved = false;
+    var startY = 0, startProgress = 0, pointerId = null;
+    var lastY = 0, lastT = 0, velocity = 0, wheelAccum = 0;
+
+    // ANY scrollable between the pointer and the stage that still has room in
+    // the gesture's direction owns the movement — the pull must never steal a
+    // scroll from the draft, the recall list, the message body or history's
+    // bubbles (Kris 2026-08-31: fixed ids missed most of them; OurTab only
+    // ever had one inner scroller to respect).
+    var scrollBlocked = function (target, opening) {
+      var el = target && target.nodeType === 1 ? target : null;
+      while (el && el !== stage) {
+        if (el.scrollHeight - el.clientHeight > 2
+            && /(auto|scroll)/.test(getComputedStyle(el).overflowY)) {
+          if (opening ? el.scrollTop > 1
+                      : el.scrollHeight - el.scrollTop - el.clientHeight > 2) return true;
+        }
+        el = el.parentElement;
+      }
+      return false;
+    };
+
+    var canDrag = function (target, opening) {
+      // Opening: nothing underneath may still scroll UP. Closing: history opens
+      // at its newest turn, so you leave it from the BOTTOM — nothing (history
+      // itself included) may still scroll DOWN.
+      return !scrollBlocked(target, opening);
+    };
+
+    stage.addEventListener('pointerdown', function (ev) {
+      if (ev.button !== 0) return;
+      // The dock is for working, not pulling — a drag that starts in a field
+      // or on a control is a selection or a tap, never a gesture.
+      if (ev.target.closest('textarea, input, select, button, a, summary')) return;
+      dragMoved = false;
+      tracking = true;
+      engaged = false;
+      startY = ev.clientY;
+      startProgress = progress;
+      pointerId = ev.pointerId;
+      lastY = ev.clientY;
+      lastT = ev.timeStamp;
+      velocity = 0;
+    });
+
+    stage.addEventListener('pointermove', function (ev) {
+      if (!tracking || (pointerId !== null && ev.pointerId !== pointerId)) return;
+      var dy = ev.clientY - startY;
+      if (!engaged) {
+        if (Math.abs(dy) < 8) return;
+        var opening = dy > 0;
+        // Don't give up on the gesture — re-baseline and stay armed, so the
+        // moment the scroller underneath runs out of room the next bit of
+        // movement takes over ("scroll to the end, keep pulling").
+        if (opening === (startProgress >= 1) || !canDrag(ev.target, opening)) {
+          startY = ev.clientY;
+          startProgress = progress;
+          return;
+        }
+        engaged = true;
+        dragMoved = true;
+        stage.classList.add('pulling');
+        if (window.getSelection) window.getSelection().removeAllRanges();
+        try { stage.setPointerCapture(ev.pointerId); } catch (err) {}
+      }
+      ev.preventDefault();
+      // Velocity smoothed, sampled no faster than 8ms — a sub-millisecond gap
+      // produces a bogus spike that commits the gesture on a twitch.
+      var dt = ev.timeStamp - lastT;
+      if (dt >= 8) {
+        velocity = velocity * 0.4 + ((ev.clientY - lastY) / dt) * 0.6;
+        lastY = ev.clientY;
+        lastT = ev.timeStamp;
+      }
+      apply(startProgress + dy / PULL_DISTANCE, { dragging: true });
+    }, { passive: false });
+
+    var finish = function (ev) {
+      if (!tracking) return;
+      tracking = false;
+      pointerId = null;
+      stage.classList.remove('pulling');
+      if (engaged) {
+        // "Moved, paused, released" is not a flick, however fast the start was.
+        var releasedAt = (ev && ev.timeStamp) || lastT;
+        if (releasedAt - lastT > FLICK_MAX_AGE) velocity = 0;
+        var open;
+        if (Math.abs(velocity) > FLICK_VELOCITY) open = velocity > 0;
+        else if (startProgress >= 1) open = progress > DISMISS_THRESHOLD;
+        else open = progress > COMMIT_THRESHOLD;
+        apply(open ? 1 : 0, { commit: true, force: open });
+      }
+      engaged = false;
+      setTimeout(function () { dragMoved = false; }, 0);
+    };
+    stage.addEventListener('pointerup', finish);
+    stage.addEventListener('pointercancel', finish);
+
+    // pointermove's preventDefault() cannot stop native touch panning — the
+    // stage keeps touch-action: pan-y so inner scrollers scroll natively, but
+    // once the pull owns the gesture the browser's own pan is vetoed here.
+    stage.addEventListener('touchmove', function (ev) {
+      if (engaged) ev.preventDefault();
+    }, { passive: false });
+
+    // Desktop: wheel up past the top of the stage opens; wheel down past the
+    // end of history closes.
+    stage.addEventListener('wheel', function (ev) {
+      // Same rule as the drag: a scroller under the wheel with room in this
+      // direction keeps its scroll — the pull only bids once everything is
+      // against its end.
+      if (!historyOpen) {
+        if (ev.deltaY < 0 && !scrollBlocked(ev.target, true)) {
+          wheelAccum += -ev.deltaY;
+          ev.preventDefault();
+          if (wheelAccum > WHEEL_THRESHOLD) { wheelAccum = 0; apply(1, { commit: true, force: true }); }
+        } else wheelAccum = 0;
+      } else {
+        if (ev.deltaY > 0 && !scrollBlocked(ev.target, false)) {
+          wheelAccum += ev.deltaY;
+          ev.preventDefault();
+          if (wheelAccum > WHEEL_THRESHOLD) { wheelAccum = 0; apply(0, { commit: true, force: false }); }
+        } else wheelAccum = 0;
+      }
+    }, { passive: false });
+
+    // Diary deep-link (#log-<id>): the exchange that placed a held/offered slot
+    // lives in the history layer — summon it, expand the round, centre, flash.
+    // Unless that round's reply is still waiting: its draft lives on the STAGE,
+    // and history would only say "close history to review & send" (Kris
+    // 2026-09-27, Dev's pencilled Sunday job) — stay on the stage.
+    var target = location.hash && location.hash.indexOf('#log-') === 0
+      ? document.getElementById(location.hash.slice(1)) : null;
+    if (target && target.querySelector('[data-draft-on-stage]')) target = null;
+    if (target) {
+      apply(1, { commit: true, force: true });
+      if (target.tagName === 'DETAILS') target.open = true;
+      target.classList.add('ring-2', 'ring-brand', 'rounded-xl');
+      requestAnimationFrame(function () { target.scrollIntoView({ block: 'center' }); });
+      setTimeout(function () { target.classList.remove('ring-2', 'ring-brand'); }, 4000);
+    }
+  }
+
+  window.blam8ThreadInit = function () {
+    // Auto-grow draft textareas to fit their full content (no inner scrollbar).
+    // The stage dock's draft grows the same way but against a ceiling, so it
+    // can never push the dock past the bottom of the stage.
+    document.querySelectorAll('textarea[name="draft_reply"]').forEach(function (ta) {
+      var stageDraft = ta.hasAttribute('data-stage-draft');
+      var fit = function () { stageDraft ? fitStageDraft(ta) : autosize(ta); };
+      fit();
+      ta.addEventListener('input', fit);
+    });
+
+    // Skip toggles — open the inline panel under the action row. The panel
+    // shares the dock with the draft, so the draft's ceiling drops as it
+    // opens: re-fit, or a tall draft would hold the dock past the stage.
+    document.querySelectorAll('[data-pop]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var el = document.getElementById(btn.getAttribute('data-pop'));
+        if (el) el.classList.toggle('hidden');
+        fitStageDrafts();
+      });
+    });
+
+    // Thumbs-down → the assistant in fix mode, scoped to this draft. The widget
+    // (concierge.js, deferred) defines blam8ConciergeFix; it applies the approved
+    // action and swaps the fresh draft into #draft-<id> itself.
+    document.querySelectorAll('[data-fix]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (window.blam8ConciergeFix) window.blam8ConciergeFix(btn.getAttribute('data-fix'));
+      });
+    });
+
+    // ⓘ — swap the draft box for the agent's working and back (Julius
+    // 2026-09-02). The textarea keeps its edits; nothing is submitted from
+    // the reasoning panel (it lives inside the form but is a plain <div>).
+    document.querySelectorAll('[data-reason-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-reason-toggle');
+        var pen = document.getElementById('draft-' + id);
+        var why = document.getElementById('reason-' + id);
+        if (!pen || !why) return;
+        var showing = !why.hidden;
+        why.hidden = showing;
+        pen.hidden = !showing;
+        btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+        fitStageDrafts();
+      });
+    });
+
+    bindStage();
+    bindHistoryPages();
+  };
+  window.blam8ThreadInit();
+
+  // The pinned card's gathered chip flips to ✓✓ Copied once the copy-out modal
+  // copies (bd:copied from the shared partial). Document-level: bound ONCE, so
+  // it must stay outside blam8ThreadInit (a swap re-run would double it).
+  document.addEventListener('bd:copied', function () {
+    var chip = document.getElementById('bd-gathered-chip');
+    if (chip) chip.innerHTML = '<span class="tracking-tighter font-bold">✓✓</span> Copied';
+  });
+
+  // The recall viewer — the ghost's "N matches" link turns the dock into the
+  // list of everything the search returned; each row expands to the exact text
+  // recalled. Document-level delegation (survives fragment swaps); the per-log
+  // cache lives here too so a swap doesn't refetch. All content is rendered
+  // with textContent only.
+  var matchesCache = {};
+  function renderMatches(rows) {
+    var list = document.getElementById('matches-list');
+    if (!list) return;
+    list.textContent = '';
+    if (!rows.length) list.textContent = 'Nothing was recalled for this draft.';
+    rows.forEach(function (r) {
+      var wrap = document.createElement('div');
+      wrap.className = 'py-2';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('data-match-row', '');
+      btn.className = 'w-full text-left flex items-baseline justify-between gap-3 text-sm font-medium text-navy hover:text-brand transition';
+      var name = document.createElement('span');
+      name.className = 'min-w-0 truncate';
+      name.textContent = r.source || 'source';
+      var pct = document.createElement('span');
+      pct.className = 'flex-none text-xs text-slate-400 font-normal';
+      pct.textContent = r.similarity ? Math.round(r.similarity * 100) + '% match' : '';
+      btn.appendChild(name);
+      btn.appendChild(pct);
+      var body = document.createElement('div');
+      body.className = 'hidden mt-1.5 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed';
+      body.textContent = r.missing
+        ? '(This entry has been updated or removed since the draft was written.)'
+        : (r.content || '');
+      wrap.appendChild(btn);
+      wrap.appendChild(body);
+      list.appendChild(wrap);
+    });
+  }
+  document.addEventListener('click', function (e) {
+    // The ⓘ on a sent reply (_thread.html working_eye): the agent's working,
+    // opened under the reply it explains. Delegated, and scoped to the bubble
+    // that was tapped — the newest sent round exists twice on this page.
+    var eye = e.target.closest('[data-working-toggle]');
+    if (eye) {
+      var box = eye.closest('[data-working-box]');
+      var work = box && box.querySelector('[data-working-panel]');
+      if (work) {
+        work.hidden = !work.hidden;
+        eye.setAttribute('aria-expanded', work.hidden ? 'false' : 'true');
+      }
+      return;
+    }
+    var link = e.target.closest('[data-matches]');
+    if (link) {
+      e.preventDefault();
+      var dock = document.getElementById('thread-stage-dock');
+      var panel = document.getElementById('matches-panel');
+      if (!dock || !panel) return;
+      dock.classList.add('showing-matches');
+      panel.classList.remove('hidden');
+      var logId = link.getAttribute('data-matches');
+      if (matchesCache[logId]) { renderMatches(matchesCache[logId]); return; }
+      fetch('/app/drafts/' + logId + '/sources')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          matchesCache[logId] = data.sources || [];
+          renderMatches(matchesCache[logId]);
+        })
+        .catch(function () {});
+      return;
+    }
+    if (e.target.closest('[data-matches-close]')) {
+      var d = document.getElementById('thread-stage-dock');
+      var p = document.getElementById('matches-panel');
+      if (d) d.classList.remove('showing-matches');
+      if (p) p.classList.add('hidden');
+      return;
+    }
+    var row = e.target.closest('[data-match-row]');
+    if (row && row.nextElementSibling) row.nextElementSibling.classList.toggle('hidden');
+  });
+})();
+</script>
+{% include "app/_review_timer.html" %}
+{# The offer countdown pills and their explain bubble (_thread.html held list). #}
+<script src="/static/hold_clock.js?v={{ asset_rev }}" defer></script>
+{% endblock %}

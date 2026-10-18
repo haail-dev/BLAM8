@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Partner · BLAM8</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/tw-plain.css?v={{ asset_rev }}">
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+  <header class="bg-navy text-white" data-pull-bar>
+    <div class="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-bold tracking-tight text-white">BLAM8
+        <span class="rounded bg-emerald-400/20 text-emerald-300 text-[10px] font-semibold px-2 py-0.5 tracking-wide">PARTNER</span></a>
+      <div class="flex items-center gap-4 text-sm text-slate-300">
+        <span class="text-slate-500 hidden sm:inline">{{ p.email }}</span>
+        {% if has_tenant %}
+        <a href="/app" class="hover:text-white">My dashboard</a>
+        {% else %}
+        <form method="post" action="/partner/setup">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button type="submit" class="hover:text-white">Use BLAM8 for my business</button>
+        </form>
+        {% endif %}
+        <a href="/logout" class="hover:text-white">Sign out</a>
+      </div>
+    </div>
+  </header>
+  <main class="max-w-5xl mx-auto px-5 py-8 space-y-6">
+    <div>
+      <h1 class="text-2xl font-bold text-navy">{{ p.name }}</h1>
+      <p class="text-sm text-slate-500 mt-1">Your referral programme — {{ s.rate_pct }}% of every collected subscription payment from businesses you refer, for as long as they stay.</p>
+    </div>
+
+    {% if disabled %}
+    <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+      This partner account is currently paused — your existing referrals stay attributed to you,
+      but new signups and leads won't attach until it's re-activated. Questions? <a class="underline" href="mailto:hello@blam8.com">hello@blam8.com</a>
+    </div>
+    {% endif %}
+
+    <!-- code + share link + share text -->
+    {# min-w-0 on the grid ITEMS: a grid item's automatic minimum size is its
+       min-content, so without this the cards refuse to shrink below the widest thing
+       inside them (the referral code at text-2xl with wide tracking, and the share URL)
+       and push the whole page into a horizontal scroll on a phone. #}
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div class="min-w-0 rounded-xl bg-white border border-slate-200 p-5">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Your referral code</div>
+        <div class="mt-2 flex items-center gap-3 min-w-0">
+          <span id="ref-code" class="min-w-0 truncate text-2xl font-extrabold tracking-widest text-navy">{{ p.ref_code }}</span>
+          <button onclick="copyText('ref-code', this)" class="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">Copy</button>
+        </div>
+        <p class="mt-2 text-xs text-slate-500">Businesses enter this on the “Tell us about your business” step when they sign up.</p>
+      </div>
+      <div class="min-w-0 rounded-xl bg-white border border-slate-200 p-5">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Your share link</div>
+        <div class="mt-2 flex items-center gap-3 min-w-0">
+          <span id="share-url" class="min-w-0 text-sm font-semibold text-brand truncate">{{ share_url }}</span>
+          <button onclick="copyText('share-url', this)" class="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">Copy</button>
+        </div>
+        <p class="mt-2 text-xs text-slate-500">Anyone signing up through this link is attributed to you automatically — no code to type.</p>
+      </div>
+    </div>
+    <div class="rounded-xl bg-white border border-slate-200 p-5">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Share text (approved wording)</div>
+        <button onclick="copyText('share-text', this)" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">Copy</button>
+      </div>
+      <p id="share-text" class="mt-2 text-sm text-slate-600">{{ share_text }}</p>
+    </div>
+
+    <!-- commission tiles (from the ledger — collected money only) -->
+    <div class="grid gap-4 sm:grid-cols-4">
+      <div class="rounded-xl bg-white border border-slate-200 p-5">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Earned this month</div>
+        <div class="mt-1 text-2xl font-extrabold text-navy">£{{ '%.2f'|format(s.this_month) }}</div>
+      </div>
+      <div class="rounded-xl bg-white border border-slate-200 p-5">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Scheduled for payout</div>
+        <div class="mt-1 text-2xl font-extrabold text-emerald-600">£{{ '%.2f'|format(s.scheduled) }}</div>
+      </div>
+      <div class="rounded-xl bg-white border border-slate-200 p-5">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Lifetime earnings</div>
+        <div class="mt-1 text-2xl font-extrabold text-navy">£{{ '%.2f'|format(s.lifetime) }}</div>
+      </div>
+      <div class="rounded-xl bg-white border border-slate-200 p-5">
+        <div class="text-xs font-semibold uppercase tracking-wide text-slate-400">Next payout</div>
+        <div class="mt-1 text-2xl font-extrabold text-navy">{{ s.next_payout }}</div>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400 -mt-3">Commission is earned when BLAM8 collects the subscription payment (excluding any VAT) —
+      so promotional discounts are already reflected, and refunds adjust automatically. Earned amounts clear at the end of the
+      month after they're earned, then pay out{% if s.payable %} — £{{ '%.2f'|format(s.payable) }} is cleared for the next run{% endif %}.
+      Balances under £{{ '%.0f'|format(s.min_payout) }} roll forward.
+      {% if p.agreed_at %}<span class="block mt-1">Partner Referral Agreement v{{ p.terms_version }} signed
+      {{ (p.agreed_at or '')[:10] }} by {{ p.signed_name or p.name }} ·
+      <a href="/partner/terms" class="font-semibold text-slate-500 hover:underline">read it</a>.</span>{% endif %}</p>
+
+    <!-- referrals table -->
+    <div class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-baseline justify-between">
+        <span class="font-semibold text-navy">Your referrals</span>
+        <span class="text-xs text-slate-400">{{ s.active }} active of {{ s.total }}</span>
+      </div>
+      {% if s.rows %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+              <th class="px-5 py-3 font-semibold">Business</th>
+              <th class="px-5 py-3 font-semibold">Referred</th>
+              <th class="px-5 py-3 font-semibold">Status</th>
+              <th class="px-5 py-3 font-semibold">Plan</th>
+              <th class="px-5 py-3 font-semibold text-right">Subscription</th>
+              <th class="px-5 py-3 font-semibold text-right">Your {{ s.rate_pct }}%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in s.rows %}
+            <tr class="border-b border-slate-50 {% if r.expired %}opacity-60{% endif %}">
+              <td class="px-5 py-3 font-medium text-navy">{{ r.name }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ r.joined }}</td>
+              <td class="px-5 py-3">
+                {% if r.paying %}<span class="inline-flex rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-0.5">{{ r.status }}</span>
+                {% elif r.status == 'Trial' %}<span class="inline-flex rounded-full bg-sky-50 text-sky-700 text-xs font-semibold px-2.5 py-0.5">{{ r.status }}</span>
+                {% elif r.status in ('Payment pending', 'Cancelled', 'Expired') %}<span class="inline-flex rounded-full bg-rose-50 text-rose-600 text-xs font-semibold px-2.5 py-0.5">{{ r.status }}</span>
+                {% else %}<span class="inline-flex rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-2.5 py-0.5">{{ r.status }}</span>{% endif %}
+                {% if r.window_expires and not r.expired and r.status in ('Registered', 'Trial', 'Payment pending') %}
+                <div class="mt-1 text-[11px] text-slate-400">attribution expires {{ r.window_expires }}</div>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3 text-slate-600">{{ r.plan }}</td>
+              <td class="px-5 py-3 text-right text-slate-600">{% if r.monthly_gbp %}£{{ '%.0f'|format(r.monthly_gbp) }}/mo{% else %}—{% endif %}</td>
+              <td class="px-5 py-3 text-right font-semibold {% if r.commission_gbp %}text-emerald-600{% else %}text-slate-400{% endif %}">
+                {% if r.commission_gbp %}£{{ '%.2f'|format(r.commission_gbp) }}/mo{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="px-5 py-10 text-center text-sm text-slate-500">
+        No referrals yet. Share your link or code — every business that signs up with it shows here,
+        and earns you {{ s.rate_pct }}% of their subscription for life.
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- manual introductions (leads) -->
+    <div id="leads" class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100">
+        <span class="font-semibold text-navy">Register an introduction</span>
+        <p class="mt-1 text-xs text-slate-500">Introduced someone in person or by email? Register them here BEFORE they sign up
+          and your attribution is protected for {{ window_days }} days even if they never use your link or code.</p>
+      </div>
+      <form method="post" action="/partner/leads" class="px-5 py-4 grid gap-3 sm:grid-cols-3 items-end border-b border-slate-100">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Business name</label>
+          <input name="company_name" required class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="Example Services Ltd">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500">Their contact email (the one they'll sign up with)</label>
+          <input name="contact_email" type="email" required class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="ops@acmehaulage.co.uk">
+        </div>
+        <button type="submit" {% if disabled %}disabled{% endif %} class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">Register lead</button>
+      </form>
+      {% if lead_msg == 'ok' %}
+      <div class="px-5 py-3 text-sm text-emerald-600 border-b border-slate-100">Lead registered — if they sign up with that email within {{ window_days }} days, the referral is yours.</div>
+      {% elif lead_msg == 'self' %}
+      <div class="px-5 py-3 text-sm text-rose-600 border-b border-slate-100">That's your own email — self-referrals aren't eligible.</div>
+      {% elif lead_msg == 'exists' %}
+      <div class="px-5 py-3 text-sm text-amber-700 border-b border-slate-100">That business already has a BLAM8 account, so this introduction isn't eligible for commission — it's recorded below as ineligible so nothing disappears silently.</div>
+      {% elif lead_msg == 'duplicate' %}
+      <div class="px-5 py-3 text-sm text-amber-700 border-b border-slate-100">You've already registered that email — the existing lead still stands.</div>
+      {% elif lead_msg == 'invalid' %}
+      <div class="px-5 py-3 text-sm text-rose-600 border-b border-slate-100">That didn't look right — check the business name and email address.</div>
+      {% endif %}
+      {% if s.leads %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+              <th class="px-5 py-3 font-semibold">Business</th>
+              <th class="px-5 py-3 font-semibold">Contact</th>
+              <th class="px-5 py-3 font-semibold">Registered</th>
+              <th class="px-5 py-3 font-semibold">Window ends</th>
+              <th class="px-5 py-3 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for l in s.leads %}
+            <tr class="border-b border-slate-50">
+              <td class="px-5 py-3 font-medium text-navy">{{ l.company }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ l.email }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ l.registered }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ l.expires }}</td>
+              <td class="px-5 py-3">
+                {% if l.status == 'Converted' %}<span class="inline-flex rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-0.5">Converted</span>
+                {% elif l.status == 'Awaiting signup' %}<span class="inline-flex rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-2.5 py-0.5">Awaiting signup</span>
+                {% elif l.status == 'Disputed' %}<span class="inline-flex rounded-full bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-0.5">Disputed</span>
+                {% elif l.status == 'Expired' %}<span class="inline-flex rounded-full bg-slate-100 text-slate-400 text-xs font-semibold px-2.5 py-0.5">Expired</span>
+                {% else %}<span class="inline-flex rounded-full bg-rose-50 text-rose-600 text-xs font-semibold px-2.5 py-0.5">{{ l.status }}</span>{% endif %}
+                {% if l.reason %}<div class="mt-1 text-[11px] text-slate-400">{{ l.reason }}</div>{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- settlement: credit vs cash, and withdrawing the surplus -->
+    <div id="settlement" class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 font-semibold text-navy">How you get paid</div>
+      <div class="p-5 space-y-4">
+
+        {% set msg = request.query_params.get('msg') %}
+        {% set err = request.query_params.get('err') %}
+        {% if err == 'notenant' %}
+        <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Subscription credit needs a BLAM8 account of your own to credit. Start one and this option opens up — until then we'll pay you by bank transfer.
+        </div>
+        {% elif err == 'wopen' %}
+        <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">You already have a withdrawal request open.</div>
+        {% elif err == 'wamount' %}
+        <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">That amount isn't available to withdraw right now.</div>
+        {% elif err == 'wmissing' %}
+        <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">We couldn't find that request.</div>
+        {% elif msg == 'wrequested' %}
+        <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Request received — we'll pay it on the next run and it'll show in your statements.</div>
+        {% elif msg == 'wcancelled' %}
+        <div class="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">Request cancelled.</div>
+        {% elif msg == 'settlement' %}
+        <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Saved.</div>
+        {% endif %}
+
+        {# Mode choice. Credit is only meaningful for a partner who is also a tenant —
+           a credit can only reduce their own bill. #}
+        <form method="post" action="/partner/settlement" class="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button name="mode" value="credit" class="rounded-lg px-4 py-2 text-sm font-semibold transition {{ 'bg-brand text-white' if s.settlement.mode == 'credit' else 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">Off my subscription</button>
+          <button name="mode" value="cash" class="rounded-lg px-4 py-2 text-sm font-semibold transition {{ 'bg-brand text-white' if s.settlement.mode == 'cash' else 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">Bank transfer</button>
+        </form>
+
+        {% if s.settlement.mode == 'credit' %}
+        <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm">
+          {% if s.settlement.is_free_this_month %}
+          <p class="font-semibold text-emerald-700">Your subscription is free this month.</p>
+          <p class="mt-1 text-slate-600">£{{ '%.2f'|format(s.settlement.credit_applied) }} of commission covers the whole bill. Anything above that builds up below.</p>
+          {% elif s.settlement.credit_applied > 0 %}
+          <p class="text-slate-700">£{{ '%.2f'|format(s.settlement.credit_applied) }} comes off this month, so you pay
+            <span class="font-semibold text-navy">£{{ '%.2f'|format(s.settlement.bill_after_credit) }}</span> instead of £{{ '%.2f'|format(s.settlement.subscription) }}.</p>
+          <p class="mt-1 text-xs text-slate-500">Refer one more and it's likely free.</p>
+          {% else %}
+          <p class="text-slate-600">Nothing to credit yet — your commission comes off your bill as soon as it clears.</p>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-500">We'll pay you by bank transfer. If you run a business on BLAM8, taking it off your own subscription is simpler — and two referrals on Pro covers a Starter plan outright.</p>
+        {% endif %}
+
+        <!-- withdrawal -->
+        <div class="border-t border-slate-100 pt-4">
+          {% if s.open_withdrawal %}
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-slate-700">
+              Withdrawal of <span class="font-semibold text-navy">£{{ '%.2f'|format(s.open_withdrawal.requested_gbp|float) }}</span> requested
+              {{ (s.open_withdrawal.requested_at or '')[:10] }} — awaiting payment.
+            </p>
+            <form method="post" action="/partner/withdraw/{{ s.open_withdrawal.id }}/cancel">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+            </form>
+          </div>
+          {% elif s.settlement.can_withdraw %}
+          {# Slider, not a text box: the amount can only ever be between £0 and what's
+             actually available, so there is nothing to mistype. The server clamps it
+             again regardless. #}
+          <form method="post" action="/partner/withdraw" class="space-y-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <label for="wamount" class="text-sm font-semibold text-navy">Withdraw some as cash</label>
+              <span class="text-xs text-slate-400">£{{ '%.2f'|format(s.settlement.available) }} available</span>
+            </div>
+            <input id="wamount" name="amount" type="range" class="w-full accent-blue-600"
+                   min="{{ s.settlement.min_withdrawal }}" max="{{ '%.2f'|format(s.settlement.available) }}" step="1"
+                   value="{{ '%.0f'|format(s.settlement.available) }}"
+                   oninput="document.getElementById('wout').textContent = '£' + Number(this.value).toFixed(2)">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <span id="wout" class="text-2xl font-extrabold text-navy">£{{ '%.2f'|format(s.settlement.available) }}</span>
+              <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Request it</button>
+            </div>
+            <p class="text-xs text-slate-400">
+              Paid by bank transfer on the next run. We pay in whole commission amounts, so the figure settled can come out slightly under what you ask for.
+              £{{ '%.2f'|format(s.settlement.buffer) }} stays held as cover while your referrals are inside the refund window.
+            </p>
+          </form>
+          {% else %}
+          <p class="text-sm font-semibold text-navy">Withdraw as cash</p>
+          <p class="mt-1 text-sm text-slate-500">{{ s.settlement.blocked_reason }}</p>
+          {% endif %}
+        </div>
+
+        {% if s.withdrawals %}
+        <div class="border-t border-slate-100 pt-4">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Withdrawal history</p>
+          <ul class="space-y-1 text-sm">
+            {% for w in s.withdrawals %}
+            <li class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ {'paid':'bg-emerald-100 text-emerald-700','requested':'bg-amber-100 text-amber-700'}.get(w.status,'bg-slate-100 text-slate-500') }}">{{ w.status }}</span>
+              <span class="flex-1 min-w-0 text-slate-500 text-xs">{{ (w.requested_at or '')[:10] }}{% if w.paid_at %} · paid {{ (w.paid_at or '')[:10] }}{% endif %}</span>
+              <span class="font-semibold text-navy">£{{ '%.2f'|format((w.settled_gbp if w.settled_gbp is not none else w.requested_gbp)|float) }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- payouts -->
+    <div class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 font-semibold text-navy">Payouts</div>
+      {% if s.payouts %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+              <th class="px-5 py-3 font-semibold">Paid</th>
+              <th class="px-5 py-3 font-semibold">Period</th>
+              <th class="px-5 py-3 font-semibold">Reference</th>
+              <th class="px-5 py-3 font-semibold text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pay in s.payouts %}
+            <tr class="border-b border-slate-50">
+              <td class="px-5 py-3 text-slate-600">{{ pay.paid }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ pay.period }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ pay.reference }}</td>
+              <td class="px-5 py-3 text-right font-semibold text-navy">£{{ '%.2f'|format(pay.total) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="px-5 py-8 text-center text-sm text-slate-500">No payouts yet — your first statement appears here after the first monthly run with scheduled earnings.</div>
+      {% endif %}
+    </div>
+
+    <!-- assets -->
+    <div class="rounded-xl bg-white border border-slate-200 p-5 space-y-3">
+      <div class="font-semibold text-navy">Promote accurately</div>
+      <ul class="text-sm text-slate-600 space-y-2">
+        <li>· <span class="font-semibold">Demo:</span> point people at <a class="text-brand font-semibold" href="https://blam8.com">blam8.com</a> —
+          or have them email <a class="text-brand font-semibold" href="mailto:hello@blam8.com">hello@blam8.com</a> and the product itself replies.</li>
+        <li>· <span class="font-semibold">Logo:</span> <a class="text-brand font-semibold" href="/static/img/blam8-logo.png" download>download the BLAM8 logo</a>.</li>
+        <li>· <span class="font-semibold">Say:</span> answers business email in the owner's voice · fills in the CRM itself · books work into a live diary ·
+          draft-first with human approval · data stored in the UK · 14-day free trial of the full product, no card.</li>
+        <li>· <span class="font-semibold">Never say:</span> guarantees of revenue or response rates, or that BLAM8 ranks/scores/evaluates job candidates — it doesn't.</li>
+      </ul>
+    </div>
+  </main>
+  <script>
+    function copyText(id, btn) {
+      navigator.clipboard.writeText(document.getElementById(id).textContent.trim()).then(() => {
+        const old = btn.textContent; btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = old; }, 1200);
+      });
+    }
+  </script>
+  <script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

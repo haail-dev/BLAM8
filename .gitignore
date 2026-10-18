@@ -1,0 +1,45 @@
+# Local credentials and editor/session state
+.env
+.env.*
+!.env.example
+.secrets/
+*.pem
+*.key
+.claude/
+.idea/
+.vscode/
+.DS_Store
+
+# Python environments and generated test/build state
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+.coverage
+htmlcov/
+*.log
+*.egg-info/
+build/
+dist/
+!scripts/build/
+
+# JavaScript dependencies and test output; package-lock.json stays tracked
+node_modules/
+test-results/
+playwright-report/
+
+# Local experiments, records, recordings, and reports belong outside source
+scratch/
+data/
+reports/
+.video/
+
+# Generated browser assets; source/build script is tracked
+src/app/static/vad/
+src/app/static/tw.css
+src/app/static/tw-site.css
+src/app/static/tw-plain.css

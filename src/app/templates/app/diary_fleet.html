@@ -1,0 +1,438 @@
+{% extends "app/base.html" %}
+{% block title %}Transport board · BLAM8{% endblock %}
+{% block heading %}{{ 'Transport board' if scheduling_on else 'Diary' }}{% endblock %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+
+{% macro status_actions(b) %}
+  <div class="ml-auto flex items-center gap-1.5 flex-none">
+    {% if b.status == 'proposed' %}
+    <span class="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[11px] font-semibold">Proposed</span>
+    <form method="post" action="/app/diary/{{ b.id }}/status">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="status" value="confirmed">
+      <input type="hidden" name="return_to" value="/app/board">
+      <button class="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 transition">Confirm</button>
+    </form>
+    <form method="post" action="/app/diary/{{ b.id }}/status">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="status" value="declined">
+      <input type="hidden" name="return_to" value="/app/board">
+      <button class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 transition">Decline</button>
+    </form>
+    {% else %}
+    <span class="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[11px] font-semibold">Confirmed</span>
+    {#- As on the office diary (Kris 2026-09-20): red outline, at the right
+        edge, and the prompt says a note to the customer is drafted. -#}
+    <form method="post" action="/app/diary/{{ b.id }}/status"
+          onsubmit="return confirm('Cancel this booking? It frees the space on this vehicle{% if b.contact %} and drafts a message to the customer for you to check, edit and send{% endif %}.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="status" value="cancelled">
+      <input type="hidden" name="return_to" value="/app/board">
+      <button class="rounded-lg border border-rose-300 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-50 transition">Cancel booking</button>
+    </form>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+{% macro booking_chip(b) %}
+<li class="py-2 flex items-start justify-between gap-3 flex-wrap" id="bk-{{ b.id }}">
+  <div class="min-w-0">
+    <p class="text-sm font-medium text-navy">
+      {% if b.spaces is not none %}<span class="rounded bg-brand-50 text-brand px-1.5 py-0.5 text-[11px] font-bold mr-1">{{ '%g'|format(b.spaces) }} plt</span>{% endif %}
+      {% if b.booking_ref %}<span class="font-mono text-[11px] text-slate-500 mr-1">{{ b.booking_ref }}</span>{% endif %}
+      {{ b.summary }}
+      {% if b.weight_kg %}<span class="text-xs text-slate-400 font-normal ml-1">· {{ '%g'|format(b.weight_kg) }} kg</span>{% endif %}
+    </p>
+    <p class="mt-0.5 text-xs text-slate-500">
+      {% if b.source == 'calendar' %}from your calendar{% elif b.source == 'manual' %}added manually{% else %}booked by the agent{% endif %}
+      {%- if b.contact %} · {{ b.contact }}
+        {%- if b.source == 'email' %} · <a class="text-brand hover:underline" href="/app/conversations/view?{{ {'contact': b.contact}|urlencode }}{% if b.email_log_id %}#log-{{ b.email_log_id }}{% endif %}">view conversation</a>{% endif %}
+      {%- endif %}
+      {#- The gathered details fold behind a "details" link, as on the office
+          diary (Kris 2026-09-20). -#}
+      {%- if b.details %} · <button type="button" class="text-brand hover:underline" data-details-toggle aria-expanded="false" aria-controls="details-{{ b.id }}">details</button>{% endif %}
+    </p>
+    {% if b.details %}
+    <p class="mt-0.5 text-xs text-slate-400" id="details-{{ b.id }}" data-booking-details hidden>
+      {% for k, v in b.details.items() %}{{ k }}: {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}
+    </p>
+    {% endif %}
+  </div>
+  {{ status_actions(b) }}
+</li>
+{% endmacro %}
+
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'added' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Booking added and placed on a vehicle.</div>
+  {% elif msg == 'nofit' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">No vehicle has space for that load on that date — it was not added. Try another date, or split it yourself across days.</div>
+  {% elif msg == 'badload' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That load didn't look right — pallets must be a positive number.</div>
+  {% elif msg == 'baddate' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That date didn't look right — use the date picker.</div>
+  {% elif msg == 'plan_proposed' %}
+  <div class="rounded-lg bg-brand-50 border border-brand/30 px-4 py-3 text-sm text-navy"><span class="font-semibold">Plan proposed</span> — review the before/after below and approve or discard.{% if note %} <span class="text-slate-600">{{ note }}</span>{% endif %}</div>
+  {% elif msg == 'plan_auto' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800"><span class="font-semibold">Plan applied automatically</span> (safe moves only — your auto-apply setting).{% if note %} {{ note }}{% endif %}</div>
+  {% elif msg == 'plan_none' %}
+  <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-700"><span class="font-semibold">No plan proposed.</span> {{ note or 'Nothing worth moving on that day.' }}</div>
+  {% elif msg == 'plan_applied' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Plan applied — the board below reflects the moves.</div>
+  {% elif msg == 'plan_failed' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800"><span class="font-semibold">Plan not applied</span> — nothing was moved. {{ note }}</div>
+  {% elif msg == 'plan_discarded' %}
+  <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-700">Plan discarded — the board is unchanged.</div>
+  {% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>{{ summary }}</p>
+    <span class="flex items-center gap-3">
+      <a href="/app/tms" class="text-brand font-medium hover:underline">Field OS · Transport view →</a>
+      {% if routing_on %}<a href="/app/fleet/import" class="text-brand font-medium hover:underline">Import order book →</a>{% endif %}
+      <a href="/app/fleet" class="text-brand font-medium hover:underline">Fleet settings →</a>
+      <a href="/app/diary/settings" class="text-brand font-medium hover:underline">Diary settings →</a>
+    </span>
+  </div>
+
+  {% if review_days %}
+  <!-- Passive freed-capacity banner (planner Q3): days that could run on fewer vehicles -->
+  <section class="rounded-xl border border-brand/30 bg-brand-50 p-4">
+    <p class="text-sm font-semibold text-navy">Worth a look — these days could run on fewer vehicles:</p>
+    <div class="mt-2 flex items-center gap-2 flex-wrap">
+      {% for r in review_days %}
+      <a href="/app/board?day={{ r.date }}" class="rounded-full bg-white border border-brand/30 px-3 py-1 text-xs font-semibold text-brand hover:bg-brand hover:text-white transition">
+        {{ r.label }} · frees {{ r.frees|join(' + ') }}
+      </a>
+      {% endfor %}
+    </div>
+    <p class="mt-2 text-xs text-slate-500">Open the day and hit “Replan” — the planner proposes the moves, nothing changes until you approve{{ ' (or auto-apply takes the safe ones)' if planner_auto else '' }}.</p>
+  </section>
+  {% endif %}
+
+  {% if not has_vehicles %}
+  <section class="rounded-xl border border-amber-300 bg-amber-50 p-5">
+    <p class="font-semibold text-navy text-sm">No active vehicles yet</p>
+    <p class="mt-1 text-sm text-slate-600">Until you add a vehicle in <a href="/app/fleet" class="text-brand hover:underline">Fleet settings</a>, the agent won't promise or decline any capacity — it tells customers a colleague will confirm.</p>
+  </section>
+  {% endif %}
+
+  {% if not calendar_connected %}
+  {% set cal_name = 'Outlook' if provider == 'microsoft' else 'Google' %}
+  <section class="rounded-xl border border-brand/30 bg-brand-50 p-5 flex items-center justify-between gap-4 flex-wrap">
+    <div class="min-w-0">
+      <p class="font-semibold text-navy text-sm">Keep your {{ cal_name }} calendar in step with BLAM8</p>
+      <p class="mt-1 text-sm text-slate-600">Connect it and every confirmed booking lands in your calendar, with your existing appointments shown alongside the board.</p>
+    </div>
+    <a href="/oauth/connect?provider={{ provider }}"
+       class="flex-none rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Connect calendar</a>
+  </section>
+  {% endif %}
+
+  {% if branches|length > 1 %}
+  <div class="flex items-center gap-1.5 flex-wrap">
+    <a href="/app/board" class="rounded-full px-3 py-1 text-xs font-semibold transition {{ 'bg-navy text-white' if not branch_id else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">All branches</a>
+    {% for b in branches %}
+    <a href="/app/board?branch={{ b.id }}" class="rounded-full px-3 py-1 text-xs font-semibold transition {{ 'bg-navy text-white' if branch_id == b.id else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">{{ b.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Manual add (fleet: pallets + type + branch — best-fit picks the van) -->
+  <details id="addform" class="bg-white rounded-xl border border-slate-200">
+    <summary class="cursor-pointer select-none px-5 py-3.5 text-sm font-semibold text-brand">+ Add booking</summary>
+    <form method="post" action="/app/board/add" class="px-5 pb-5 pt-1 grid sm:grid-cols-2 gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="booking_date">Date</label>
+        <input id="booking_date" name="booking_date" type="date" required
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-navy mb-1" for="qty">Pallets</label>
+          <input id="qty" name="qty" type="number" min="1" max="999" step="1" required placeholder="6"
+                 class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-navy mb-1" for="pallet_type">Type</label>
+          <select id="pallet_type" name="pallet_type" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+            {% for name, factor in type_options %}
+            <option value="{{ name }}">{{ name|title }}{% if factor != 1 %} ({{ '%g'|format(factor) }}){% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="weight_kg">Weight kg <span class="text-slate-400 font-normal">(optional)</span></label>
+        <input id="weight_kg" name="weight_kg" type="number" min="1" max="99999" step="1" placeholder="—"
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      {% if branches|length > 1 %}
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1" for="branch_id">Branch</label>
+        <select id="branch_id" name="branch_id" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          <option value="">Any branch</option>
+          {% for b in branches %}
+          <option value="{{ b.id }}" {{ 'selected' if branch_id == b.id }}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-navy mb-1" for="summary_field">What's the job?</label>
+        <input id="summary_field" name="summary" type="text" required placeholder="Describe this booking"
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-sm font-medium text-navy mb-1" for="contact">Customer email <span class="text-slate-400 font-normal">(optional)</span></label>
+        <input id="contact" name="contact" type="email" placeholder="ops@customer.co.uk"
+               class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2 flex items-center gap-3">
+        <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Add booking</button>
+        <span class="text-xs text-slate-400">Added by you, so it goes in as confirmed — the best-fitting vehicle is picked automatically.</span>
+      </div>
+    </form>
+  </details>
+
+  <!-- Month → week → day fleet board -->
+  {% set ns = namespace(month='') %}
+  {% for week in weeks %}
+    {% if week.days[0].month_label != ns.month %}
+      {% set ns.month = week.days[0].month_label %}
+      <div class="pt-2 {% if not loop.first %}mt-2{% endif %}">
+        <p class="font-semibold text-navy">{{ ns.month }}</p>
+        <div class="mt-2 grid grid-cols-7 gap-1.5 text-center text-xs text-slate-400">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-7 gap-1.5">
+      {% for d in week.days %}
+        {% if d.filler %}
+        {# A neighbouring month's day. Blank, not muted-with-a-number: this grid
+           is September, and a greyed "1" in the corner reads as a September day
+           that is somehow unavailable. #}
+        <div class="min-h-[64px]" aria-hidden="true"></div>
+        {% elif d.in_diary %}
+        <button type="button" data-day="{{ d.date }}"
+                class="cal-day text-left rounded-lg border p-2 min-h-[64px] transition hover:border-brand
+                       {% if d.full %}bg-rose-50 border-rose-200{% elif d.booked_count %}bg-emerald-50 border-emerald-200{% else %}bg-white border-slate-200{% endif %}
+                       {% if d.today %}ring-2 ring-brand{% endif %}">
+          <span class="text-xs font-semibold {% if d.full %}text-rose-700{% elif d.booked_count %}text-emerald-700{% else %}text-navy{% endif %}">{{ d.dom }}</span>
+          <span class="block mt-1 text-[10px] leading-tight {% if d.full %}text-rose-600 font-semibold{% elif d.booked_count %}text-emerald-600 font-semibold{% else %}text-slate-400{% endif %}">
+            {%- if d.total_spaces %}{{ '%g'|format(d.used_spaces) }} / {{ '%g'|format(d.total_spaces) }}{% if not d.working %} · closed{% endif %}
+            {%- elif not d.working %}closed · booked{% else %}—{% endif -%}
+          </span>
+        </button>
+        {% else %}
+        <div class="rounded-lg p-2 min-h-[64px] {% if d.out %}bg-slate-50 text-slate-300{% else %}bg-slate-100/70 text-slate-400{% endif %}">
+          <span class="text-xs">{{ d.dom }}</span>
+          {% if not d.out %}<span class="block mt-1 text-[10px]">closed</span>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Day panels for this week: one row per vehicle, with its load bar -->
+    {% for d in week.days if d.in_diary %}
+    <section id="panel-{{ d.date }}" class="cal-panel hidden bg-white rounded-xl border border-slate-200 p-5 space-y-4 scroll-mt-20">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <span class="font-semibold text-navy">{{ d.label }}</span>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          {% if not d.working %}
+          <span class="rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-xs font-semibold">Closed</span>
+          {% endif %}
+          <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ 'bg-rose-50 text-rose-700' if d.full else 'bg-emerald-50 text-emerald-700' }}">
+            {{ '%g'|format(d.used_spaces) }} of {{ '%g'|format(d.total_spaces) }} spaces
+          </span>
+          {% if routing_on %}
+          <form method="post" action="/app/board/replan">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="plan_date" value="{{ d.date }}">
+            <button class="rounded-lg bg-navy px-3 py-1 text-xs font-semibold text-white hover:bg-navy-800 transition"
+                    title="Ask the planner whether this day could run on fewer vehicles or miles">↻ Replan this day</button>
+          </form>
+          {% endif %}
+        </div>
+        {# The two buttons keep the right edge whatever the chips do (Kris
+           2026-09-20), as on the office diary. #}
+        <div class="ml-auto flex items-center gap-1.5" data-day-actions>
+          <button type="button" data-addday="{{ d.date }}" class="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-brand hover:bg-brand-50 transition">+ Add</button>
+          <button type="button" data-close="{{ d.date }}" aria-label="Close day view"
+                  class="rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">✕ Close</button>
+        </div>
+      </div>
+
+      {% for p in plans_by_date.get(d.date, []) %}
+      <!-- Proposed plan (planner D6): the diff a human approves — before/after
+           load bars per affected vehicle + the move list with refs -->
+      <div class="rounded-xl border-2 border-brand/40 bg-brand-50/50 p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <p class="text-sm font-semibold text-navy">
+            <span class="rounded-full bg-brand text-white px-2 py-0.5 text-[11px] font-bold mr-1.5">PROPOSED PLAN</span>
+            {{ p.summary }}
+          </p>
+          {% if p.frees %}<span class="rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-0.5 text-xs font-semibold">Frees {{ p.frees|join(' + ') }}</span>{% endif %}
+        </div>
+        {% if p.stale %}
+        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">The board has changed since this plan was proposed — approving will re-check every move and refuse loudly if anything no longer fits.</p>
+        {% endif %}
+        <ul class="text-sm text-slate-700 space-y-1">
+          {% for m in p.moves %}
+          <li class="flex items-center gap-2 flex-wrap">
+            <span class="rounded bg-brand-50 text-brand px-1.5 py-0.5 text-[11px] font-bold">{{ '%g'|format(m.spaces) }} plt</span>
+            {% if m.ref %}<span class="font-mono text-[11px] text-slate-500">{{ m.ref }}</span>{% endif %}
+            <span class="min-w-0 truncate">{{ m.summary }}</span>
+            <span class="text-xs text-slate-500 flex-none">{{ m.from_name }} → <span class="font-semibold text-navy">{{ m.to_name }}</span></span>
+          </li>
+          {% endfor %}
+        </ul>
+        <div class="space-y-2">
+          {% for v in p.vehicles %}
+          <div class="text-xs text-slate-600">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-navy">{{ v.name }}</span>
+              <span>{{ '%g'|format(v.before) }} → <span class="font-semibold {{ 'text-emerald-700' if v.freed else 'text-navy' }}">{{ '%g'|format(v.after) }}</span> of {{ '%g'|format(v.capacity) }} spaces{% if v.freed %} · freed{% endif %}</span>
+            </div>
+            <div class="mt-1 h-1.5 rounded-full bg-slate-200/70 overflow-hidden"><div class="h-full rounded-full bg-slate-400" style="width: {{ v.before_pct }}%"></div></div>
+            <div class="mt-0.5 h-1.5 rounded-full bg-slate-200/70 overflow-hidden"><div class="h-full rounded-full {{ 'bg-emerald-400' if v.freed else 'bg-brand' }}" style="width: {{ v.after_pct }}%"></div></div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="flex items-center gap-2">
+          <form method="post" action="/app/board/plans/{{ p.id }}/apply">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition">Approve &amp; apply</button>
+          </form>
+          <form method="post" action="/app/board/plans/{{ p.id }}/discard">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Discard</button>
+          </form>
+          <span class="text-[11px] text-slate-400">Applied in one transaction — if any move no longer fits, nothing moves.</span>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="space-y-3">
+        {% for row in d.vehicles %}
+        {% set v = row.vehicle %}
+        <div class="rounded-lg border {{ 'border-slate-200' if v.active else 'border-dashed border-slate-200 opacity-70' }} p-3">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <p class="text-sm font-semibold text-navy">
+              {{ v.name }}
+              {% if not v.active %}<span class="ml-1.5 rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-[11px] font-semibold">Inactive</span>{% endif %}
+              {% if branches|length > 1 and v.branch_id %}<span class="ml-1.5 text-xs text-slate-400 font-normal">{{ branches|selectattr('id', 'equalto', v.branch_id)|map(attribute='name')|first }}</span>{% endif %}
+            </p>
+            <p class="text-xs {{ 'text-rose-600 font-semibold' if row.free_spaces <= 0 else 'text-slate-500' }}">
+              {{ '%g'|format(row.used_spaces) }} / {{ '%g'|format(v.capacity_spaces) }} spaces
+              {%- if v.max_payload_kg %} · {{ '%g'|format(row.used_kg) }} / {{ '%g'|format(v.max_payload_kg) }} kg{% elif row.used_kg %} · {{ '%g'|format(row.used_kg) }} kg{% endif %}
+              {% if routing_on %}<a href="/app/fleet/vehicles/{{ v.id }}/day/{{ d.date }}" class="ml-2 text-brand font-semibold hover:underline">Manifest →</a>{% endif %}
+            </p>
+          </div>
+          <div class="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+            {% set pct = (100 * row.used_spaces / v.capacity_spaces)|round(0) if v.capacity_spaces else 0 %}
+            <div class="h-full rounded-full {{ 'bg-rose-400' if row.free_spaces <= 0 else 'bg-brand' }}" style="width: {{ [pct, 100]|min }}%"></div>
+          </div>
+          {% if row.bookings %}
+          <ul class="mt-1 divide-y divide-slate-100">
+            {% for b in row.bookings %}{{ booking_chip(b) }}{% endfor %}
+          </ul>
+          {% else %}
+          <p class="mt-2 text-xs text-slate-300">Nothing on this vehicle yet.</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if d.unassigned %}
+        <div class="rounded-lg border border-amber-300 bg-amber-50/60 p-3">
+          <p class="text-sm font-semibold text-amber-800">Unassigned — needs a vehicle</p>
+          <p class="text-xs text-amber-700">These bookings lost their vehicle (it was removed). Re-add them to the board, or cancel them.</p>
+          <ul class="mt-1 divide-y divide-amber-100">
+            {% for b in d.unassigned %}{{ booking_chip(b) }}{% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if d.legacy %}
+        <div class="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Other diary entries (not counted against the fleet)</p>
+          <ul class="mt-1 divide-y divide-slate-100">
+            {% for b in d.legacy %}{{ booking_chip(b) }}{% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+  {% endfor %}
+
+  {% if not weeks %}
+  <section class="bg-white rounded-xl border border-slate-200 p-8 text-center">
+    <p class="font-medium text-navy">No working days in the booking horizon</p>
+    <p class="mt-1 text-sm text-slate-500">Check your working days and horizon in <a href="/app/diary/settings" class="text-brand hover:underline">Diary settings</a>.</p>
+  </section>
+  {% endif %}
+
+  <p class="text-xs text-slate-400">Click a day to see each vehicle's load; ✕ Close takes you back to the month. Proposed holds are placed by the agent and occupy vehicle space until you (or an approved reply) confirm them — stale ones are released automatically after 7 days. Which vehicle a job rides on is never mentioned to customers.</p>
+</div>
+
+<script>
+  (function () {
+    function hideAll() { document.querySelectorAll('.cal-panel').forEach(function (e) { e.classList.add('hidden'); }); }
+    document.querySelectorAll('.cal-day').forEach(function (el) {
+      el.addEventListener('click', function () {
+        hideAll();
+        var p = document.getElementById('panel-' + el.dataset.day);
+        if (p) { p.classList.remove('hidden'); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+    document.querySelectorAll('[data-close]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        hideAll();
+        var c = document.querySelector('.cal-day[data-day="' + el.dataset.close + '"]');
+        if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    });
+    document.querySelectorAll('[data-addday]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var dt = document.getElementById('booking_date'), det = document.getElementById('addform');
+        if (dt) dt.value = el.dataset.addday;
+        if (det) { det.open = true; det.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+    // The row's "details" link opens (and closes) its gathered details.
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-details-toggle]');
+      if (!t) return;
+      var p = document.getElementById(t.getAttribute('aria-controls'));
+      if (!p) return;
+      var open = p.hasAttribute('hidden');
+      if (open) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+      t.setAttribute('aria-expanded', open ? 'true' : 'false');
+      t.textContent = open ? 'hide details' : 'details';
+    });
+    // Deep-link a day open (?day=YYYY-MM-DD) — used by the replan redirect and
+    // the freed-capacity banner, so the panel with the plan diff is in view.
+    var openDay = {{ (open_day or '')|tojson }};
+    if (openDay) {
+      var p = document.getElementById('panel-' + openDay);
+      if (p) { p.classList.remove('hidden'); p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }
+    // …and a booking lit (&booking=<id>): the thread's "Booked slot" line
+    // lands on its own row (Kris 2026-09-20).
+    var focus = {{ (focus_booking or '')|tojson }};
+    if (focus) {
+      var fr = document.getElementById('bk-' + focus);
+      if (fr) {
+        fr.classList.add('ring-2', 'ring-inset', 'ring-brand', 'rounded-lg', 'px-2', 'bg-brand-50');
+        fr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  })();
+</script>
+{% endblock %}

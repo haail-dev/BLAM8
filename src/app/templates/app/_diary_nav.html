@@ -1,0 +1,13 @@
+{# Diary sections, rendered INSIDE the masthead dropdown (menu_sections block)
+   — replaces the loose toolbar pills (Counting House masthead rule,
+   2026-08-29). Inherits {{ item }} / {{ on }} from app/base.html. #}
+<p class="px-4 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Diary</p>
+{# highlight by PATH: these three pages all render with active='diary'-ish
+   values, so the path is the one honest discriminator. #}
+{% set dpath = request.url.path %}
+<a href="/app/diary" class="{{ item }} {% if dpath == '/app/diary' %}{{ on }}{% endif %}"><span class="flex-1">{{ 'Office diary' if fleet_on else 'Diary' }}</span></a>
+<a href="/app/diary/dependants" class="{{ item }} {% if dpath == '/app/diary/dependants' %}{{ on }}{% endif %}"><span class="flex-1">Dependants</span></a>
+<div class="my-1 border-t border-slate-100"></div>
+{# The section's own settings left this menu on 2026-09-02: they live behind
+   the cog in the masthead, which is beside you on every page of the section
+   rather than two taps down a dropdown. Navigation stayed. #}

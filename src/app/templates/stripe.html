@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% block title %}Payments, billing &amp; Stripe | BLAM8{% endblock %}
+{% block meta_description %}How BLAM8 uses Stripe: the monthly subscription you pay BLAM8 (Stripe-hosted checkout, a customer portal to change plan or cancel, a {{ trial_days }}-day trial with no card) and Stripe Connect for your own customers paying your invoices by card, straight into your own Stripe account with no cut taken. What Stripe sees, what BLAM8 stores, what never touches our systems.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/stripe#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 store my card details?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Every payment page is hosted by Stripe. You type your card into Stripe's page, Stripe keeps it under its own PCI DSS Level 1 certification, and BLAM8 stores only the Stripe customer and subscription references it needs to know which plan you are on. Card numbers, expiry dates and security codes never reach BLAM8's servers." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a card to start?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. The free trial runs for {{ trial_days }} days or {{ trial_email_cap }} handled emails, whichever comes first, with no card. Nothing is created on Stripe until you choose a plan. If you pick a plan during the trial, the card is charged when the trial ends, not when you enter it; the trial keeps its original end date." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 take a cut of my customers' payments?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. When you connect your own Stripe account, each invoice's Pay Now link opens a Stripe checkout on your account, in your business's name. The money settles into your Stripe balance and pays out to your bank on your Stripe schedule. BLAM8 adds no fee or commission; Stripe's own processing fees on your account apply as normal." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I cancel or change plan myself?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, from Stripe's customer portal inside BLAM8: upgrade, downgrade, change the card, download past invoices or cancel, with nobody to phone. Plans are monthly with no annual lock-in. Cancelling stops the next renewal and you keep access until the end of the period you have paid for." }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens if a subscription payment fails?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Stripe retries the card and emails you. Your subscription shows as past due in BLAM8 until the payment clears, and you can update the card in the customer portal at any time. Nothing you have set up is deleted." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I refund a customer from BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. On a card-paid invoice, or on the Card payments page, Refund issues a full or partial refund on your own Stripe account with a reason. The invoice records it, the customer's timeline shows it, and you get a notification. A refund you issue in Stripe's dashboard instead lands the same way. Stripe returns the money to the customer's card in five to ten working days." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a Stripe account to use BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Your subscription to BLAM8 is paid on BLAM8's Stripe, which needs nothing from you but a card. Connecting your own Stripe account is optional and only affects how your customers pay you: with it, invoices carry a Pay Now card link; without it, invoices carry your bank-transfer details and you mark them paid." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-16">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Payments, billing &amp; Stripe
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      Everything BLAM8 does with Stripe, on one page.
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Two separate relationships run on Stripe: you paying BLAM8 for your subscription, and your customers paying you for the work. Here is how each one works, what Stripe sees, what we keep, and what never touches our systems. The legal detail is in the <a href="/terms" class="text-brand font-medium hover:underline">Terms of Service</a>; Stripe is listed as a sub-processor in the <a href="/privacy" class="text-brand font-medium hover:underline">Privacy Policy</a>.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">Two relationships, kept apart</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl text-sm leading-relaxed">They use different Stripe accounts, different webhooks and different signing secrets. Money from one can never end up in the other.</p>
+    <div class="mt-10 grid md:grid-cols-2 gap-6">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <div class="flex items-start justify-between gap-3">
+          <h3 class="font-semibold text-navy text-lg">1 · You pay BLAM8</h3>
+          {% if billing_on %}
+          <span class="flex-none rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Live</span>
+          {% else %}
+          <span class="flex-none rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Not switched on here</span>
+          {% endif %}
+        </div>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Your monthly subscription, on BLAM8's own Stripe account. A Stripe-hosted checkout takes the card; Stripe's customer portal is where you change plan, update the card or cancel. BLAM8 never sees the card.</p>
+        <a href="#subscription" class="mt-4 inline-block text-sm font-medium text-brand hover:underline">How the subscription works &darr;</a>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <div class="flex items-start justify-between gap-3">
+          <h3 class="font-semibold text-navy text-lg">2 · Your customers pay you</h3>
+          {% if connect_on %}
+          <span class="flex-none rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Live</span>
+          {% else %}
+          <span class="flex-none rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Coming soon</span>
+          {% endif %}
+        </div>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Optional. Connect your <em>own</em> Stripe account and every invoice goes out with a Pay Now link. Your customer pays on a Stripe page in your business's name, the money lands in your Stripe, and BLAM8 takes no cut.{% if not connect_on %} Until this is switched on, invoices carry your bank-transfer details instead.{% endif %}</p>
+        <a href="#connect" class="mt-4 inline-block text-sm font-medium text-brand hover:underline">How getting paid works &darr;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="subscription" class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Your subscription to BLAM8</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl text-sm leading-relaxed">From the free trial to cancelling, in the order it happens.</p>
+
+  <div class="mt-10 grid md:grid-cols-2 gap-6">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Start free. No card, nothing on Stripe yet</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Every account starts with a {{ trial_days }}-day trial of the full product, the Concierge included, capped at {{ trial_email_cap }} handled emails, whichever runs out first. It asks for no card, and no Stripe customer record exists until you choose a plan. If the trial ends before you decide, everything you set up is kept and waits.</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Pick a plan. Prices are public and monthly</h3>
+      <div class="mt-3 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-200">
+              <th class="py-2 pr-3 font-semibold">Plan</th>
+              <th class="py-2 pr-3 font-semibold">Price</th>
+              <th class="py-2 font-semibold">Includes</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-700">
+            {% for plan in plans %}
+            <tr class="border-b border-slate-100">
+              <td class="py-2 pr-3 font-medium text-navy">{{ plan.name }}</td>
+              <td class="py-2 pr-3 whitespace-nowrap">{{ plan.price }} {{ plan.per }}</td>
+              <td class="py-2">{{ plan.emails }}, {{ plan.included_mailboxes }} mailbox{% if plan.included_mailboxes != 1 %}es{% endif %}</td>
+            </tr>
+            {% endfor %}
+            <tr class="border-b border-slate-100">
+              <td class="py-2 pr-3 font-medium text-navy">{{ extra_mailbox.name }}</td>
+              <td class="py-2 pr-3 whitespace-nowrap">{{ extra_mailbox.price }} {{ extra_mailbox.per }}</td>
+              <td class="py-2">Each additional mailbox, adding 300 emails/month</td>
+            </tr>
+            {% if topup_on %}
+            <tr>
+              <td class="py-2 pr-3 font-medium text-navy">{{ topup.name }}</td>
+              <td class="py-2 pr-3 whitespace-nowrap">{{ topup.price }} {{ topup.per }}</td>
+              <td class="py-2">{{ topup.emails }} prepaid emails, used only once your plan's allowance runs out, never expire</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-3 text-xs text-slate-500">All prices in GBP. Any VAT that applies is shown on Stripe's checkout page before you confirm and on every Stripe invoice. No per-seat pricing.</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Pay on Stripe's page, not ours</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Choosing a plan sends you to a checkout page hosted by Stripe. You enter the card there, it is kept there, and BLAM8's servers never handle it. The page shows the exact total before you confirm and accepts promotion codes. One trial clock: upgrading during the trial keeps the trial's original end date and the card is charged when it ends. If the trial has already finished, billing starts the day you subscribe.</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Stripe tells BLAM8 what is paid. BLAM8 never guesses</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Stripe sends BLAM8 a signed message for every billing event: checkout completed, subscription created, updated or cancelled, invoice paid or failed. BLAM8 checks the signature, ignores duplicates, and mirrors the subscription's current state onto your account. That state is what unlocks the plan's features, so upgrading or downgrading is self-serve with no operator step.</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Manage it yourself, any time</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Plans &amp; billing inside BLAM8 opens Stripe's customer portal: switch plan, update the card, download past invoices and receipts, or cancel. Plans are monthly with no annual lock-in. Cancelling stops the next renewal and you keep access until the end of the period you have paid for. Fees already paid are not refunded except where the law requires it, as the <a href="/terms" class="text-brand font-medium hover:underline">Terms</a> set out.</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Add-ons follow what you actually use</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Connecting a mailbox beyond your plan's allowance adds one extra-mailbox line to your Stripe subscription, pro-rated from that day; disconnecting it removes the line. Before you connect another mailbox, BLAM8 shows the new monthly figure and asks you to confirm. The quantity on Stripe is rechecked against your live mailboxes on every billing event, so the bill and the product can never disagree.</p>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white p-7 md:col-span-2">
+      <h3 class="font-semibold text-navy text-lg">If a payment fails</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Stripe retries the card on its own schedule and emails you each time. Your subscription reads <em>past due</em> in BLAM8 until the payment clears; updating the card in the customer portal settles it. Nothing you have built, your inbox, drafts, diary, CRM or knowledge, is deleted because a card declined.</p>
+    </div>
+  </div>
+</section>
+
+<section id="connect" class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">Your customers paying you</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl text-sm leading-relaxed">Stripe Connect, in plain terms: your Stripe account, your money, BLAM8 just builds the payment page.{% if not connect_on %} <span class="font-medium text-amber-700">This is not switched on yet</span>: today every invoice carries your bank-transfer details and you mark it paid. The rest of this section describes how it works once it is.{% endif %}</p>
+
+    <div class="mt-10 grid md:grid-cols-2 gap-6">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">Connect your own Stripe account</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">From Settings › Getting paid, <em>Connect your Stripe account</em> sends you to Stripe's own consent screen. No Stripe account yet? Stripe offers to create one in the same flow. When you come back, BLAM8 stores one thing: your connected account's identifier. It never holds your Stripe login or your API keys, and it uses the connection for one purpose, creating the payment page for each invoice. It never moves money out of your account.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">Every invoice goes out with a Pay Now link</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">The link opens the invoice on a page BLAM8 hosts: your business name, the lines, the total, the due date. <em>Pay now</em> opens a Stripe checkout on your account, labelled with your business and the invoice number, for the outstanding balance. It accepts cards and any wallets your Stripe account has enabled, such as Apple Pay and Google Pay, and Stripe handles 3-D Secure. Bacs Direct Debit and Pay by Bank can join them from an invoice size you choose, because they cost less than a card on a big invoice. The link never expires; each click starts a fresh session. A customer with several unpaid invoices can settle them all in one payment from the same page. A quote accepted with a deposit raises the deposit invoice with the same link.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">The money is yours, with no cut</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Payments settle into your own Stripe balance and pay out to your bank on the schedule you set in Stripe. BLAM8 adds no application fee, commission or mark-up. Stripe's standard processing fees on your account apply, exactly as they would for any other Stripe payment you take. Refunds, if you ever need one, are issued from your own Stripe dashboard.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">Paid means paid, automatically</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Stripe notifies BLAM8 the moment a payment succeeds, over its own signed and de-duplicated webhook. The invoice marks itself paid, you get a push notification, the payment lands on the customer's CRM timeline, and if the invoice belongs to a deal the assistant offers to move it to Won. A failed payment notifies you too, with the reason Stripe gave, and so does a dispute, with a link to answer it in Stripe. Refunds work in both directions: issue one from BLAM8, full or partial with a reason, or from your Stripe dashboard, and either way it lands on the invoice and the customer's timeline. Payment-confirmation emails from Stripe and similar services are recognised on arrival and never drafted a reply.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">Without Stripe, bank transfer</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Add your sort code and account number in Settings › Getting paid and every invoice, and the same invoice page, carries them with the invoice number as the payment reference. You mark the invoice paid when the money arrives; the same notifications and CRM timeline follow. Overdue chasing at 7, 14 and 30 days works the same either way.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">See it all inside BLAM8, no Stripe login</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">The Card payments page shows your available balance, what is on its way, your next payout and its date, what you took today, and the last 30 days with Stripe's fee on every payment and the net that reaches you. Each payment sits beside the invoice it paid, the customer and the deal, with a refund button in place. Payouts list when the money reached your bank. It reads your own account; the full Stripe dashboard is one click away when you want it.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">Disconnect whenever you like</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm"><em>Disconnect Stripe</em> in Settings › Getting paid removes the stored account identifier; new invoices fall back to your bank details. You can also revoke BLAM8 from the authorised applications list in your own Stripe dashboard, which has the same effect from Stripe's side.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">What Stripe holds, what BLAM8 keeps, what nobody stores</h2>
+  <div class="mt-10 grid md:grid-cols-3 gap-6">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Stripe holds</h3>
+      <ul class="mt-3 space-y-2 text-sm text-slate-600 list-disc pl-5">
+        <li>Your card, under Stripe's PCI DSS Level 1 certification</li>
+        <li>Your billing email and a reference to your BLAM8 account</li>
+        <li>Your subscription, invoice and receipt history</li>
+        <li>For customer payments, on your own account: the customer's email, the invoice number and the amount</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">BLAM8 keeps</h3>
+      <ul class="mt-3 space-y-2 text-sm text-slate-600 list-disc pl-5">
+        <li>Your Stripe customer and subscription identifiers</li>
+        <li>Subscription status (trialing, active, past due, cancelled), the plan it maps to, the trial end and next renewal dates</li>
+        <li>Your connected account identifier, if you connect one</li>
+        <li>The Stripe payment reference on each invoice paid by card, and the refund or dispute lines that follow it</li>
+        <li>The identifiers of webhook events already handled, so a retry is never applied twice</li>
+      </ul>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h3 class="font-semibold text-navy text-lg">Nobody at BLAM8 stores</h3>
+      <ul class="mt-3 space-y-2 text-sm text-slate-600 list-disc pl-5">
+        <li>Card numbers, expiry dates or security codes, yours or your customers'</li>
+        <li>Your Stripe login, password or secret API keys</li>
+        <li>Your Stripe balance or payout details</li>
+      </ul>
+      <p class="mt-4 text-xs text-slate-500">Both webhooks are signature-verified with their own secrets, de-duplicated by event id and rate-limited. Stripe is a listed sub-processor in the <a href="/privacy" class="text-brand font-medium hover:underline">Privacy Policy</a>; the wider data picture is on the <a href="/security" class="text-brand font-medium hover:underline">Security page</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="grid md:grid-cols-2 gap-10">
+      <div>
+        <h2 class="text-3xl font-bold tracking-tight text-navy">Partners: paid on what Stripe actually collects</h2>
+        <p class="mt-4 text-slate-600 leading-relaxed text-sm">A partner who refers a business earns {{ rate_pct }}% of every subscription payment BLAM8 collects from them, for as long as they stay. Commission is written to the ledger only when Stripe confirms an invoice paid, never from list prices, and a refunded payment claws its commission back automatically. Statements are monthly and paid by bank transfer within 30 days of the month's end; balances under £{{ min_payout }} roll forward. Details on the <a href="/partners" class="text-brand font-medium hover:underline">partner programme page</a>.</p>
+      </div>
+      <div>
+        <h2 class="text-3xl font-bold tracking-tight text-navy">Something missing?</h2>
+        <p class="mt-4 text-slate-600 leading-relaxed text-sm">A billing question, a receipt you need re-issued, a security questionnaire that asks about payment handling: email <a href="mailto:hello@blam8.com" class="text-brand font-medium hover:underline">hello@blam8.com</a> and you will get a straight answer. If this page and the product ever disagree, tell us; the page is meant to be checkable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Questions people ask</h2>
+  <div class="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">Does BLAM8 store my card details?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">No. Every payment page is hosted by Stripe. You type your card into Stripe's page, Stripe keeps it under its own PCI DSS Level 1 certification, and BLAM8 stores only the Stripe customer and subscription references it needs to know which plan you are on. Card numbers, expiry dates and security codes never reach BLAM8's servers.</p>
+    </div>
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">Do I need a card to start?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">No. The free trial runs for {{ trial_days }} days or {{ trial_email_cap }} handled emails, whichever comes first, with no card. Nothing is created on Stripe until you choose a plan. If you pick a plan during the trial, the card is charged when the trial ends, not when you enter it; the trial keeps its original end date.</p>
+    </div>
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">Does BLAM8 take a cut of my customers' payments?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">No. When you connect your own Stripe account, each invoice's Pay Now link opens a Stripe checkout on your account, in your business's name. The money settles into your Stripe balance and pays out to your bank on your Stripe schedule. BLAM8 adds no fee or commission; Stripe's own processing fees on your account apply as normal.</p>
+    </div>
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">Can I cancel or change plan myself?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">Yes, from Stripe's customer portal inside BLAM8: upgrade, downgrade, change the card, download past invoices or cancel, with nobody to phone. Plans are monthly with no annual lock-in. Cancelling stops the next renewal and you keep access until the end of the period you have paid for.</p>
+    </div>
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">What happens if a subscription payment fails?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">Stripe retries the card and emails you. Your subscription shows as past due in BLAM8 until the payment clears, and you can update the card in the customer portal at any time. Nothing you have set up is deleted.</p>
+    </div>
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">Can I refund a customer from BLAM8?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">Yes. On a card-paid invoice, or on the Card payments page, Refund issues a full or partial refund on your own Stripe account with a reason. The invoice records it, the customer's timeline shows it, and you get a notification. A refund you issue in Stripe's dashboard instead lands the same way. Stripe returns the money to the customer's card in five to ten working days.</p>
+    </div>
+    <div class="py-5">
+      <h3 class="font-semibold text-navy">Do I need a Stripe account to use BLAM8?</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">No. Your subscription to BLAM8 is paid on BLAM8's Stripe, which needs nothing from you but a card. Connecting your own Stripe account is optional and only affects how your customers pay you: with it, invoices carry a Pay Now card link; without it, invoices carry your bank-transfer details and you mark them paid.</p>
+    </div>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Try it before Stripe ever hears your name.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Free {{ trial_days }}-day trial of the full product, no card. Choose a plan only if it earns it.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/terms" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">Read the Terms</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

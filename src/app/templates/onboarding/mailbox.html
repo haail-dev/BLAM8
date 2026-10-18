@@ -1,0 +1,88 @@
+{% extends "onboarding/base.html" %}
+{% block title %}Connect mailbox · Set up BLAM8{% endblock %}
+{% block heading %}Connect the inbox your customers email{% endblock %}
+{% block subheading %}This is the mailbox BLAM8 reads and drafts replies in. It's a separate choice from the account you signed in with — a human approves every reply before it's sent.{% endblock %}
+{% block content %}
+{# Which account is which (Kris 2026-09-13): the stays-business sign-up connected a
+   personal Hotmail here because nothing said "you signed in as X — that was
+   your login; now pick the inbox customers write to". The strip names the
+   login, then asks the one question that matters: same address, or another? #}
+<div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm space-y-2.5">
+  <div class="flex gap-2.5">
+    <span class="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white">&#10003;</span>
+    <p class="text-slate-600"><span class="font-semibold text-navy">Your BLAM8 login</span>{% if signer_email %} — <span class="font-medium text-slate-700" data-signer-email>{{ signer_email }}</span>{% endif %}. Done. That's how you sign in; we don't read any mail from it.</p>
+  </div>
+  <div class="flex gap-2.5">
+    {% if connected %}
+    {# Step 2 ticks like step 1 once the inbox is connected (Kris, live on
+       this step 2026-09-13). #}
+    <span class="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white">&#10003;</span>
+    <p class="text-slate-600"><span class="font-semibold text-navy">The inbox customers email</span> — <span class="font-medium text-slate-700" data-connected-inbox>{{ mailbox }}</span>. Connected{% if same_as_login %} — the same address as your login{% endif %}.</p>
+    {% else %}
+    <span class="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white">2</span>
+    <p class="text-slate-600"><span class="font-semibold text-navy">The inbox customers email</span> — this step. {% if signer_email %}If customers write to <span class="font-medium text-slate-700">{{ signer_email }}</span>, connect that same account. {% endif %}If they write to a business address (info@…, bookings@…), connect that one instead — Google or Microsoft will ask which account, so pick the business one.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if connected and not change %}
+{# Why the note is shown, said first (Kris 2026-09-13: "X is a personal
+   address" read wrong when the address was simply the login reused). Same
+   address as the login → an informational note; a gmail/hotmail address
+   that is NOT the login → the "is this where enquiries arrive?" ask
+   (LittleDogs finding 7). A personal address CAN be right — a sole trader
+   on Gmail — so neither refuses. #}
+{% if same_as_login %}
+<div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-600" data-same-as-login>
+  <span class="font-semibold text-navy">Same address as your login.</span> Fine if that's where your customers' enquiries arrive. If they go to a different address (info@…, bookings@…), connect that one instead — it replaces this connection.
+</div>
+{% elif personal_inbox %}
+<div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800" data-personal-inbox>
+  <span class="font-semibold">Is this where your customers' enquiries arrive?</span> {{ mailbox }} is a {{ mailbox_domain }} address — fine if that's the inbox customers use. If enquiries go to a business address instead, connect that one — it replaces this connection.
+</div>
+{% endif %}
+{# Honest about the go-live hold (Julius 2026-09-02): drafting does NOT
+   start at connect — mail files while held, and the owner releases
+   drafting in Settings once they've been through what's arriving. #}
+{% include "_backlog_status.html" %}
+<script src="/static/backlog_status.js?v={{ asset_rev }}" defer></script>
+<p class="mt-2 text-sm text-slate-500">Recent mail is filed without replying. Review your inbox and sending settings before enabling drafting.</p>
+<div class="mt-5 flex items-center justify-between">
+  <a href="/onboarding/mailbox?change=1" class="text-sm text-slate-500 hover:text-navy transition">Use a different account</a>
+  <a href="/onboarding/voice" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</a>
+</div>
+{% else %}
+{% if change and mailbox %}
+<p class="mt-4 text-sm text-slate-500">Connecting another account replaces <span class="font-medium text-slate-700">{{ mailbox }}</span>.</p>
+{% endif %}
+<p class="mt-4 text-xs font-semibold uppercase tracking-wider text-slate-400">Where is that inbox?</p>
+<div class="mt-2 space-y-3">
+  {# Two equal buttons that mirror the sign-in page (run #10, Kris: the
+     bracketed provider qualifiers "just confuse the situation") — the
+     which-is-mine help is one line below. #}
+  <a href="/oauth/connect?provider=microsoft" class="flex items-center justify-center gap-3 rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-navy hover:border-slate-400 transition">
+    <svg width="18" height="18" viewBox="0 0 21 21" aria-hidden="true"><path fill="#F25022" d="M1 1h9v9H1z"/><path fill="#7FBA00" d="M11 1h9v9h-9z"/><path fill="#00A4EF" d="M1 11h9v9H1z"/><path fill="#FFB900" d="M11 11h9v9h-9z"/></svg>
+    Connect with Microsoft
+  </a>
+  {% if gmail_connect_open(request) %}
+  <a href="/oauth/connect?provider=google" class="flex items-center justify-center gap-3 rounded-lg border border-slate-300 px-5 py-3 text-sm font-semibold text-navy hover:border-slate-400 transition">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+    Connect with Google
+  </a>
+  {% else %}
+  {% set gate_next = "/onboarding/mailbox" %}{% set gate_mode = "replace" %}
+  {% include "_gmail_gate.html" %}
+  {% endif %}
+</div>
+<p class="mt-3 text-xs text-slate-500">Not sure which? Gmail and Google Workspace addresses are Google; Outlook, Hotmail and Microsoft 365 addresses are Microsoft.</p>
+<p class="mt-2 text-xs text-slate-400">You’ll be sent to Microsoft or Google to approve read &amp; send access, then brought back here. Connecting Gmail? Google shows an “unverified app” notice while our verification is pending — continue via its Advanced link. <a href="/help/why-is-google-sign-in-invite-only" class="underline hover:text-slate-600" target="_blank" rel="noopener">Why the notice — and why Gmail is invite-only?</a></p>
+<div class="mt-6 flex items-center justify-between">
+  {# Back goes to the default front door (the interview), not the classic
+     picker — most tenants arrived from the assistant and have never seen it. #}
+  <a href="/onboarding/interview" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
+  {% if change and connected %}
+  <a href="/onboarding/mailbox" class="text-sm text-slate-500 hover:text-navy transition">Keep {{ mailbox }}</a>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

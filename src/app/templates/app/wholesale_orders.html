@@ -1,0 +1,81 @@
+{% extends "app/base.html" %}
+{% block title %}Order book · Wholesale OS · BLAM8{% endblock %}
+{% block heading %}Order book{% endblock %}
+{% set back = ('/app/wholesale', 'Wholesale') %}
+
+{% block content %}
+{# 6xl page: the concierge side dock (_concierge.html) starts sliding the
+   page left at page-width + 46rem — 72rem + 46rem here. #}
+<style>:root { --bc-clear: 118rem; }</style>
+<div class="max-w-6xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'nobuyer' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Pick a buyer for the order.</div>{% endif %}
+  {% if msg == 'nolines' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">An order needs at least one line.</div>{% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>{{ book.count }} order{{ '' if book.count == 1 else 's' }} on the book. An order is a deal with line items — the whole CRM feed rides along.</p>
+  </div>
+
+  <!-- status columns -->
+  <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for col in book.columns %}
+    <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-slate-50/60">
+        <h2 class="text-xs font-semibold text-navy uppercase tracking-wide">{{ col.status }}</h2>
+        <span class="text-xs text-slate-400">£{{ '%.0f' | format(col.total) }}</span>
+      </div>
+      {% if col.orders %}
+      <ul class="divide-y divide-slate-50">
+        {% for o in col.orders %}
+        <li class="px-4 py-2.5 text-sm">
+          <a href="/app/wholesale/orders/{{ o.id }}" class="font-medium text-navy hover:underline block truncate">{{ o.title }}</a>
+          <span class="text-xs text-slate-500">{{ o.buyer }} · {{ o.required_by or 'no date' }} · £{{ '%.2f' | format(o.total) }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="px-4 py-4 text-xs text-slate-300">—</p>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+
+  <!-- new order -->
+  <section class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold text-navy mb-3">New order</h2>
+    <form method="post" action="/app/wholesale/orders" class="space-y-3 text-sm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="grid sm:grid-cols-3 gap-3">
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">Buyer</span>
+          <select name="company_id" required class="mt-1 w-full rounded-lg border-slate-300 text-sm">
+            <option value="">— pick a buyer —</option>
+            {% for c in companies %}<option value="{{ c.id }}">{{ c.name or c.id }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">Title</span>
+          <input name="title" placeholder="Tue bread order" class="mt-1 w-full rounded-lg border-slate-300 text-sm">
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">Required by</span>
+          <input type="date" name="required_by" class="mt-1 w-full rounded-lg border-slate-300 text-sm">
+        </label>
+      </div>
+      <div class="space-y-2">
+        <span class="text-xs font-medium text-slate-500">Lines</span>
+        {% for i in range(4) %}
+        <div class="grid grid-cols-12 gap-2">
+          <input name="line_desc_{{ i }}" placeholder="Sourdough 800g" class="col-span-6 rounded-lg border-slate-300 text-sm">
+          <input name="line_qty_{{ i }}" placeholder="Qty" inputmode="decimal" class="col-span-2 rounded-lg border-slate-300 text-sm">
+          <input name="line_unit_{{ i }}" placeholder="ea / case" class="col-span-2 rounded-lg border-slate-300 text-sm">
+          <input name="line_price_{{ i }}" placeholder="£ / unit" inputmode="decimal" class="col-span-2 rounded-lg border-slate-300 text-sm">
+        </div>
+        {% endfor %}
+      </div>
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Create order</button>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

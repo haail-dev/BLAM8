@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% block title %}What BLAM8 Does — and What It Doesn't | Capabilities, Honestly{% endblock %}
+{% block meta_description %}A straight yes/partial/no list of BLAM8's capabilities: what the email agent, the diary, quotes, invoices and chasing, the self-filling CRM with dependants, the customer portal, the Concierge and the installable app do today, where the honest boundaries are, and what BLAM8 deliberately doesn't do (with pointers to tools that do). Updated as features ship.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/capabilities#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What does BLAM8 actually do?",
+          "acceptedAnswer": { "@type": "Answer", "text": "BLAM8 is the AI front desk for service businesses. It runs one loop from a business email address: it reads every inbound customer email, drafts the reply in the business's voice from its real prices and policies (and holds the draft to ask the owner one question when the answer isn't in its knowledge), holds the slot so a live diary can't double-book, drops the confirmed job into Outlook or Google Calendar, drafts the quote for the customer to accept online, raises the invoice and chases it at 7, 14 and 30 days overdue, and writes the CRM — contact, company, deal, promises, documents and dependants — straight from the thread. Your customers, the ones your emails already reach, get a portal to check, move and pay their bookings and ask questions; your team goes on it too, including people who never sign in; and the whole thing installs as an app with push notifications. Replies, booking, quotes, invoices, People and the portal are on Starter (£39/month); the self-filling CRM with dependants, packages and progress is Pro (£99/month); the Concierge, an assistant that answers from your records and acts once you confirm, is Pro + Concierge (£249/month). Draft-first approval by default; auto-send is opt-in per mailbox." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 do quotes and invoices?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, on every plan. A quote is drafted from the email thread with optional lines and a deposit percentage; the customer accepts it on a public page by typing their name, and the deposit invoice is raised on acceptance carrying their PO reference. Invoices are paid by card or bank transfer, chased at 7, 14 and 30 days overdue in a tone that firms up each time and stands down the moment the customer replies, and handed to the accountant as one export per month or per Making Tax Digital quarter. Existing Xero history imports from two CSV files. A quote that goes quiet is chased too." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can my customers use BLAM8 too?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, the ones your emails already reach. At blam8.com/c/your-business they can check, move and pay their bookings, see their invoices and quotes, and ask questions by conversation, answered from the business's knowledge base. They get in with the reference code on every email from the business, or a code sent to the address on file. Strangers are turned away. No customer login or app needed; anything the AI can't handle is passed to the business's inbox, and the whole portal conversation lands in the email thread." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there a BLAM8 mobile app?",
+          "acceptedAnswer": { "@type": "Answer", "text": "There is no app-store app, deliberately: BLAM8 is a Progressive Web App, installable from the browser (Chrome, Edge or Safari) on Mac, Windows, iOS and Android. It opens in its own window with dock/taskbar shortcuts to Inbox, CRM, Diary and (on Pro + Concierge) the Concierge, sends push notifications when a draft is ready for approval, a portal customer books, or a mailbox or calendar stops syncing, and keeps its app shell available offline." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can BLAM8 integrate with Notion, Slack, or my CRM?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. BLAM8 is not a workflow-integration platform and doesn't compose cross-app pipelines. Its integration surface today is Outlook/Gmail, Outlook/Google Calendar, Stripe payments, invoice exports for Xero, QuickBooks and bookkeepers (monthly or per Making Tax Digital quarter), and a Xero history import from CSV. Within its own suite the email-to-diary-to-quote-to-invoice-to-CRM chain is fully connected with an audit log — but if you need app-to-app plumbing, that's Zapier's category, not ours." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can BLAM8 send marketing campaigns or newsletters?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. BLAM8 answers inbound email; it doesn't broadcast outbound campaigns to a list. It will draft a check-in to a contact who has gone quiet, chase an unpaid invoice and remind a customer that a certificate or MOT is due — one customer, one reason, each one approved by you. If you want newsletters and marketing journeys, use a marketing platform like Mailchimp — many businesses run both, because the two don't overlap." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 manage my team's internal calendars and meetings?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. BLAM8's diary is for customer-facing work: appointments, jobs, engineers, vehicles, bays, class places, capacity. It doesn't coordinate internal 1:1s, protect deep-work blocks, or optimise meeting schedules across time zones — that's a different product category (calendar assistants). It does sync with Outlook and Google Calendar so booked jobs appear in your calendar and your busy times are respected." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can BLAM8 answer phone calls or WhatsApp messages?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. BLAM8 answers email and runs the diary; it doesn't answer phone calls. The Concierge's voice is for the owner, not for callers. SMS and missed-call text-back are built and being tested; they switch on when testing is done. WhatsApp and Telegram do not exist today. If a capability on this page says planned, treat it as a direction, not a promise with a date." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 hallucinate answers to customers?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The honest engineering answer: replies are grounded in the business's own knowledge via retrieval; when the answer isn't there, the draft is held and the owner is asked the one question instead of the agent inventing one; nothing sends without human approval until the business itself switches auto-send on; a held slot is a real diary record so the agent can't promise a Tuesday that doesn't exist; a chase never names a payment route you don't offer; and any wrong line can be turned into a standing never-rule in one click. We don't claim 'no hallucinations' — we claim grounding, holding, approval, escalation and correction, which is what actually keeps customers safe." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-16">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Capabilities, honestly · updated 25 September 2026
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      What BLAM8 does — and what it doesn't.
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Every AI product page says "yes" to everything. This one doesn't. Below is the straight list — what works today, where the honest boundaries are, and what BLAM8 deliberately isn't (with pointers to the tools that are). The agent itself is built to hold a draft and ask rather than make things up; its product page should behave the same way. This page is updated as features ship.
+    </p>
+    <p class="mt-4 text-sm text-slate-500">
+      Everything in the "does" column has been run end to end on {{ setups|length }} kinds of business — the worked setups are on <a href="/setups" class="text-brand font-medium hover:underline">the setups pages</a>, and the whole pipeline is drawn node by node on <a href="/architecture" class="text-brand font-medium hover:underline">the architecture page</a>.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">✅ Does today</h2>
+    <p class="mt-3 text-slate-500 text-sm max-w-2xl">One loop, in order: the email is answered, the job is booked, the quote goes out, the invoice is raised and chased, and the CRM writes itself. Each card is live on every account unless it says Pro or Pro + Concierge.</p>
+    <div class="mt-10 grid md:grid-cols-2 gap-8">
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">1 · The email agent — replies in your voice, from your facts</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Answers inbound customer email in your configured voice — tone, sign-off, example replies it matches — on Outlook &amp; Gmail (secure OAuth, never a stored password)</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Grounded in your own knowledge — prices, policies, FAQs, the rules of your trade — which can be drafted from your website in one step and reviewed before it's saved</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span>When the answer isn't in your knowledge, the draft <span class="font-medium text-navy">holds</span> and a card asks you the one question; answer it once and it becomes knowledge, and the reply is redrafted with it</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Draft-first approval queue — nothing sends without a human until you switch auto-send on, per mailbox; a reply already sent is redrafted as text only, never re-sent</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A new account holds its drafts until you've checked the setup and said go; three unsent drafts to one contact pause that contact</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Remembers the whole conversation across days; tracks who you're talking to (name &amp; company) across a thread, and gathers the booking details into one pinned card per thread</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Standing never-rules: thumbs-down a bad line, say what's wrong, one click — it never writes it again</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Learns from your edits: change a draft in a way that matters and, after it sends, BLAM8 offers to save the change as knowledge or as an always/never rule — you confirm, nothing is saved silently, and a typo or a swapped greeting asks nothing</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Escalation rules that hold sensitive threads for a human, even on auto-send; on Pro and above, heated customers are always held; no-reply senders auto-skipped</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A promise the agent can't keep isn't sent: a reply that says "I'll hold that for you" has to have placed the hold first, and a placeholder is never an answer to a booking question</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>EU AI Act-ready (Art 50): replies the agent sends by itself carry an AI disclosure, on by default — replies you approve are your own human communication</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">2 · The diary — holds that can't double-book, in your shape</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Books real jobs from the email conversation against a live diary — timed slots, arrival windows, half-days, whole days, multi-night stays, weekly series that skip half-term</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Capacity in your units — vans, bays, engineers, class places — with travel gaps and notice periods you set; atomic holds, so two requests in the same second cannot take one slot</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span>The offer <span class="font-medium text-navy">is</span> the hold: a slot the agent offers a customer is reserved while they decide, and released when they don't</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Never books a date or a time nobody chose: every held date is one the customer named or the diary offered; a missing time reserves the space and asks</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>When it's full, you choose: hold the space while details come in (on by default); it can also offer the nearest opening, or keep a waiting list</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A follow-up that changes nothing never re-books or re-quotes</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Hard-refuses to confirm a booking until your required details are gathered — you define what "ready to book" means, and a customer's "none" counts as an answer</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>One hold per visit: two cars, two dogs or two children on the same email each get their own booking</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A move is re-checked like a new booking — if the new slot doesn't fit, it says no and offers times that do</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Appointments and stays in one diary: a meet &amp; greet and a trial night can come from one email</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A stay can be extended, shortened or moved: the price follows the nights, and an extra night gets its own draft invoice</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Outlook / Google Calendar sync: confirmed jobs land in your calendar, confirmed in the same email thread; your calendar's busy times block the diary</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>"On my way": one tap on the job page tells whoever is on site the ETA — an ETA, not a promise the job is done</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">3 · Quotes — drafted from the thread, accepted online</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A quote document drafted from the email, with optional lines and a deposit percentage — on every plan</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>The customer accepts on a public page by typing their name; the deposit invoice is raised on acceptance, carrying their PO reference through</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Quotes cluster into deals with a stage and a value; the reply that carries a quote is labelled Replied and flips back to Needs Reply the moment the customer answers</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A quote that goes quiet is chased for you — the chase drafts land in your queue like any other reply</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A quote never promises a deposit you haven't set up, and never quotes a price that isn't in your knowledge</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">4 · Getting paid — invoices raised, paid, chased, handed to your accountant</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Invoices raised from the job or the quote — edit lines, email the PDF, mark paid — with your VAT treatment and your terms, on every plan</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Paid by card through your own Stripe account, or by bank transfer; the customer sees and pays their invoices in the portal</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Settings you choose: a deposit to secure the booking, a higher deposit on peak dates, the balance billed the day before collection, and no separate quote when the diary already set the price</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Overdue invoices chase themselves at 7, 14 and 30 days, in a register that firms up each time — statutory interest mentioned, never invented — and the chase stands down the moment the customer writes back</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A chase never names a payment route you don't offer, and never invents a figure that isn't on the invoice</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Money: the cashflow view — quoted, accepted-not-yet-invoiced, invoiced, paid, overdue — as a funnel, month by month</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Accountant hand-off: one export per month or per Making Tax Digital quarter, in the format Xero, QuickBooks and bookkeepers import; your existing Xero history imports from two CSV files</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">5 · The self-filling CRM (Pro) — no typing</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>New enquiries become contacts; several people at one firm roll up into a company; quotes cluster into deals; every promise, from both sides, is logged with a due date</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Documents:</span> certificates, photos and PDFs sent by email are filed on the contact's record, linked to the booking they belong to</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Job parties:</span> a landlord who pays, a tenant on site, an agent kept informed — name them and the invoice, the certificate and the day-before reminder each go to the right person; a "the landlord pays" read from an email is never acted on until you confirm it</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Customer mood: each contact carries a live temperature read from their own words, with the trend; frustrated customers are flagged, the agent's register changes to match, and a heated thread is always held for you</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Gone quiet for two weeks? The check-in is drafted for you, one click to send; follow-up sequences run the same way</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Pre-fills quietly on every account from day one, so it opens already populated the day you upgrade</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">6 · Dependants, packages &amp; progress (Pro)</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Dependants:</span> each pet, child, car, property or tub is its own record under the customer — name the kind and what to know about each one, and the facts are read from the emails, not typed</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A booking is about something that belongs to the customer: the Golf's MOT and the Fiesta's are two bookings; a vaccination record that's lapsed holds a kennel stay back until it's renewed</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A certificate sent as a PDF is read, labelled and filed on the right pet, child or vehicle; its expiry has to cover the whole booking, not just the first day; a new fact fills itself in, a changed one asks you first</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Expiries that recall: an MOT date, a certificate, a vaccination — when one is due and nothing is booked, a reminder is drafted in your words; once a visit is booked, silence</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Certificates on contacts too: a dated field that expires, recalled the number of days ahead you choose</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Packages:</span> sell ten sessions on an invoice and the credits appear the moment it's issued; attendance, late cancellations and no-shows spend them by rules you set — the agent and the portal both know the balance, and Money shows what's sold and still unspent</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Progress:</span> a ladder of stages (a swim stage, a grade) the teacher moves with one tap, with the message to the parent drafted</span></li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">7 · Customer portal — for the customers you already have</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business, a mobile-first page with your banner</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>They get in with the reference code (YOURBIZ-XXXX) on every email BLAM8 sends, or a code sent to the address you hold; never taken on trust</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Strangers are turned away: someone who isn't on your books is told the page is for your customers, and never reaches the AI</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>A move is checked against the real diary like a new booking, and a second dependant on the same visit adds to the booking rather than duplicating it</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Questions about services and pricing are answered from your knowledge base — with a "quote prices in the portal" toggle if you'd rather take details for a personal quote</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Nothing is lost between channels: the portal conversation lands in the email thread, a customer's note on their own booking reaches you, and anything the AI can't handle is passed to your inbox with a push notification</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">8 · People — your team, on every plan</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Your team in one list, including people who never sign in</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Choose what each person can see and do: owner, manager, staff or accountant</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>"View as": see the app exactly as one of your people sees it</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Put one person on a job, or several if you switch that on</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>No seat charges: adding someone never changes your bill</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">9 · The Concierge (Pro + Concierge) — say it, see the card, confirm</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Ask it anything about your business — it answers from your inbox, CRM, diary, money and knowledge base: "What needs replying to today?", "Who owes me?", "What's my Thursday booking?"</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>The person icon opens her; hold it for a second to talk to her out loud, hands-free</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Say it and she drafts the card: draft or send an email, block or reopen days, change a stay, update a pet's (or any dependant's) details, ask for a renewal, delegate a job to one of your people</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Also: move or cancel a booking, chase, and several at once</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Nothing happens until you confirm the card, and every step lands in the audit log; a card you didn't answer waits (&#9203;) and comes back rebuilt against today's diary, and what's done is listed (&#10003;)</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>She knows who's asking and what they may do</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Shows its working: each answer carries the trail of what it looked up and which knowledge it stood on</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>The morning brief is her first message of the day</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Fills your onboarding from a chat, and turns any bad draft into a rule or a knowledge fix</li>
+        </ul>
+        <p class="mt-4 text-xs text-slate-400">The Concierge comes with Pro + Concierge (&pound;249/mo) and is open during the free trial. Starter and Pro keep App help in the search box, for how-to-use-the-app questions. Daily fair-use caps apply to the assistant.</p>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">10 · Smart inbox — self-organising labels</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span>Every incoming email is categorised the moment it's ingested — before the draft is even generated — into six labels: <span class="font-medium text-navy">Needs Reply</span>, <span class="font-medium text-navy">Draft Ready</span>, <span class="font-medium text-navy">Replied</span>, <span class="font-medium text-navy">Booked</span>, <span class="font-medium text-navy">FYI</span> (receipts, newsletters — no action needed) and <span class="font-medium text-navy">Automated</span> (system mail, correctly skipped)</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Labels follow the job, not just the mail: a new enquiry is Needs Reply, becomes Draft Ready when the reply is drafted, Replied when a reply goes out — and flips back to Needs Reply the moment the customer answers</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Instant: new mail appears the moment it lands, no refresh; the thread shows where each conversation stands and why you're needed</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>No rules to set up, and zero extra AI cost — classification rides the draft-generation call that runs anyway; click any label chip to override it</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">11 · Today, notifications &amp; the installable app</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Today</span> is a deck of cards, one per thing that needs you — a draft ready, a portal booking, an overdue invoice, a recall due, a mailbox that stopped syncing — in an order you set by topic; a card settles itself when the thing is done</span></li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>The morning brief: the day in plain words, on Today, as a push and, on Pro + Concierge, as the Concierge's first message</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Search from the top bar; pull down to refresh on any screen</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Notifications per topic, not one switch for twenty kinds: choose what reaches your phone and what reaches your inbox as a morning brief</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Connection health: a mailbox or calendar that stops syncing reaches you within the hour, not when a customer complains</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>BLAM8 is a Progressive Web App — install it on your phone, desktop or tablet straight from Chrome, Edge or Safari; no app store, no download, no update prompts; Mac, Windows, iOS and Android</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Opens in its own window with shortcuts straight to Inbox, CRM, Diary or (on Pro + Concierge) the Concierge; push notifications say who's waiting, "Draft ready — [customer name]"; the app shell loads from cache with a clear offline banner</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">12 · Setup — configuration, not code</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Point it at your website and it drafts your knowledge for review; a knowledge interview asks the questions your website didn't answer</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>The setup assistant proposes your diary shape, services, booking checklist, dependants and pipeline from a few questions; the walk-through ends on Today with the loop running</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Learn your voice from your sent email in one click at setup; multiple mailboxes, each with its own persona — &pound;39/mo per mailbox beyond your plan's included one</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Worked setups for {{ setups|length }} kinds of business — {% for s in setups %}{{ s.trade }}{% if not loop.last %}, {% endif %}{% endfor %} — each run through the live system end to end, with the honest gaps written down and fixed</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy text-lg">13 · Your data</h3>
+        <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed text-sm">
+          <li class="flex gap-2"><span class="text-brand">&check;</span>UK-hosted database; the app runs in the EU (Frankfurt); built around UK GDPR, with the full sub-processor list public before you sign up</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>One isolated tenant per company with row-level security; every agent action, proposal and execution in an audit log</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>Leave with everything: one download — contacts, invoices, quotes, diary, knowledge — and it still works after you cancel</li>
+          <li class="flex gap-2"><span class="text-brand">&check;</span>The price you join on is the price you keep; no per-seat pricing; nothing you're already paying for moves up-tier on you</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-7 md:col-span-2">
+        <h3 class="font-semibold text-navy text-lg">Industry modules — with founding partners only, not on public sale</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed text-sm">Beyond the loop above, deeper operations modules exist for trades (engineers with skills, emergency triage, rate-card pricing, job board), logistics (pallet orders read from the email, capacity and legal payload per vehicle checked atomically, routing, driver run sheets, tracking links, driver-hours and vehicle compliance), practices, storefronts, asset hire, wholesale and events. They work, and they are deliberately early: each is shaped hands-on with a founding partner, one industry at a time, and none is sold on the website. The core loop is what every account runs and what every worked setup proves. If your business needs the depth, email <a href="mailto:hello@blam8.com" class="text-brand font-medium hover:underline">hello@blam8.com</a> and tell us what you run.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">◐ Partial — with the honest boundary</h2>
+  <div class="mt-8 space-y-5 max-w-3xl">
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Scheduling is customer-facing, not an executive assistant</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">It solves capacity: appointments, jobs, engineers, vehicles, bays, class places, holds. It does not coordinate your team's internal 1:1s, protect deep-work blocks, or optimise meetings across time zones — that's calendar-assistant territory, a different product.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Travel: buffers yes, route optimisation not yet</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">You can set travel time between jobs today, and "On my way" sends an ETA. A route-optimised "book my day back-to-back around the map" assistant is a planned paid add-on — planned means direction, not a dated promise.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Money: quote-to-cash yes, bookkeeping no</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Quotes, deposits, invoices, card and bank payment, chasing and the accountant export are all here. BLAM8 is not a ledger: no bank feeds, no reconciliation, no VAT return, no Making Tax Digital submission. It hands your accountant clean months and quarters and lets Xero or QuickBooks do the accounting.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Certificates: PDFs yes, photos not yet</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">A certificate or vaccination card sent as a PDF is read, dated and filed on the right record. A photo of a card isn't read yet: check it and add the date yourself.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Gmail: sign-in open, inbox connection by invite</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Sign in with Microsoft or Google, open to everyone. Connecting a Microsoft 365 / Outlook mailbox is open to everyone. Connecting a Gmail inbox is invite-only while our Google verification completes — request an invite from the connect step.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Industry modules — real, early, not for sale</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">The trades and logistics modules are the most worn-in; practice, storefront, asset hire, wholesale and events modules exist and are being shaped with founding partners. None is on public sale, and every business type we have proven end to end ran on the core loop alone. Construction and recruitment run the core loop with tuned vocabulary and have no bespoke module.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <h3 class="font-semibold text-navy">Tracking links, not telematics</h3>
+      <p class="mt-2 text-slate-600 leading-relaxed text-sm">Delivery customers on the logistics module get live tracking links. BLAM8 does not integrate with vehicle GPS/telematics hardware, tachographs, or DVLA systems.</p>
+    </div>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">✕ Doesn't do — and where to go instead</h2>
+    <div class="mt-8 space-y-5 max-w-3xl">
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">Marketing campaigns &amp; newsletters</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">BLAM8 answers email; it doesn't broadcast it. It will draft a check-in to one contact who has gone quiet, chase one unpaid invoice, remind one customer that a certificate is due — one person, one reason, each approved by you. Campaigns to a list are Mailchimp's category — <a href="/vs/mailchimp" class="text-brand font-medium hover:underline">our honest comparison</a>. Plenty of businesses run both; they don't overlap.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">Cross-app workflow plumbing</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">No Notion, Slack or third-party CRM connectors, and no build-your-own pipelines. "Email → CRM → Notion → Slack" is Zapier's category — <a href="/vs/zapier" class="text-brand font-medium hover:underline">our honest comparison</a>. The integration surface is Outlook/Gmail, Outlook/Google Calendar, Stripe payments, the accountant export for Xero, QuickBooks and bookkeepers, and a Xero history import. Within its own suite, email → diary → quote → invoice → CRM is fully connected with an audit log; that's the bridge we do run.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">Phone answering, WhatsApp, Telegram — and SMS, for now</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">BLAM8 doesn't answer your phone. It answers email and runs the diary, and the Concierge's voice is for you, not your callers. SMS and missed-call text-back are built and being tested; they switch on when testing is done. WhatsApp and Telegram do not exist yet, and we won't pretend otherwise.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">"No hallucinations" claims</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Nobody can honestly promise that, so we don't. What we build instead: replies grounded in your own knowledge; a draft that <em>holds</em> and asks you the one question when the answer isn't there, instead of inventing one; a diary that can't be talked into a slot it doesn't have; a chase that never names a payment route you don't offer; human approval until you switch auto-send on; escalation for the sensitive stuff; and one-click never-rules when something's wrong. Grounding, holding, approval, escalation, correction — that's the real safety story, written down on <a href="/help/does-blam8-hallucinate" class="text-brand font-medium hover:underline">its own page</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="px-5 py-16 md:py-20">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">If the "does" column fits, try it on your real inbox.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Free trial of the full product — every feature open, the Concierge included — for 14 days or {{ trial_email_cap }} handled emails, whichever comes first. No card to start. And if something you need is in the wrong column, tell us: founding users watch missing features get built.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/#pricing" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">View pricing</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

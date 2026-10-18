@@ -1,0 +1,273 @@
+{% extends "app/base.html" %}
+{% block title %}Review draft · BLAM8{% endblock %}
+{% set back = ('/app/conversations', 'Inbox') %}
+{% block heading %}Review draft{% endblock %}
+{% block content %}
+{% if not e %}
+<div class="p-10 text-center text-slate-400">Draft not found.</div>
+{% else %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ 'Scheduled message' if e.kind=='scheduled_plan' else ('Outreach email' if e.kind=='tenant_outreach' else 'Incoming email') }}</p>
+    <p class="mt-1 font-semibold text-navy">{{ e.subject }}</p>
+    <p class="text-sm text-slate-500">{{ 'To' if e.kind in ['tenant_outreach','scheduled_plan'] else 'From' }}: {{ e.from_address or 'unknown' }}</p>
+    <div class="mt-3 pt-3 border-t border-slate-100 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed max-h-48 overflow-auto">{{ e.body_in }}</div>
+  </div>
+
+  {% if e.knowledge_gap %}
+  <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+    <p class="text-sm text-amber-800">
+      <span class="font-semibold">⚠ Knowledge gap.</span>
+      The agent didn't have this information and deferred to a colleague —
+      missing: <span class="font-medium">{{ e.knowledge_gap }}</span>.
+    </p>
+    <a href="/app/knowledge?prefill={{ e.knowledge_gap | urlencode }}#paste"
+       class="mt-2 inline-block rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-700 transition">
+      Add to Knowledge
+    </a>
+  </div>
+  {% endif %}
+
+  {% if e.scheduling_gap %}
+  <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+    <p class="text-sm text-indigo-800">
+      <span class="font-semibold">Scheduling requested.</span>
+      This customer wanted to book, but Scheduling isn't switched on — the agent
+      deferred to a colleague. Add Scheduling (included on every plan) to let it
+      book directly.
+    </p>
+    <a href="/billing/plans"
+       class="mt-2 inline-block rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 transition">
+      Add Scheduling
+    </a>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/app/drafts/{{ e.id }}/send" class="bg-white rounded-xl border border-slate-200 p-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <div class="flex items-center justify-between">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ 'Scheduled draft' if e.kind=='scheduled_plan' else ('Outreach draft' if e.kind=='tenant_outreach' else 'Drafted reply') }}</p>
+      <span class="text-xs text-slate-400">edit before sending if needed</span>
+    </div>
+    <textarea id="draft_reply" name="draft_reply" rows="10" class="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">{{ e.draft_reply }}</textarea>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Approve &amp; send</button>
+      <button type="submit" formaction="/app/drafts/{{ e.id }}/skip" formnovalidate class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 hover:border-slate-400 transition">Skip</button>
+      {% if kb_configured %}
+      <button type="button" id="flag-toggle" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 hover:border-rose-400 hover:text-rose-600 transition">Something's wrong</button>
+      {% endif %}
+      <span class="text-xs text-slate-400 ml-auto hidden sm:inline">{% if from_box %}Sends from {{ from_box }}{% else %}Sends from your connected mailbox{% endif %}</span>
+    </div>
+    {% if not kb_configured %}
+    <p class="mt-3 text-xs text-slate-400">Spot a wrong fact? Turn on the knowledge base (set <code class="font-mono">VOYAGE_API_KEY</code>) to flag and correct it here.</p>
+    {% endif %}
+  </form>
+
+  {% if kb_configured %}
+  <div id="flag-panel" class="hidden bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-rose-600">Something's wrong</p>
+      <p class="text-xs text-slate-400 mt-0.5">Paste the incorrect text from the draft. We'll trace it back to the knowledge it came from so you can fix it — then re-draft.</p>
+    </div>
+
+    <textarea id="flag-text" rows="3" class="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" placeholder="e.g. 'next-day delivery is £4.99'"></textarea>
+    <button type="button" id="flag-find" class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Find source</button>
+
+    <div id="flag-results" class="space-y-3"></div>
+
+    <details id="flag-add" class="rounded-lg border border-slate-200 p-3">
+      <summary class="text-sm font-medium text-slate-600 cursor-pointer">None of these — add it as new knowledge</summary>
+      <div class="mt-3 space-y-2">
+        <input id="add-label" class="w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="Label — e.g. 'Delivery pricing'">
+        <textarea id="add-content" rows="3" class="w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="The correct fact…"></textarea>
+        <button type="button" id="add-save" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Add to knowledge</button>
+      </div>
+    </details>
+
+    <div class="border-t border-slate-100 pt-3">
+      <p class="text-sm font-medium text-slate-600">Tell the agent what NOT to say</p>
+      <p class="text-xs text-slate-400 mt-0.5">Not a wrong fact, but something it shouldn't say or do — saved as a permanent rule (your "Never do" list) and applied to every future reply.</p>
+      <textarea id="never-text" rows="2" class="mt-2 w-full rounded-lg border border-slate-300 p-2 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" placeholder="e.g. Never offer free delivery · Don't mention weekend collections · Don't be over-familiar"></textarea>
+      <button type="button" id="never-save" class="mt-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition">Save rule &amp; re-draft</button>
+    </div>
+
+    <p id="flag-msg" class="hidden text-sm"></p>
+
+    <div id="redraft-row" class="hidden border-t border-slate-100 pt-3">
+      <button type="button" id="redraft-btn" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">Re-draft with the correction</button>
+      <span class="text-xs text-slate-400 ml-2">Regenerates the reply above from the updated knowledge.</span>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    const CSRF = "{{ csrf_token(request) }}";
+    const LOG_ID = "{{ e.id }}";
+    const $ = (id) => document.getElementById(id);
+
+    function post(url, data) {
+      const body = new URLSearchParams(Object.assign({ csrf_token: CSRF }, data || {}));
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      }).then(async (r) => {
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(json.detail || "Request failed");
+        return json;
+      });
+    }
+
+    function toast(msg, ok) {
+      const el = $("flag-msg");
+      el.textContent = msg;
+      el.className = "text-sm " + (ok ? "text-emerald-700" : "text-rose-700");
+      el.classList.remove("hidden");
+    }
+
+    function escapeHtml(s) {
+      return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function showRedraft() { $("redraft-row").classList.remove("hidden"); }
+
+    $("flag-toggle").addEventListener("click", () => $("flag-panel").classList.toggle("hidden"));
+
+    $("flag-find").addEventListener("click", async () => {
+      const text = $("flag-text").value.trim();
+      const results = $("flag-results");
+      results.innerHTML = "";
+      if (!text) { toast("Paste the incorrect text first.", false); return; }
+      $("flag-find").disabled = true;
+      try {
+        const data = await post("/app/drafts/" + LOG_ID + "/flag", { text: text });
+        if (data.error) { toast(data.error, false); }
+        else if (!data.matches || !data.matches.length) {
+          results.innerHTML = '<p class="text-sm text-slate-500">No matching knowledge found — use “add it as new knowledge” below.</p>';
+        } else {
+          data.matches.forEach(renderMatch);
+        }
+      } catch (e) {
+        toast(e.message, false);
+      } finally {
+        $("flag-find").disabled = false;
+      }
+    });
+
+    function renderMatch(m) {
+      const card = document.createElement("div");
+      card.className = "rounded-lg border border-slate-200 p-3 space-y-2";
+
+      const head = document.createElement("div");
+      head.className = "flex items-center justify-between text-xs text-slate-400";
+      const pct = (m.similarity != null) ? Math.round(m.similarity * 100) + "% match" : "";
+      head.innerHTML = '<span class="font-medium text-slate-500">' + escapeHtml(m.source || "source") + '</span><span>' + pct + '</span>';
+
+      const ta = document.createElement("textarea");
+      ta.className = "w-full rounded-lg border border-slate-300 p-2 text-sm text-slate-700";
+      ta.rows = 4;
+      ta.value = m.content || "";
+
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-2";
+
+      const save = document.createElement("button");
+      save.type = "button";
+      save.className = "rounded-lg bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 transition";
+      save.textContent = "Update knowledge";
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        try {
+          await post("/app/knowledge/chunk/" + m.chunk_id, { content: ta.value });
+          toast("Knowledge updated. Re-draft to apply it.", true);
+          showRedraft();
+        } catch (e) { toast(e.message, false); }
+        finally { save.disabled = false; }
+      });
+
+      const dismiss = document.createElement("button");
+      dismiss.type = "button";
+      dismiss.className = "rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-slate-400 transition";
+      dismiss.textContent = "This one's actually correct";
+      dismiss.addEventListener("click", () => card.remove());
+
+      row.append(save, dismiss);
+      card.append(head, ta, row);
+      $("flag-results").appendChild(card);
+    }
+
+    $("add-save").addEventListener("click", async () => {
+      const label = $("add-label").value.trim();
+      const content = $("add-content").value.trim();
+      if (!label || !content) { toast("Add a label and the correct fact.", false); return; }
+      $("add-save").disabled = true;
+      try {
+        await post("/app/knowledge/text", { label: label, content: content });
+        toast("Added to knowledge. Re-draft to apply it.", true);
+        showRedraft();
+      } catch (e) { toast(e.message, false); }
+      finally { $("add-save").disabled = false; }
+    });
+
+    $("never-save").addEventListener("click", async () => {
+      const rule = $("never-text").value.trim();
+      if (!rule) { toast("Type what the agent should never say first.", false); return; }
+      $("never-save").disabled = true;
+      try {
+        const data = await post("/app/drafts/" + LOG_ID + "/correct", { never: rule });
+        $("draft_reply").value = data.draft;
+        toast(data.saved ? "Saved as a permanent rule — draft updated above." : "Draft updated.", true);
+        const ta = $("draft_reply");
+        ta.scrollIntoView({ behavior: "smooth", block: "center" });
+        ta.classList.add("ring-2", "ring-emerald-400");
+        setTimeout(() => ta.classList.remove("ring-2", "ring-emerald-400"), 2500);
+      } catch (e) { toast(e.message, false); }
+      finally { $("never-save").disabled = false; }
+    });
+
+    $("redraft-btn").addEventListener("click", async () => {
+      const btn = $("redraft-btn");
+      const label = "Re-draft with the correction";
+      btn.disabled = true;
+      btn.textContent = "Re-drafting…";
+      try {
+        const data = await post("/app/drafts/" + LOG_ID + "/redraft", {});
+        const ta = $("draft_reply");
+        ta.value = data.draft;
+        toast("Draft regenerated — the updated reply is highlighted above.", true);
+        // Make the result obvious: bring the rewritten draft into view and pulse it,
+        // since the re-draft button is at the bottom of the panel and the draft is up top.
+        ta.scrollIntoView({ behavior: "smooth", block: "center" });
+        ta.classList.add("ring-2", "ring-emerald-400");
+        setTimeout(() => ta.classList.remove("ring-2", "ring-emerald-400"), 2500);
+        // Brief "done" state on the button (re-enables so you can re-draft again).
+        btn.textContent = "✓ Re-drafted";
+        btn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
+        btn.classList.add("bg-slate-400", "cursor-default");
+        setTimeout(() => {
+          btn.textContent = label;
+          btn.classList.remove("bg-slate-400", "cursor-default");
+          btn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
+          btn.disabled = false;
+        }, 2500);
+      } catch (e) {
+        toast(e.message, false);
+        btn.textContent = label;
+        btn.disabled = false;
+      }
+    });
+
+    // Arrived via "Something's wrong?" from a thread → open the fix panel straight away.
+    if (location.search.indexOf("fix=1") !== -1) {
+      $("flag-panel").classList.remove("hidden");
+      $("flag-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  })();
+  </script>
+  {% endif %}
+
+</div>
+{% endif %}
+{% include "app/_review_timer.html" %}
+{% endblock %}

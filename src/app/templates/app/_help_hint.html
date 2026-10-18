@@ -1,0 +1,7 @@
+{# The settings pages' help line (Kris 2026-09-25): the "Help me set this up"
+   buttons are gone; the guided setup reads its opening question from the
+   hidden [data-concierge-ask] each page keeps. This opens the assistant with
+   nothing sent (no model call) — the owner asks, or /help from search. #}
+<p class="text-[11px] text-slate-400">Got a question?
+  <a href="/help" onclick="if(window.blam8ConciergeAsk){event.preventDefault();window.blam8ConciergeAsk('');}"
+     class="inline-flex items-center gap-0.5 font-semibold text-brand hover:underline"><svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>/help</a></p>

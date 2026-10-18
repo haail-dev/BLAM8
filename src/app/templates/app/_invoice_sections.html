@@ -1,0 +1,127 @@
+{# The ONE invoice-card renderer (docs/modules/module-invoicing.md — layout reorder, 2026-07-26).
+   Both the real invoice page (app/invoice.html) and the settings-page live preview
+   render through this macro, so the preview is BY CONSTRUCTION what the customer
+   sees. Sections render in s.section_order (invoice_config.normalize_section_order
+   guarantees it's complete); "core" = meta + lines + totals, welded so totals can
+   never drift from their lines. `editable` + `csrf` drive the draft line-edit form
+   (the real page only); the preview always passes editable=False. #}
+
+{# Status = dot + quiet text (Counting House), never a filled pill — the same
+   vocabulary as invoices.html's list. Defined HERE so every invoice_card caller
+   agrees without passing a map in. #}
+{% set stone = {'draft':'text-slate-500','sent':'text-brand','paid':'text-emerald-700','overdue':'text-rose-700','partially_paid':'text-amber-700','cancelled':'text-slate-400','void':'text-slate-400'} %}
+{% set sdot = {'draft':'bg-slate-200','sent':'bg-brand','paid':'bg-emerald-600','overdue':'bg-rose-600','partially_paid':'bg-amber-500','cancelled':'bg-slate-200','void':'bg-slate-200'} %}
+
+{% macro _business_header(s) %}
+  {% if s.show_business_details and (s.business_name or s.business_address or s.business_vat_no or s.business_contact) %}
+  <div class="border-b border-slate-100 pb-4">
+    {% if s.business_name %}<p class="font-bold text-navy">{{ s.business_name }}</p>{% endif %}
+    {% if s.business_address %}<p class="text-sm text-slate-500 whitespace-pre-line">{{ s.business_address }}</p>{% endif %}
+    <p class="text-sm text-slate-500">
+      {% if s.business_contact %}{{ s.business_contact }}{% endif %}
+      {% if s.business_vat_no %}{% if s.business_contact %} · {% endif %}VAT {{ s.business_vat_no }}{% endif %}
+    </p>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro _core(inv, lines, s, editable, csrf) %}
+  <div class="flex items-start justify-between">
+    <div>
+      <p class="text-2xl font-bold text-navy">{{ inv.invoice_ref }}</p>
+      <p class="text-sm text-slate-500 mt-1">To: <span class="font-medium text-slate-700">{{ inv.customer_name or inv.customer_email or '—' }}</span>{% if inv.customer_name and inv.customer_email %} <span class="text-slate-400">· {{ inv.customer_email }}</span>{% endif %}</p>
+      {% if inv.period_from %}<p class="text-xs text-slate-400">Period {{ inv.period_from | pretty_date }} → {{ inv.period_to | pretty_date }}</p>{% endif %}
+      <p class="text-xs text-slate-400">
+        {% if inv.issue_date %}Issued {{ inv.issue_date | pretty_date }}{% endif %}
+        {% if inv.due_date %} · Due {{ inv.due_date | pretty_date }}{% endif %}
+        {% if inv.viewed_at %} · Viewed by customer {{ inv.viewed_at | pretty_date }}{% endif %}
+        {% if inv.paid_at %} · Paid {{ inv.paid_at | pretty_date }}{% if inv.payment_method %} ({{ inv.payment_method.replace('_', ' ') }}){% endif %}{% endif %}
+      </p>
+      {% if inv.customer_reference %}<p class="text-xs text-slate-400">Their ref: <span class="font-medium text-slate-500">{{ inv.customer_reference }}</span></p>{% endif %}
+      {% if inv.payment_link %}<p class="text-xs text-slate-400">Pay Now link: <a href="{{ inv.payment_link }}" class="text-brand" target="_blank" rel="noopener">{{ inv.payment_link }}</a></p>{% endif %}
+    </div>
+    <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium {{ stone.get(inv.status,'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ sdot.get(inv.status,'bg-slate-200') }} self-center"></span>{{ inv.status.replace('_', ' ') }}</span>
+  </div>
+
+  {% if editable %}
+  {# Editable lines (draft only) — clear a row's description to remove it #}
+  <form method="post" action="/app/invoices/{{ inv.id }}/lines" class="space-y-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+      <span class="flex-1">Item</span><span class="w-28 text-right">Amount (£)</span><span class="w-5"></span>
+    </div>
+    {# booking_id rides along hidden on EVERY row, including the blank ones, so the
+       three posted lists stay index-aligned. Without it an edit wiped the line's link
+       to its job, which silently freed that work to be invoiced a second time —
+       see the duplicate guard in docs/modules/module-invoicing.md. #}
+    {% for l in lines %}
+    <div class="flex items-center gap-2" data-filled-row>
+      <input type="hidden" name="booking_id" value="{{ l.booking_id or '' }}">
+      <input name="description" value="{{ l.description }}" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+      <input name="amount" type="number" step="0.01" value="{{ '%.2f'|format(l.amount|float) }}" class="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+      <span class="w-5"></span>
+    </div>
+    {% endfor %}
+    {# Spare rows (src/app/static/spare_rows.js): hidden until "+ Add a line". #}
+    {% for i in range(6) %}
+    <div class="flex items-center gap-2" data-spare-row hidden>
+      <input type="hidden" name="booking_id" value="">
+      <input name="description" placeholder="Add a line…" class="flex-1 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+      <input name="amount" type="number" step="0.01" placeholder="0.00" class="w-28 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+      <span class="w-5"></span>
+    </div>
+    {% endfor %}
+    <div><button type="button" data-add-row class="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">+ Add a line</button></div>
+    <div data-save-row class="flex justify-end"><button class="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Save lines</button></div>
+  </form>
+  {% else %}
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+      <th class="py-2 pr-3">Item</th><th class="py-2 text-right">Amount</th></tr></thead>
+    <tbody class="divide-y divide-slate-50">
+      {% for l in lines %}
+      <tr><td class="py-2 pr-3 text-slate-700">{{ l.description }}</td>
+          <td class="py-2 text-right text-slate-700">£{{ '%.2f'|format(l.amount|float) }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if inv.prices_include_vat and s.show_vat %}<div class="ml-auto text-right text-sm"><span class="font-bold text-navy">Total £{{ '%.2f'|format(inv.total|float) }}</span> <span class="text-slate-500">(includes VAT £{{ '%.2f'|format(inv.vat|float) }})</span></div>{% else %}<div class="ml-auto w-56 space-y-1 text-sm">
+    <div class="flex justify-between text-slate-500"><span>Subtotal</span><span>£{{ '%.2f'|format(inv.subtotal|float) }}</span></div>
+    {% if s.show_vat %}<div class="flex justify-between text-slate-500"><span>VAT ({{ '%g'|format(s.vat_rate|float) }}%)</span><span>£{{ '%.2f'|format(inv.vat|float) }}</span></div>{% endif %}
+    <div class="flex justify-between font-bold text-navy border-t border-slate-200 pt-1"><span>Total</span><span>£{{ '%.2f'|format(inv.total|float) }}</span></div>
+  </div>{% endif %}
+{% endmacro %}
+
+{% macro _payment_terms(s) %}
+  {% if s.show_payment_terms and s.payment_terms %}
+  <p class="text-xs text-slate-500 border-t border-slate-100 pt-3">{{ s.payment_terms }}</p>
+  {% endif %}
+{% endmacro %}
+
+{% macro _bank_details(inv, s) %}
+  {% if s.bank_sort_code and s.bank_account_number %}
+  <div class="text-xs text-slate-500 border-t border-slate-100 pt-3">
+    <p class="font-semibold text-slate-600">Pay by bank transfer</p>
+    {% if s.bank_account_name %}<p>Account name: {{ s.bank_account_name }}</p>{% endif %}
+    <p>Sort code: {{ s.bank_sort_code }} · Account number: {{ s.bank_account_number }}</p>
+    <p>Reference: {{ inv.invoice_ref }}</p>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro _footer_note(s) %}
+  {% if s.footer_note %}<p class="text-xs text-slate-400">{{ s.footer_note }}</p>{% endif %}
+{% endmacro %}
+
+{% macro invoice_card(inv, lines, s, editable=False, csrf='') %}
+  {% for section in s.section_order %}
+    {% if section == 'business_header' %}{{ _business_header(s) }}
+    {% elif section == 'core' %}{{ _core(inv, lines, s, editable, csrf) }}
+    {% elif section == 'payment_terms' %}{{ _payment_terms(s) }}
+    {% elif section == 'bank_details' %}{{ _bank_details(inv, s) }}
+    {% elif section == 'footer_note' %}{{ _footer_note(s) }}
+    {% endif %}
+  {% endfor %}
+{% endmacro %}

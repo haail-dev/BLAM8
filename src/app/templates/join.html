@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Join {{ business or 'a business' }} on BLAM8{% endblock %}
+{% block content %}
+{# The invitation itself, signed out (docs/plan-people.md). It says WHO invited
+   them and WHAT they will be able to see before asking them to sign in —
+   an invitation that asks first and explains afterwards teaches people to
+   click through anything. #}
+<section class="mx-auto max-w-lg px-4 py-16 sm:py-24" data-join-page data-state="{{ state }}">
+  {% if state == 'pending' %}
+  <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">You've been invited</p>
+    <h1 class="mt-2 text-2xl font-bold font-display text-navy">{{ business or 'A business' }} wants you on their BLAM8</h1>
+    <p class="mt-3 text-sm text-slate-600 leading-relaxed">
+      {% if invited_name %}They've put you down as <span class="font-semibold text-navy">{{ invited_name }}</span>, joining as {% else %}You're joining as {% endif %}<span class="font-semibold text-navy">{{ role_as or role_label }}</span>. {{ role_blurb }}
+    </p>
+    {% if doors %}
+    <p class="mt-4 text-xs font-medium text-slate-500">What you'll be able to open</p>
+    <div class="mt-1.5 flex flex-wrap gap-2">
+      {% for d in doors %}<span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600">{{ d }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    <p class="mt-5 text-xs text-slate-400 leading-relaxed">You sign in with your own Google or Microsoft account — you never get a password of theirs, and they never see yours. It costs you nothing.</p>
+    <form method="post" action="/join/{{ token }}" class="mt-5">
+      <button class="w-full rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition">Accept and sign in</button>
+    </form>
+    <p class="mt-3 text-center text-xs text-slate-400">Didn't expect this? Close the page — nothing happens until you sign in.</p>
+  </div>
+  {% else %}
+  <div class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+    <h1 class="text-xl font-bold font-display text-navy">
+      {% if state == 'accepted' %}This invitation has already been used
+      {% elif state == 'expired' %}This invitation has expired
+      {% elif state == 'revoked' %}This invitation was cancelled
+      {% else %}We don't recognise this invitation{% endif %}
+    </h1>
+    <p class="mt-2 text-sm text-slate-600">
+      {% if state == 'accepted' %}If it was you, <a href="/login" class="text-brand font-medium hover:underline">sign in</a> and you're already in.
+      {% else %}Ask whoever invited you to send a new link — they take a moment to make.{% endif %}
+    </p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

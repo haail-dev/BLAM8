@@ -1,0 +1,91 @@
+{# The doors a person may open, and what they may DO behind each one (Kris
+   2026-09-13: "each of these tick boxes should have more options to each of
+   them once ticked. More control basically"). Shared by the invite form and
+   the person's page so the two can never drift apart.
+
+   Inherits: pages, page_labels, abilities, open_pages (a list), can (a list).
+   A door on its own is reading. Every ability is off until it is ticked. #}
+<div class="space-y-2.5" data-doors-list>
+  {# Today is where they land, not a door to grant (Kris 2026-09-13) — shown
+     so the business knows what they'll see, never offered as a choice. #}
+  <div class="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2" data-door-always="today">
+    <span class="text-sm font-medium text-navy">Today</span>
+    <span class="ml-2 text-xs text-slate-400">their first screen — their own work, whatever else you give them</span>
+  </div>
+  {% for p in pages if p not in always_open %}
+  <div class="rounded-lg border border-slate-200 px-3 py-2" data-door-block="{{ p }}">
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" name="page" value="{{ p }}" {{ 'checked' if p in open_pages }} class="accent-blue-600 h-4 w-4 flex-none" data-door-check>
+      <span class="text-sm font-medium text-navy">{{ page_labels[p] }}</span>
+      {% if abilities[p] %}<span class="text-xs text-slate-400" data-door-face>{{ 'reading only' if p in open_pages }}</span>{% endif %}
+    </label>
+    {# The Inbox is not a door with a filter behind it — it IS a mailbox
+       (Kris 2026-09-14: "it should only happen if it's a business email for
+       that person"). The owner's own inbox is never in this list: it is the
+       oldest one, and it is the business's. #}
+    {% if p == 'inbox' %}
+    <div class="mt-2 ml-6" data-mailboxes {{ 'hidden' if p not in open_pages }}>
+      {% if mailboxes %}
+      <span class="block text-xs font-medium text-slate-500 mb-1.5">Which address is theirs</span>
+      <div class="space-y-1.5">
+        {% for b in mailboxes %}
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="mailbox" value="{{ b.id }}" {{ 'checked' if b.id in mailboxes_on }} class="accent-blue-600 h-4 w-4 flex-none" data-mailbox>
+          <span class="text-sm text-navy">{{ b.display }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="mt-1.5 text-xs text-slate-400">They read that mailbox and nothing else. Without one, the Inbox stays shut.</p>
+      {% else %}
+      <p class="text-xs text-amber-700">There's no address to give them yet. Your main inbox stays yours — <a href="/app/mailboxes" class="underline">add the one that's theirs</a> and it'll appear here.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if abilities[p] %}
+    <div class="mt-2 ml-6 space-y-1.5" data-door-more {{ 'hidden' if p not in open_pages }}>
+      {% for a, label, hint in abilities[p] %}
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input type="checkbox" name="can" value="{{ p }}:{{ a }}" {{ 'checked' if (p ~ ':' ~ a) in can }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none" data-ability>
+        <span class="min-w-0">
+          <span class="block text-sm text-navy">{{ label }}</span>
+          <span class="block text-xs text-slate-400">{{ hint }}</span>
+        </span>
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+<p class="mt-2 text-xs text-slate-400">A door on its own lets them look. Tick what they may change.</p>
+<script>
+  (function () {
+    // Ticking a door reveals what can be done behind it; untucking it hides
+    // them again — and the server drops any that were left ticked, so a shut
+    // door can never leave a write behind it.
+    document.querySelectorAll("[data-door-block]").forEach(function (block) {
+      var check = block.querySelector("[data-door-check]");
+      var more = block.querySelector("[data-door-more]");
+      var face = block.querySelector("[data-door-face]");
+      var boxes = block.querySelector("[data-mailboxes]");
+      function paint() {
+        if (more) more.hidden = !check.checked;
+        if (boxes) boxes.hidden = !check.checked;
+        if (!face) return;
+        if (!check.checked) { face.textContent = ""; return; }
+        // An Inbox with no mailbox chosen is shut, and the server says so on
+        // save — so the face says it BEFORE they save, not after.
+        if (boxes && !block.querySelectorAll("[data-mailbox]:checked").length) {
+          face.textContent = "pick their address"; return;
+        }
+        var on = block.querySelectorAll("[data-ability]:checked").length;
+        face.textContent = on ? on + " thing" + (on === 1 ? "" : "s") + " they can change" : "reading only";
+      }
+      check.addEventListener("change", paint);
+      block.querySelectorAll("[data-ability], [data-mailbox]").forEach(function (el) {
+        el.addEventListener("change", paint);
+      });
+      paint();
+    });
+  })();
+</script>

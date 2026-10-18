@@ -1,0 +1,41 @@
+/* Normal flex layout anchors the overview to the real diary/nav boundary;
+   the cards and sheet each own a scroller, never an overlapping fixed layer. */
+main.app-sky:has(.today-regions) { overflow: hidden; }
+[data-pull-root]:has(.today-regions) { height: var(--today-visible-height, 100%); }
+.today-regions { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.today-regions .deck-stage { overscroll-behavior-y: contain; }
+.today-drawer { flex: none; min-height: 0; }
+.today-drawer:not([data-ready]) { flex-shrink: 1; max-height: 50%; overflow-y: auto; }
+.today-drawer-resting { position: relative; }
+.today-drawer-resting > a > div:first-of-type { padding-right: 28px; }
+.today-drawer-handle {
+  position: absolute; right: 8px; top: 10px;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0; border: 0; background: transparent;
+  color: rgb(var(--c-text-slate-400, 148 163 184)); cursor: grab;
+  touch-action: none; user-select: none;
+}
+.today-drawer-handle[hidden] { display: none; }
+.today-drawer-handle:focus-visible { outline: 2px solid #2e5bff; outline-offset: -3px; border-radius: 8px; }
+.today-drawer-handle:active { cursor: grabbing; }
+.today-drawer-handle svg { opacity: .7; }
+.today-drawer[data-expanded="true"] .today-drawer-handle svg { transform: rotate(180deg); }
+.today-drawer-viewport { overflow-y: auto; overscroll-behavior-y: contain; }
+.today-drawer[data-ready] .today-drawer-viewport { height: var(--today-reveal); }
+.today-drawer[data-expanded="false"] .today-drawer-viewport { overflow: hidden; }
+.today-drawer [data-tour="emails"] { touch-action: none; }
+/* An unusually tall email row plus a keyboard can exceed the whole region.
+   Keep that row readable in its own scroller; the arrow still opens the rest. */
+.today-drawer[data-constrained="true"][data-expanded="false"] .today-drawer-viewport { overflow-y: auto; }
+.today-drawer[data-constrained="true"][data-expanded="false"] .today-drawer-sheet > [inert] { display: none; }
+.today-drawer[data-constrained="true"] [data-tour="emails"] { touch-action: pan-y; }
+.today-drawer-sheet { border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+/* One quiet lift every 12 seconds, stopping after three hints or interaction. */
+.today-drawer[data-hint] .today-drawer-handle svg { animation: today-pull-hint 12s ease-in-out 3; }
+@keyframes today-pull-hint {
+  0%, 78%, 90%, 100% { translate: 0 0; }
+  84% { translate: 0 -3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .today-drawer[data-hint] .today-drawer-handle svg { animation: none; }
+}

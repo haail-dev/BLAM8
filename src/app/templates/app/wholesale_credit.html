@@ -1,0 +1,42 @@
+{% extends "app/base.html" %}
+{% block title %}Credit ledger · Wholesale OS · BLAM8{% endblock %}
+{% block heading %}Credit ledger{% endblock %}
+{% set back = ('/app/wholesale', 'Wholesale') %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>Every buyer with a credit limit, worst headroom first. Exposure counts open orders plus the invoices BLAM8 has raised — connect accounts later for the full picture.</p>
+  </div>
+
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    {% if rows %}
+    <table class="w-full text-sm">
+      <thead><tr class="text-xs text-slate-400 text-left border-b border-slate-100">
+        <th class="px-5 py-2.5">Buyer</th><th class="px-2 py-2.5">Open orders</th>
+        <th class="px-2 py-2.5">Unpaid invoices</th><th class="px-2 py-2.5">Exposure</th>
+        <th class="px-2 py-2.5">Limit</th><th class="px-2 py-2.5">Headroom</th>
+        <th class="px-2 py-2.5">Drafter stance</th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for r in rows %}
+        <tr class="{{ 'bg-red-50/40' if r.over else '' }}">
+          <td class="px-5 py-2.5 font-medium text-navy">{{ r.name }}</td>
+          <td class="px-2 py-2.5">£{{ '%.2f' | format(r.open_orders) }}</td>
+          <td class="px-2 py-2.5">£{{ '%.2f' | format(r.unpaid_invoices) }}</td>
+          <td class="px-2 py-2.5 font-medium">£{{ '%.2f' | format(r.exposure) }}</td>
+          <td class="px-2 py-2.5">£{{ '%.2f' | format(r.limit) }}</td>
+          <td class="px-2 py-2.5 {{ 'text-red-700 font-semibold' if r.over else 'text-slate-600' }}">£{{ '%.2f' | format(r.headroom) }}</td>
+          <td class="px-2 py-2.5 text-xs {{ 'text-red-700' if r.over else 'text-slate-400' }}">{{ 'holds new orders' if r.over else 'confirms normally' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400">No buyers carry a credit limit yet. Set one on a company (or let the agent pick it up from an email — "our limit's a grand") and the ledger fills itself in.</p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

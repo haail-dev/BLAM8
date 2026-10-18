@@ -1,0 +1,70 @@
+{% extends "onboarding/base.html" %}
+{% block title %}About you · Set up BLAM8{% endblock %}
+{% block heading %}Tell us about your business{% endblock %}
+{% block subheading %}Step 1 of 4 here. Tell the assistant what you do and what you'd like handled, and it fills this in for you to review. Then: connect the inbox customers email, choose a voice, give it your facts — and inside the app, five short tuning steps with the assistant (diary, booking requirements, what bookings are about, contacts, getting paid). Prefer to type it yourself? Go right ahead.{% endblock %}
+{% block content %}
+{% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+{% set label = "block text-sm font-semibold text-navy" %}
+<form method="post" action="/onboarding/interview" enctype="multipart/form-data" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <div>
+    <label class="{{ label }}" for="business_name">Business name</label>
+    <input id="business_name" name="business_name" maxlength="120" class="{{ field }}" value="{{ business_name or '' }}"
+           placeholder="{{ name_placeholder or 'The trading name your customers know you by.' }}">
+    <p class="mt-1 text-xs text-slate-400">Shown to your customers — on your booking portal and in the agent's replies.</p>
+  </div>
+  <div>
+    <label class="{{ label }}" for="website">Your website <span class="font-normal text-slate-400">(optional)</span></label>
+    <input id="website" name="website" inputmode="url" autocomplete="url" maxlength="200" class="{{ field }}" value="{{ cfg.website or '' }}"
+           placeholder="www.yourbusiness.co.uk">
+    {# The website is the fastest route to a full knowledge base, so it is asked
+       for HERE and read automatically at the Knowledge step (Kris 2026-09-13:
+       the stays-business owner typed prices by hand that their site already carried). #}
+    <p class="mt-1 text-xs text-slate-400">At the Knowledge step we read it and draft your prices, hours and policies for you to check — so you don't have to type them.</p>
+  </div>
+  <div>
+    <label class="{{ label }}" for="portal_banner">Portal banner <span class="font-normal text-slate-400">(optional — the Portal is a paid add-on)</span></label>
+    {% if banner_url %}
+    <img src="{{ banner_url }}" alt="Current portal banner" class="mt-2 w-full h-20 object-cover rounded-lg border border-slate-200">
+    {% endif %}
+    <input id="portal_banner" type="file" name="portal_banner" accept="image/png,image/jpeg,image/webp,image/gif"
+           class="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand hover:file:bg-blue-100">
+    <p class="mt-1 text-xs text-slate-400">A wide image (logo, van, shopfront) shown across the top of your customer portal. PNG, JPG, WEBP or GIF up to 4&nbsp;MB — click Choose or drop a file straight onto it. You can add or change it later in Settings.</p>
+    {% if banner_err == 'invalid' %}
+    <p class="mt-2 text-sm text-rose-600">That file isn't an image we can use — please choose a PNG, JPG, WEBP or GIF, or continue without one.</p>
+    {% elif banner_err == 'too_big' %}
+    <p class="mt-2 text-sm text-rose-600">That image is over 4&nbsp;MB — please choose a smaller one, or continue without it.</p>
+    {% elif banner_err == 'storage' %}
+    <p class="mt-2 text-sm text-rose-600">We couldn't store the banner just now — everything else is saved. Try again, or add it later in Settings.</p>
+    {% endif %}
+  </div>
+  <div>
+    <label class="{{ label }}" for="business_brief">What your business does</label>
+    <textarea id="business_brief" name="business_brief" rows="2" class="{{ field }}" placeholder="A line or two on what your business does and who you help.">{{ cfg.business_brief or '' }}</textarea>
+  </div>
+  <div>
+    <label class="{{ label }}" for="goals">What you'd like handled for you</label>
+    <textarea id="goals" name="goals" rows="2" class="{{ field }}" placeholder="e.g. enquiries answered fast, bookings straight into the diary, quotes followed up.">{{ cfg.goals or '' }}</textarea>
+  </div>
+  <div>
+    <label class="{{ label }}" for="industry">What does your business do?</label>
+    <input id="industry" name="industry" required class="{{ field }}" value="{{ selected or '' }}" placeholder="Describe it in your own words">
+  </div>
+  {# Morning brief moved off this step (Julius, 2026-08-02) — it's a setting,
+     not an interview question. The default (on, 07:30) is seeded at tenant
+     creation (db.ensure_tenant_for_user) and lives in Settings. #}
+  {# Referral-code entry removed from this step to keep it short (Julius,
+     2026-08-02) — partner attribution still flows via the /partner ref-cookie
+     (90-day hold) and the POST still honours a referral_code field, so the
+     box can return on a later surface without backend work. A tenant who WAS
+     referred still sees the confirmation. #}
+  {% if referral_code_used %}
+  <p class="text-sm text-emerald-600">Referred with code <span class="font-semibold">{{ referral_code_used }}</span> — all set.</p>
+  {% endif %}
+  <div class="flex items-center justify-between pt-1">
+    <a href="/onboarding/industry" class="text-sm text-slate-400 hover:text-slate-600 transition">Prefer a list? Classic picker</a>
+    <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</button>
+  </div>
+</form>
+
+{% endblock %}

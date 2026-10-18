@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+{% block title %}OS access · Operator{% endblock %}
+{% block content %}
+<a href="/admin" class="text-sm text-slate-500 hover:text-navy">← Overview</a>
+<h1 class="text-xl font-bold text-navy mt-2 mb-1">Founding-partner access — Core + your OS</h1>
+<p class="text-sm text-slate-500 mb-4">The OS tier is request-only while the founding cohort is hand-picked. Approving unlocks that tenant's OS-tier checkout (the price never changed — only the buy button). Someone you recruited in person can be granted directly from their tenant page, no request needed.</p>
+
+{% set pending = requests | selectattr('approved_at', 'none') | selectattr('dismissed_at', 'none') | list %}
+{% if pending %}
+<h2 class="text-sm font-bold text-navy mb-2">Awaiting a decision <span class="ml-1 rounded-full bg-amber-400 text-navy px-2 py-0.5 text-xs font-bold">{{ pending | length }}</span></h2>
+<div class="mb-6 overflow-x-auto rounded-xl border border-amber-200 bg-amber-50/40">
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-amber-100">
+      <th class="py-2 px-4">Date</th><th class="py-2 px-4">Business</th><th class="py-2 px-4">Industry</th><th class="py-2 px-4">Mailbox</th><th class="py-2 px-4">What they run</th><th class="py-2 px-4"></th></tr></thead>
+    <tbody class="divide-y divide-amber-100/60">
+      {% for r in pending %}
+      {% set t = tenants.get(r.tenant_id, {}) %}
+      <tr class="align-top">
+        <td class="py-2 px-4 text-slate-400 whitespace-nowrap">{{ r.created_at[:10] if r.created_at }}</td>
+        <td class="py-2 px-4 whitespace-nowrap"><a href="/admin/tenants/{{ r.tenant_id }}" class="text-navy font-medium hover:underline">{{ t.name or r.tenant_id[:8] }}</a></td>
+        <td class="py-2 px-4 text-slate-600 whitespace-nowrap">{{ t.industry or '—' }}</td>
+        <td class="py-2 px-4 text-slate-600 whitespace-nowrap">{{ r.email or t.mailbox or '—' }}</td>
+        <td class="py-2 px-4 text-slate-600">{{ r.message or '—' }}</td>
+        <td class="py-2 px-4 whitespace-nowrap text-right">
+          <form method="post" action="/admin/os-access/{{ r.id }}/approve" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition">Approve</button>
+          </form>
+          <form method="post" action="/admin/os-access/{{ r.id }}/dismiss" class="inline ml-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button type="submit" class="text-slate-400 text-xs font-semibold hover:text-rose-500 hover:underline">Dismiss</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="mb-6 text-sm text-slate-400 py-10 text-center rounded-xl border border-slate-200 bg-white">No requests waiting — new ones appear here (and land in the notify inbox).</p>
+{% endif %}
+
+{% set approved_rows = requests | rejectattr('approved_at', 'none') | list %}
+{% set dismissed_rows = requests | rejectattr('dismissed_at', 'none') | list %}
+{% set handled = approved_rows + dismissed_rows %}
+{% if handled %}
+<h2 class="text-sm font-bold text-navy mb-2">Handled</h2>
+<div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+  <table class="w-full text-sm">
+    <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+      <th class="py-2 px-4">Date</th><th class="py-2 px-4">Business</th><th class="py-2 px-4">Mailbox</th><th class="py-2 px-4">Outcome</th><th class="py-2 px-4"></th></tr></thead>
+    <tbody class="divide-y divide-slate-50">
+      {% for r in handled %}
+      {% set t = tenants.get(r.tenant_id, {}) %}
+      <tr class="align-top">
+        <td class="py-2 px-4 text-slate-400 whitespace-nowrap">{{ r.created_at[:10] if r.created_at }}</td>
+        <td class="py-2 px-4 whitespace-nowrap"><a href="/admin/tenants/{{ r.tenant_id }}" class="text-navy font-medium hover:underline">{{ t.name or r.tenant_id[:8] }}</a></td>
+        <td class="py-2 px-4 text-slate-600 whitespace-nowrap">{{ r.email or t.mailbox or '—' }}</td>
+        <td class="py-2 px-4 whitespace-nowrap">
+          {% if r.approved_at %}<span class="rounded-full bg-emerald-50 text-emerald-600 px-2 py-0.5 text-xs font-semibold">Approved {{ r.approved_at[:10] }}</span>
+          {% else %}<span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-semibold">Dismissed {{ r.dismissed_at[:10] if r.dismissed_at }}</span>{% endif %}
+        </td>
+        <td class="py-2 px-4 whitespace-nowrap text-right">
+          {% if r.approved_at and (r.email or t.mailbox) %}
+          <a class="text-brand text-xs font-semibold hover:underline"
+             href="mailto:{{ r.email or t.mailbox }}?subject=You%27re%20in%20%E2%80%94%20BLAM8%20founding%20access&body=Hi%2C%0A%0AYour%20founding%20access%20to%20Core%20%2B%20your%20OS%20is%20approved%20%E2%80%94%20the%20upgrade%20is%20now%20unlocked%20under%20Plans%20%26%20billing%20in%20your%20BLAM8%20account.%0A%0AAs%20a%20founding%20partner%20you%20get%20a%20direct%20line%20to%20us%20and%20founding%20terms%20that%20stay%20with%20you.%20Reply%20to%20this%20email%20and%20tell%20us%20what%20to%20build%20around%20how%20you%20actually%20work.%0A%0AKris%20%E2%80%94%20BLAM8">Send the good news ✉</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

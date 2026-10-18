@@ -1,0 +1,507 @@
+<style>
+#cz-root [data-cz-origin] {--cz-source:#64748b;}
+#cz-root [data-cz-mode="text"] {--cz-source:#2563eb;--cz-mode-wash:rgba(37,99,235,.075);}
+#cz-root [data-cz-mode="live"] {--cz-source:#7c3aed;--cz-mode-wash:rgba(124,58,237,.075);}
+#cz-root [data-cz-mode="vc"] {--cz-source:#0891b2;--cz-mode-wash:rgba(8,145,178,.075);}
+#cz-root .cz-origin-label {display:block;font-size:10px;font-weight:600;color:var(--cz-source);margin-bottom:3px;}
+#cz-root .cz-mode-item {position:relative;isolation:isolate;padding:.45rem .5rem;margin-block:.25rem;border-radius:1rem;background:linear-gradient(105deg,var(--cz-mode-wash),transparent 88%);}
+#cz-root .cz-mode-start {margin-top:.8rem;padding-top:.65rem;border-top:1px solid color-mix(in srgb,var(--cz-source) 24%,transparent);}
+#cz-root .cz-mode-label {font-size:10px;letter-spacing:.04em;text-transform:uppercase;}
+#cz-root .cz-mode-item:not(.cz-mode-start) > .cz-mode-label {display:none;}
+#cz-root [data-cz-mode] .rounded-2xl, #cz-root [data-cz-mode] > .rounded-2xl, #cz-root [data-cz-mode] > .flex > .rounded-2xl {border-inline-start:3px solid var(--cz-source);}
+#cz-root [data-cz-origin] [data-cz-pill] {border-color:var(--cz-source);color:var(--cz-source);}
+#cz-root [data-cz-role="user"] > .cz-origin-label {text-align:right;}
+</style>
+<style>
+#cz-root .cz-message-user {padding:6px 12px;}
+#cz-root .cz-message-assistant {padding:8px 12px;}
+#cz-root .cz-message-assistant[data-cz-brief] {padding-right:2.25rem;}
+/* One growing backdrop; the original message bubbles remain above it. */
+#cz-root [data-cz-mode="unknown"] {--cz-source:#64748b;--cz-mode-wash:rgba(100,116,139,.06);}
+#cz-root .cz-mode-section {position:relative;isolation:isolate;display:flow-root;margin-top:.8rem;border-top:1px solid color-mix(in srgb,var(--cz-source) 24%,transparent);border-radius:1rem 1rem 0 0;background:linear-gradient(105deg,var(--cz-mode-wash),transparent 88%);}
+#cz-root .cz-mode-section > .cz-mode-item:not(.cz-message-assistant) {background:none;}
+#cz-root .cz-mode-section > .cz-mode-opening {margin-top:0;}
+#cz-root .cz-mode-section > .cz-mode-opening:not(.cz-message-assistant) {padding-top:.65rem;}
+#cz-root .cz-mode-section .cz-origin-label:not([hidden]) {display:block;}
+#cz-root .cz-mode-section .cz-origin-label[hidden] {display:none;}
+#cz-root .cz-mode-section .cz-message-bubble {width:fit-content;max-width:85%;min-width:0;overflow-wrap:anywhere;}
+#cz-root .cz-mode-section .cz-message-assistant {margin-inline-start:8px;max-width:min(85%,calc(100% - 8px));background:linear-gradient(255deg,var(--cz-mode-wash),transparent 88%);border:1px solid rgb(var(--c-bd-slate-200));}
+#cz-root .cz-mode-section .cz-message-assistant:not([data-cz-pending]) {box-shadow:0 2px 5px rgba(15,23,42,.06);}
+/* The chat scrolls right up to the bar above it (Kris 2026-10-16): the panel's 1rem top padding moves into the scroller, so text that scrolls
+   up no longer vanishes under a fixed pale strip. The first tinted section then sits about 0.2rem under the bar (it was about 1.8rem, then 0.5rem): the
+   container, its hairline and its corners are untouched, only the gap above it is smaller. Anything else first keeps its 1rem. (:not(* ~ *) = nothing before it: the vocabulary guard reads the plain word.) */
+#cz-root #cz-messages {margin-top:-1rem;padding-top:1rem;}
+#cz-root #cz-messages > .cz-mode-section:not(* ~ *) {margin-top:-.8rem;}
+/* Phone: the tinted backdrop runs from screen edge to screen edge (Kris 2026-10-16). #cz-messages scrolls, so it would clip a
+   section that pulled out past it: the scroller takes the panel's 1rem side padding as its own and each section pulls back out over
+   it. The bubbles, pills and buttons keep their own inset from the section edge, so they move out by the same 1rem. */
+@media (max-width:767px) {
+  #cz-root #cz-messages {margin-inline:-1rem;padding-inline:1rem;}
+  #cz-root .cz-mode-section {margin-inline:-1rem;}
+  /* The newest section (JS marks it .cz-mode-last when nothing but the wait dot follows it) fills the chat area to its foot, so one message
+     still shows the tint from the top down; the same tint then carries on behind the composer and the two links to the foot of the
+     screen. The chat area itself still ends above the composer, so nothing in the thread passes behind the links. The tint under the
+     footer is a layer on the panel (--cz-foot-h and --cz-last-h are read by concierge_panel.js) drawn as the next stretch of the
+     section's own gradient, so the join does not show. A new input mode starts a new section, which cuts it off as it does today. */
+  #cz-root[data-cz-tail] #cz-messages {display:flex;flex-direction:column;}
+  #cz-root[data-cz-tail] #cz-messages > * {flex:none;}
+  #cz-root[data-cz-tail] #cz-messages > .cz-mode-last {flex:1 0 auto;margin-bottom:-1rem;padding-bottom:1rem;}
+  #cz-root[data-cz-tail-mode="text"] {--cz-tail-wash:rgba(37,99,235,.075);}
+  #cz-root[data-cz-tail-mode="live"] {--cz-tail-wash:rgba(124,58,237,.075);}
+  #cz-root[data-cz-tail-mode="vc"] {--cz-tail-wash:rgba(8,145,178,.075);}
+  #cz-root[data-cz-tail-mode="unknown"] {--cz-tail-wash:rgba(100,116,139,.06);}
+  #cz-root[data-cz-tail][data-cz-tail-mode]::after {content:"";position:absolute;left:0;right:0;bottom:0;height:var(--cz-foot-h,0px);z-index:0;pointer-events:none;
+    background:linear-gradient(105deg,var(--cz-tail-wash),transparent 88%);background-repeat:no-repeat;
+    background-size:100% calc(var(--cz-last-h,0px) + var(--cz-foot-h,0px));background-position:0 calc(-1 * var(--cz-last-h,0px));}
+  #cz-root[data-cz-tail] > #cz-waiting, #cz-root[data-cz-tail] > #cz-form, #cz-root[data-cz-tail] > .cz-conversation-actions {z-index:1;}
+}
+/* Where the chat meets the composer it fades out into whatever is behind it (Kris 2026-10-16): the page's own gradient or the pop-up's, so
+   nothing of a different colour is laid on top and nothing has to match. --cz-edge (0 to 56px, set by concierge_panel.js) is how much of the
+   chat lies below the edge, so the fade is as deep as what is hidden and gone when the last message is in view. The tint behind the composer
+   (phone) eases away with it (--cz-tail-o), so the fade and the tint meet the same background at the edge. */
+#cz-root[data-cz-tail] #cz-messages {-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - var(--cz-edge,0px)),transparent);
+  mask-image:linear-gradient(to bottom,#000 calc(100% - var(--cz-edge,0px)),transparent);}
+#cz-root[data-cz-tail][data-cz-tail-mode]::after {opacity:var(--cz-tail-o,1);}
+</style>
+{# The Concierge (Kris 2026-09-23): one panel, two frames. The masthead's
+   person icon opens it as a modal on every app page (base.html #cz-modal,
+   fetched from /app/concierge/panel); /app/concierge still renders it as a
+   page for deep links. Wired by /static/concierge_panel.js — the same file
+   for both, so the two frames can never drift. It took over everything the
+   Assistant widget's old "Your business" tab did: the lookups, the action
+   cards, the "While you were away" digest and live voice. #}
+<div data-voice-user="{{ voice_user_id or '' }}" data-gptlive="{{ 'on' if gptlive_on else 'off' }}" data-debrief="{{ 'on' if debrief_on else 'off' }}" id="cz-root" class="relative h-full flex flex-col max-w-3xl mx-auto w-full px-4 md:px-6 py-4"
+     data-voice="{{ 'true' if voice_live_on else 'false' }}"
+     data-cz-empty="{{ 'false' if chat_history else 'true' }}"
+     data-cz-newest="{{ chat_history[-1].created_at if chat_history else '' }}">
+
+  {# Settings (Kris 2026-09-23): the cog in the Concierge bar opens this. The
+     mic line is a per-device setting (this phone's mic, this room), so it
+     lives in localStorage where voice-live.js reads it (MIC_LINE_KEY); the
+     meter runs its own mic only while this sheet is open. Each card says which
+     voice mode uses it (data-cz-voices: standard, gptlive or both) and
+     paintModeSections() in concierge_panel.js shows only the cards for the
+     mode chosen, so the sheet never offers a setting the mode ignores. #}
+  <div id="cz-settings" class="cz-settings" hidden role="dialog" aria-label="Concierge settings">
+    <div class="cz-set-head">
+      <p class="cz-set-title">Settings</p>
+      <button type="button" data-cz-settings-close class="cz-set-x" aria-label="Close settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <section class="cz-set-sec" data-cz-voices="both">
+      <p class="cz-set-h">How loud counts as you</p>
+      <p class="cz-set-hint" data-cz-voices="standard">Talk as you normally would. Grey is the room, blue is you. Set the line above the grey and below the blue: a request quieter than the line is held, and the screen asks you to repeat it.</p>
+      <p class="cz-set-hint" data-cz-voices="gptlive">Talk as you normally would. Grey is the room, blue is you. With the line set, sound quieter than the line is not sent to the agent. Off, everything is sent and the agent decides what is speech. If this phone cannot measure the room, everything is sent and the voice screen says so. Takes effect from the next conversation.</p>
+      <div class="cz-meter" aria-hidden="true">
+        <div class="cz-meter-room"></div>
+        <div class="cz-meter-now"></div>
+        <div class="cz-meter-line"></div>
+      </div>
+      <input id="cz-mic-line" type="range" min="1" max="100" step="1" aria-label="Voice line">
+      <div class="cz-set-row">
+        <span id="cz-mic-read" class="cz-set-read">Starting the mic…</span>
+        <button type="button" id="cz-mic-off" class="cz-set-btn" hidden>Turn the line off</button>
+      </div>
+      <p id="cz-mic-warn" class="cz-set-warn" hidden></p>
+      <p id="cz-mic-holdnote" class="cz-set-hint" hidden>The line is not used while Hold to talk is on.</p>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="gptlive" aria-labelledby="cz-talk-heading">
+      <p id="cz-talk-heading" class="cz-set-h">How you talk</p>
+      <p class="cz-set-hint">Hold to talk keeps background sound from reaching the agent between your turns. Press and hold Mist to speak, release when you have finished. A short tap keeps the mic open until you tap again. End the conversation with the End button. Takes effect from the next conversation. Saved on this device.</p>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-talk" value="hands_free"> Hands-free — it listens all the time</label>
+      </div>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-talk" value="hold"> Hold to talk — it only hears you while you hold Mist</label>
+      </div>
+      <p id="cz-talk-status" class="cz-set-hint" role="status"></p>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="both" aria-labelledby="cz-mode-heading">
+      <p id="cz-mode-heading" class="cz-set-h">Conversation mode</p>
+      <div class="cz-set-row"><label><input type="radio" name="cz-voice-mode" value="standard" checked> Standard</label></div>
+      <div class="cz-set-row"><label><input type="radio" name="cz-voice-mode" value="gptlive"> GPT-Live</label></div>
+      <p class="cz-set-hint">Switching ends the current conversation. GPT-Live uses native audio and the same business agent. Business results and confirmations remain in chat.</p>
+      {% if not gptlive_on %}<p class="cz-set-hint">GPT-Live is unavailable on this server.</p>{% endif %}
+    </section>
+    <section class="cz-set-sec" data-cz-voices="standard" aria-labelledby="cz-voice-heading">
+      <p id="cz-voice-heading" class="cz-set-h">Voice</p>
+      <p class="cz-set-hint">Saved on this device. Takes effect from the next conversation. Samples use an AI-generated voice.</p>
+      {% for voice, voice_label in speech_voice_choices().items() %}
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-voice" value="{{ voice }}"> {{ voice_label }}</label>
+        <button type="button" class="cz-set-btn" data-cz-voice-sample="{{ voice }}" aria-label="Play {{ voice_label }} sample">▶ Sample</button>
+      </div>
+      {% endfor %}
+      <p id="cz-voice-status" class="cz-set-hint" role="status"></p>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="standard">
+      <p class="cz-set-h">Voice volume</p>
+      <p class="cz-set-hint">How loud the Concierge speaks, on top of your phone's volume. Takes effect from the next conversation.</p>
+      <input id="cz-voice-vol" type="range" min="50" max="300" step="10" aria-label="Voice volume">
+      <div class="cz-set-row">
+        <span id="cz-voice-vol-read" class="cz-set-read"></span>
+        <button type="button" id="cz-voice-vol-reset" class="cz-set-btn">Reset</button>
+      </div>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="standard" aria-labelledby="cz-greeting-heading">
+      <p id="cz-greeting-heading" class="cz-set-h">Greeting</p>
+      <p class="cz-set-hint">Whether the Concierge says a word ("Morning.") when the voice screen opens. Off, it opens quietly and listens straight away. Saved on this device.</p>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-greeting" value="off"> Off — a quiet start</label>
+      </div>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-greeting" value="on"> On — say the time of day</label>
+      </div>
+      <p id="cz-greeting-status" class="cz-set-hint" role="status"></p>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="both" aria-labelledby="cz-talk-auto-heading">
+      <p id="cz-talk-auto-heading" class="cz-set-h">Launch by button</p>
+      <p class="cz-set-hint">Start listening automatically when opened from a launch button. This works on some phones. If yours needs a tap you will still see the mic button, so tap it. It only applies to a link ending in #talk, never to a refresh or a notification. Saved on this device.</p>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-talk-auto" value="off"> Off — wait for a tap</label>
+      </div>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-talk-auto" value="on"> On — start listening automatically</label>
+      </div>
+      <p id="cz-talk-auto-status" class="cz-set-hint" role="status"></p>
+      <details class="cz-set-hint">
+        <summary>How to set up a launch button</summary>
+        <p><strong>iPhone</strong> (not tested on a device yet)</p>
+        <ol>
+          <li>Install BLAM8 to your Home Screen (Share, then Add to Home Screen).</li>
+          <li>In the Shortcuts app, make a shortcut with one action, Open URLs, set to https://blam8.com/app/concierge#talk</li>
+          <li>Settings, Action Button, Shortcut, and pick that shortcut.</li>
+        </ol>
+        <p>Found on an iPhone 16 Pro Max: an https link in the Shortcuts app opens a tab in your default browser, not the installed app, though it does reach the voice screen. Unofficial, device-specific alternative: an Open URLs action with webapp://blam8.com/app/concierge#talk opens the installed web app, but only if you added BLAM8 to the Home Screen from Safari, and it opens whichever Home Screen web app is there, so keep BLAM8 the only one. It ignores the address and lands on Today, so turn on “Open on the voice screen” above. Whether iOS reloads or just resumes the app on the button press is untested; the setting handles both, but resuming only counts after the app has been away for ten minutes. On iPhone you will normally still need to tap the mic once, because iOS will not play sound until you touch the screen.</p>
+        <p><strong>Android</strong> (untested)</p>
+        <ul>
+          <li>Long-press the BLAM8 icon and choose Talk to Concierge.</li>
+          <li>Pixel: Quick Tap (double-tap the back) can open the app. Untested.</li>
+          <li>Samsung: a side-key option may exist. Untested.</li>
+        </ul>
+        <p>A Bluetooth headset's own button cannot launch BLAM8. Once the voice screen is open, the headset carries the sound.</p>
+      </details>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="both" aria-labelledby="cz-open-voice-heading">
+      <p id="cz-open-voice-heading" class="cz-set-h">Open on the voice screen</p>
+      <p class="cz-set-hint">When you open the installed app from your Home Screen (or a launch button), land on the voice screen, ready for a tap on the mic. It only happens on the first open of a launch, never when you move around inside the app, reload, or tap a notification. With “Launch by button” also On it tries to start listening by itself. Saved on this device.</p>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-open-voice" value="off"> Off — open on Today as usual</label>
+      </div>
+      <div class="cz-set-row">
+        <label><input type="radio" name="cz-open-voice" value="on"> On — open on the voice screen</label>
+      </div>
+      <p id="cz-open-voice-status" class="cz-set-hint" role="status"></p>
+    </section>
+    <section class="cz-set-sec" data-cz-voices="both">
+      <p class="cz-set-h">Voice tour</p>
+      <p class="cz-set-hint">Opens a voice conversation and walks you through the screen: muting, interrupting, cancelling what it heard.</p>
+      <button type="button" id="cz-tour-start" class="cz-set-btn cz-set-primary">Start the tour</button>
+    </section>
+  </div>
+
+  <!-- Transcript -->
+  <div id="cz-messages" class="flex-1 min-h-0 overflow-y-auto space-y-3 pb-4">
+    {% include 'app/_concierge_history.html' %}
+  </div>
+
+  <section id="cz-discovery" class="cz-discovery" hidden aria-label="Explore Concierge actions">
+    <div class="cz-discovery-head cz-discovery-nonvisual">
+      <h2>Concierge request map</h2>
+    </div>
+    <div class="cz-discovery-viewport" data-discovery-viewport tabindex="0" role="region" aria-label="Request map. Drag or use arrow keys to pan. Two fingers pan and pinch to zoom. Scroll, or press plus and minus, to zoom; zero resets zoom. Tab reaches each grouped request; Enter sends it.">
+      <div class="cz-discovery-stage" data-discovery-stage><div class="cz-discovery-canvas" data-discovery-canvas></div></div>
+    </div>
+    <div class="cz-discovery-foot cz-discovery-nonvisual">
+      <p class="cz-discovery-status" data-discovery-status role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  {# Waiting cards (Kris 2026-09-23): a card nobody answered waits here as a
+     chip — tap to bring it back (rebuilt against today's data), ✕ to let it
+     go. Filled by concierge_panel.js from /concierge/business/waiting. #}
+  <div id="cz-waiting" class="flex-none pb-2" hidden></div>
+
+
+
+  <!-- Composer -->
+  {# The composer acts as OurTab's does (Kris 2026-09-23): one 16px line
+     (iOS never zooms it; Enter sends; a pasted newline becomes a space); the
+     mic and Send share ONE 44px slot — an empty box shows the mic (tap = live
+     voice), any text shows Send, toggled by .has-text on the form so the swap
+     is a swap, not a reflow. Focusing alone doesn't swap. Everything is
+     disabled while an answer is on its way. The mic is ALWAYS there (Kris
+     2026-09-23: "copy the composer"); where voice can't run, tapping it says
+     why. Wired by static/concierge_panel.js. #}
+  <form id="cz-form" class="flex-none flex items-center gap-2">
+    <textarea id="cz-input" rows="1" wrap="off" maxlength="1000" placeholder="Ask Concierge…" aria-label="Ask Concierge"
+              autocomplete="off" autocorrect="on" enterkeyhint="send"
+              class="flex-1 min-w-0 resize-none rounded-xl border border-slate-300 bg-white text-navy placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand disabled:opacity-60"></textarea>
+    <button id="cz-mic" type="button" aria-label="Live voice conversation" title="Live voice"
+            class="cz-slot inline-flex flex-none items-center justify-center rounded-xl bg-brand text-white hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg>
+    </button>
+    <button id="cz-send" type="submit" aria-label="Send"
+            class="cz-slot inline-flex flex-none items-center justify-center rounded-xl bg-brand text-white hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l14-7-7 16-2-7z"/></svg>
+    </button>
+  </form>
+  <style>
+    /* Plain CSS, not utilities: exact sizes the swap depends on, and the one
+       line an <input> would give. */
+    #cz-input { height: 44px; padding: 11px 14px; font-size: 16px; line-height: 20px;
+                white-space: pre; overflow-x: auto; overflow-y: hidden; }
+    #cz-form .cz-slot { width: 44px; height: 44px; padding: 0; }
+    #cz-form .cz-slot svg { width: 22px; height: 22px; }
+    #cz-form.has-text #cz-mic { display: none; }
+    #cz-form:not(.has-text) #cz-send { display: none; }
+    /* A draft the Drafting agent wrote for a voice request (concierge_panel.js
+       draftCardNode): the thread's draft card, slimmed. In the chat it wears
+       the reply bubble's own theme tokens (bg-white / border-slate-200 …), so
+       it follows Light/Dark like every bubble around it (Kris 2026-09-23: "it
+       doesn't match the app style" — it was hard-coded light). The voice
+       screen restyles it as dark glass below. */
+    .cz-draft { border: 1px solid rgb(var(--c-bd-slate-200)); border-radius: 1rem;
+                background: rgb(var(--c-bg-white)); padding: 0.7rem 0.85rem 0.6rem; max-width: 100%; }
+    .cz-draft-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+    .cz-draft-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; color: rgb(var(--c-tx-brand));
+                      text-align: right; margin: 0; }
+    .cz-draft-to { flex: 1; min-width: 0; font-size: 0.8rem; color: rgb(var(--c-tx-slate-500)); margin: 0;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cz-draft-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin-top: 0.4rem; }
+    .cz-draft-foot .cz-draft-open { margin-top: 0; flex: none; }
+    /* A proposal card is a draft card (Kris 2026-09-24): the change on the top
+       line with its buttons, the details under it, the state bottom right. */
+    .cz-proposal-title { flex: 1; min-width: 0; margin: 0; font-size: 0.9rem; font-weight: 600;
+                         color: rgb(var(--c-tx-navy)); white-space: pre-wrap; overflow-wrap: anywhere; }
+    .cz-proposal-detail { margin: 0.3rem 0 0; font-size: 0.8rem; color: rgb(var(--c-tx-slate-500));
+                          white-space: pre-wrap; overflow-wrap: anywhere; }
+    .cz-proposal-foot { justify-content: flex-end; }
+    /* Sleek by default (Kris 2026-10-16): the details stay shut until the title or the card is tapped. */
+    .cz-proposal[data-collapsible] { cursor: pointer; }
+    .cz-proposal[data-collapsible][data-open="false"] .cz-proposal-detail { display: none; }
+    .cz-proposal[data-collapsible] .cz-proposal-title::after { content: "\203A"; display: inline-block; margin-left: 0.4rem;
+      color: rgb(var(--c-tx-slate-400)); font-weight: 400; transition: transform .15s; }
+    .cz-proposal[data-collapsible][data-open="true"] .cz-proposal-title::after { transform: rotate(90deg); }
+    /* A card that has been dealt with (Kris 2026-10-16): the state sits right under the title, the arrow moves to the end of the
+       title line, and the link to the record waits inside the details. */
+    .cz-proposal[data-state] .cz-proposal-foot { justify-content: flex-start; margin-top: 0.1rem; }
+    .cz-proposal[data-state] .cz-draft-label { text-align: left; }
+    .cz-proposal[data-collapsible][data-open="false"] .cz-proposal-links { display: none; }
+    .cz-proposal[data-state][data-collapsible] .cz-proposal-title::after { content: none; }
+    .cz-proposal[data-state][data-collapsible] .cz-draft-head::after { content: "\203A"; flex: none; color: rgb(var(--c-tx-slate-400));
+      transition: transform .15s; }
+    .cz-proposal[data-state][data-collapsible][data-open="true"] .cz-draft-head::after { transform: rotate(90deg); }
+    .cz-proposal-title[role="button"]:focus-visible { outline: 2px solid rgba(37, 99, 235, 0.35); outline-offset: 2px; border-radius: 4px; }
+    .cz-draft-foot[hidden] { display: none; }
+    .cz-proposal .cz-draft-btn:disabled { opacity: 0.4; }
+    .cz-draft-acts { display: flex; gap: 0.35rem; flex: none; }
+    .cz-draft-btn { width: 2.25rem; height: 2.25rem; border-radius: 9999px; display: inline-flex;
+                    align-items: center; justify-content: center; color: rgb(var(--c-tx-slate-700));
+                    border: 1px solid rgb(var(--c-bd-slate-300)); background: transparent; cursor: pointer; }
+    .cz-draft-btn svg { width: 1.15rem; height: 1.15rem; }
+    .cz-draft-send { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .cz-draft-bin { color: #dc2626; border-color: rgba(220, 38, 38, 0.45); }
+    .cz-draft-text { display: block; width: 100%; margin-top: 0.45rem; resize: none;
+                     min-height: 3.2rem; max-height: 24vh; overflow-y: auto; overscroll-behavior: contain;
+                     border: 0; border-radius: 0.6rem; padding: 0.55rem 0.65rem;
+                     background: rgb(var(--c-bg-slate-50)); color: rgb(var(--c-tx-navy));
+                     font-size: 0.9rem; line-height: 1.45; }
+    .cz-draft-text:focus { outline: 2px solid rgba(37, 99, 235, 0.35); }
+    .cz-draft-open { display: inline-block; margin-top: 0.4rem; font-size: 0.75rem; color: rgb(var(--c-tx-brand)); }
+    .cz-draft[data-state="sent"] .cz-draft-label { color: #15803d; }
+    .cz-draft[data-state="failed"] .cz-draft-label,
+    .cz-draft[data-state="empty"] .cz-draft-label { color: #be123c; }
+    /* Settings sheet (the cog in the Concierge bar): over the chat, theme
+       tokens so it follows Light/Dark. */
+    .cz-settings { position: absolute; inset: 0; z-index: 5; overflow-y: auto;
+                   background: rgb(var(--c-bg-slate-50)); padding: 1rem 1rem 1.5rem; }
+    .cz-set-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .cz-set-title { font-weight: 600; font-size: 1rem; color: rgb(var(--c-tx-navy)); }
+    .cz-set-x { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center;
+                border-radius: 9999px; color: rgb(var(--c-tx-slate-500)); background: transparent; border: 0; cursor: pointer; }
+    .cz-set-x svg { width: 1.2rem; height: 1.2rem; }
+    .cz-set-sec { border: 1px solid rgb(var(--c-bd-slate-200)); background: rgb(var(--c-bg-white));
+                  border-radius: 1rem; padding: 0.9rem 1rem 1rem; margin-bottom: 0.75rem; }
+    .cz-set-h { font-weight: 600; font-size: 0.9rem; color: rgb(var(--c-tx-navy)); }
+    .cz-set-hint { font-size: 0.8rem; line-height: 1.45; color: rgb(var(--c-tx-slate-500)); margin-top: 0.2rem; }
+    .cz-meter { position: relative; height: 1.1rem; margin-top: 0.85rem; border-radius: 9999px; overflow: hidden;
+                background: rgb(var(--c-bg-slate-200)); }
+    .cz-meter-room, .cz-meter-now { position: absolute; left: 0; top: 0; bottom: 0; width: 0; }
+    .cz-meter-now { background: #2563eb; opacity: 0.85; transition: width 0.06s linear; }
+    .cz-meter-room { background: #94a3b8; z-index: 1; transition: width 0.3s ease; }
+    .cz-meter-line { position: absolute; top: -2px; bottom: -2px; width: 3px; margin-left: -1.5px; left: 0;
+                     background: #f59e0b; z-index: 2; border-radius: 2px; }
+    #cz-mic-line { width: 100%; margin-top: 0.6rem; accent-color: #f59e0b; }
+    #cz-voice-vol { width: 100%; margin-top: 0.6rem; accent-color: #2563eb; }
+    .cz-set-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.35rem; }
+    .cz-set-read { font-size: 0.75rem; color: rgb(var(--c-tx-slate-500)); }
+    .cz-set-btn { font-size: 0.8rem; padding: 0.4rem 0.85rem; border-radius: 9999px; cursor: pointer;
+                  border: 1px solid rgb(var(--c-bd-slate-300)); background: transparent; color: rgb(var(--c-tx-slate-700)); }
+    .cz-set-btn[aria-pressed="true"] { border-color: #2563eb; color: rgb(var(--c-tx-brand)); }
+    .cz-set-primary { margin-top: 0.7rem; background: #2563eb; border-color: #2563eb; color: #fff; }
+    .cz-set-warn { font-size: 0.78rem; margin-top: 0.5rem; color: #d97706; }
+    /* Waiting chips: one per unanswered card. */
+    .cz-wait-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+    .cz-wait-label { font-size: 0.72rem; font-weight: 600; color: rgb(var(--c-tx-slate-500)); }
+    .cz-wait { display: inline-flex; align-items: center; max-width: 100%; border-radius: 9999px;
+               border: 1px dashed #f59e0b; background: rgb(var(--c-bg-white)); overflow: hidden; }
+    .cz-wait-go { font-size: 0.78rem; padding: 0.35rem 0.4rem 0.35rem 0.75rem; color: rgb(var(--c-tx-slate-700));
+                  background: transparent; border: 0; cursor: pointer; white-space: nowrap;
+                  overflow: hidden; text-overflow: ellipsis; max-width: 16rem; }
+    .cz-wait-x { font-size: 0.8rem; padding: 0.35rem 0.6rem 0.35rem 0.3rem; color: rgb(var(--c-tx-slate-500));
+                 background: transparent; border: 0; cursor: pointer; }
+    /* Typed thread (Kris 2026-09-29): the waiting count is the voice screen's circle, in the
+       gutter beside the Concierge's newest bubble; hidden while the owner's message is being
+       answered, back with the answer. With no gutter (a full-width card) it sits just below.
+       Tapped, the list opens centred above the composer. */
+    .cz-waitdot-row { position: relative; height: 0; margin-top: 0 !important; overflow: visible; }
+    .cz-waitdot-row.is-empty, .cz-waitdot-row.is-hidden { display: none !important; }
+    .cz-wait-dot { width: 2rem; height: 2rem; border-radius: 9999px; border: 1px dashed #f59e0b; cursor: pointer;
+      background: rgb(var(--c-bg-white)); color: rgb(var(--c-tx-slate-700));
+      font: 600 0.85rem/1 Inter, system-ui, sans-serif; display: inline-flex; align-items: center;
+      justify-content: center; -webkit-tap-highlight-color: transparent; }
+    .cz-wait-dot[hidden] { display: none; }
+    .cz-wait-dot.is-open { background: #f59e0b; color: #0b1220; border-style: solid; }
+    .cz-waitdot-row.is-beside .cz-wait-dot { position: absolute; bottom: 0; right: 0; }
+    .cz-waitdot-row:not(.is-beside) { height: auto; margin-top: 0.5rem !important; display: flex; justify-content: flex-end; }
+    #cz-waiting.cz-waiting-pop { display: flex; justify-content: center; }
+    #cz-waiting.cz-waiting-pop .cz-wait-list { flex-direction: column; align-items: stretch; gap: 0.5rem;
+      width: min(100%, 26rem); max-height: 40vh; overflow-y: auto; padding: 0.6rem; border-radius: 1rem;
+      background: rgb(var(--c-bg-white)); border: 1px solid rgb(var(--c-bd-slate-300));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); }
+    #cz-waiting.cz-waiting-pop .cz-wait { width: 100%; justify-content: space-between; }
+    #cz-waiting.cz-waiting-pop .cz-wait-go { max-width: none; flex: 1; text-align: left; }
+    #voice-live-root .cz-wait-label { color: #94a3b8; }
+    /* The pending count sits beside Debrief on the live screen; its list opens
+       at the bottom and stacks one line per item so each is easy to tap. */
+    #voice-live-root .cz-badges { position: absolute; top: max(0.9rem, env(safe-area-inset-top)); right: 1rem; z-index: 4;
+      display: flex; gap: 0.5rem; }
+    #voice-gptlive-root .cz-badges { position: absolute; top: max(0.9rem, env(safe-area-inset-top)); right: 0.8rem; left: auto; z-index: 4;
+      display: flex; gap: 0.5rem; }
+    #voice-live-root .cz-wait-badge, #voice-gptlive-root .cz-wait-badge {
+      width: 2.75rem; height: 2.75rem; border-radius: 9999px; border: 1px dashed #f59e0b;
+      background: rgba(245, 158, 11, 0.16); color: #fcd34d; font: 600 0.85rem/1 Inter, system-ui, sans-serif;
+      display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    #voice-live-root .cz-wait-badge[hidden], #voice-gptlive-root .cz-wait-badge[hidden] { display: none; }
+    #voice-live-root .cz-wait-badge.is-open, #voice-gptlive-root .cz-wait-badge.is-open { background: #f59e0b; color: #0b1220; }
+    /* New task: a small pill beside the circles — the earlier chat is set aside. */
+    #voice-live-root .cz-new-task { position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 1rem; z-index: 4;
+      height: 2rem; padding: 0 0.8rem; border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.45); background: rgba(226, 232, 240, 0.08); color: #cbd5e1;
+      font: 600 0.75rem/1 Inter, system-ui, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    #voice-live-root .cz-new-task:active { background: rgba(226, 232, 240, 0.2); }
+    /* Context, top left: its view lists what goes with the next question, and clears it. */
+    #voice-live-root .cz-context-chip, #voice-gptlive-root .cz-context-chip { position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 1rem; z-index: 4;
+      width: 3rem; height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 9999px;
+      background: transparent; color: #e2e8f0; cursor: pointer; overflow: hidden; -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+    #voice-live-root .cz-context-chip::before, #voice-gptlive-root .cz-context-chip::before { content: ""; position: absolute;
+      left: 0; right: 0; top: calc(50% - 2px); height: 4px; border-radius: 9999px;
+      background: rgba(239, 68, 68, 0.28); transition: background-color 0.2s ease; }
+    #voice-live-root .cz-context-chip:focus-visible, #voice-gptlive-root .cz-context-chip:focus-visible { outline: 2px solid #f87171; outline-offset: 2px; }
+    #voice-gptlive-root .cz-context-chip { min-height: 44px; }
+    #voice-live-root .cz-context-chip.is-open::before, #voice-gptlive-root .cz-context-chip.is-open::before { background: rgba(239, 68, 68, 0.48); }
+    #voice-live-root .cz-ctx-fill, #voice-live-root .cz-ctx-hold, #voice-gptlive-root .cz-ctx-fill, #voice-gptlive-root .cz-ctx-hold { position: absolute; left: 0; top: calc(50% - 2px); bottom: auto; height: 4px; width: 0; border-radius: 9999px; pointer-events: none; }
+    #voice-live-root .cz-ctx-fill, #voice-gptlive-root .cz-ctx-fill { transition: width 0.4s ease, background-color 0.4s ease; }
+    #voice-live-root .cz-ctx-fill.is-green, #voice-live-root .cz-ctx-fill.is-amber, #voice-live-root .cz-ctx-fill.is-red,
+    #voice-gptlive-root .cz-ctx-fill.is-green, #voice-gptlive-root .cz-ctx-fill.is-amber, #voice-gptlive-root .cz-ctx-fill.is-red { background: #ef4444; }
+    #voice-live-root .cz-ctx-hold, #voice-gptlive-root .cz-ctx-hold { background: rgba(255, 255, 255, 0.82); }
+    #voice-live-root .cz-ctx-label, #voice-gptlive-root .cz-ctx-label { display: none; }
+    #voice-live-root .cz-context, #voice-gptlive-root .cz-context { max-height: 40vh; overflow-y: auto; overscroll-behavior: contain;
+      border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 1rem; padding: 0.75rem 0.9rem;
+      background: rgba(15, 23, 42, 0.6); color: #cbd5e1; font-size: 0.8rem; line-height: 1.45; }
+    #voice-live-root .cz-context p, #voice-gptlive-root .cz-context p { margin: 0 0 0.45rem; }
+    #voice-live-root .cz-context-h, #voice-gptlive-root .cz-context-h { font-weight: 600; color: #e2e8f0; }
+    #voice-live-root .cz-context-turn b, #voice-gptlive-root .cz-context-turn b { color: #e2e8f0; }
+    #voice-live-root .cz-context-lookups, #voice-gptlive-root .cz-context-lookups { color: #94a3b8; }
+    #voice-live-root .cz-context-note, #voice-gptlive-root .cz-context-note { color: #fcd34d; }
+    #voice-live-root .cz-context-foot, #voice-gptlive-root .cz-context-foot { color: #94a3b8; font-size: 0.72rem; }
+
+    .cz-new-task-line { text-align: center; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.04em;
+      text-transform: uppercase; color: rgb(var(--c-tx-slate-400)); padding: 0.25rem 0; }
+    /* Done: the same circle in green, solid — a count of what's happened. */
+    #voice-live-root .cz-done-badge { border: 1px solid #34d399; background: rgba(52, 211, 153, 0.16); color: #6ee7b7; }
+    #voice-live-root .cz-done-badge.is-open { background: #34d399; color: #0b1220; }
+    /* The done deck: the Today page's pile (home.html .deck-*), in the bottom
+       third of the voice screen. The scroller becomes the deck's stage — a
+       fixed height so the sticky piles have edges to rest on. Dark glass, as
+       the app's dark theme gives the deck. */
+    /* One card tall plus the piles' edges: doneRow's sizeStage measures the
+       card and sets --cz-deck-h (Kris 2026-09-24: one unblurred card at a time). */
+    #voice-live-root .vl-stage-scroll:has(.cz-done-deck) { height: var(--cz-deck-h, 33vh); max-height: var(--cz-deck-h, 33vh); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; isolation: isolate; }
+    #voice-live-root .vl-stage-scroll .cz-done-deck { position: relative; display: flex; flex-direction: column; gap: 0.75rem; }
+    #voice-live-root .vl-stage-scroll .cz-done-deck > * + * { margin-top: 0; }
+    #voice-live-root .vl-stage-scroll .cz-done-card { position: sticky; display: block; text-decoration: none; padding: 0;
+      border-color: rgba(255, 255, 255, 0.09); background: rgba(26, 32, 42, 0.72); border-radius: 18px;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 16px 40px -18px rgba(0, 0, 0, 0.6); }
+    #voice-live-root .vl-stage-scroll .cz-done-card:hover { background: rgba(26, 32, 42, 0.8); }
+    #voice-live-root .cz-done-face { padding: 0.65rem 1rem; transition: filter .3s ease; }
+    #voice-live-root .cz-done-card.is-buried .cz-done-face { filter: blur(3px); }
+    #voice-live-root .cz-done-title { margin: 0; font: 600 15px/1.3 "Plus Jakarta Sans", Inter, system-ui, sans-serif; color: #e2e8f0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #voice-live-root .cz-done-fact { margin: 0.2rem 0 0; display: flex; align-items: baseline; gap: 0.5rem; font-size: 0.8rem; }
+    #voice-live-root .cz-done-what { min-width: 0; flex: 1; color: #6ee7b7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #voice-live-root .cz-done-when { flex: none; color: #94a3b8; font-size: 0.72rem; }
+    #voice-live-root .cz-wait-list { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+    #voice-live-root .cz-wait-list .cz-wait { width: 100%; justify-content: space-between; }
+    #voice-live-root .cz-wait-list .cz-wait-go { max-width: none; flex: 1; text-align: left; }
+    #voice-live-root .cz-wait { background: rgba(226, 232, 240, 0.08); border-color: rgba(245, 158, 11, 0.7); }
+    #voice-live-root .cz-wait-go { color: #e2e8f0; }
+    #voice-live-root .cz-wait-x { color: #94a3b8; }
+    #voice-live-root .vl-stage-scroll .cz-wait-row { justify-content: center; }
+    /* On the voice screen: dark glass, no white box. */
+    #voice-live-root .cz-draft { background: rgba(226, 232, 240, 0.07);
+                                 border-color: rgba(148, 163, 184, 0.3); }
+    #voice-live-root .cz-draft-label { color: #94a3b8; }
+    #voice-live-root .cz-draft-to { color: #e2e8f0; }
+    #voice-live-root .cz-proposal-title { color: #e2e8f0; }
+    #voice-live-root .cz-proposal-detail { color: #94a3b8; }
+    #voice-live-root .cz-draft-btn { color: #e2e8f0; border-color: rgba(148, 163, 184, 0.4); }
+    #voice-live-root .cz-draft-send { background: #2563eb; border-color: #3b82f6; color: #fff; }
+    #voice-live-root .cz-draft-bin { color: #f87171; border-color: rgba(248, 113, 113, 0.55); }
+    /* The box is as tall as the draft (fitted in concierge_panel.js), up to
+       most of the bottom third, then it scrolls (Kris 2026-09-23: "the draft
+       box is much bigger than the text it holds"). */
+    #voice-live-root .cz-draft-text { background: rgba(15, 23, 42, 0.55); color: #e2e8f0;
+                                      max-height: 22vh; }
+    #voice-live-root .vl-stage-scroll a.cz-draft-open { background: none; border: 0; padding: 0;
+                                                        color: #93c5fd; font-size: 0.75rem; }
+    #voice-live-root .cz-draft[data-state="sent"] .cz-draft-label { color: #86efac; }
+    #voice-live-root .cz-draft[data-state="failed"] .cz-draft-label,
+    #voice-live-root .cz-draft[data-state="empty"] .cz-draft-label { color: #fda4af; }
+  </style>
+  <style>
+    /* The Debrief button (Kris 2026-10-14): the top-right corner of the live screen.
+       Match the pending-review chip; once the walk is running the group count
+       sits under it and a tap means "next group". The tap area is padded out to 44px. */
+    #voice-live-root .cz-debrief, #voice-gptlive-root .cz-debrief {
+      position: absolute; top: max(0.9rem, env(safe-area-inset-top)); right: 0.8rem; z-index: 4;
+      width: 2.75rem; height: 2.75rem; padding: 0; border-radius: 9999px;
+      border: 1px solid rgba(148, 163, 184, 0.45); background: rgba(226, 232, 240, 0.08); color: #e2e8f0;
+      display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    #voice-live-root .cz-debrief::before, #voice-gptlive-root .cz-debrief::before {
+      content: ""; position: absolute; inset: -6px; border-radius: 9999px; }
+    #voice-live-root .cz-debrief svg, #voice-gptlive-root .cz-debrief svg { width: 1.1rem; height: 1.1rem; }
+    #voice-live-root .cz-debrief:active, #voice-gptlive-root .cz-debrief:active { background: rgba(226, 232, 240, 0.2); }
+    #voice-live-root .cz-debrief:focus-visible, #voice-gptlive-root .cz-debrief:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+    #voice-live-root .cz-debrief.is-running, #voice-gptlive-root .cz-debrief.is-running {
+      border-color: #7dd3fc; color: #bae6fd; background: rgba(125, 211, 252, 0.14); }
+    #voice-live-root .cz-debrief-step, #voice-gptlive-root .cz-debrief-step {
+      position: absolute; top: calc(100% + 0.25rem); left: 50%; transform: translateX(-50%);
+      font: 600 0.65rem/1 Inter, system-ui, sans-serif; color: #bae6fd; white-space: nowrap; pointer-events: none; }
+    #voice-live-root .cz-debrief-step[hidden], #voice-gptlive-root .cz-debrief-step[hidden] { display: none; }
+    /* Keep pending-review badges immediately left of the same-size debrief button. */
+    #voice-live-root.has-debrief .cz-badges, #voice-gptlive-root.has-debrief .cz-badges { right: calc(0.8rem + 2.75rem + 0.5rem); pointer-events: none; }
+    #voice-live-root.has-debrief .cz-badges > *, #voice-gptlive-root.has-debrief .cz-badges > * { pointer-events: auto; }
+    /* GPT-Live's activity strip must not run underneath the button; the same room on
+       the left keeps what it holds centred on the screen. */
+    #voice-gptlive-root.has-debrief .vl-top-strip { padding-left: 3.2rem; padding-right: 3.2rem; }
+  </style>
+  <div class="cz-conversation-actions">
+    <button id="cz-explore" type="button">Explore actions</button>
+    <button id="cz-clear" type="button" class="text-xs text-slate-400 hover:text-slate-600 transition">Clear history</button>
+  </div>
+</div>

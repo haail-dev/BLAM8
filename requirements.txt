@@ -1,0 +1,44 @@
+# Pinned to the locally-installed, test-passing versions (2026-06-22).
+# Installed on Render via `pip install -r requirements.txt`; secrets live in
+# Render → Environment (spec §10), never in code.
+# Refresh with:  pip freeze  (then update the pins you intend to move).
+
+fastapi==0.135.2
+uvicorn[standard]==0.32.1
+jinja2==3.1.6
+httpx==0.28.1
+msal==1.37.0                 # Microsoft Graph OAuth + token refresh
+anthropic==0.83.0
+supabase==2.30.0
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+python-multipart==0.0.20     # form posts from the dashboard
+cryptography==45.0.7         # Fernet — token-at-rest encryption (src/app/crypto.py)
+pywebpush==2.0.3             # Web Push (PWA notifications, src/app/push.py) — VAPID signing + payload encryption
+tzdata==2025.2               # IANA tz data for zoneinfo on Windows (src/app/scheduling.py — Europe/London)
+
+# Knowledge base — text extraction from uploaded documents
+pypdf==6.13.1                # PDF (read/extract)
+fpdf2==2.8.7                 # PDF generation — invoice PDFs (src/app/invoice_pdf.py); pure-python, no system libs
+openpyxl==3.1.5              # XLSX / XLSM
+python-docx==1.2.0           # DOCX
+
+# Embeddings provider: Voyage AI (voyage-3, 1024-dim). Called via httpx — no SDK.
+# Set VOYAGE_API_KEY (see README / .env.example).
+
+# Stripe — subscription billing (hosted Checkout + Customer Portal, webhook signing).
+# NOTE: pinned to 15.1.0 — the locally-installed, test-passing version. The old
+# spec was `>=8,<13`, so prod may currently run a 12.x; this pin bumps the SDK
+# major on the next deploy. The Checkout / Customer Portal / webhook calls we use
+# are stable across these majors, but skim the Stripe Python changelog (or pin
+# back to a 12.x) before deploying if you want zero billing risk.
+stripe==15.1.0
+segno==1.6.1          # QR for a People invitation (src/app/people.py qr_svg)
+pillow==12.1.1        # customer photos: resize for the drafting model, thumbnails (src/app/photos.py)
+pillow-heif==1.8.0    # iPhone HEIC photos (src/app/photos.py)
+
+# GPT-Live trusted server sideband (no model SDK required).
+websockets==15.0.1
+twilio==9.12.0              # Official carrier webhook signature validator; no automatic account setup.
+openai==2.54.0              # Official local webhook signature verification; HTTP controls remain explicit.
+jsonschema==4.26.0          # Bounded tenant-authored objective forms, with external references disabled.

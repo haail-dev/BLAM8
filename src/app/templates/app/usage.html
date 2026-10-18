@@ -1,0 +1,125 @@
+{% extends "app/base.html" %}
+{% block title %}Usage · BLAM8{% endblock %}
+{% block heading %}Usage{% endblock %}
+{% block toolbar %}<span>{{ summary.plan.label }} · {{ summary.period_start.strftime('%d %b') }}–{{ summary.period_end.strftime('%d %b %Y') }}</span>{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-5 md:p-6 space-y-6">
+
+  {# Over the limit reads differently now depending on what is actually behind
+     it: prepaid credit keeping the agent going, or nothing. Under soft
+     enforcement nothing stops either way, and the copy says so rather than
+     implying a consequence that doesn't exist. #}
+  {% if summary.over and summary.credits > 0 %}
+  <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+    <span class="font-semibold">Running on your top-up.</span>
+    Your plan's {{ "{:,}".format(summary.allowance) }} emails are used; <span class="font-semibold">{{ "{:,}".format(summary.credits) }}</span> prepaid email{{ '' if summary.credits == 1 else 's' }} left, and they carry over until spent.
+  </div>
+  {% elif summary.over %}
+  <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <span class="font-semibold">You've reached your plan limit.</span> {{ "{:,}".format(summary.emails) }} of {{ "{:,}".format(summary.allowance) }} emails this month —
+    {% if enforcement == 'hard' %}the agent has stopped drafting until you top up.{% else %}nothing is interrupted.{% endif %}
+    {% if not topup_on %}<a href="mailto:hello@blam8.com?subject=BLAM8%20plan%20upgrade" class="underline font-medium">Talk to us about more capacity</a>.{% endif %}
+  </div>
+  {% elif summary.warn %}
+  <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+    <span class="font-semibold">{{ summary.pct|round|int }}% of your plan used.</span> {{ "{:,}".format(summary.emails) }} of {{ "{:,}".format(summary.allowance) }} emails this billing month.
+  </div>
+  {% endif %}
+
+  <!-- plan meter (the only customer-facing number) -->
+  <div class="rounded-xl border border-slate-200 bg-white p-6">
+    <div class="flex items-baseline justify-between">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Emails handled this month</p>
+      <span class="text-xs text-slate-400">{{ summary.plan.label }} plan</span>
+    </div>
+    <p class="mt-2 text-3xl font-bold text-navy">{{ "{:,}".format(summary.emails) }} <span class="text-lg font-medium text-slate-400">/ {{ "{:,}".format(summary.allowance) }}</span></p>
+    <div class="mt-4 h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+      <div class="h-full rounded-full {% if summary.over %}bg-red-500{% elif summary.warn %}bg-amber-500{% else %}bg-brand{% endif %}" style="width: {{ [summary.pct, 100]|min }}%"></div>
+    </div>
+    <p class="mt-3 text-sm text-slate-500">Your agent has drafted {{ "{:,}".format(summary.emails) }} repl{{ 'y' if summary.emails == 1 else 'ies' }} for review this billing month. Resets {{ summary.period_end.strftime('%d %b') }}.</p>
+    {# The other two surfaces that cost anything (Kris 2026-09-13): the
+       assistant against its daily fair-use cap, and the customer portal. #}
+    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3" data-usage-more>
+      <div class="rounded-lg border border-slate-200 px-4 py-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Assistant</p>
+        <p class="mt-1 text-xl font-bold text-navy">{{ "{:,}".format(summary.assistant_turns or 0) }} <span class="text-sm font-medium text-slate-400">chat{{ '' if summary.assistant_turns == 1 else 's' }} this month</span></p>
+        <p class="text-xs text-slate-400 mt-0.5">{% if summary.assistant_day_cap %}{{ summary.assistant_today or 0 }} of {{ summary.assistant_day_cap }} business questions today — the daily fair-use allowance on your plan.{% else %}No daily cap on your plan.{% endif %}</p>
+      </div>
+      <div class="rounded-lg border border-slate-200 px-4 py-3">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Customer portal</p>
+        <p class="mt-1 text-xl font-bold text-navy">{{ "{:,}".format(summary.portal_bookings or 0) }} <span class="text-sm font-medium text-slate-400">booking{{ '' if summary.portal_bookings == 1 else 's' }} · {{ "{:,}".format(summary.portal_turns or 0) }} chat{{ '' if summary.portal_turns == 1 else 's' }}</span></p>
+        <p class="text-xs text-slate-400 mt-0.5">What your customers did on the portal this month. Chats before a customer verifies are on us, not you.</p>
+      </div>
+    </div>
+
+    {# Credit sits BESIDE the meter, never inside it: the bar should still read
+       100% when the plan is spent. Rolling credit into the allowance would hide
+       that they have started burning something they paid extra for. #}
+    {% if summary.credits > 0 or topup_on %}
+    <div class="mt-5 border-t border-slate-200 pt-4 flex items-baseline justify-between gap-3 flex-wrap">
+      <div class="min-w-0">
+        <p class="text-sm font-medium text-navy">
+          {% if summary.credits > 0 %}{{ "{:,}".format(summary.credits) }} prepaid email{{ '' if summary.credits == 1 else 's' }} in reserve{% else %}No prepaid emails{% endif %}
+        </p>
+        <p class="text-xs text-slate-400">Used only once your plan's allowance runs out. Carries over until spent — it never expires.</p>
+      </div>
+      {% if topup_on %}
+      <form method="post" action="/billing/topup" class="flex-none">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="packs" value="1">
+        <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition whitespace-nowrap">
+          Top up {{ "{:,}".format(topup_emails) }} for £{{ topup_gbp }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  {% if enterprise %}
+  <!-- enterprise reporting: activity breakdown + CSV export (value only) -->
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3 flex items-center justify-between">
+      <h2 class="font-semibold text-navy text-sm">Activity this period</h2>
+      <a href="/app/usage/export.csv" class="text-sm font-medium text-brand hover:underline">Download CSV</a>
+    </div>
+    <div class="grid grid-cols-3 divide-x divide-slate-100">
+      {% for label, key in [('Drafted','pending'),('Sent','sent'),('Skipped','skipped')] %}
+      <div class="p-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">{{ label }}</p>
+        <p class="mt-1 text-xl font-bold text-navy">{{ "{:,}".format(status_counts.get(key, 0)) }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="px-5 py-3 text-xs text-slate-400 border-t border-slate-100">Export covers date, sender, subject, status and mailbox for your governance records.</p>
+  </div>
+
+  {% if mailbox_usage %}
+  <!-- enterprise: per-mailbox slice (derived from the handled-emails log) -->
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3"><h2 class="font-semibold text-navy text-sm">By mailbox this period</h2></div>
+    <table class="w-full text-sm">
+      <thead class="text-xs uppercase tracking-wide text-slate-400"><tr>
+        <th class="px-5 py-2 text-left font-semibold">Mailbox</th>
+        <th class="px-5 py-2 text-left font-semibold">Department</th>
+        <th class="px-5 py-2 text-right font-semibold">Handled</th>
+        <th class="px-5 py-2 text-right font-semibold">Sent</th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for row in mailbox_usage %}
+        <tr>
+          <td class="px-5 py-2.5 text-slate-700">{{ row.display }}{% if row.address and row.address != row.display %} <span class="text-slate-400 text-xs">{{ row.address }}</span>{% endif %}</td>
+          <td class="px-5 py-2.5 text-slate-500">{{ row.department or '—' }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">{{ "{:,}".format(row.handled) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">{{ "{:,}".format(row.sent) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <p class="text-xs text-slate-400">Usage is measured in emails your agent handles. Need a higher limit or annual terms? <a href="mailto:hello@blam8.com?subject=BLAM8%20plan" class="underline">Get in touch</a>.</p>
+</div>
+{% endblock %}

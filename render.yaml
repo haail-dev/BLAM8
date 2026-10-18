@@ -1,0 +1,107 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# Deploys the web service. Secrets marked `sync: false` are set in the
+# Render dashboard, never committed.
+services:
+  - type: web
+    name: blautom8
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt && pip install --no-deps -e . && bash scripts/build/build_css.sh
+    startCommand: uvicorn app.main:app --app-dir src --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: AZURE_CLIENT_ID
+        sync: false
+      - key: AZURE_CLIENT_SECRET
+        sync: false
+      - key: AZURE_REDIRECT_URI
+        sync: false
+      - key: AZURE_TENANT_ID
+        value: common
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # OpenAI audio ONLY: Whisper for the founder Voice CRM (/admin/voice-crm)
+      # and STT/TTS for the live voice conversation (/concierge/voice/*).
+      - key: OPENAI_API_KEY
+        sync: false
+      # Live voice conversation (docs/voice-live-seed.md): ON by default
+      # wherever OPENAI_API_KEY is set (2026-09-23). Set "false" in the
+      # dashboard to switch it off; leave unset to keep it on.
+      - key: VOICE_LIVE_ENABLED
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: GRAPH_WEBHOOK_SECRET
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false
+      # Web Push (PWA notifications) — pair from scripts/ops/generate_vapid_keys.py;
+      # must match the pair in the local .env (subscriptions bind to the public key).
+      # Push stays quietly OFF until both are set.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        value: "mailto:hello@blam8.com"
+      - key: EMAIL_RETENTION_DAYS
+        value: "90"
+      - key: CSP_ENFORCE
+        value: "false"
+      # Trial lock + sign-in indicators. Declared here for visibility; values set
+      # in the dashboard (an env change restarts the service, applying the new
+      # value with no redeploy). Gate stays OFF until deliberately switched on.
+      - key: REQUIRE_SUBSCRIPTION_GATE
+        sync: false
+      - key: TRIAL_EMAIL_CAP
+        sync: false
+      - key: GOOGLE_OAUTH_VERIFIED
+        sync: false
+      # Gmail-connect invite gate: GOOGLE_INVITE_GATE=true arms it (single-use codes
+      # are minted in /admin/invites); GOOGLE_INVITE_CODES optionally adds reusable
+      # comma-separated channel codes. Gates connecting a Gmail mailbox — sign-in
+      # and Microsoft are never gated.
+      - key: GOOGLE_INVITE_GATE
+        sync: false
+      - key: GOOGLE_INVITE_CODES
+        sync: false
+      # ── Stripe billing — values set in the Render dashboard (sync: false). ──
+      # For LIVE: sk_live_… secret, the LIVE webhook endpoint's whsec_…, and the
+      # LIVE price IDs (test-mode IDs do NOT work live). See docs/operations/STRIPE_LIVE_SETUP.md.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_EMAIL_PRICE_ID
+        sync: false
+      - key: STRIPE_STARTER_PRICE_ID
+        sync: false
+      - key: STRIPE_PROFESSIONAL_PRICE_ID
+        sync: false
+      - key: STRIPE_SCALE_PRICE_ID
+        sync: false
+      - key: STRIPE_ENTERPRISE_PRICE_ID
+        sync: false
+      - key: STRIPE_EXTRA_MAILBOX_PRICE_ID
+        sync: false
+      - key: TRIAL_DAYS
+        value: "14"
+
+  # The maintenance jobs run IN-PROCESS inside the web service above — NOT as separate
+  # Render cron services (avoids a per-deploy rebuild of each + per-service overhead):
+  #   - Retention purge (redact old email bodies)  → src/app/main.py:_start_daily_jobs (03:30 UTC)
+  #   - Day-before booking reminders                → src/app/main.py:_start_daily_jobs (08:00 UTC)
+  #   - Graph subscription renewal                  → src/app/main.py:_start_subscription_renewer (6h)
+  # See src/app/scheduler.py. They're idempotent, so a double/missed run is harmless. To move
+  # them to an external cron instead: RUN_DAILY_JOBS=false and/or SUBSCRIPTION_RENEW_SECONDS=0,
+  # then run `python -m app.jobs.<purge_email_log|send_reminders|renew_subscriptions>`.

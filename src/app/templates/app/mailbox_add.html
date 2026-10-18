@@ -1,0 +1,90 @@
+{% extends "app/base.html" %}
+{% block title %}Add a mailbox · BLAM8{% endblock %}
+{% block heading %}Add a mailbox{% endblock %}
+{% set back = ('/app/mailboxes', 'Mailboxes') %}
+{% block content %}
+{# The confirm step between "add another mailbox" and the provider's consent
+   screen (Kris 2026-09-01). Every route to an ADDITIONAL mailbox comes through
+   here, because the add-on used to appear on the invoice before it appeared on
+   a page. Nothing on this page connects anything — it states the price, and
+   then offers the two buttons that do. #}
+<div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-5">
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">What this costs</p>
+      <p class="text-sm text-slate-400">Read this before you sign in — connecting the mailbox is what starts the charge.</p>
+    </div>
+
+    {% if quote.unlimited %}
+    <p class="text-sm text-slate-700">Your plan includes <span class="font-semibold">unlimited mailboxes</span>. This one adds nothing to your bill.</p>
+
+    {% elif not quote.charged %}
+    {# Still inside the allowance — either the plan's own, or a branch that
+       brought its own mailbox with it. Say so plainly rather than staying quiet:
+       "no charge" is worth reading too. #}
+    <p class="text-sm text-slate-700">
+      {% if quote.plan_name %}{{ quote.plan_name }} includes{% else %}Your plan includes{% endif %}
+      <span class="font-semibold">{{ quote.included }} mailbox{{ '' if quote.included == 1 else 'es' }}</span>
+      and you're using {{ quote.count }}. This one is <span class="font-semibold">included</span> — your bill doesn't change.
+    </p>
+
+    {% else %}
+    <div class="space-y-3">
+      <p class="text-sm text-slate-700">
+        This is your <span class="font-semibold">{{ quote.ordinal }}{{ 'st' if quote.ordinal % 10 == 1 and quote.ordinal != 11 else 'nd' if quote.ordinal % 10 == 2 and quote.ordinal != 12 else 'rd' if quote.ordinal % 10 == 3 and quote.ordinal != 13 else 'th' }} mailbox</span>{% if quote.plan_name and quote.included %},
+        and {{ quote.plan_name }} includes {{ quote.included }}{% endif %}.
+      </p>
+      <div class="rounded-lg border border-slate-200 divide-y divide-slate-200 text-sm">
+        <div class="flex items-baseline gap-3 px-4 py-2.5">
+          <span class="flex-1 min-w-0 text-slate-600">This mailbox, from today</span>
+          <span class="font-semibold text-navy flex-none">£{{ quote.extra_gbp }}/month</span>
+        </div>
+        <div class="flex items-baseline gap-3 px-4 py-2.5">
+          {# Links to where the allowance actually lives, so "+300" can be read
+             against the number it's being added to. NOT a shop: allowance is a
+             consequence of plan + mailboxes + branches, and there is nothing to
+             buy on its own — /app/usage is the honest destination. #}
+          <a href="/app/usage" class="flex-1 min-w-0 text-brand hover:underline">Your monthly email allowance</a>
+          <span class="font-semibold text-emerald-700 flex-none">+{{ "{:,}".format(quote.emails_added) }}</span>
+        </div>
+        {% if quote.total_after is not none %}
+        {# Only rendered when the whole figure is exact — a flat-priced tier with
+           no branch add-on beside it (app/billing.mailbox_addon_quote). Anything
+           else shows the £39 alone rather than a total that would be wrong. #}
+        <div class="flex items-baseline gap-3 px-4 py-2.5 bg-slate-50">
+          <span class="flex-1 min-w-0 font-medium text-navy">Plan and mailboxes together</span>
+          <span class="font-semibold text-navy flex-none">£{{ quote.total_after }}/month</span>
+        </div>
+        {% endif %}
+      </div>
+      <p class="text-xs text-slate-400">
+        Charged pro rata from today, on the card already on file. Disconnect the mailbox later and
+        the charge comes off the same way — it follows the mailboxes you actually have.
+      </p>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">What you get</p>
+      <p class="text-sm text-slate-400">Its own persona, its own knowledge, and its own labels — on top of your company-wide settings. Your existing mailboxes are untouched.</p>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="/oauth/connect?provider=microsoft&amp;mode=add" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Connect Outlook</a>
+      {% if has_gmail or gmail_connect_open(request) %}
+      <a href="/oauth/connect?provider=google&amp;mode=add" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy hover:border-slate-400 transition">Connect Gmail</a>
+      {% endif %}
+      <a href="/app/mailboxes" class="text-sm text-slate-500 hover:text-navy px-2">Cancel</a>
+    </div>
+    {# A tenant already holding a Google grant reconnects freely; everyone else
+       meets the Gmail invite gate, same rule as the Mailboxes page. #}
+    {% if not has_gmail and not gmail_connect_open(request) %}
+    <div class="space-y-3">
+      {% set gate_next = "/app/mailboxes/add" %}{% set gate_mode = "add" %}
+      {% include "_gmail_gate.html" %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

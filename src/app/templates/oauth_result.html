@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} · BLAM8{% endblock %}
+{% block robots %}<meta name="robots" content="noindex" />{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-md px-5 py-16 md:py-24 text-center">
+  <div class="rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 p-8">
+    <div class="mx-auto h-12 w-12 grid place-items-center rounded-full {{ 'bg-brand-50 text-brand' if ok else 'bg-red-50 text-red-600' }}">
+      {% if ok %}
+      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+      {% else %}
+      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      {% endif %}
+    </div>
+    <h1 class="mt-4 text-2xl font-extrabold tracking-tight text-navy">{{ title }}</h1>
+    <p class="mt-2 text-sm text-slate-500 leading-relaxed">
+      {% if mailbox %}<span class="font-medium text-slate-700">{{ mailbox }}</span> {% endif %}{{ message }}
+    </p>
+    <a href="{{ next_url or '/app/conversations' }}" class="mt-6 inline-flex items-center rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">
+      {{ cta or ('Open your inbox' if ok else 'Try again') }}
+    </a>
+  </div>
+</section>
+{% endblock %}

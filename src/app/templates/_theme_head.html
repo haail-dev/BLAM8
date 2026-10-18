@@ -1,0 +1,80 @@
+{# Shared theme head for the app / admin / onboarding shells (marketing pages
+   stay light-only and do NOT include this — templates/base.html carries the
+   same Counting House palette in its own inline config).
+
+   Flight Deck (2026-08-31, supersedes Counting House): graphite ink on a
+   cool near-white ground, hairline borders, ONE electric cobalt accent.
+   Display face Space Grotesk on headings; Inter stays the body face. Chrome
+   stays flat; frosted glass is reserved for the Today deck's floating cards. NO tnum anywhere (not even the tabular-nums utility): both faces give
+   the full stop and hyphen figure-width forms under tnum, which mangles
+   amounts and dates — Inter's default figures are already uniform enough, and
+   right-aligned columns do the rest.
+
+   How it works — no per-template dark: variants anywhere:
+   1. A pre-paint script reads localStorage 'blam8-theme' (light | dark) and
+      stamps data-theme on <html> before first paint (no flash). There WAS a
+      third choice, 'system', dropped 2026-09-01 (Kris: "I think we should just
+      have the option of Light/Dark") — on any given screen it looked identical
+      to one of the other two with nothing saying which or why, so it read as a
+      duplicate button. Anyone still carrying it is migrated below.
+   2. Every colour utility the templates use is remapped in the Tailwind
+      config to a CSS variable (as an "R G B" triplet so /opacity modifiers
+      keep working). Crucially the maps are PER PLUGIN — backgroundColor vs
+      textColor etc. — so bg-white can go dark while text-white stays white,
+      and text-navy flips light while bg-navy stays navy.
+   3. Both :root (light) and [data-theme="dark"] var blocks are emitted, so
+      toggling the attribute restyles instantly.
+   Tokens whose colour is identical in both modes are simply not mapped and
+   fall through to stock Tailwind.
+
+   Since 2026-08-31 the token maths lives in config/tailwind/tailwind.config.js and the CSS is
+   BUILT at deploy (scripts/build/build_css.sh → /static/tw.css): the Play CDN was a
+   compiler running in the browser on every navigation — real seconds on a
+   phone. Local dev: run `bash scripts/build/build_css.sh` once (and after adding
+   classes no template used before). #}
+<script>
+  (function () {
+    var pref = 'light';
+    try { pref = localStorage.getItem('blam8-theme') || 'light'; } catch (e) { /* private mode */ }
+    // Someone who chose 'system' before it was dropped keeps EXACTLY the theme
+    // they are looking at right now — resolved against their device once and
+    // written back as a real choice. Falling through to the 'light' default
+    // instead would have flipped every one of them on a dark phone to light,
+    // which is the one thing they had actively asked not to happen.
+    if (pref === 'system') {
+      pref = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ? 'dark' : 'light';
+      try { localStorage.setItem('blam8-theme', pref); } catch (e) {}
+    }
+    function apply() {
+      document.documentElement.setAttribute('data-theme', pref === 'dark' ? 'dark' : 'light');
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', '#0B1220');
+    }
+    apply();
+    // settings.html calls this after writing localStorage
+    window.blam8ApplyTheme = function (choice) { pref = choice; apply(); };
+
+    // Ripples: a soft moving water background behind the page, switched on per device (Settings, beside Light / Dark).
+    // Like the theme it is stamped before first paint, so nothing flashes; unlike the theme it costs nothing when off:
+    // the water module is fetched only on pages that opt in (water_page) and only once the switch is on, after the page is idle.
+    var water = 'off', waterLoaded = false;
+    try { water = localStorage.getItem('blam8-water') === 'on' ? 'on' : 'off'; } catch (e) { /* private mode */ }
+    function applyWater() {
+      document.documentElement.setAttribute('data-water', water);
+      {% if water_page %}
+      if (water !== 'on' || waterLoaded) return;
+      waterLoaded = true;
+      (window.requestIdleCallback || function (f) { setTimeout(f, 300); })(function () {
+        import('/static/water-page.js?v={{ asset_rev }}').catch(function () { waterLoaded = false; });
+      });
+      {% endif %}
+    }
+    applyWater();
+    // settings.html calls this after writing localStorage
+    window.blam8ApplyWater = function (choice) { water = choice === 'on' ? 'on' : 'off'; applyWater(); };
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/static/tw.css?v={{ asset_rev }}">

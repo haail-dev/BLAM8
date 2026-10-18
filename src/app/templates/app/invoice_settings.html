@@ -1,0 +1,429 @@
+{% extends "app/base.html" %}
+{% block title %}Getting paid · BLAM8{% endblock %}
+{% block heading %}Getting paid{% endblock %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set inp = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand" %}
+{# The Settings idiom (settings.html) applied to the last expanded page: every
+   section folds to one line that STATES ITS VALUE — the page reads as a
+   receipt of how invoices go out before anything is opened. Collapsed inputs
+   still post (<details> hides, it doesn't disable), so the one form and the
+   live preview behave exactly as before whatever is folded. #}
+{% macro face(name, value, needs=false) %}
+  <summary class="flex items-baseline gap-3 px-5 py-3.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+    <span class="text-sm font-semibold text-navy flex-none">{{ name }}</span>
+    {% if needs %}
+    <span class="flex-1 min-w-0 truncate text-xs font-medium text-amber-700 group-open:invisible"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 mr-1.5 align-middle"></span>{{ value }}</span>
+    {% else %}
+    <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open:invisible">{{ value }}</span>
+    {% endif %}
+    <span class="flex-none text-slate-300 transition group-open:rotate-90">&rsaquo;</span>
+  </summary>
+{% endmacro %}
+{% set fold = "group bg-white rounded-xl border border-slate-200 overflow-hidden" %}
+{% set foldbody = "border-t border-slate-200 p-5 space-y-3" %}
+{# min-w-0 on both columns: a grid item's default min-width:auto sizes the
+   implicit column to its widest content's min-content, which pushed the whole
+   page into horizontal scroll on a phone. min-w-0 lets the truncating faces
+   actually truncate. #}
+{# 6xl page: the concierge side dock (_concierge.html) starts sliding the
+   page left at page-width + 46rem — 72rem + 46rem here. #}
+<style>:root { --bc-clear: 118rem; }</style>
+<div class="max-w-6xl mx-auto p-4 sm:p-6 grid gap-6 lg:grid-cols-2 items-start">
+<div class="space-y-4 min-w-0">
+  {# The tuning walk-through's auto-ask hook (Julius 2026-09-02): these are
+     facts only the owner knows, so the assistant can't fill them — arriving
+     here from the guided flow, it EXPLAINS the page instead. The button
+     doubles as the manual door to the same explanation. #}
+  <div class="flex justify-end -mb-1">
+    <span hidden data-concierge-ask="Set up Getting paid for me: put a recommended card in your FIRST reply with the payment terms, deposit (and whether it is asked when a booking is confirmed), quote validity, VAT and footer from what I have already told you — only what I have said, nothing guessed. Two short lines beside it: what it fills, and that my bank details are mine to type."></span>
+{% include "app/_help_hint.html" %}
+  </div>
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>{% endif %}
+  {% if msg == 'stripe_connected' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Stripe connected — invoices now go out with a Pay Now link.</div>{% endif %}
+  {% if msg == 'methods_saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved — the Pay Now page offers bank payment {% if s.bank_methods_min_gbp is not none %}on invoices from £{{ '%.2f'|format(s.bank_methods_min_gbp) }}{% else %}on no invoice; cards and wallets only{% endif %}.</div>{% endif %}
+  {% if msg == 'methods_badamount' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That threshold didn't read as money — a figure like 250, or blank for cards only.</div>{% endif %}
+  {% if msg == 'stripe_disconnected' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Stripe disconnected — invoices fall back to your bank-transfer details.</div>{% endif %}
+  {% if msg in ('stripe_failed', 'stripe_declined', 'stripe_unavailable') %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{{ "Online payments aren't available yet — invoices use your bank details instead." if msg == 'stripe_unavailable' else "Stripe connection didn't complete — you can try again any time." }}</div>{% endif %}
+
+  <!-- Getting paid: Stripe Pay Now vs bank transfer fallback. Its own forms,
+       so it folds OUTSIDE the settings form below. -->
+  <details class="{{ fold }}">
+    {% if stripe_connected %}
+    {{ face('Pay Now links', 'Stripe connected — Pay Now on every invoice') }}
+    {% elif stripe_available %}
+    {{ face('Pay Now links', 'bank transfer only — connect Stripe for Pay Now links') }}
+    {% else %}
+    {{ face('Pay Now links', 'bank transfer — card payments coming soon') }}
+    {% endif %}
+    <div class="{{ foldbody }}">
+      {% if stripe_connected %}
+      <p class="text-sm text-emerald-700">✓ Stripe connected — every invoice you send includes a <strong>Pay Now</strong> link, and payments mark the invoice paid automatically. Balance, payouts, fees and refunds are on <a href="/app/payments" class="font-semibold underline">Card payments</a>.</p>
+      {# Which methods the connected account can take (docs/plan-payments-panel.md
+         §0.6). Checkout offers whatever Stripe has switched on; bank methods only
+         from the invoice size named below. #}
+      <div class="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 space-y-2">
+        <p class="text-xs font-medium text-slate-500">Ways your customers can pay on the Pay Now page</p>
+        {% if stripe_methods %}
+        <ul class="flex flex-wrap gap-2">
+          {% for m in stripe_methods %}
+          <li class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs {% if m.active %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-white text-slate-400{% endif %}">
+            {% if m.active %}✓{% else %}○{% endif %} {{ m.label }}{% if not m.active and m.state != 'off' %} <span class="text-[10px]">({{ m.state }})</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-xs text-slate-400">Stripe didn't answer just now — cards always work; the rest is set in Stripe.</p>
+        {% endif %}
+        <p class="text-xs text-slate-400">Switch methods on or off in <a href="{{ stripe_methods_url }}" target="_blank" rel="noopener" class="text-brand font-medium hover:underline">your Stripe payment-method settings</a>. Bacs Direct Debit and Pay by Bank cost less than a card on a big invoice and take a few days to clear.</p>
+        <form method="post" action="/app/payments/methods" class="flex flex-wrap items-center gap-2 pt-1">
+          <input type="hidden" name="invoice_snapshot" value="{{ invoice_snapshot|default({})|tojson|forceescape }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <label for="bank_methods_min_gbp" class="text-sm text-slate-700">Offer bank payment on invoices from</label>
+          <span class="text-sm text-slate-500">£</span>
+          <input id="bank_methods_min_gbp" name="bank_methods_min_gbp" inputmode="decimal" placeholder="cards only"
+                 value="{{ '%g'|format(s.bank_methods_min_gbp) if s.bank_methods_min_gbp is not none else '' }}"
+                 class="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+          <button data-save-row class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Save</button>
+          <span class="text-xs text-slate-400">blank = cards and wallets only</span>
+        </form>
+      </div>
+      <form method="post" action="/app/payments/disconnect" onsubmit="return confirm('Disconnect Stripe? New invoices will fall back to bank-transfer details.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Disconnect Stripe</button>
+      </form>
+      {% elif stripe_available %}
+      <p class="text-sm text-slate-500">Connect your Stripe account and every invoice goes out with a <strong>Pay Now</strong> link — card payments land straight in your Stripe, and the invoice marks itself paid. No Stripe account yet? You can create one in the same flow.</p>
+      <a href="/app/payments/connect" class="inline-block rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Connect your Stripe account</a>
+      {% else %}
+      <p class="text-sm text-slate-500">Online card payments are coming soon. Until then, add your bank details below and invoices carry them for bank-transfer payment.</p>
+      {% endif %}
+    </div>
+  </details>
+
+  <form id="inv-settings-form" method="post" action="/app/invoices/settings" class="space-y-4">
+    <input type="hidden" name="invoice_snapshot" value="{{ invoice_snapshot|default({})|tojson|forceescape }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="hidden" id="section-order" name="section_order"
+           value="{{ s.section_order|join(',') }}">
+
+    <!-- Invoice layout: drag sections into your preferred order -->
+    {% set layout_face -%}
+      {%- for key in s.section_order %}{{ section_labels[key] }}{% if not loop.last %} → {% endif %}{% endfor -%}
+    {%- endset %}
+    <details class="{{ fold }}">
+      {{ face('Layout', layout_face) }}
+      <div class="{{ foldbody }}">
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-slate-400">Drag to rearrange how sections appear on the invoice and PDF. The invoice details, line items and totals move as one block — the sums always stay with their lines.</p>
+          <button type="button" id="section-reset"
+                  class="flex-none ml-3 text-xs font-semibold text-slate-500 hover:text-navy underline decoration-dotted underline-offset-2">Reset order</button>
+        </div>
+        <ul id="section-list" class="space-y-1.5">
+          {% for key in s.section_order %}
+          <li draggable="true" data-section="{{ key }}"
+              class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 cursor-grab select-none">
+            <span class="text-slate-400" aria-hidden="true">⠿</span>{{ section_labels[key] }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </details>
+
+    <!-- VAT -->
+    <details class="{{ fold }}">
+      {{ face('VAT', ('%g'|format(s.vat_rate|float)) ~ ('% included in your prices' if s.prices_include_vat else '% added on top') if s.show_vat else 'off — totals as priced') }}
+      <div class="{{ foldbody }}">
+        <label class="flex items-center gap-2 text-sm font-semibold text-navy">
+          <input type="checkbox" name="show_vat" value="1" {{ 'checked' if s.show_vat else '' }} onchange="document.getElementById('vat-basis').hidden = !this.checked" class="rounded border-slate-300"> Show VAT</label>
+        <label class="block max-w-[12rem]"><span class="text-xs font-medium text-slate-500">VAT rate (%)</span>
+          <input name="vat_rate" type="number" step="0.1" min="0" value="{{ '%g'|format(s.vat_rate|float) }}" class="{{ inp }}"></label>
+        <p class="text-xs text-slate-400">VAT is off until you turn it on — tick it once your business is VAT registered and invoices add the VAT line at your rate.</p>
+        <fieldset id="vat-basis" class="space-y-1" {{ '' if s.show_vat else 'hidden' }}>
+          <input type="hidden" name="prices_include_vat_form" value="1">
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="radio" name="prices_include_vat" value="1" {{ 'checked' if s.prices_include_vat is true else '' }} class="border-slate-300"> My prices already include VAT</label>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input type="radio" name="prices_include_vat" value="0" {{ 'checked' if s.prices_include_vat is false else '' }} class="border-slate-300"> VAT is added to my prices</label>
+          {% if s.prices_include_vat is none %}<p class="text-xs text-slate-400">Not chosen yet: VAT is added on top until you choose.</p>{% endif %}
+        </fieldset>
+      </div>
+    </details>
+
+    <!-- Business header. An empty one is the amber row: headless invoices are
+         the "Julius, fill your invoice settings" gap from the first live e2e. -->
+    {% set biz_face = (s.business_name ~ (' · VAT ' ~ s.business_vat_no if s.business_vat_no else '')) if s.business_name else 'not filled in — invoices go out without your details' %}
+    <details class="{{ fold }}">
+      {{ face('Your business', biz_face if s.show_business_details else 'hidden from invoices', needs=(s.show_business_details and not s.business_name)) }}
+      <div class="{{ foldbody }}">
+        <label class="flex items-center gap-2 text-sm font-semibold text-navy">
+          <input type="checkbox" name="show_business_details" value="1" {{ 'checked' if s.show_business_details else '' }} class="rounded border-slate-300"> Show your business details at the top</label>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <label class="block"><span class="text-xs font-medium text-slate-500">Business name</span>
+            <input name="business_name" value="{{ s.business_name or '' }}" class="{{ inp }}"></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">VAT number</span>
+            <input name="business_vat_no" value="{{ s.business_vat_no or '' }}" class="{{ inp }}"></label>
+          <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">Address</span>
+            <textarea name="business_address" rows="2" class="{{ inp }}">{{ s.business_address or '' }}</textarea></label>
+          <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">Contact (phone / email)</span>
+            <input name="business_contact" value="{{ s.business_contact or '' }}" class="{{ inp }}"></label>
+        </div>
+      </div>
+    </details>
+
+    <!-- Payment terms + footer -->
+    <details class="{{ fold }}">
+      {{ face('Terms & footer', (s.payment_terms or 'no terms') ~ (' · footer note' if s.footer_note else '') if s.show_payment_terms else 'terms hidden' ~ (' · footer note' if s.footer_note else '')) }}
+      <div class="{{ foldbody }}">
+        <label class="flex items-center gap-2 text-sm font-semibold text-navy">
+          <input type="checkbox" name="show_payment_terms" value="1" {{ 'checked' if s.show_payment_terms else '' }} class="rounded border-slate-300"> Show payment terms</label>
+        <label class="block"><span class="text-xs font-medium text-slate-500">Payment terms</span>
+          <input name="payment_terms" value="{{ s.payment_terms or '' }}" placeholder="Your payment terms, in your own words" class="{{ inp }}"></label>
+        <p class="text-xs text-slate-400 -mt-1">A sentence, printed under the total. Type just a number of days and it's written out for you.</p>
+        <label class="block"><span class="text-xs font-medium text-slate-500">Footer note (optional)</span>
+          <input name="footer_note" value="{{ s.footer_note or '' }}" placeholder="e.g. a thank-you note" class="{{ inp }}"></label>
+      </div>
+    </details>
+
+    <!-- Quote defaults — quotes share this settings row (docs/modules/module-quotes.md) -->
+    {% set autodraft_word = {'propose': 'drafted for your review', 'auto': 'sent with the reply', 'off': 'manual only'}.get(quote_auto_draft, 'drafted for your review') %}
+    <details class="{{ fold }}">
+      {{ face('Quote defaults', 'valid ' ~ ('%g'|format(s.default_quote_valid_days|float)) ~ ' days · ' ~ (('%g'|format(s.default_deposit_percent|float)) ~ '% deposit' ~ (' on confirmation' if s.deposit_on_confirm else ', by hand') if s.default_deposit_percent else 'no deposit') ~ ' · ' ~ autodraft_word) }}
+      <div class="{{ foldbody }}">
+        <p class="text-xs text-slate-400">Quotes use the same branding, VAT and business details as invoices. These two only apply to new quotes (each quote can override them).</p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <label class="block"><span class="text-xs font-medium text-slate-500">Quotes valid for (days)</span>
+            <input name="default_quote_valid_days" type="number" step="1" min="1" max="365" value="{{ '%g'|format(s.default_quote_valid_days|float) }}" class="{{ inp }}"></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">Deposit % on acceptance <span class="text-slate-400">(blank = no deposit)</span></span>
+            <input name="default_deposit_percent" type="number" step="1" min="1" max="100" value="{{ '%g'|format(s.default_deposit_percent|float) if s.default_deposit_percent else '' }}" class="{{ inp }}"></label>
+          <label class="flex items-start gap-2 text-sm text-slate-700 sm:col-span-2">
+            <input type="hidden" name="deposit_on_confirm_form" value="1">
+            <input type="checkbox" name="deposit_on_confirm" value="1" {{ 'checked' if s.deposit_on_confirm else '' }} class="mt-0.5 rounded border-slate-300">
+            <span>Ask for the deposit when a booking is confirmed — the confirmation email carries the deposit invoice with a Pay Now link (Stripe connected) or your bank details, so nobody has to raise it by hand.</span>
+          </label>
+          <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">When the assistant prices an enquiry</span>
+            <select name="quote_auto_draft" class="{{ inp }}">
+              <option value="propose" {{ 'selected' if quote_auto_draft == 'propose' else '' }}>Draft the quote for me to review and send (recommended)</option>
+              <option value="auto" {{ 'selected' if quote_auto_draft == 'auto' else '' }}>Draft it AND put the accept link in the reply — the quote goes out with the answer</option>
+              <option value="off" {{ 'selected' if quote_auto_draft == 'off' else '' }}>Don't draft quotes automatically</option>
+            </select>
+            <span class="text-xs text-slate-400">Zero extra AI cost — it reuses the price already worked out for the reply. The customer accepts online with their name; you're notified the moment they do.</span></label>
+          {# Getting paid for bookings (Kris 2026-09-24: "how would a real kennels
+             deal with payments?"). Three settings, each defaulting to what every
+             business had before — a business turns on what fits how it's paid. #}
+          <div class="sm:col-span-2 border-t border-slate-100 pt-3 space-y-3" data-payments-settings>
+            <input type="hidden" name="payments_form" value="1">
+            <p class="text-sm font-semibold text-navy">Getting paid for bookings</p>
+            <label class="flex items-start gap-2 text-sm text-slate-700">
+              <input type="checkbox" name="quote_booking_priced" value="1" {{ 'checked' if s.quote_booking_priced else '' }} class="mt-0.5 rounded border-slate-300">
+              <span>Also draft a quote when the reply books something the diary has already priced. <span class="text-xs text-slate-400">Turn off when your prices are fixed — a stay at your nightly rate, a class at its price — and the confirmation already says the cost.</span></span>
+            </label>
+            <label class="block"><span class="text-xs font-medium text-slate-500">Bill the balance</span>
+              <select name="balance_mode" class="{{ inp }}">
+                <option value="off" {{ 'selected' if s.balance_mode == 'off' else '' }}>By hand — I'll invoice the rest myself</option>
+                <option value="draft" {{ 'selected' if s.balance_mode == 'draft' else '' }}>Draft it the day before it ends, for me to send or take at collection</option>
+                <option value="send" {{ 'selected' if s.balance_mode == 'send' else '' }}>Send it the day before it ends, with the Pay Now link</option>
+              </select>
+              <span class="text-xs text-slate-400">The booking's price less any deposit already asked for, due on its last day — a stay's collection, a visit's own day.</span></label>
+            <label class="block"><span class="text-xs font-medium text-slate-500">Peak dates <span class="text-slate-400">— a different deposit for busy periods, one range per line</span></span>
+              <textarea name="peak_deposits" rows="3" placeholder="2026-12-18 to 2027-01-03: 100%" class="{{ inp }}">{% for p in s.peak_deposits %}{{ p['from'] }} to {{ p['to'] }}: {{ '%g'|format(p.percent) }}%{{ '\n' if not loop.last }}{% endfor %}</textarea>
+              <span class="text-xs text-slate-400">A booking that touches one of these asks for that deposit of its price instead of the usual one (100% = paid in full when confirmed).</span></label>
+            <div data-deposit-rules>
+              <span class="text-xs font-medium text-slate-500">Deposit by value <span class="text-slate-400">— a different deposit when the amount is over a figure</span></span>
+              <div id="deposit-rule-rows" class="space-y-2 mt-1">
+                {% for r in s.deposit_rules %}
+                <div class="deposit-rule-row flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                  <span>Over £</span><input name="deposit_rule_over" type="number" step="0.01" min="0.01" value="{{ '%g'|format(r.over) }}" class="w-28 {{ inp }}">
+                  <span>ask for</span><input name="deposit_rule_percent" type="number" step="1" min="1" max="100" value="{{ '%g'|format(r.percent) }}" class="w-20 {{ inp }}"><span>%</span>
+                  <select name="deposit_rule_basis" class="{{ inp }} w-auto"><option value="total" {{ 'selected' if r.basis != 'ticked' else '' }}>of the whole amount</option><option value="ticked" {{ 'selected' if r.basis == 'ticked' else '' }}>of the ticked lines only</option></select>
+                  <button type="button" class="deposit-rule-remove text-xs text-slate-400 hover:text-rose-600">Remove</button>
+                </div>
+                {% endfor %}
+              </div>
+              <button type="button" id="deposit-rule-add" class="text-sm font-medium text-brand">+ Add a deposit rule</button>
+              <span class="block text-xs text-slate-400">When a quote's total, or a booking's price, is over the amount, the deposit asked for is that percentage. It wins over the usual deposit; where a peak date also applies, the higher percentage is used.</span>
+            </div>
+            <template id="deposit-rule-template">
+              <div class="deposit-rule-row flex flex-wrap items-center gap-2 text-sm text-slate-700">
+                <span>Over £</span><input name="deposit_rule_over" type="number" step="0.01" min="0.01" placeholder="250" class="w-28 {{ inp }}">
+                <span>ask for</span><input name="deposit_rule_percent" type="number" step="1" min="1" max="100" placeholder="50" class="w-20 {{ inp }}"><span>%</span>
+                <select name="deposit_rule_basis" class="{{ inp }} w-auto"><option value="total">of the whole amount</option><option value="ticked">of the ticked lines only</option></select>
+                <button type="button" class="deposit-rule-remove text-xs text-slate-400 hover:text-rose-600">Remove</button>
+              </div>
+            </template>
+            <script>
+              (function () {
+                var rows = document.getElementById('deposit-rule-rows'), add = document.getElementById('deposit-rule-add');
+                if (!rows || !add) return;
+                add.addEventListener('click', function () {
+                  rows.appendChild(document.getElementById('deposit-rule-template').content.cloneNode(true));
+                });
+                rows.addEventListener('click', function (e) {
+                  if (e.target.matches('.deposit-rule-remove')) e.target.closest('.deposit-rule-row').remove();
+                });
+              })();
+            </script>
+          </div>
+        </div>
+      </div>
+    </details>
+
+
+    <!-- Packages (src/app/wallet.py, 2026-09-05): what the business sells AHEAD of use —
+         a block of lessons, prepaid hours, a class pass. Every knob a setting. -->
+    {% set pkgs = s.extras.packages or [] %}
+    {% set pref = s.extras.package_prefs or {} %}
+    <details class="{{ fold }}" id="packages">
+      {{ face('Packages', (pkgs|length ~ ' package' ~ ('' if pkgs|length == 1 else 's') ~ ' · ' ~ (pkgs|map(attribute='name')|join(', '))) if pkgs else 'none — every job invoiced on its own') }}
+      <div class="{{ foldbody }}">
+        <input type="hidden" name="pkg_form" value="1">
+        <p class="text-xs text-slate-400">Blocks, passes and prepaid hours. A package line on an invoice adds its sessions or hours to the customer's wallet when the invoice is sent; bookings spend them per your Diary settings (Cancellations &amp; credits). The customer sees the balance on the portal and the agent quotes it.</p>
+        <div id="pkg-rows" class="space-y-2">
+          {% for p in pkgs %}
+          <div class="pkg-row grid sm:grid-cols-12 gap-2 rounded-lg border border-slate-200 p-3">
+            <input type="hidden" name="pkg_key" value="{{ p.key }}">
+            <label class="sm:col-span-3 block text-xs text-slate-500">Name<input name="pkg_name" value="{{ p.name }}" required class="mt-1 {{ inp }}"></label>
+            <label class="sm:col-span-2 block text-xs text-slate-500">Holds<input name="pkg_quantity" type="number" step="0.5" min="0.5" value="{{ '%g'|format(p.quantity) }}" required class="mt-1 {{ inp }}"></label>
+            <label class="sm:col-span-2 block text-xs text-slate-500">Unit<select name="pkg_unit" class="mt-1 {{ inp }}"><option value="session" {{ 'selected' if p.unit == 'session' }}>sessions</option><option value="hour" {{ 'selected' if p.unit == 'hour' }}>hours</option></select></label>
+            <label class="sm:col-span-2 block text-xs text-slate-500">Price (£)<input name="pkg_price" type="number" step="0.01" min="0" value="{{ '%.2f'|format(p.price) }}" class="mt-1 {{ inp }}"></label>
+            <label class="sm:col-span-3 block text-xs text-slate-500">Valid for (days, 0 = never expires)<input name="pkg_valid_days" type="number" step="1" min="0" value="{{ p.valid_days }}" class="mt-1 {{ inp }}"></label>
+            <label class="sm:col-span-8 block text-xs text-slate-500">Covers these services <span class="text-slate-400">(blank = all; semicolon-separated)</span><input name="pkg_services" value="{{ p.services|join('; ') }}" class="mt-1 {{ inp }}"></label>
+            <label class="sm:col-span-3 block text-xs text-slate-500">Needed to book them?<select name="pkg_required" class="mt-1 {{ inp }}"><option value="0" {{ 'selected' if not p.required }}>No — pay as you go too</option><option value="1" {{ 'selected' if p.required }}>Yes — a package is required</option></select></label>
+            <div class="sm:col-span-1 flex items-end justify-end"><button type="button" class="pkg-remove text-xs text-slate-400 hover:text-rose-600">Remove</button></div>
+          </div>
+          {% endfor %}
+        </div>
+        <button type="button" id="pkg-add" class="text-sm font-medium text-brand">+ Add a package</button>
+        <div class="grid sm:grid-cols-3 gap-3 pt-2">
+          <label class="block"><span class="text-xs font-medium text-slate-500">Only count paid packages</span>
+            <select name="packages_paid_only" class="{{ inp }}"><option value="0" {{ 'selected' if not pref.paid_only }}>No — credits count once the invoice is sent, marked unpaid until paid</option><option value="1" {{ 'selected' if pref.paid_only }}>Yes — nothing counts until the invoice is paid</option></select></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">Tell the customer when this many remain <span class="text-slate-400">(0 = never)</span></span>
+            <input name="package_low_at" type="number" min="0" max="99" value="{{ pref.low_at if pref.low_at is not none else 1 }}" class="{{ inp }}"></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">Warn this many days before credits expire <span class="text-slate-400">(0 = never)</span></span>
+            <input name="package_expiry_days" type="number" min="0" max="365" value="{{ pref.expiry_days if pref.expiry_days is not none else 14 }}" class="{{ inp }}"></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">Show the balance on the portal</span>
+            <select name="packages_portal" class="{{ inp }}"><option value="1" {{ 'selected' if pref.portal is not defined or pref.portal is none or pref.portal }}>Yes — "6 of 10 sessions left" on their record</option><option value="0" {{ 'selected' if pref.portal is defined and pref.portal is not none and not pref.portal }}>No — the business quotes it when asked</option></select></label>
+        </div>
+        <p class="text-xs text-slate-400">Those two notes are sent automatically — they are arithmetic, not a judgement. Hand adjustments (a goodwill session, a refund) live on the customer's card.</p>
+      </div>
+    </details>
+    <template id="pkg-template">
+      <div class="pkg-row grid sm:grid-cols-12 gap-2 rounded-lg border border-slate-200 p-3">
+        <input type="hidden" name="pkg_key" value="">
+        <label class="sm:col-span-3 block text-xs text-slate-500">Name<input name="pkg_name" required placeholder="Name of your package" class="mt-1 {{ inp }}"></label>
+        <label class="sm:col-span-2 block text-xs text-slate-500">Holds<input name="pkg_quantity" type="number" step="0.5" min="0.5" value="10" required class="mt-1 {{ inp }}"></label>
+        <label class="sm:col-span-2 block text-xs text-slate-500">Unit<select name="pkg_unit" class="mt-1 {{ inp }}"><option value="session">sessions</option><option value="hour">hours</option></select></label>
+        <label class="sm:col-span-2 block text-xs text-slate-500">Price (£)<input name="pkg_price" type="number" step="0.01" min="0" placeholder="0.00" class="mt-1 {{ inp }}"></label>
+        <label class="sm:col-span-3 block text-xs text-slate-500">Valid for (days, 0 = never expires)<input name="pkg_valid_days" type="number" step="1" min="0" value="365" class="mt-1 {{ inp }}"></label>
+        <label class="sm:col-span-8 block text-xs text-slate-500">Covers these services <span class="text-slate-400">(blank = all; semicolon-separated)</span><input name="pkg_services" class="mt-1 {{ inp }}"></label>
+        <label class="sm:col-span-3 block text-xs text-slate-500">Needed to book them?<select name="pkg_required" class="mt-1 {{ inp }}"><option value="0">No — pay as you go too</option><option value="1">Yes — a package is required</option></select></label>
+        <div class="sm:col-span-1 flex items-end justify-end"><button type="button" class="pkg-remove text-xs text-slate-400 hover:text-rose-600">Remove</button></div>
+      </div>
+    </template>
+    <script>
+      (function () {
+        var rows = document.getElementById('pkg-rows'), add = document.getElementById('pkg-add');
+        if (!rows || !add) return;
+        add.addEventListener('click', function () {
+          rows.appendChild(document.getElementById('pkg-template').content.cloneNode(true));
+        });
+        rows.addEventListener('click', function (e) {
+          if (e.target.matches('.pkg-remove')) e.target.closest('.pkg-row').remove();
+        });
+      })();
+    </script>
+
+    <!-- Bank transfer details (the no-Stripe fallback). Amber when there is NO
+         way to pay at all: no Stripe and no bank details. -->
+    {% set bank_filled = s.bank_sort_code and s.bank_account_number %}
+    {% set bank_face = (s.bank_sort_code ~ ' · ····' ~ s.bank_account_number[-4:]) if bank_filled else ('not filled in — invoices offer no way to pay' if not stripe_connected else 'none — Pay Now covers it') %}
+    <details class="{{ fold }}">
+      {{ face('Bank transfer', bank_face, needs=(not bank_filled and not stripe_connected)) }}
+      <div class="{{ foldbody }}">
+        <p class="text-xs text-slate-400">Shown on invoices{{ " when there's no Pay Now link" if stripe_connected else "" }} so customers can pay by transfer — the invoice number is the payment reference.</p>
+        <div class="grid sm:grid-cols-3 gap-3">
+          <label class="block"><span class="text-xs font-medium text-slate-500">Account name</span>
+            <input name="bank_account_name" value="{{ s.bank_account_name or '' }}" class="{{ inp }}"></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">Sort code</span>
+            <input name="bank_sort_code" value="{{ s.bank_sort_code or '' }}" placeholder="00-00-00" class="{{ inp }}"></label>
+          <label class="block"><span class="text-xs font-medium text-slate-500">Account number</span>
+            <input name="bank_account_number" value="{{ s.bank_account_number or '' }}" class="{{ inp }}"></label>
+        </div>
+      </div>
+    </details>
+
+    {# The PDF preview is the "PDF invoice" link under the sample (the preview
+       fragment) — one place to look, not a second button beside Save. #}
+    <div class="flex justify-end gap-2">
+      <button data-save-row class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save settings</button>
+    </div>
+  </form>
+</div>
+
+<!-- Live preview: the sample invoice, re-rendered (debounced) from the form as
+     it stands — the same macro the real invoice page uses, so no drift. -->
+<div class="lg:sticky lg:top-6 min-w-0">
+  <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Preview</p>
+  <div id="inv-preview" class="opacity-90">
+    <div class="bg-white rounded-xl border border-slate-200 p-6 text-sm text-slate-400">Loading preview…</div>
+  </div>
+</div>
+</div>
+
+<script>
+(function () {
+  var form = document.getElementById('inv-settings-form');
+  var pane = document.getElementById('inv-preview');
+  var list = document.getElementById('section-list');
+  var orderInput = document.getElementById('section-order');
+  var resetBtn = document.getElementById('section-reset');
+  var DEFAULT_ORDER = {{ section_labels.keys()|list|tojson }};
+  var timer = null;
+
+  function syncOrder() {
+    orderInput.value = Array.prototype.map.call(
+      list.children, function (li) { return li.dataset.section; }).join(',');
+  }
+  async function refresh() {
+    try {
+      var res = await fetch('/app/invoices/settings/preview',
+                            { method: 'POST', body: new FormData(form) });
+      if (res.ok) pane.innerHTML = await res.text();
+    } catch (e) { /* preview is a convenience — never break the form */ }
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 350); }
+  form.addEventListener('input', schedule);
+  form.addEventListener('change', schedule);
+
+  // Drag to reorder — vanilla HTML5 DnD, whole-block moves only.
+  var dragEl = null;
+  Array.prototype.forEach.call(list.children, function (el) {
+    el.addEventListener('dragstart', function (e) {
+      dragEl = el; e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', el.dataset.section); } catch (err) {}
+    });
+    el.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      if (el === dragEl || !dragEl) return;
+      var r = el.getBoundingClientRect();
+      var after = (e.clientY - r.top) > r.height / 2;
+      el.parentNode.insertBefore(dragEl, after ? el.nextSibling : el);
+    });
+    el.addEventListener('dragend', function () {
+      dragEl = null; syncOrder(); schedule();
+    });
+  });
+  resetBtn.addEventListener('click', function () {
+    DEFAULT_ORDER.forEach(function (key) {
+      var li = list.querySelector('[data-section="' + key + '"]');
+      if (li) list.appendChild(li);
+    });
+    syncOrder(); schedule();
+  });
+
+  syncOrder();
+  refresh();
+})();
+</script>
+{% endblock %}

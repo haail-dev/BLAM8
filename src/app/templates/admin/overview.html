@@ -1,0 +1,97 @@
+{% extends "admin/base.html" %}
+{% block title %}Margin overview · Operator{% endblock %}
+{% block content %}
+{% if not s.cost_complete %}<p class="text-sm text-amber-700">Cost totals are incomplete. Shown amounts are recorded subtotals; unknown usage is not zero. Any margin shown is provisional.</p>{% endif %}
+<h1 class="text-xl font-bold text-navy mb-1">Margin overview</h1>
+<p class="text-sm text-slate-500 mb-5">Each tenant's current billing month · cost is real (from metered tokens) · revenue = contract value or plan list price.</p>
+
+<div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-6">
+  <div class="rounded-xl border border-slate-200 bg-white p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Tenants</p>
+    <p class="mt-1 text-2xl font-bold text-navy">{{ s.tenant_count }}</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Revenue / mo</p>
+    <p class="mt-1 text-2xl font-bold text-navy">£{{ "%.0f"|format(s.total_revenue_gbp) }}</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Cost (this period)</p>
+    <p class="mt-1 text-2xl font-bold text-navy">£{{ "%.2f"|format(s.total_cost_gbp) }}</p>
+  </div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Gross margin</p>
+    <p class="mt-1 text-2xl font-bold {% if s.total_margin_gbp < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">£{{ "%.2f"|format(s.total_margin_gbp) }}{% if s.total_margin_pct is not none %} <span class="text-sm font-medium text-slate-400">({{ s.total_margin_pct|round|int }}%)</span>{% endif %}</p>
+  </div>
+  {# HRT — the pitch number: how long a human actually spends per email once
+     the agent has drafted it. All-time, tracked (human-approved) sends only. #}
+  <div class="rounded-xl border border-slate-200 bg-white p-4" title="Human Review Time — average visible time a draft was on screen before its send, across every tenant. Tracking began 31 Aug 2026.">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">HRT · per email</p>
+    {% if s.hrt.avg %}
+    <p class="mt-1 text-2xl font-bold text-navy">{{ s.hrt.avg }}</p>
+    <p class="text-xs text-slate-400">{{ "{:,}".format(s.hrt.n) }} tracked send{{ '' if s.hrt.n == 1 else 's' }} · {{ s.hrt.total }} human time</p>
+    {% else %}
+    <p class="mt-1 text-2xl font-bold text-slate-300">—</p>
+    <p class="text-xs text-slate-400">no tracked sends yet</p>
+    {% endif %}
+  </div>
+  {# Time saved — by-hand minutes per email kind / Concierge action, net of the
+     human time spent (src/app/time_saved.py). Estimates until calibrated. #}
+  <div class="rounded-xl border border-slate-200 bg-white p-4" title="By-hand time BLAM8 took off every tenant, all-time: each sent email and each confirmed Concierge action is priced at an estimated by-hand time, minus the time a person actually spent reviewing or confirming it. Minutes are first-pass estimates (src/app/time_saved.py).">
+    <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Time saved</p>
+    {% if s.saved %}
+    <p class="mt-1 text-2xl font-bold text-emerald-600">{{ s.saved.total }}</p>
+    <p class="text-xs text-slate-400">{{ "{:,}".format(s.saved.emails_n) }} email{{ '' if s.saved.emails_n == 1 else 's' }} · {{ s.saved.emails }} &middot; {{ "{:,}".format(s.saved.actions_n) }} action{{ '' if s.saved.actions_n == 1 else 's' }} · {{ s.saved.actions }}</p>
+    {% else %}
+    <p class="mt-1 text-2xl font-bold text-slate-300">—</p>
+    <p class="text-xs text-slate-400">nothing counted yet</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+  <div class="overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+      <tr>
+        <th class="px-4 py-2.5 text-left font-semibold">Tenant</th>
+        <th class="px-4 py-2.5 text-left font-semibold">Plan</th>
+        <th class="px-4 py-2.5 text-right font-semibold">Emails</th>
+        <th class="px-4 py-2.5 text-right font-semibold" title="Human Review Time — avg visible time a draft sat under this tenant's eyes before its send (all-time tracked sends)">HRT</th>
+        <th class="px-4 py-2.5 text-right font-semibold" title="Time saved, all-time — by-hand estimate for each sent email and confirmed Concierge action, net of human review/confirm time">Saved</th>
+        <th class="px-4 py-2.5 text-right font-semibold">Revenue/mo</th>
+        <th class="px-4 py-2.5 text-right font-semibold">Cost</th>
+        <th class="px-4 py-2.5 text-right font-semibold">Margin</th>
+        {# Their money, not ours — invoice payments processed through BLAM8 this
+           period (engagement/value signal, directive §8.2). #}
+        <th class="px-4 py-2.5 text-right font-semibold">Invoiced £ in</th>
+        {# Also their money — work quoted this period, the stage before the £ in. #}
+        <th class="px-4 py-2.5 text-right font-semibold">Quoted £</th>
+        <th class="px-4 py-2.5 text-left font-semibold">Status</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% set badge = {'healthy':'bg-emerald-50 text-emerald-700','thin':'bg-amber-50 text-amber-700','underwater':'bg-red-50 text-red-700','pilot':'bg-slate-100 text-slate-500'} %}
+      {% for r in s.rows %}
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-2.5"><a href="/admin/tenants/{{ r.tenant_id }}" class="font-medium text-brand hover:underline">{{ r.name }}</a>{% if r.reporting_tier=='enterprise' %} <span class="ml-1 rounded bg-navy/5 text-navy text-[10px] font-semibold px-1.5 py-0.5">ENT</span>{% endif %}
+          {# journey.stalled_step — a signup that never finished the wizard #}
+          {% if r.stalled_at %}<span class="ml-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold px-1.5 py-0.5" title="Signed up {{ r.signed_up[:10] if r.signed_up else '' }}{% if r.last_seen %} · last seen {{ r.last_seen[:16].replace('T',' ') }}{% endif %}">stalled · {{ {'interview':'industry','mailbox':'mailbox','finish':'finish'}.get(r.stalled_at, r.stalled_at) }}</span>{% endif %}</td>
+        <td class="px-4 py-2.5 text-slate-600">{{ r.plan }}{% if r.contract_set %} <span class="text-slate-400">· MSA</span>{% endif %}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">{{ "{:,}".format(r.emails) }}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">{% if r.hrt %}{{ r.hrt }} <span class="text-slate-400 text-xs">· {{ r.hrt_n }}</span>{% else %}—{% endif %}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">{{ r.saved or '—' }}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">£{{ "%.0f"|format(r.revenue_gbp) }}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">£{{ "%.2f"|format(r.cost_gbp) }}{% if not r.cost_complete %} (incomplete){% endif %}</td>
+        <td class="px-4 py-2.5 text-right font-semibold {% if r.margin_gbp < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">£{{ "%.2f"|format(r.margin_gbp) }}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">{% if r.invoices_collected_gbp %}£{{ "%.2f"|format(r.invoices_collected_gbp) }}{% else %}—{% endif %}</td>
+        <td class="px-4 py-2.5 text-right text-slate-600">{% if r.quoted_gbp %}£{{ "%.2f"|format(r.quoted_gbp) }}{% else %}—{% endif %}</td>
+        <td class="px-4 py-2.5"><span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ badge.get(r.status,'bg-slate-100 text-slate-500') }}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+      {% if not s.rows %}<tr><td colspan="11" class="px-4 py-6 text-slate-400">No tenants yet.</td></tr>{% endif %}
+    </tbody>
+  </table>
+  </div>
+</div>
+<p class="mt-4 text-xs text-slate-400">Operator-only · aggregates and cost/margin, never tenant email content. Underwater = cost exceeds revenue this period.</p>
+{% endblock %}

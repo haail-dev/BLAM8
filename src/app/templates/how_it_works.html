@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}How Onboarding Works — Sign-in to First Approved Reply | BLAM8{% endblock %}
+{% block meta_description %}What setting up BLAM8 actually involves: sign in with Microsoft or Google, a short interview with the built-in assistant, one-click OAuth mailbox connection, and teaching it your prices and policies — the only step that takes longer than a few clicks. Draft-only until you say otherwise, on the inbox and calendar you already use.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/how-it-works#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How long does it take to set up BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sign-in, the interview and connecting your mailbox are a few clicks each — drafts start the moment you say go: a new account holds them until you've checked the setup. The only step that takes longer is teaching it your business: pasting or uploading your prices, policies and FAQs so replies quote your real numbers. Most businesses do that in one sitting with their price list open. There's no migration, no IT project and no sales call — and a built-in assistant can walk you through any step in plain English." }
+        },
+        {
+          "@type": "Question",
+          "name": "What does BLAM8 need access to?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Two things: revocable OAuth consent to the one mailbox you choose (read incoming mail, send the replies you approve — never your password), and the business knowledge you give it (prices, policies, services) so replies are grounded in fact. Calendar access is optional, for the Scheduling tier. That's the whole list — no access to other systems, no data migration." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I have to stop using Outlook or Gmail?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No — that's the point. BLAM8 runs on the mailbox and calendar you already have. Your inbox stays your inbox; BLAM8 reads what arrives, prepares a grounded draft, and files confirmed bookings into Outlook or Google Calendar. You can keep working exactly as before and simply approve drafts when it suits you, and if you disconnect, your mailbox is untouched." }
+        },
+        {
+          "@type": "Question",
+          "name": "What happens if I connect BLAM8 and then ignore it?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It quietly keeps working, and nothing is sent. Drafts accumulate in the approval queue, booking details are gathered into a pinned card on each thread, and the CRM fills itself in — contacts, companies, deals, promises, and each customer's mood. When you come back, the work is prepared and waiting; until you approve something, no customer ever hears from the AI." }
+        },
+        {
+          "@type": "Question",
+          "name": "How does BLAM8 know when to hand a conversation to a human?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Three ways. Escalation rules you set hold sensitive topics for a person. The mood read tracks each customer's emotional temperature from their own words across the whole thread — a customer getting frustrated is flagged in the inbox and on the dashboard, replies change register to match, and a heated thread is always held for your approval, even in full-auto. And the agent defers when it doesn't know something rather than inventing an answer." }
+        },
+        {
+          "@type": "Question",
+          "name": "When should I turn on auto-send?",
+          "acceptedAnswer": { "@type": "Answer", "text": "When the queue has earned it. BLAM8 is draft-only by default: every reply waits for a human. After you've watched it handle your real mail — and used thumbs-down to turn any bad line into a standing never-rule — you can switch full-auto on per mailbox. Escalations and heated threads still wait for a human even then, and every reply the agent sends by itself carries an AI disclosure." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-16">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> How onboarding works
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      From sign-in to your first approved reply.
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      No migration, no IT project, no sales call. BLAM8 runs on the mailbox and calendar you already have — here is exactly what setup involves, including the one step that takes longer than a few clicks.
+    </p>
+    <p class="mt-4 text-sm text-slate-500">
+      Curious what's underneath? Every stage from inbound email to booked job is drawn node by node on <a href="/architecture" class="text-brand font-medium hover:underline">the architecture page</a>.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <span class="text-sm font-bold text-brand">01</span>
+        <h2 class="mt-2 font-semibold text-navy text-lg">Sign in</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">With Microsoft or Google — no password to create, nothing to install. You're in the app in under a minute.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <span class="text-sm font-bold text-brand">02</span>
+        <h2 class="mt-2 font-semibold text-navy text-lg">A short interview, not a settings maze</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">The built-in assistant asks about your business in plain English — what you do, who emails you, what a good outcome looks like — and turns your answers into configuration. You can type three sentences and move on; you can always go deeper later.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <span class="text-sm font-bold text-brand">03</span>
+        <h2 class="mt-2 font-semibold text-navy text-lg">Pick your industry</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">One choice tunes the agent's vocabulary to your trade — consignments and PODs for haulage, callouts and day rates for trades. Your own voice settings always win over the defaults.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <span class="text-sm font-bold text-brand">04</span>
+        <h2 class="mt-2 font-semibold text-navy text-lg">Connect the mailbox</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">One click opens Microsoft's or Google's own consent screen — you grant scoped, revocable access to the one inbox you choose. BLAM8 never sees your password, and you can cut access from your side at any time. Drafts start the moment you say go: a new account holds them until you've checked the setup.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <span class="text-sm font-bold text-brand">05</span>
+        <h2 class="mt-2 font-semibold text-navy text-lg">Teach it your business — the one real step</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">This is the only part of setup that takes longer than a few clicks, and it's the part that makes replies worth sending: paste your prices, policies and FAQs, upload documents, add pages. The agent quotes what you actually charge — and says what it doesn't know instead of inventing. Most businesses do it in one sitting with the price list open.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <span class="text-sm font-bold text-brand">06</span>
+        <h2 class="mt-2 font-semibold text-navy text-lg">Approve from the queue</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">Drafts wait for you — approve, tweak or skip in a click. Thumbs-down a bad line, say what's wrong, and it becomes a standing never-rule. Change a draft before you send it and, once it's gone, BLAM8 asks whether the change was a missing fact, an always or a never — one tap saves it, so the same fix isn't needed twice. When the queue has earned your trust, switch full-auto on per mailbox; escalations and heated threads still wait for a human even then.</p>
+      </div>
+    </div>
+    <p class="mt-8 text-sm text-slate-500 max-w-3xl">Optional extras, whenever you're ready: connect your calendar so confirmed bookings land in Outlook or Google Calendar and your busy times block the diary, and import your order book or contacts from CSV/Excel. Neither is required to start.</p>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <div class="grid md:grid-cols-2 gap-10">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight text-navy">What BLAM8 needs from you</h2>
+      <ul class="mt-6 space-y-3 text-slate-600 leading-relaxed text-sm">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Mailbox consent</span> — revocable OAuth to the inbox you choose: read incoming mail, send the replies you approve. Never a password.</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Your business knowledge</span> — prices, policies, services, FAQs. This is what grounds every reply in fact.</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span><span class="font-medium text-navy">Optionally, your calendar</span> — so confirmed bookings land in it and your busy times block the diary.</span></li>
+      </ul>
+      <p class="mt-5 text-sm text-slate-500">That's the whole list. No migration, no new inbox, no access to your other systems — your Outlook or Gmail stays exactly as it is, and disconnecting deletes the tokens and stops all processing. Full detail on our <a href="/security" class="text-brand font-medium hover:underline">security &amp; data handling page</a>.</p>
+    </div>
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight text-navy">And if you connect it, then get busy?</h2>
+      <p class="mt-6 text-slate-600 leading-relaxed text-sm">It quietly keeps working — and sends nothing. Drafts accumulate in the approval queue. Booking details are gathered into a pinned card on each thread. The CRM fills itself in: contacts, companies, deals with a stage and value, promises in both directions. When you come back, the admin is done and waiting for a yes. Until you approve something, no customer ever hears from the AI.</p>
+      <p class="mt-4 text-slate-600 leading-relaxed text-sm">You're never on your own either: the built-in assistant answers questions aware of your actual setup state — "you've connected the mailbox, now add your rate card" — from your first visit to travel-time buffers and escalation rules.</p>
+    </div>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <div class="max-w-2xl">
+      <p class="text-sm font-semibold uppercase tracking-wider text-slate-400">The mood read</p>
+      <h2 class="mt-3 text-3xl font-bold tracking-tight text-navy">It notices a customer getting annoyed before you do.</h2>
+      <p class="mt-4 text-slate-600 leading-relaxed">Automation that can't tell when a customer is upset is a liability. So every contact carries a live emotional temperature, read from their own words across the whole conversation — not a black-box score.</p>
+    </div>
+    <div class="mt-10 grid md:grid-cols-3 gap-6">
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">Read from their words</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">The mood and its trend — improving or worsening — are tracked across every email in the relationship, with the reason shown in their own words. A polite email after two chasers reads differently from a polite first email, and BLAM8 knows it.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">Flagged before it costs you</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">A customer turning frustrated is surfaced in the inbox and on the dashboard, and the agent's replies change register to match — more direct, more careful, no breezy cheerfulness at an angry customer.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <h3 class="font-semibold text-navy">Heated means human</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed text-sm">A heated thread is always held for your approval — even if that mailbox is on full-auto. Angry customers are how businesses lose accounts; they get a person, every time.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-3xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Setup questions, answered straight</h2>
+  <div class="mt-6 divide-y divide-slate-100">
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How long does it take to set up?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Sign-in, the interview and connecting your mailbox are a few clicks each — drafts start the moment you say go: a new account holds them until you've checked the setup. Teaching it your business is the only step that takes real time, and most businesses do it in one sitting with their price list open.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Do I have to stop using Outlook or Gmail?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">No — BLAM8 runs on the mailbox and calendar you already have. Your inbox stays your inbox; keep working exactly as before and approve drafts when it suits you. Disconnect any time and your mailbox is untouched.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">What if the AI gets something wrong?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Nothing sends without you until you decide otherwise — a wrong draft costs you one click, not a customer. Thumbs-down the bad line, say what's wrong, and it becomes a standing never-rule the agent won't break again. And because replies are grounded in your own knowledge, the agent says "I don't know" rather than inventing.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">When would BLAM8 hand a conversation to a human?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">On your escalation rules, on a heated mood read, and whenever it's out of its depth. All three hold the thread for a person — even in full-auto.</p>
+    </details>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Connect it in the morning. Approve your first draft the same day.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Free 14-day pilot of the full product on your real inbox — no card, draft-only, nothing sends without you.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/#pricing" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">View pricing</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

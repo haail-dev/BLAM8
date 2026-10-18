@@ -1,0 +1,113 @@
+from types import SimpleNamespace
+import pytest
+from fastapi.testclient import TestClient
+from app import knowledge_review as kr,knowledge as kb,concierge_routes as cr
+from app.auth import TenantCtx,require_tenant
+from app.main import app
+from app.security import require_csrf
+from tests.knowledge_review_fixture import review_store
+
+
+@pytest.fixture
+def client(monkeypatch,review_store):
+    app.dependency_overrides[require_tenant]=lambda:TenantCtx(tenant_id='tenant',client=None)
+    app.dependency_overrides[require_csrf]=lambda:None
+    monkeypatch.setattr(kb,'is_configured',lambda:True)
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_preview_and_unresolved_overlap_save_nothing_and_preserve_edits(client,review_store,monkeypatch):
+    review_store.brief='We provide a scheduled support service for customers.'
+    row=review_store.stage('tenant',[{'label':'What we do','content':review_store.brief}])
+    view=client.get('/onboarding/knowledge/review/'+row['id'])
+    assert view.status_code==200 and 'Possible overlap: Business brief' in view.text
+    version=review_store.load('tenant')['version'];id=row['payload']['entries'][0]['id']
+    f={'version':version,'operation':'save','action_'+id:'keep','content_'+id:review_store.brief+' Extra fact.'}
+    r=client.post('/onboarding/knowledge/review/'+row['id'],data=f)
+    assert r.status_code==409 and 'Extra fact.' in r.text and review_store.sources==[]
+    f['operation']='preview'
+    r=client.post('/onboarding/knowledge/review/'+row['id'],data=f)
+    assert r.status_code==200 and 'Extra fact.' in r.text and review_store.sources==[]
+    assert client.get('/onboarding/knowledge/review/missing').status_code==404
+
+
+def test_assistant_questions_and_drafts_are_stored_and_linked_before_admission(client,review_store,monkeypatch):
+    async def reply(*a,**kw):
+        return SimpleNamespace(reply='Does the price vary with size?',form_fill={},ready_to_advance=False,
+            notes=[{'label':'Prices','content':'We charge £50.'}],unanswered=[{'topic':'prices','question':'Does the price vary with size?'}],held=[],model='test',usage={})
+    monkeypatch.setattr(cr.concierge,'answer_onboarding',reply)
+    monkeypatch.setattr(cr.fairuse,'onboarding_allowed',lambda *a,**kw:True)
+    monkeypatch.setattr(cr,'_tenant_context',lambda ctx:{})
+    monkeypatch.setattr(cr.usage,'record_anthropic',lambda *a,**kw:None)
+    from app import setup_held
+    monkeypatch.setattr(setup_held,'load',lambda *a,**kw:[])
+    r=client.post('/concierge/onboard',json={'step':'knowledge','question':'Help with prices'})
+    assert r.status_code==200 and r.json()['review_link']['href'].startswith('/onboarding/knowledge/review/')
+    assert review_store.rows[-1]['payload']['questions'][0]['question']=='Does the price vary with size?'
+    page=client.get(r.json()['review_link']['href'])
+    assert 'Does the price vary with size?' in page.text and review_store.sources==[]
+
+
+@pytest.mark.parametrize('pending',[True,False])
+def test_review_only_assistant_never_invents_replacement_cards(client,review_store,monkeypatch,pending):
+    from copy import deepcopy
+    if pending:
+        row=review_store.stage('tenant',[{'label':'Starting service','content':'The monthly fee is £95.'}])
+    before=deepcopy(review_store.rows)
+    async def forbidden(*a,**kw):
+        pytest.fail('Review corrections must not call an ungrounded prose generator')
+    monkeypatch.setattr(cr.concierge,'answer_onboarding',forbidden)
+    monkeypatch.setattr(cr.fairuse,'onboarding_allowed',lambda *a,**kw:True)
+    r=client.post('/concierge/onboard',json={'step':'knowledge',
+        'question':'Give source-faithful replacement cards for review only.',
+        'current':{'note':'Unsaved browser edit'},
+        'history':[{'role':'assistant','content':'Invented fee 10% and an imaginary First Report card.'}]})
+    assert r.status_code==200
+    data=r.json()
+    assert data['notes']==[] and data['form_fill']=={} and not data['ready_to_advance']
+    assert '10%' not in data['reply'] and 'First Report' not in data['reply']
+    assert review_store.rows==before and review_store.sources==[]
+    if pending:
+        assert 'Starting service' in data['reply']
+        assert data['review_link']['href'].endswith(row['id'])
+    else:
+        assert "can't verify" in data['reply']
+
+
+def test_source_inventory_blocks_admission_and_preserves_corrections(client,review_store,monkeypatch):
+    from app.knowledge_fidelity import inventory
+    from app import setup_card_knowledge
+    row=review_store.stage('tenant',[{'label':'Starting service','content':'The monthly fee is £95.'}],
+        origin='Website',source_units=inventory([{'url':'https://example.test','text':'Approval must precede a booking.'}]))
+    async def forbidden(*a,**kw):pytest.fail('Unresolved source coverage must fail before embedding')
+    monkeypatch.setattr(setup_card_knowledge,'prepare',forbidden)
+    id=row['payload']['entries'][0]['id']
+    r=client.post('/onboarding/knowledge/review/'+row['id'],data={
+        'version':review_store.load('tenant')['version'],'operation':'save',
+        'action_'+id:'keep','content_'+id:'The corrected fee is £95.'})
+    assert r.status_code==409 and 'corrected fee' in r.text
+    assert 'Approval must precede a booking.' in r.text and review_store.sources==[]
+
+
+@pytest.mark.parametrize('admitted',[0,1])
+def test_discarded_notes_do_not_consume_facts_held_for_later(client,review_store,monkeypatch,admitted):
+    from app import setup_held
+    row=review_store.stage('tenant',[{'label':'Hours','content':'We open at nine.'}])
+    used=[]
+    async def admit(*a,**kw):return admitted
+    monkeypatch.setattr(kr,'admit',admit)
+    monkeypatch.setattr(setup_held,'mark_used',lambda *a,**kw:used.append(a))
+    r=client.post('/onboarding/knowledge/review/'+row['id'],data={'operation':'save'},follow_redirects=False)
+    assert r.status_code==303 and len(used)==admitted
+
+
+def test_many_long_draft_titles_do_not_break_the_next_chat_turn(client,review_store,monkeypatch):
+    review_store.stage('tenant',[{'label':str(i)+'x'*157,'content':'An actual stored fact.'} for i in range(30)])
+    monkeypatch.setattr(cr.fairuse,'onboarding_allowed',lambda *a,**kw:True)
+    first=client.post('/concierge/onboard',json={'step':'knowledge','question':'Review my drafts'})
+    assert first.status_code==200 and len(first.json()['reply'])<=cr.MAX_TURN_CHARS
+    assert '22 more draft titles' in first.json()['reply']
+    followup=client.post('/concierge/onboard',json={'step':'knowledge','question':'Show that review',
+        'history':[{'role':'assistant','content':first.json()['reply']}]})
+    assert followup.status_code==200 and len(review_store.rows)==1 and review_store.sources==[]

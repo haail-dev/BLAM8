@@ -1,0 +1,212 @@
+{% extends "admin/base.html" %}
+{% block title %}Partners · Operator · BLAM8{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-bold text-navy">Referral partners</h1>
+  </div>
+
+  {% if err == 'exists' %}
+  <div class="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+    Couldn't create that partner — the email or code is already in use.
+  </div>
+  {% elif err == 'nothing' %}
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+    Nothing cleared for that partner — commissions clear at the end of the month after they're earned.
+  </div>
+  {% elif err == 'threshold' %}
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+    Cleared balance is under the £10 minimum (clause 4.6) — it rolls forward to next month's run.
+  </div>
+  {% elif msg == 'paid' %}
+  <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+    Payout recorded — the scheduled commissions are marked paid and appear on the partner's statement.
+  </div>
+  {% elif err == 'wmissing' %}
+  <div class="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">That withdrawal request no longer exists, or it's already settled.</div>
+  {% elif err == 'wnothing' %}
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+    Nothing settleable against that request — cleared commission has moved since it was made (a clawback, most likely). It stays open.
+  </div>
+  {% elif err == 'wraced' %}
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">That request was settled by someone else a moment ago.</div>
+  {% elif msg == 'wpaid' %}
+  <div class="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">Withdrawal settled and recorded on the partner's statement.</div>
+  {% elif msg == 'wcancelled' %}
+  <div class="rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">Withdrawal request cancelled — the commissions stay scheduled.</div>
+  {% endif %}
+
+  <!-- withdrawal queue: someone is waiting on each of these -->
+  {% if withdrawals %}
+  <div class="rounded-xl bg-white border border-amber-300 overflow-hidden">
+    <div class="px-5 py-4 border-b border-amber-200 bg-amber-50">
+      <p class="font-semibold text-navy">Withdrawal requests · {{ withdrawals|length }}</p>
+      <p class="mt-1 text-xs text-slate-600">
+        Send the money first, then record it here — the commission rows are chosen at that moment, so a clawback since the request is picked up.
+        We settle in whole commission amounts, so the figure paid can land under the amount asked for.
+      </p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="px-4 py-2">Requested</th><th class="px-4 py-2">Partner</th>
+          <th class="px-4 py-2 text-right">Amount</th><th class="px-4 py-2">Record payment</th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for w in withdrawals %}
+          <tr>
+            <td class="px-4 py-2.5 whitespace-nowrap text-slate-500">{{ (w.requested_at or '')[:10] }}</td>
+            <td class="px-4 py-2.5 font-medium text-navy">{{ w.partner_name }}</td>
+            <td class="px-4 py-2.5 text-right font-semibold text-navy">£{{ '%.2f'|format(w.requested_gbp|float) }}</td>
+            <td class="px-4 py-2.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <form method="post" action="/admin/withdrawals/{{ w.id }}/pay" class="flex items-center gap-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                  <input name="reference" placeholder="bank ref" class="w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-xs outline-none focus:border-brand">
+                  <button class="whitespace-nowrap rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Mark paid</button>
+                </form>
+                <form method="post" action="/admin/withdrawals/{{ w.id }}/cancel">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                  <button class="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- new partner -->
+  <form method="post" action="/admin/partners/new" class="rounded-xl bg-white border border-slate-200 p-5 grid gap-3 sm:grid-cols-5 items-end">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <div class="sm:col-span-1">
+      <label class="block text-xs font-semibold text-slate-500">Name</label>
+      <input name="name" required class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="Sterling Accounts">
+    </div>
+    <div class="sm:col-span-2">
+      <label class="block text-xs font-semibold text-slate-500">Sign-in email (their SSO login)</label>
+      <input name="email" type="email" required class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="jo@sterling.co.uk">
+    </div>
+    <div>
+      <label class="block text-xs font-semibold text-slate-500">Code <span class="font-normal text-slate-400">(blank = auto)</span></label>
+      <input name="ref_code" maxlength="32" class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm uppercase" placeholder="STERLING41">
+    </div>
+    <div class="flex gap-2 items-end">
+      <div class="flex-1">
+        <label class="block text-xs font-semibold text-slate-500">Rate %</label>
+        <input name="rate_pct" class="mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" placeholder="20">
+      </div>
+      <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Add</button>
+    </div>
+  </form>
+
+  <!-- partner table -->
+  <div class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+    {% if partners %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+            <th class="px-5 py-3 font-semibold">Partner</th>
+            <th class="px-5 py-3 font-semibold">Code</th>
+            <th class="px-5 py-3 font-semibold text-right">Referrals</th>
+            <th class="px-5 py-3 font-semibold text-right">Active</th>
+            <th class="px-5 py-3 font-semibold text-right">Month</th>
+            <th class="px-5 py-3 font-semibold text-right">Scheduled</th>
+            <th class="px-5 py-3 font-semibold text-right">Lifetime</th>
+            <th class="px-5 py-3 font-semibold">Payout</th>
+            <th class="px-5 py-3 font-semibold">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in partners %}
+          <tr class="border-b border-slate-50 {% if p.status != 'active' %}opacity-60{% endif %}">
+            <td class="px-5 py-3">
+              <div class="font-medium text-navy">{{ p.name }}</div>
+              <div class="text-xs text-slate-400">{{ p.email }} · {{ p.summary.rate_pct }}%</div>
+            </td>
+            <td class="px-5 py-3 font-mono font-semibold tracking-wider">{{ p.ref_code }}</td>
+            <td class="px-5 py-3 text-right">{{ p.summary.total }}</td>
+            <td class="px-5 py-3 text-right">{{ p.summary.active }}</td>
+            <td class="px-5 py-3 text-right text-slate-600">£{{ '%.2f'|format(p.summary.this_month) }}</td>
+            <td class="px-5 py-3 text-right font-semibold {% if p.summary.scheduled %}text-emerald-600{% else %}text-slate-400{% endif %}">
+              £{{ '%.2f'|format(p.summary.scheduled) }}
+              <div class="text-[11px] font-normal text-slate-400">£{{ '%.2f'|format(p.summary.payable) }} cleared</div></td>
+            <td class="px-5 py-3 text-right text-slate-600">£{{ '%.2f'|format(p.summary.lifetime) }}</td>
+            <td class="px-5 py-3">
+              <form method="post" action="/admin/partners/{{ p.id }}/payout" class="flex gap-1.5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input name="reference" placeholder="bank ref" class="w-24 rounded border border-slate-200 p-1 text-xs">
+                <button type="submit" class="rounded bg-navy px-2 py-1 text-xs font-semibold text-white hover:bg-navy-800 disabled:opacity-40"
+                        {% if p.summary.payable < p.summary.min_payout %}disabled{% endif %}>Record payout</button>
+              </form>
+            </td>
+            <td class="px-5 py-3">
+              <form method="post" action="/admin/partners/{{ p.id }}/status">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="status" value="{{ 'disabled' if p.status == 'active' else 'active' }}">
+                <button type="submit" class="text-xs font-semibold text-slate-400 hover:text-slate-600">
+                  {{ 'Disable' if p.status == 'active' else 'Re-activate' }}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-5 py-10 text-center text-sm text-slate-500">No partners yet — add the first one above.
+      They sign in with their normal Google/Microsoft account and see their portal at /partner.</div>
+    {% endif %}
+  </div>
+
+  <!-- leads (dispute review) -->
+  <div class="rounded-xl bg-white border border-slate-200 overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <span class="font-semibold text-navy">Leads</span>
+      <span class="ml-2 text-xs text-slate-400">manual introductions across partners — review anything Disputed</span>
+    </div>
+    {% if leads %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+            <th class="px-5 py-3 font-semibold">Partner</th>
+            <th class="px-5 py-3 font-semibold">Business</th>
+            <th class="px-5 py-3 font-semibold">Contact</th>
+            <th class="px-5 py-3 font-semibold">Registered</th>
+            <th class="px-5 py-3 font-semibold">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in leads %}
+          <tr class="border-b border-slate-50">
+            <td class="px-5 py-3 text-slate-600">{{ l.partner_name }}</td>
+            <td class="px-5 py-3 font-medium text-navy">{{ l.company_name }}</td>
+            <td class="px-5 py-3 text-slate-500">{{ l.contact_email }}</td>
+            <td class="px-5 py-3 text-slate-500">{{ (l.created_at or '')[:10] }}</td>
+            <td class="px-5 py-3">
+              {% if l.status == 'disputed' %}<span class="inline-flex rounded-full bg-amber-50 text-amber-700 text-xs font-semibold px-2.5 py-0.5">disputed</span>
+              {% elif l.status == 'converted' %}<span class="inline-flex rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-0.5">converted</span>
+              {% elif l.status == 'ineligible' %}<span class="inline-flex rounded-full bg-rose-50 text-rose-600 text-xs font-semibold px-2.5 py-0.5">ineligible</span>
+              {% else %}<span class="inline-flex rounded-full bg-slate-100 text-slate-500 text-xs font-semibold px-2.5 py-0.5">{{ l.status }}</span>{% endif %}
+              {% if l.reason %}<span class="ml-1 text-[11px] text-slate-400">{{ l.reason }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="px-5 py-8 text-center text-sm text-slate-500">No leads registered yet.</div>
+    {% endif %}
+  </div>
+
+  <p class="text-xs text-slate-400">Commission is ledgered from collected Stripe invoices only — 20% of the amount paid excluding
+    any VAT (promos exact by construction; processor fees not deducted). Refunds claw back automatically. Commissions clear at the
+    end of the month after they're earned (net-30); run "Record payout" at month-end AFTER sending the money — it pays cleared
+    rows only and stamps the statement the partner sees. Balances under £10 roll forward.</p>
+</div>
+{% endblock %}

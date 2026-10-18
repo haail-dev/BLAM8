@@ -1,0 +1,73 @@
+{% extends "app/base.html" %}
+{% block title %}Quotes · BLAM8{% endblock %}
+{% block heading %}Quotes{% endblock %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{# status = dot + quiet text (Counting House), never a filled pill #}
+{% set stone = {'draft':'text-slate-500','sent':'text-brand','accepted':'text-emerald-700','declined':'text-rose-700','expired':'text-amber-700','invoiced':'text-indigo-700','cancelled':'text-slate-400'} %}
+{% set sdot = {'draft':'bg-slate-200','sent':'bg-brand','accepted':'bg-emerald-600','declined':'bg-rose-600','expired':'bg-amber-500','invoiced':'bg-indigo-500','cancelled':'bg-slate-200'} %}
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      {% if outstanding_n %}
+      <p class="text-sm text-slate-600"><span class="font-semibold text-navy">£{{ '%.2f'|format(outstanding_value) }}</span>
+        waiting on {{ outstanding_n }} sent quote{{ 's' if outstanding_n != 1 else '' }} — money not yet won.</p>
+      {% else %}
+      <p class="text-sm text-slate-500">Send a quote as a link the customer can view, ask about, and accept online — you'll know the moment they open it.</p>
+      {% endif %}
+    </div>
+    <a href="/app/quotes/new" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">New quote</a>
+  </div>
+
+  {# Status pills — same interaction as the inbox label pills. #}
+  <div class="flex items-center gap-1 text-sm overflow-x-auto">
+    <a href="/app/quotes" class="rounded-lg px-2.5 py-1.5 font-medium whitespace-nowrap transition {{ 'bg-navy text-white' if not status_filter else 'text-slate-500 hover:bg-slate-50 hover:text-navy' }}">All</a>
+    {% for s_key in ['sent','accepted','draft','declined','expired','invoiced'] %}
+    {% if counts.get(s_key) %}
+    <a href="/app/quotes?status={{ s_key }}" class="rounded-lg px-2.5 py-1.5 font-medium whitespace-nowrap transition {{ 'bg-navy text-white' if status_filter == s_key else 'text-slate-500 hover:bg-slate-50 hover:text-navy' }}">{{ s_key.replace('_',' ') | capitalize }} <span class="{{ 'text-white/60' if status_filter == s_key else 'text-slate-400 font-normal' }}">{{ counts[s_key] }}</span></a>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    {% if quotes %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Ref</th><th class="py-2 pr-3">Customer</th>
+          <th class="py-2 pr-3 hidden sm:table-cell">Valid until</th>
+          <th class="py-2 pr-3 hidden sm:table-cell">Seen</th>
+          <th class="py-2 pr-3 text-right">Total</th><th class="py-2 pr-3"></th><th class="py-2"></th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for q in quotes %}
+          <tr>
+            <td class="py-2 pr-3 font-medium text-navy whitespace-nowrap">{{ q.quote_ref }}</td>
+            <td class="py-2 pr-3 text-slate-600">{{ q.customer_name or q.customer_email or '—' }}
+              {% if q.title %}<span class="text-slate-400 hidden md:inline">· {{ q.title }}</span>{% endif %}</td>
+            <td class="py-2 pr-3 text-slate-500 hidden sm:table-cell whitespace-nowrap">{{ q.valid_until | pretty_date or '—' }}</td>
+            <td class="py-2 pr-3 text-slate-500 hidden sm:table-cell whitespace-nowrap">
+              {% if q.viewed_at %}✓ {{ q.viewed_at | pretty_date }}{% if (q.view_count or 0) > 1 %} ×{{ q.view_count }}{% endif %}{% else %}—{% endif %}</td>
+            <td class="py-2 pr-3 text-right font-semibold text-navy whitespace-nowrap">£{{ '%.2f'|format(q.total|float) }}</td>
+            <td class="py-2 pr-3"><span class="inline-flex items-center gap-1.5 text-[13px] font-medium whitespace-nowrap {{ stone.get(q.status,'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ sdot.get(q.status,'bg-slate-200') }} self-center"></span>{{ q.status.replace('_',' ') }}</span></td>
+            <td class="py-2 text-right"><a href="/app/quotes/{{ q.id }}" class="text-brand text-xs font-semibold whitespace-nowrap">View &rarr;</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">No quotes yet{% if status_filter %} with that status{% endif %}.
+      {% if not status_filter %}Create one above, or start from a booking's page.{% endif %}</p>
+    {% endif %}
+  </div>
+
+  <details class="text-xs">
+    <summary class="cursor-pointer select-none text-slate-400 hover:text-navy transition font-medium">How quotes work</summary>
+    <p class="mt-1.5 text-slate-400 leading-relaxed">
+      Quotes share the branding, VAT and business details in <a href="/app/invoices/settings" class="text-brand">Getting paid</a>.
+      Accepting a quote records the customer's typed name, the date, and exactly what was quoted — and converting it copies those agreed lines straight onto the invoice.
+    </p>
+  </details>
+</div>
+{% endblock %}

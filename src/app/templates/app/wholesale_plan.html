@@ -1,0 +1,56 @@
+{% extends "app/base.html" %}
+{% block title %}This week · Wholesale OS · BLAM8{% endblock %}
+{% block heading %}This-week plan{% endblock %}
+{% set back = ('/app/wholesale', 'Wholesale') %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>Every order shipping this week, by day. Shortages flag when a line's orders exceed what's allocatable — priority buyers fill first, the balance waitlists.</p>
+  </div>
+
+  {% if plan %}
+  {% for day in plan %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">{{ day.date }}</h2>
+      <span class="text-xs text-slate-400">{{ day.orders | length }} order{{ '' if day.orders | length == 1 else 's' }}</span>
+    </div>
+
+    {% if day.shortages %}
+    <div class="px-5 py-3 bg-amber-50/60 border-b border-amber-100 space-y-1">
+      {% for s in day.shortages %}
+      <p class="text-sm text-amber-800">
+        <span class="font-semibold">{{ s.line }}:</span>
+        {{ s.ordered }} ordered, {{ s.allocatable }} allocatable → <span class="font-semibold">{{ s.short_by }} short</span>
+      </p>
+      {% endfor %}
+      {% if day.waitlist %}
+      <p class="text-xs text-amber-700">Waitlisted: {% for w in day.waitlist %}<a href="/app/wholesale/orders/{{ w.deal_id }}" class="underline">{{ w.title }}</a> ({{ w.allocatable }}/{{ w.ordered }}){{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <ul class="divide-y divide-slate-50">
+      {% for o in day.orders %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+          {{ 'bg-amber-100 text-amber-700' if o.wholesale_status == 'on_hold_short' else 'bg-blue-100 text-blue-700' }}">
+          {{ (o.wholesale_status or 'quote') | upper }}</span>
+        <a href="/app/wholesale/orders/{{ o.id }}" class="font-medium text-navy hover:underline">{{ o.title }}</a>
+        <span class="text-slate-500">{{ o.buyer }}</span>
+        <span class="text-slate-400 ml-auto">£{{ '%.2f' | format(o.total) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endfor %}
+  {% else %}
+  <section class="bg-white rounded-xl border border-slate-200 px-5 py-8">
+    <p class="text-sm text-slate-400">Nothing plannable this week. Orders with a required-by date land here automatically; add per-line weekly capacity in settings to get shortage flags.</p>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

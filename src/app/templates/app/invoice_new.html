@@ -1,0 +1,75 @@
+{% extends "app/base.html" %}
+{% block title %}New invoice · BLAM8{% endblock %}
+{% block heading %}New invoice{% endblock %}
+{% set back = ('/app/invoices', 'All invoices') %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set inp = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand" %}
+<div class="max-w-2xl mx-auto p-6 space-y-5">
+  {% if msg == 'nocustomer' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Add a customer (email or name) first.</div>{% endif %}
+  {% if msg == 'nolines' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Add at least one line.</div>{% endif %}
+  {% if msg == 'failed' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">Couldn't create the invoice — try again.</div>{% endif %}
+
+  <p class="text-sm text-slate-500">A standalone invoice — bill anything, whether or not it came through the diary. It starts as a draft you can edit before sending. Tip: you can also just ask the Concierge — “draft an invoice for …”.</p>
+
+  <form method="post" action="/app/invoices/new" class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <div class="grid sm:grid-cols-2 gap-3">
+      <label class="block"><span class="text-xs font-medium text-slate-500">Customer email</span>
+        <input name="customer_email" type="email" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Customer name</span>
+        <input name="customer_name" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Due date <span class="text-slate-400">(blank = {% if due_days == 0 %}on receipt{% else %}{{ due_days }} days, per your payment terms{% endif %})</span></span>
+        <input name="due_date" type="date" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Notes (optional)</span>
+        <input name="notes" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Their ref / PO <span class="text-slate-400">(optional — prints on the invoice and the export)</span></span>
+        <input name="customer_reference" placeholder="e.g. PO 4471" class="{{ inp }}"></label>
+    </div>
+
+    <div class="space-y-2">
+      <div class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+        {% if packages %}<span class="w-36">Package</span>{% endif %}<span class="flex-1">Item</span><span class="w-16 text-right">Qty</span><span class="w-28 text-right">Unit price (£)</span>
+      </div>
+      {# Row 1 shows; the rest are spares behind "+ Add a line" (src/app/static/spare_rows.js). #}
+      {% for i in range(6) %}
+      <div class="flex items-center gap-2" {{ 'data-filled-row' if i == 0 else 'data-spare-row hidden' }}>
+        {% if packages %}
+        {# Packages (src/app/wallet.py): pick one and the row fills itself; the key rides
+           the line so the issued invoice mints the credits. #}
+        <select name="package_key" class="w-36 rounded-lg border border-slate-300 px-2 py-1.5 text-sm bg-white pkg-pick">
+          <option value="">—</option>
+          {% for p in packages %}<option value="{{ p.key }}" data-name="{{ p.name }}" data-price="{{ '%.2f'|format(p.price) }}">{{ p.name }} · {{ '%g'|format(p.quantity) }} {{ p.unit }}{{ 's' if p.quantity != 1 }}</option>{% endfor %}
+        </select>
+        {# 2b nit: who the package is for — matched to the customer's dependant by name on send. #}
+        <input name="for_name" placeholder="for (name)" title="Optional: the dependant this package is for, by name" class="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm">
+        {% endif %}
+        <input name="description" placeholder="{{ 'e.g. Annual service (standard)' if i == 0 else 'Add a line…' }}" class="flex-1 rounded-lg border {{ 'border-slate-300' if i == 0 else 'border-dashed border-slate-300' }} px-3 py-1.5 text-sm outline-none focus:border-brand">
+        <input name="quantity" type="number" step="0.5" min="0" placeholder="1" class="w-16 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+        <input name="unit_price" type="number" step="0.01" placeholder="0.00" class="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+      </div>
+      {% endfor %}
+      <div><button type="button" data-add-row class="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">+ Add a line</button></div>
+      <p class="text-xs text-slate-400">VAT is added on top per your <a href="/app/invoices/settings" class="text-brand">Getting paid settings</a>. Blank quantity counts as 1.{% if packages %} A package line adds its sessions or hours to the customer's wallet when the invoice is sent.{% endif %}</p>
+      {% if packages %}
+      <script>
+        document.querySelectorAll('.pkg-pick').forEach(function (sel) {
+          sel.addEventListener('change', function () {
+            var o = sel.options[sel.selectedIndex], row = sel.closest('div');
+            if (!o || !o.value) return;
+            row.querySelector('[name="description"]').value = o.dataset.name;
+            row.querySelector('[name="quantity"]').value = 1;
+            row.querySelector('[name="unit_price"]').value = o.dataset.price;
+          });
+        });
+      </script>
+      {% endif %}
+    </div>
+
+    <div class="flex justify-end">
+      <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Create draft invoice</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

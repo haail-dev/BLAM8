@@ -1,0 +1,126 @@
+{# Today's person pop-up (Kris 2026-09-21). "Clicking the blank space / name
+   on a chip does nothing. I would like it to open a pop-up (like the
+   Promises links), but the pop-up just shows the full sentence for the
+   lines that are being listed with ellipses — a small expansion before
+   clicking a link for FULL detail."
+
+   One file, two uses, the same shape as _promise_popup.html:
+     · {% from "app/_card_popup.html" import card_popup %} — the macro
+       renders the card's lines IN FULL into an inert <template> on the card
+       (home.html), so opening is a copy into the shell and nothing is fetched;
+     · {% include "app/_card_popup.html" %} — the shell itself, once per
+       page, and the script that fills it.
+   Every line keeps its onward step: a link row is the same link, a promise
+   row hands over to the row's own promise pop-up (and its dots).
+
+   The dot sits on the FIRST line's baseline, not centred like the card's
+   (Kris 2026-09-21): a line wraps here, and a centred dot floated to the
+   middle of the paragraph, level with nothing. #}
+
+{% macro card_popup(p) %}
+<template data-card-popup data-card-title="{{ p.name }}{% if p.handle %} · {{ p.handle }}{% endif %}{% if p.company %} · {{ p.company }}{% endif %}">
+  <ul class="space-y-2.5">
+    {% for x in p.facts %}
+    {# The card's own tones (home.html), so a line reads the same colour here. #}
+    {% set ink = {'rose': 'text-rose-700', 'emerald': 'text-emerald-700', 'amber': 'text-amber-700', 'ink': 'text-slate-500'}.get(x.tone, 'text-brand') %}
+    {% set dot = {'rose': 'bg-rose-600', 'emerald': 'bg-emerald-600', 'amber': 'bg-amber-500', 'ink': 'bg-slate-400'}.get(x.tone, 'bg-brand') %}
+    <li class="flex items-baseline gap-2">
+      {% if x.promise %}
+      <button type="button" data-card-promise="{{ x.promise.id or '' }}" aria-haspopup="dialog"
+              class="group flex-1 min-w-0 flex items-baseline gap-2 text-left">
+        <span class="flex-none h-1.5 w-1.5 rounded-full self-baseline {{ dot }}"></span>
+        <span class="flex-none leading-snug text-[13px] font-medium {{ ink }}">{% for part in (x.chip | string).split(' · ') %}{% set bits = part.rsplit(' ', 1) %}{% if bits | length == 2 and ':' in bits[1] and bits[1].replace(':', '').isdigit() %}<span class="block">{{ bits[0] }}</span><span class="block">{{ bits[1] }}</span>{% else %}<span class="block">{{ part }}</span>{% endif %}{% endfor %}</span>
+        {% if x.text %}<span class="min-w-0 break-words text-[13px] leading-snug text-slate-600 group-hover:text-brand">{{ x.text }}</span>{% endif %}
+      </button>
+      {% else %}
+      <a href="{{ x.href }}" class="group flex-1 min-w-0 flex items-baseline gap-2">
+        <span class="flex-none h-1.5 w-1.5 rounded-full self-baseline {{ dot }}"></span>
+        <span class="flex-none leading-snug text-[13px] font-medium {{ ink }}">{% for part in (x.chip | string).split(' · ') %}{% set bits = part.rsplit(' ', 1) %}{% if bits | length == 2 and ':' in bits[1] and bits[1].replace(':', '').isdigit() %}<span class="block">{{ bits[0] }}</span><span class="block">{{ bits[1] }}</span>{% else %}<span class="block">{{ part }}</span>{% endif %}{% endfor %}</span>
+        {% if x.text %}<span class="min-w-0 break-words text-[13px] leading-snug text-slate-600 group-hover:text-brand">{{ x.text }}</span>{% endif %}
+      </a>
+      {% endif %}
+      {% if x.at %}<span class="flex-none text-[11px] tabular-nums text-slate-400">{{ x.at }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</template>
+{% endmacro %}
+
+{# The shell — one per page, filled from the card's own <template>. Centre
+   screen (Kris 2026-09-21), z-50 like every modal, so it covers the app bar
+   (z-30) and the deck's pile. #}
+<div data-card-modal class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
+  <div data-card-backdrop class="absolute inset-0 bg-navy/40" style="backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); background: radial-gradient(ellipse at center, rgba(11,19,43,.22) 0%, rgba(11,19,43,.62) 100%);"></div>
+  <div class="relative w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-5">
+    <div class="flex items-center justify-between gap-3">
+      <p id="card-modal-title" class="min-w-0 truncate text-sm font-semibold text-navy">Card</p>
+      {# The cross: quiet to look at, thumb-sized to hit (same as the promise pop-up's). #}
+      <button type="button" data-card-close aria-label="Close" class="flex-none -my-2 -mr-2 px-2.5 py-2 text-xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+    </div>
+    <div class="mt-3" data-card-body></div>
+  </div>
+</div>
+
+<script>
+  // Today's person pop-up. The name, or blank space on the card's face,
+  // copies the card's <template> into the shell — nothing is fetched. Links,
+  // buttons and forms on the card keep their own job, and a swipe that
+  // selected text is not a tap. Closes on the cross, the backdrop or Escape,
+  // and hands focus back to the card's name.
+  (function () {
+    var modal = document.querySelector("[data-card-modal]");
+    if (!modal) return;
+    var body = modal.querySelector("[data-card-body]");
+    var title = modal.querySelector("#card-modal-title");
+    var closeBtn = modal.querySelector("[data-card-close]");
+    var opener = null, openedCard = null;
+
+    function open(card, from) {
+      var tpl = card.querySelector("template[data-card-popup]");
+      if (!tpl) return;
+      body.innerHTML = "";
+      body.appendChild(tpl.content.cloneNode(true));
+      title.textContent = tpl.getAttribute("data-card-title") || "Card";
+      modal.classList.remove("hidden");
+      opener = from || card.querySelector("[data-card-open]");
+      openedCard = card;
+      closeBtn.focus();
+    }
+    function close() {
+      if (modal.classList.contains("hidden")) return;
+      modal.classList.add("hidden");
+      body.innerHTML = "";
+      openedCard = null;
+      if (opener) { opener.focus(); opener = null; }
+    }
+    document.addEventListener("click", function (e) {
+      var name = e.target.closest("[data-card-open]");
+      if (!name) {
+        if (e.target.closest("a, button, form, input, label, select, textarea, template, [data-card-modal], [data-promise-modal]")) return;
+        var face = e.target.closest(".deck-face");
+        if (!face || face.classList.contains("deck-face-back")) return;
+        if (window.getSelection && String(window.getSelection())) return;
+      }
+      var card = e.target.closest(".deck-card");
+      if (!card) return;
+      e.preventDefault();
+      open(card, name);
+    });
+    // A promise line hands over to the row's own pop-up: the row's button
+    // knows its template and its neighbours (the dots), so this pop-up
+    // closes and taps it.
+    modal.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-card-promise]");
+      if (!btn) return;
+      var id = btn.getAttribute("data-card-promise");
+      // (JSON.stringify quotes the id, so the page's text never carries the
+      // row button's attribute-with-a-value, which tests read as a promise row.)
+      var row = openedCard && openedCard.querySelector('[data-facts] [data-promise-open=' + JSON.stringify(id) + ']');
+      close();
+      if (row) row.click();
+    });
+    closeBtn.addEventListener("click", close);
+    modal.querySelector("[data-card-backdrop]").addEventListener("click", close);
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
+  })();
+</script>

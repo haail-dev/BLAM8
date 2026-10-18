@@ -1,0 +1,839 @@
+{# ── A round's own ghost (Kris 2026-09-01) ─────────────────────────────────
+   The decision ghost on the stage is built from `latest` only, but every field
+   it draws on — category_reason, searched_for, source_pills, draft_sources — is
+   recorded PER email_log row, so every past round already carries its own and
+   nothing was surfacing it. Open a collapsed round and you saw what was said
+   and what was replied; the reasoning that produced it stayed invisible, which
+   is the half you actually go back for.
+
+   Same quiet voice as the stage ghost, and the same rule about when to stay
+   silent: a hand-set label has no agent reasoning behind it, and a row that
+   recorded nothing gets no header rather than an empty one. The knowledge gap
+   is deliberately NOT repeated — it already sits on the inbound bubble above.
+
+   No rule above it (Kris 2026-09-21): the bubble's own edge ends the block,
+   and a line across the page only added to the crowding. #}
+{% macro round_ghost(e) %}
+  {# ghost_why, not category_reason: the route already dropped the reasons that
+     explain nothing — a hand-set label, and a reason that just restates the
+     category the status line above already shows. #}
+  {% set why = e.ghost_why %}
+  {% set pills = e.source_pills or [] %}
+  {% set grounded_known = e.draft_sources is not none %}
+  {% if why or e.recorded_query or pills or (grounded_known and not pills) %}
+  <div data-ghost-scope="round-{{ e.id }}" class="mt-2 pt-2 space-y-1 text-center">
+    {% if why %}
+    <p class="text-xs text-slate-400"><span class="font-medium text-slate-500">Agent assessment:</span> {{ why }}</p>
+    {% endif %}
+    {% if e.recorded_query %}
+    <p class="text-xs text-slate-400">Searched your knowledge using the customer's message</p>
+    {% endif %}
+    {% if e.knowledge_line %}<p class="text-xs text-slate-400">{{ e.knowledge_line }}</p>{% endif %}
+    {% if pills %}
+    <p class="text-xs text-slate-400">Knowledge retrieved from
+      {% for p in pills[:3] %}<span class="text-slate-500">{{ p.source }}</span>{% if not loop.last %}, {% endif %}{% endfor %}
+      {%- if pills | length > 3 %} +{{ pills | length - 3 }} more{% endif %}</p>
+    {% elif grounded_known and not e.knowledge_line %}
+    {# Legacy lists did not record failures or additional context notes. #}
+    <p class="text-xs text-slate-400">No knowledge matches recorded.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endmacro %}
+{# The live half of a conversation thread — now a Duet stage (Kris 2026-08-31,
+   layout ported from OurTab's duet chat): one fixed viewport, the newest
+   inbound top-left, the draft (or booking card / last reply) docked at the
+   bottom, and the FULL history a layer above the stage, pulled down over it
+   like a blind (gesture + CSS in conversation.html). Included by
+   conversation.html on a full render AND returned alone by
+   GET /app/conversations/view/fragment: live.js swaps #thread-live's innerHTML
+   with it (then re-runs blam8ThreadInit, which re-binds the stage and reapplies
+   the history-open state).
+   Needs: items, contact, booking, drafting_here, drafting_msgs,
+   category/category_reason/cat_meta, suppression. #}
+{# Sent provenance (Kris 2026-08-31): the label tells the truth about who wrote
+   and who sent — auto = AI · Sent; a human-approved AI draft says so (and
+   whether it was edited first); an owner-written reply (empty pen) is theirs.
+   Legacy rows without stamps keep the old AI · Sent. #}
+{# When the reply went, right-aligned on the sent bubble's label row. Rows sent
+   before sent_at existed (2026-09-23) show nothing — created_at is when the
+   email CAME IN, not when we replied. #}
+{% macro sent_time(e) %}{% set w = e.sent_at | sent_when %}{% if w %}<span class="text-[11px] font-medium text-emerald-600/80 whitespace-nowrap">{{ w }}</span>{% endif %}{% endmacro %}
+{% macro sent_label(e) %}{% if e.sent_via == 'owner' %}You · Sent{% elif e.sent_via == 'human' %}{{ 'AI · Edited & approved' if e.edited else 'AI · Approved by you' }}{% else %}AI · Sent{% endif %}{% endmacro %}
+{# Portal chat turns (Kris 2026-08-31): the customer-portal conversation rides
+   the history blind in violet — unmistakably a different channel. Customer
+   turns sit left like inbound mail, the portal assistant's answers right. #}
+{# A paperclip on the bubble whenever the message carried a file (Kris
+   2026-09-20) — the customer's attachment saved to the record, or the PDF an
+   invoice went out with. It opens the file itself, and sits on the resting
+   face so a collapsed bubble still says "there's something attached". #}
+{% macro clip(files) %}{% for a in files or [] %}<a href="{{ a.href }}" target="_blank" rel="noopener" title="{{ a.name }}" aria-label="Open {{ a.name }}" class="attachment-clip inline-flex items-center flex-none align-middle ml-1 text-slate-400 hover:text-brand transition"><svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/></svg></a>{% endfor %}{% endmacro %}
+{# Photos as photos (Kris 2026-09-26: "we don't have anywhere to store,
+   display or attach photos") — a row of thumbnails under the message, each
+   opening the full picture. The clip above still says "there's a file". #}
+{% macro photo_strip(files, extra='') %}{% set ph = (files or []) | selectattr('photo') | list %}{% if ph %}<div class="{{ extra }} mt-2 flex flex-wrap gap-1.5" data-photo-strip>{% for a in ph %}<a href="{{ a.href }}" target="_blank" rel="noopener" title="{{ a.name }}" class="block h-16 w-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-100"><img src="{{ a.href }}" alt="{{ a.name }}" loading="lazy" class="h-full w-full object-cover" onerror="this.parentNode.style.display='none'"></a>{% endfor %}</div>{% endif %}{% endmacro %}
+{# The ⓘ on a SENT reply (Kris 2026-09-22: "once the draft has been sent, we
+   can no longer review the ⓘ"). The working panel used to live on the draft
+   box alone, so it went out of reach at exactly the moment the question gets
+   asked most — you go back to a reply that has already gone and want to know
+   why it said that. Same glyph, same panel, parked in the bubble's top-right
+   corner where it cannot crowd the provenance label. Rows drafted before the
+   agent recorded its working simply have no ⓘ.
+
+   No ids: the newest sent round is drawn twice — once on the stage, once as
+   the history blind's last page — so a tap finds the panel inside its OWN
+   bubble ([data-working-box]) rather than the first one in the document. #}
+{% macro working_eye() %}<button type="button" data-working-toggle aria-expanded="false"
+        title="How the agent got here" aria-label="Show the agent's working"
+        class="flex-none -mr-1 -my-1 rounded-lg p-1 text-emerald-600/70 hover:bg-emerald-100 hover:text-emerald-800 transition">
+  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
+</button>{% endmacro %}
+{% macro working_panel(text, technical) %}<div data-working-panel hidden
+     class="mt-2 rounded-lg border border-emerald-200 bg-white/70 p-3 max-h-[40vh] overflow-y-auto"
+     style="overscroll-behavior: contain;">
+  <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">How the agent got here</p>
+  <pre class="whitespace-pre-wrap text-xs text-slate-600 leading-relaxed font-sans">{{ text }}</pre>
+  <pre hidden data-working-technical>{{ technical }}</pre>
+</div>{% endmacro %}
+{% macro portal_bubble(m) %}
+{% if m.role == 'customer' %}
+<div class="flex">
+  <div class="max-w-[85%] rounded-2xl rounded-tl-sm bg-violet-50 border border-violet-200 px-4 py-3">
+    <p class="text-[11px] font-semibold text-violet-600">Customer portal{% if m.created_at %} · {{ m.created_at | sent_when }}{% endif %}</p>
+    <div class="mt-1 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[24vh] overflow-auto">{{ m.content }}</div>
+  </div>
+</div>
+{% else %}
+<div class="flex flex-col items-end">
+  <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-white border border-violet-200 px-4 py-3">
+    <p class="text-[11px] font-semibold text-violet-500">Portal assistant</p>
+    <div class="mt-1 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed max-h-[24vh] overflow-auto">{{ m.content }}</div>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+{% set latest = items[-1] if items else None %}
+{% set dmsg = drafting_msgs[-1] if drafting_here and drafting_msgs else None %}
+{# The dock belongs to the latest row — or, once that row is decided, to the
+   newest row still pending on the thread (run #8: an automatic package note
+   filed for approval had no control once a later email arrived). #}
+{% set pending_rows = items | selectattr('status', 'equalto', 'pending') | list %}
+{% set pending = (latest if (latest and latest.status not in ('sent', 'skipped')) else (pending_rows[-1] if pending_rows else None)) if not booking.is_request else None %}
+{# Knowledge hold: the agent deferred a missing business fact and wrote no
+   reply (rule 5) — the dock shows the gap and its two doors instead of an
+   empty draft form. #}
+{% set gap_hold = pending and not (pending.draft_reply or '').strip() and pending.knowledge_gap %}
+{# Document hold (Kris 2026-09-22): the reply waits on a card the customer sent;
+   the dock shows the card and the decision instead of an empty draft form. #}
+{% set doc_hold_on = doc_hold and pending and pending.id == doc_hold.id %}
+{# A thread that needs a human PULSES (Kris 2026-09-01) — the whole stage
+   breathes rose (amber for a merely concerned customer) instead of wearing a
+   warning sign in the corner. The reasons show themselves in the ghost below,
+   so nothing has to be tapped to find out why. #}
+<div id="thread-stage" data-contact-name="{{ contact_name or contact }}" data-contact-href="{{ contact_crm_href }}" class="relative h-full min-h-0 overflow-hidden flex flex-col{% if attention %} needs-eyes needs-eyes-{{ attention_tone }}{% endif %}" style="touch-action: pan-y;" data-pull-refresh="off">
+
+  {# ── History layer — the whole record, pulled down over the stage, one
+        ROUND PER PAGE (Kris 2026-09-20: "the expanded history isn't clear on
+        message rounds"). Each page is laid out like the stage — the customer
+        top-left, the agent's working in the middle, the reply bottom-right —
+        and a scroll or swipe snaps to the next round; the newest round is the
+        last page, so "now" is just where the pages end. Every page is locked
+        to the blind's height and long messages scroll inside their box, the
+        way the stage's own bubble does (Kris 2026-09-20). The pending draft's
+        form still lives on the stage — one form, one set of ids — so its page
+        only points at it. #}
+  <div id="thread-history" class="thread-history bg-slate-100" aria-hidden="true">
+    {# No "Back to now" button (Kris 2026-09-20: "gets in the way"): the blind
+       closes the way it opened — a pull, or a wheel notch down past the last
+       page (conversation.html). #}
+    <div id="thread-msgs" class="thread-pages">
+      {% set total = (items | length) + (1 if (drafting_here or portal_tail) else 0) %}
+      {% if not items and not drafting_here %}
+      <section class="round-page"><div class="p-10 text-center text-slate-400 text-sm">No messages in this conversation yet.</div></section>
+      {% endif %}
+      {% for e in items %}
+      {# id=log-<row id>: the diary's per-booking deep-link target (a held/offered
+         slot links to the exact exchange that placed it, not just the thread). #}
+      <section class="round-page" id="log-{{ e.id }}" data-round="{{ loop.index }}">
+        <div class="round-frame max-w-3xl mx-auto w-full px-4 sm:px-6 pt-1 pb-4 flex flex-col min-h-0 flex-1">
+          <p class="round-marker text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right pb-2">Round {{ loop.index }} of {{ total }}{% if e.created_at %} · {{ e.created_at | sent_when }}{% endif %}</p>
+          {# Portal chat that happened before this exchange lands here, in order. #}
+          {% for m in e.portal_before or [] %}{{ portal_bubble(m) }}{% endfor %}
+
+          {# Top-left: the customer, as the stage shows them. #}
+          {% if e.outbound_only %}
+          {# An invoice / quote / reminder round: nothing came in from the customer,
+             so no customer bubble — the placeholder body used to render as
+             "[Invoice]" in their name (Kris 2026-09-04). #}
+          <p class="text-xs text-slate-400 italic px-1">{{ e.body_in_display }}</p>
+          {% else %}
+          <div class="flex">
+            <div class="glass-card min-w-0 max-w-[85%] p-4 rounded-tl-sm">
+              <div class="flex items-start justify-between gap-2">
+                <p class="min-w-0 text-xs text-slate-400"><span class="font-semibold text-slate-500">{{ contact_name or contact }}</span>{% if e.subject %} · {{ e.subject }}{% endif %}{{ clip(e.attachments) }}</p>
+                {# When it came in (Kris 2026-09-23) — same wording as the sent bubble's time. #}
+                {% set w = e.created_at | sent_when %}{% if w %}<span class="flex-none text-[11px] font-medium text-slate-400 whitespace-nowrap">{{ w }}</span>{% endif %}
+              </div>
+              <div class="round-body round-body-in mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed" style="overscroll-behavior: contain;">{{ e.body_in_display or e.body_in or 'No message text was included.' }}</div>
+              {{ photo_strip(e.attachments) }}
+              {% if e.knowledge_gap %}<p class="mt-2 text-xs text-amber-700">⚠ Knowledge gap — missing: <span class="font-medium">{{ e.knowledge_gap }}</span> · <a class="underline hover:text-amber-800" href="/app/knowledge?prefill={{ e.knowledge_gap | urlencode }}#paste">Add to Knowledge</a></p>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {# The middle: the agent's working for this round — what it looked
+             up, why, and what it drew on — centred like the stage's ghost.
+             PAST rounds only: the newest round's reasoning is the stage's own
+             decision ghost, and printing it here too would put the same
+             sentences in the page twice (the rose duplication the stage ghost
+             was taught not to make, live 2026-09-01). Closing the blind is the
+             newest round's live view. #}
+          <div class="round-ghost flex-1 min-h-0 overflow-hidden flex items-center justify-center py-3">
+            {% if e.status in ('sent', 'skipped') and not loop.last %}<div class="max-w-md w-full">{{ round_ghost(e) }}</div>{% endif %}
+          </div>
+
+          {# Bottom-right: our reply. #}
+          <div class="flex flex-col items-end">
+            {% if e.status == 'sent' %}
+            <div data-working-box class="max-w-[90%] rounded-2xl rounded-tr-sm bg-emerald-50 border border-emerald-200 p-4">
+              <div class="flex items-center justify-between gap-1.5">
+                <p class="min-w-0 flex items-center whitespace-nowrap text-xs font-semibold text-emerald-700"><span class="truncate">{{ sent_label(e) }}</span>{{ clip(e.reply_attachments) }}</p>
+                <div class="flex-none flex items-center gap-1">{{ sent_time(e) }}{% if e.draft_reasoning %}{{ working_eye() }}{% endif %}</div>
+              </div>
+              <div class="round-body mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed" style="overscroll-behavior: contain;">{{ e.draft_reply or '' }}</div>
+              {% if e.draft_reasoning %}{{ working_panel(e.working_text, e.draft_reasoning) }}{% endif %}
+            </div>
+            {% elif e.status == 'skipped' %}
+            <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-slate-50 border border-slate-200 p-4">
+              <p class="text-xs font-semibold text-slate-400">You · Skipped — no reply sent</p>
+              <div class="round-body mt-1 text-sm text-slate-400 whitespace-pre-wrap leading-relaxed" style="overscroll-behavior: contain;">{{ e.draft_reply or '' }}</div>
+              {# A skip isn't final — re-run the pipeline for this inbound and re-open
+                 the row (mistaken skip, or circumstances changed). #}
+              <form method="post" action="/app/drafts/{{ e.id }}/redraft" class="mt-2 border-t border-slate-200 pt-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+                <button class="text-xs font-semibold text-brand hover:underline">Draft a reply again</button>
+              </form>
+            </div>
+            {% elif e.drafting %}
+            <span class="text-xs text-slate-400">Agent writing reply</span>
+            {% elif booking.is_request %}
+            {# Booking-request thread: the ready reply lives in the stage's pinned
+               booking card — history only records the exchange. #}
+            <span hidden data-draft-on-stage></span>
+            {% else %}
+            {# The pending draft's form lives on the STAGE below — one form, one
+               set of ids. History just points at it. #}
+            <div data-draft-on-stage class="max-w-[85%] rounded-2xl rounded-tr-sm bg-brand-50 border border-brand/30 px-4 py-3">
+              <p class="text-xs font-semibold text-brand">Draft ready · Editable before approval — close history to review &amp; send</p>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% endfor %}
+
+      {% if portal_tail or drafting_here %}
+      {# The "now" page: portal chat newer than the last email (usually the
+         conversation that raised the request waiting on the stage), and the
+         inbound being answered RIGHT NOW. Stored messages already have a
+         history round above, so only provisional messages need a bubble here. #}
+      <section class="round-page" data-round="now">
+        <div class="round-frame max-w-3xl mx-auto w-full px-4 sm:px-6 pt-1 pb-4 flex flex-col min-h-0 flex-1">
+          <p class="round-marker text-[11px] font-semibold uppercase tracking-wider text-slate-400 text-right pb-2">Now</p>
+          {% for m in portal_tail or [] %}{{ portal_bubble(m) }}{% endfor %}
+          {% if drafting_here %}
+          {% for d in drafting_msgs if not d.stored %}
+          <div class="flex" data-draft-key="{{ d.key }}">
+            <div class="glass-card min-w-0 max-w-[85%] p-4 rounded-tl-sm">
+              <p class="text-xs text-slate-400"><span class="font-semibold text-slate-500">{{ contact_name or contact }}</span> · Just now{% if d.subject %} · {{ d.subject }}{% endif %}</p>
+              {% if d.body %}<div class="round-body round-body-in mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed" style="overscroll-behavior: contain;">{{ d.body }}</div>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          <div class="flex-1"></div>
+          <div class="flex flex-col items-end" id="thread-typing">
+            <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-brand-50 border border-brand/30 px-4 py-3">
+              <p class="text-xs font-semibold text-brand inline-flex items-center gap-1.5">Agent writing reply<span class="typing-dots inline-flex gap-0.5"><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span></span></p>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {# ── The stage: newest message top-left, the work docked at the bottom. ── #}
+  <div class="flex-none max-w-3xl mx-auto w-full px-4 sm:px-6 pt-4">
+    <div class="flex items-start justify-between gap-3">
+      {% if dmsg or latest %}
+      {# While drafting, show the message being answered without a tap. Other
+         states rest collapsed; tapping expands the body and fades the ghost. #}
+      <div id="stage-bubble" class="stage-bubble glass-card{% if not drafting_here %} collapsed{% endif %} min-w-0 max-w-[85%] p-4 cursor-pointer" role="button" tabindex="0" aria-expanded="{{ 'true' if drafting_here else 'false' }}" aria-label="Latest message — tap to expand">
+        {# Resting face = date · time, nothing else (Kris 2026-08-31 — the
+           masthead already names the contact); the subject waits in the
+           expandable region with the body. #}
+        <p class="text-xs text-slate-400 flex items-center gap-1.5">
+          {% if dmsg %}<span class="flex-none">Just now</span>
+          {% elif latest.created_at %}<span class="flex-none">{{ latest.created_at | sent_when }}</span>{% endif %}
+          {# A portal-raised exchange says so on its resting face (Kris
+             2026-08-31: the bare timestamp gave no hint a request was in it). #}
+          {% if not dmsg and latest and (latest.source_message_id or '').startswith('portal:') %}<span class="flex-none rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">Customer portal</span>{% endif %}
+          {% if not dmsg and latest %}{{ clip(latest.attachments) }}{% endif %}
+          <svg class="stage-bubble-caret h-3 w-3 flex-none text-slate-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
+        </p>
+        {% set subj = dmsg.subject if dmsg else latest.subject %}
+        {% if subj %}<p class="stage-bubble-body mt-2 text-xs font-medium text-slate-500">{{ subj }}</p>{% endif %}
+        <div class="stage-bubble-body mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[34vh] overflow-y-auto" id="stage-bubble-body" style="overscroll-behavior: contain;">{% if dmsg %}{{ dmsg.body or 'Message text is not available yet.' }}{% else %}{{ latest.body_in_display or latest.body_in or 'No message text was included.' }}{% endif %}</div>
+        {% if not dmsg and latest %}{{ photo_strip(latest.attachments, 'stage-bubble-body') }}{% endif %}
+        {% if not dmsg and latest.knowledge_gap %}<p class="stage-bubble-body mt-2 text-xs text-amber-700">⚠ Knowledge gap — missing: <span class="font-medium">{{ latest.knowledge_gap }}</span> · <a class="underline hover:text-amber-800" href="/app/knowledge?prefill={{ latest.knowledge_gap | urlencode }}#paste">Add to Knowledge</a></p>{% endif %}
+      </div>
+      {% endif %}
+      {# The warning bubble left the stage (Kris 2026-09-01): the pulse says a
+         human is needed, and the ghost says why — a sign to tap said neither. #}
+      {# The category chip left the stage (Kris 2026-08-31: "not sure why it's
+         there for me to change its state") — the inbox row's glow already says
+         where the thread stands, and the manual-override endpoint stays for
+         the concierge's use. #}
+    </div>
+  </div>
+
+  {# ── The middle: quiet ground, the door to history, anything urgent. ── #}
+  <div class="flex-1 min-h-0 overflow-y-auto max-w-3xl mx-auto w-full px-4 sm:px-6 py-3 flex flex-col justify-center gap-3">
+    {% if suppression %}
+    {# Draft-suppression escalation banner (docs/modules/module-draft-suppression.md §1). #}
+    <div id="suppression-banner" class="rounded-xl border border-amber-300 bg-amber-50 p-4">
+      <p class="text-sm text-amber-900">
+        <span class="font-semibold">⚠️ You haven't responded to {{ contact }} in {{ suppression.consecutive_unsent_drafts }} emails</span>
+        {# A pending draft below this banner means drafting paused ON that draft —
+           "has stopped drafting" would contradict the draft in plain sight
+           (live e2e 2026-08-31). Sending it resumes drafting (record_sent). #}
+        {% if pending and not gap_hold and not doc_hold_on %}
+        — so the AI has paused drafting after the draft below. Sending that draft (or Resume) turns drafting back on; otherwise new emails still arrive, filed under FYI.
+        {% else %}
+        — so the AI has stopped drafting replies to them. New emails still arrive, filed under FYI.
+        {% endif %}
+      </p>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <form method="post" action="/app/suppression/resume">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="contact" value="{{ contact }}">
+          <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+          <button class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 transition">Resume drafting</button>
+        </form>
+        <form method="post" action="/app/suppression/ignore">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="contact" value="{{ contact }}">
+          <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+          <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-rose-400 hover:text-rose-600 transition">Ignore permanently</button>
+        </form>
+        <form method="post" action="/app/suppression/draft-now">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="contact" value="{{ contact }}">
+          <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+          <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-brand hover:text-brand transition">Draft now</button>
+        </form>
+      </div>
+      <p class="mt-2 text-[11px] text-amber-700/80">Resume = draft replies again from now on · Ignore = never draft to them (their mail still arrives) · Draft now = a one-off reply to their latest email</p>
+    </div>
+    {% endif %}
+    {% if drafting_here %}
+    {# The ghost being born (Kris 2026-08-31): each drafting_step streams in
+       here as a ghost line — the same quiet centred grammar the finished
+       decision uses — so the middle of the stage narrates the work live and
+       the completed ghost simply takes its place on the next swap. live.js
+       fills it; stale ghost text from the PREVIOUS exchange stands down
+       while a new reply is being written. #}
+    <div id="stage-ghost-live" class="w-full max-w-md mx-auto text-center space-y-1.5"></div>
+    {% elif decision or attention %}
+    {# The agent's decision as GHOST TEXT (Kris 2026-08-31): no bubble — quiet
+       centred lines floating on the sky. What the customer asked, why the
+       agent acted, and the recorded evidence — the KB search it ran, the diary
+       holds it placed, the gap it hit. Every line comes from stored truth
+       (rule-6 self-reports, kind, category_reason, the kb_retrieval trace,
+       linked bookings) — nothing here is re-asked of a model. Fades away while
+       the customer's message is expanded (conversation.html). #}
+    {# transition inline, not in the page shell: the fragment is always fresh
+       (SSE-swapped), the shell only refreshes on a true reload — the fade must
+       not depend on which shell vintage the phone is holding. #}
+    <div data-ghost-scope="round-{{ latest.id if latest else 'attention' }}" id="stage-decision" class="w-full max-w-md mx-auto text-center space-y-1.5" style="transition: opacity 180ms ease;">
+      {# Why you're needed, shown not hidden (Kris 2026-09-01): the flagged
+         reasons open the ghost rather than waiting behind a tap. First,
+         because it is why the operator is on this screen at all. #}
+      {% if attention %}
+      <div class="pb-1 space-y-1">
+        <p class="text-[11px] font-semibold uppercase tracking-wider {{ 'text-rose-700/80' if attention_tone == 'rose' else 'text-amber-700/80' }}">Why you're needed</p>
+        {% for line in attention %}
+        <p class="text-sm {{ 'text-rose-700/90' if line.tone == 'rose' else 'text-amber-700/90' }}">{{ line.text }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {# They-said / I-did came out (Kris 2026-08-31): the message and the draft
+         are both on the stage already — the ghost keeps only what ISN'T visible.
+         Order (Kris): the knowledge story first — what couldn't be answered,
+         what was searched — THEN the why, then the diary moves. #}
+      {% if decision and decision.gap %}
+      <p class="text-sm text-amber-700/80"><span class="font-semibold">Couldn't answer:</span> {{ decision.gap }} · {% if gap_hold %}<a href="#kb-inline" data-focus-kb class="underline hover:text-amber-800">Add it below</a>{% else %}<a class="underline hover:text-amber-800" href="/app/knowledge?prefill={{ decision.gap | urlencode }}#paste">Add to Knowledge</a>{% endif %}</p>
+      {% endif %}
+      {# The match count is the door to the recall viewer: tapping it turns the
+         dock into the list of everything the search returned (Kris 2026-08-31
+         — the pill row is gone; this is where the evidence lives now). #}
+      {# The count is the KNOWLEDGE search's, and says so (Kris 2026-08-31:
+         "searched for availability — 0 matches" read as the DIARY finding
+         nothing while three held slots sat right below it — two different
+         systems glued into one sentence). Zero knowledge matches on a booking
+         email is normal and now says nothing at all. #}
+      {% set match_link %}{% if decision.kb and decision.sources_n %} — <a href="#" data-matches="{{ decision.log_id }}" class="underline underline-offset-2 hover:text-brand">{{ decision.kb.results }} knowledge match{{ '' if decision.kb.results == 1 else 'es' }}</a>{% elif decision.kb and decision.kb.results %} — {{ decision.kb.results }} knowledge match{{ '' if decision.kb.results == 1 else 'es' }}{% endif %}{% endset %}
+      {% if decision.searched %}
+      {# The search ran on the customer's own message: say so, don't echo it back. #}
+      <p class="text-sm text-slate-500"><span class="font-semibold text-slate-600">Searched your knowledge</span> using the customer's message{{ match_link }}</p>
+      {% elif decision.sources %}
+      {# A source title says what was supplied, not what the query was. #}
+      <p class="text-sm text-slate-500"><span class="font-semibold text-slate-600">Knowledge retrieved:</span> {{ decision.sources | join(', ') }}{% if decision.more_sources %} +{{ decision.more_sources }} more{% endif %}{{ match_link }}</p>
+      {% elif decision.grounded_known and not decision.sources_n and not decision.knowledge_line %}
+      <p class="text-sm text-slate-400">No knowledge matches recorded.</p>
+      {% endif %}
+      {% if decision.knowledge_line %}<p class="text-sm text-slate-400">{{ decision.knowledge_line }}</p>{% endif %}
+      {% if decision.why %}
+      <p class="text-sm text-slate-500"><span class="font-semibold text-slate-600">Agent assessment:</span> {{ decision.why }}{% if gap_hold %} — no draft written until the knowledge lands{% endif %}</p>
+      {% elif gap_hold %}
+      <p class="text-sm text-slate-500"><span class="font-semibold text-slate-600">Why:</span> No draft written — the missing knowledge above blocks a real answer.</p>
+      {% endif %}
+      {# The diary moves stand off from the reasoning above them (Kris
+         2026-09-01). Padding on a wrapper, not a margin on the first row: the
+         parent's space-y-1.5 already owns every child's margin-top and would
+         win on specificity. #}
+      {% if decision.held %}
+      {# A bullet list of the LIVE diary moves (Kris 2026-09-03): one line per
+         booking that still stands — released holds have already left the list
+         in _held_rows, and the SSE repaint keeps it current as they go. #}
+      {# Compact (Kris 2026-09-27, filming: the three offer lines filled half
+         a phone screen). Offers that share a service say it once as a heading;
+         each line is then just its day and window, and an offer carries a live
+         countdown pill instead of "held until …". Tapping the pill explains it
+         in a bubble (src/app/static/hold_clock.js). #}
+      {% set held_group = decision.held|length > 1
+            and (decision.held|map(attribute='label')|unique|list|length) == 1
+            and (decision.held|map(attribute='what')|unique|list|length) == 1 %}
+      {% set h0 = decision.held[0] %}
+      {% macro hold_clock(h) %}<button type="button" data-hold-clock data-until="{{ h.until_iso }}"
+              data-explain="Held for this customer until {{ h.until }}, as recorded in your diary. If they don't choose by then, the slot goes back into your diary by itself."
+              aria-label="Held until {{ h.until }}"
+              class="ml-1 inline-flex items-center gap-1 rounded-full border border-amber-300 px-1.5 text-xs tabular-nums text-amber-700 hover:bg-amber-50 align-middle"><svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"/></svg><span data-left>{{ h.until_left }}</span></button>{% endmacro %}
+      {% macro hold_line(h, bare) %}{% if h.href %}<a href="{{ h.href }}" class="hover:underline">{% endif %}{% if not bare %}{{ h.label }} {{ h.what or 'booking' }}{% if h.date %} · {% endif %}{% endif %}{% if h.date %}{{ h.date | pretty_date }}{% endif %}{% if h.when_short or h.when %} · {{ h.when_short or h.when }}{% endif %}{% if h.href %}</a>{% endif %}{% if h.until_iso %}{{ hold_clock(h) }}{% elif h.until %} <span class="text-amber-700/70">· held until {{ h.until }}</span>{% endif %}{% endmacro %}
+      {% set tone = 'text-emerald-700/80' if h0.status == 'confirmed' else 'text-amber-700/80' %}
+      <div class="pt-2 text-center inline-block text-sm" data-held-list>
+        {% if decision.held|length == 1 %}
+        {# One booking: one plain line, nothing to fold. #}
+        <p class="{{ tone }}">{{ hold_line(h0, false) }}</p>
+        {% else %}
+        {# Several: one chip, folded (Kris 2026-09-27, filming: "an expandable
+           chip… something a little more compressed"). The chip names what they
+           are and how many, with the SOONEST deadline's countdown; a tap opens
+           the day-and-window lines. <details> is the browser's own fold — no
+           script. A tap on the pill explains it (hold_clock.js) and doesn't
+           toggle the fold. #}
+        {% set soonest = decision.held|selectattr('until_iso')|sort(attribute='until_iso')|first %}
+        <details class="group" data-held-fold>
+          <summary class="cursor-pointer list-none inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-medium {{ tone }} {{ 'border-emerald-300' if h0.status == 'confirmed' else 'border-amber-300' }} [&::-webkit-details-marker]:hidden">
+            {% if held_group %}{{ h0.label }} {{ h0.what or 'booking' }}{% else %}Diary{% endif %} · {{ decision.held|length }} {{ 'slots' if held_group and h0.status == 'offered' else 'bookings' }}{% if soonest %}{{ hold_clock(soonest) }}{% endif %}
+            <svg class="h-3.5 w-3.5 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+          </summary>
+          <ul class="mt-1.5 space-y-1 list-disc list-inside">
+            {% for h in decision.held %}
+            <li class="{{ 'text-emerald-700/80 marker:text-emerald-600' if h.status == 'confirmed' else 'text-amber-700/80 marker:text-amber-500' }}">{{ hold_line(h, held_group) }}</li>
+            {% endfor %}
+          </ul>
+        </details>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% elif not drafting_here and not items %}
+    <p class="text-center text-slate-400 text-sm">No messages in this conversation yet.</p>
+    {% endif %}
+    {# The separate attention panel is gone (Kris 2026-09-01) — its lines open
+       the ghost above instead, so the reasons are read, not discovered. #}
+  </div>
+
+  {# ── The dock: the work at the bottom. A pending draft GROWS into the stage
+        rather than claiming it (Kris 2026-09-01): one line to start, taller
+        with every line written, and 55% of the stage — what it used to take
+        outright — is now the ceiling it stops at. Everything else sizes to
+        content as before. ── #}
+  {# mt-auto: the dock owns the stage's bottom edge unconditionally — the
+     typing pill was seen floating mid-stage when the middle didn't stretch
+     (Kris 2026-08-31). #}
+  {# The draft card sits ON the bottom bar (Kris 2026-09-27, filming: "the
+     draft box could be connected to the bottom bar"): no gap under it, square
+     bottom corners, and a fade where the text runs on under the bar. #}
+  {% set dock_flush = pending and not gap_hold and not doc_hold_on and not drafting_here and not booking.is_request %}
+  <div class="flex-none mt-auto max-w-3xl mx-auto w-full px-4 sm:px-6 {{ 'pb-0' if dock_flush else 'pb-4' }} {% if pending and not gap_hold and not doc_hold_on %}max-h-[55%] flex flex-col gap-2{% else %}max-h-[62%] overflow-y-auto{% endif %}" id="thread-stage-dock" style="overscroll-behavior: contain;">
+    {# The recall viewer (Kris 2026-08-31): while open it replaces whatever the
+       dock holds — every match the search returned, each expandable to the
+       exact text recalled. Filled by conversation.html from /drafts/{id}/sources. #}
+    {# Content-sized (Kris 2026-08-31): the panel is only as tall as its text —
+       the dock's cap (conversation.html) stops a long expansion outgrowing the
+       stage, at which point the list scrolls inside. #}
+    <div id="matches-panel" class="hidden glass-card w-full max-h-full min-h-0 p-4">
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">What the search recalled</p>
+        {# A discreet cross (Kris 2026-09-20), not a sentence: quiet to look
+           at, thumb-sized to hit — the same close as the promise pop-up. #}
+        <button type="button" data-matches-close aria-label="Back to the draft" title="Back to the draft"
+                class="flex-none -my-2 -mr-2 px-2.5 py-2 text-xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+      </div>
+      <div id="matches-list" class="mt-2 min-h-0 overflow-y-auto divide-y divide-slate-200/70 text-sm text-slate-400" style="overscroll-behavior: contain;">Loading…</div>
+    </div>
+    {% if drafting_here %}
+    {# The toast is JUST the toast (Kris 2026-08-31): "Agent writing reply" +
+       dots, bottom-right of the chat area. The streamed tool-use lines left
+       it — they build up as the fresh ghost text centre-stage instead
+       (#stage-ghost-live), waiting for the rest of the ghost to land. #}
+    <div class="flex flex-col items-end" id="thread-stage-typing">
+      <div class="rounded-2xl rounded-br-sm bg-brand-50 border border-brand/30 px-4 py-3">
+        <p class="text-xs font-semibold text-brand inline-flex items-center gap-1.5">Agent writing reply<span class="typing-dots inline-flex gap-0.5"><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span></span></p>
+      </div>
+    </div>
+    {% elif booking.is_request %}
+    {# Single pinned booking card — one per thread. It accumulates the request:
+       what they want + every detail gathered + what's outstanding, and it's
+       where the operator confirms the ready reply or changes it. #}
+    <div class="rounded-xl border border-indigo-200 bg-white shadow-lg shadow-indigo-100/50 p-4">
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-xs font-semibold uppercase tracking-wider text-indigo-700">Booking request</p>
+        {% if booking.gathered and booking.details %}
+        {# The gathered chip IS the copy affordance: clipboard icon, tap → the
+           checkbox copy-out modal; flips to ✓✓ Copied on copy (bd:copied event). #}
+        <button type="button" id="bd-gathered-chip"
+                data-booking-details='{{ booking.details | tojson }}'
+                data-booking-contact="{{ contact }}"
+                title="All details gathered — tap to copy into your calendar"
+                aria-label="All details gathered — view and copy"
+                class="details-btn inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition cursor-pointer">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>
+          All details gathered
+        </button>
+        {% elif booking.gathered %}
+        <span class="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+          All details gathered
+        </span>
+        {% else %}
+        <span class="text-xs text-slate-400">Still collecting details…</span>
+        {% endif %}
+      </div>
+
+      {% if booking.summary %}<p class="mt-1.5 text-sm text-slate-700"><span class="font-semibold text-navy">What they want:</span> {{ booking.summary }}</p>{% endif %}
+
+      {% if booking.details %}
+      <dl class="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+        {% for d in booking.details %}
+        <div class="flex gap-2"><dt class="text-slate-500 font-medium whitespace-nowrap">{{ d.label }}:</dt><dd class="text-slate-800">{{ d.value }}</dd></div>
+        {% endfor %}
+      </dl>
+      {% else %}
+      <p class="mt-2 text-sm text-slate-400">No details captured yet — the agent is still gathering them.</p>
+      {% endif %}
+
+      {% if booking.missing %}
+      <p class="mt-2.5 text-xs text-amber-700"><span class="font-semibold">Still needed:</span> {{ booking.missing | join(', ') }}</p>
+      {% endif %}
+
+      {% if booking.pending_id %}
+      {# The ready reply — SAME review UI as a general draft: approve (✓) / skip (⏩) /
+         something's-wrong (👎) icon row. Shared JS via matching element ids. #}
+      <form method="post" action="/app/drafts/{{ booking.pending_id }}/send" class="mt-3 border-t border-slate-100 pt-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+        <div class="flex items-center justify-between gap-2">
+          <p class="min-w-0 truncate text-xs font-semibold text-brand" data-send-status>Draft reply · ready to confirm &amp; send{% if not booking.gathered %} <span class="font-normal text-slate-400">— or keep gathering</span>{% endif %}</p>
+          <div class="flex flex-none items-center gap-2">
+          {# data-send-ack: the button wears the send itself (grey, then a green
+             pulse — app/base.html). data-busy keeps nav.js's generic spinner
+             off it; this IS the wait. #}
+          <button type="submit" data-send-ack data-busy title="Confirm booking &amp; send" aria-label="Confirm booking and send"
+                  class="inline-flex items-center justify-center rounded-lg bg-emerald-600 h-9 w-9 text-white hover:bg-emerald-700 transition">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.04 9.04 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.5 4.5 0 0 0 .322-1.672v-.633c0-.414.336-.75.75-.75a2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.5 4.5 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.96 8.96 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z"/></svg>
+          </button>
+          <button type="button" data-pop="skip-{{ booking.pending_id }}" title="Skip this reply" aria-label="Skip this reply"
+                  class="inline-flex items-center justify-center rounded-lg border border-slate-300 h-9 w-9 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.062a1.125 1.125 0 0 1 0 1.953l-7.108 4.062A1.125 1.125 0 0 1 3 16.81V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.062a1.125 1.125 0 0 1 0 1.953l-7.108 4.062a1.125 1.125 0 0 1-1.683-.977V8.69Z"/></svg>
+          </button>
+          <button type="button" data-fix="{{ booking.pending_id }}" title="Something's wrong — fix it with the assistant" aria-label="Something's wrong"
+                  class="inline-flex items-center justify-center rounded-lg border border-slate-300 h-9 w-9 text-slate-500 hover:border-rose-400 hover:text-rose-600 transition">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 12 12)" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.04 9.04 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.5 4.5 0 0 0 .322-1.672v-.633c0-.414.336-.75.75-.75a2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.5 4.5 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.96 8.96 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z"/></svg>
+          </button>
+          </div>
+        </div>
+        <textarea id="draft-{{ booking.pending_id }}" name="draft_reply" rows="4" class="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 leading-relaxed max-h-[26vh] overflow-y-auto focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">{{ booking.pending_draft or '' }}</textarea>
+      </form>
+
+      {# Skip panel — collapsible, hidden until ⏩. #}
+      <div id="skip-{{ booking.pending_id }}" class="hidden mt-2 rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold text-slate-500">Skip this reply?</p>
+          <button type="button" data-pop="skip-{{ booking.pending_id }}" aria-label="Close" class="text-slate-400 hover:text-slate-600 text-lg leading-none px-1">&times;</button>
+        </div>
+        <form method="post" action="/app/drafts/{{ booking.pending_id }}/skip" class="flex items-center gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+          <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-slate-400 transition">Skip once</button>
+          <span class="text-xs text-slate-400">don't send this reply</span>
+        </form>
+      </div>
+      {% else %}
+      <p class="mt-3 text-xs text-slate-400">{% if drafting_here %}The AI is writing the next reply now…{% else %}No reply is waiting — the last one has been sent.{% endif %}</p>
+      {% endif %}
+
+      {# Occasional, not wallpaper: shows on every 5th manually-confirmed booking send. #}
+      {% if booking.upsell %}
+      <p class="mt-2.5 text-xs text-indigo-700">You've confirmed a few of these by hand now — want them booked into your diary automatically, with no manual step? <a class="underline hover:text-indigo-800 font-medium" href="/billing/plans">Add Scheduling — included on every plan →</a></p>
+      {% endif %}
+    </div>
+    {% elif doc_hold_on %}
+    {# The document card (Kris 2026-09-22): "instead of the Agent responding to
+       it, we have a notification box … telling us there's a document that
+       arrived and needs our attention, text linked directly to it." No reply
+       is written until the card is read and, where it would change the
+       record, the owner says so — right here, without leaving the chat. #}
+    <div class="glass-card w-full p-4" style="border-color: rgb(245 158 11 / 0.45);" data-doc-hold="{{ doc_hold.id }}">
+      <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">
+        {% if doc_hold.state == 'reading' %}Document arrived — reading it
+        {% elif doc_hold.state == 'writing' %}Document used — writing the reply
+        {% else %}Document arrived — needs you{% endif %}</p>
+      {% for d in doc_hold.docs %}
+      <div class="mt-2">
+        <p class="text-sm text-slate-700">{{ doc_hold.who }} sent
+          <a href="/app/crm/documents/{{ d.id }}" target="_blank" rel="noopener" class="font-semibold text-brand underline hover:text-blue-700">{{ d.filename }}</a>
+          {% if d.label %}<span class="ml-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs text-emerald-800">{{ d.label }}{% if d.about %} · {{ d.about }}{% endif %}</span>{% endif %}
+          {% if d.replaces %}<span class="ml-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs text-blue-800" title="Replaces {{ d.replaces.filename }} ({{ d.replaces.when }})">new version</span>{% endif %}
+        </p>
+        {% if d.updates %}
+        <p class="mt-2 text-sm text-amber-900">Use it to update <span class="font-semibold">{{ d.updates[0].who }}</span>?</p>
+        <ul class="mt-1 space-y-0.5 text-sm">
+          {% for u in d.updates %}
+          <li class="text-amber-900">{{ u.label }}{% if u.replaces %} <span class="line-through text-amber-700/70">{{ u.replaces | pretty_date }}</span> →{% else %}:{% endif %} <span class="font-semibold">{{ u.value_text | pretty_date }}</span></li>
+          {% endfor %}
+        </ul>
+        <form method="post" action="/app/crm/documents/{{ d.id }}/updates" class="mt-3 flex flex-wrap gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+          {% for u in d.updates %}<input type="hidden" name="ids" value="{{ u.id }}">{% endfor %}
+          <button name="use" value="1" data-busy class="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 transition">✓ Use it &amp; write the reply</button>
+          <button name="use" value="0" data-busy class="rounded-lg border border-slate-300 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Don't use it</button>
+        </form>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if doc_hold.state == 'reading' %}<p class="mt-2 text-xs text-slate-500">No reply yet — it's written once BLAM8 knows what the document says.</p>
+      {% elif doc_hold.state == 'writing' %}<p class="mt-2 text-xs text-slate-500">The reply appears here in a moment.</p>
+      {% else %}<p class="mt-2 text-xs text-slate-500">No reply is written until you decide — it's drafted from whatever the record says then.</p>{% endif %}
+    </div>
+    {% elif gap_hold %}
+    {# The knowledge-hold card: no tokens were spent on a throwaway reply. The
+       Knowledge page's paste box lives RIGHT HERE now (Kris 2026-08-31 —
+       leaving the thread was a pain): same endpoint, and saving drafts the
+       reply and returns to this thread. "Draft anyway" is the escape hatch. #}
+    <div class="glass-card w-full p-4" style="border-color: rgb(245 158 11 / 0.4);">
+      <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">No draft written — missing knowledge</p>
+      <p class="mt-1.5 text-sm text-slate-700">{{ pending.knowledge_gap }}</p>
+      <form method="post" action="/app/knowledge/text" class="mt-3 space-y-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="redraft_log" value="{{ pending.id }}">
+        <input name="label" required value="{{ pending.knowledge_gap | gap_title }}"
+               class="w-full rounded-lg border border-slate-300 bg-white/80 p-2 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+               placeholder="Label — e.g. 'ISO certification'">
+        <textarea id="kb-inline" name="content" rows="3" required
+                  class="w-full rounded-lg border border-slate-300 bg-white/80 p-2 text-sm text-slate-700 leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+                  placeholder="Write the missing fact once — the reply drafts itself from it, and it's answered forever."></textarea>
+        <button class="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-amber-700 transition">Save &amp; draft reply</button>
+      </form>
+      {# No "draft anyway" escape hatch (Kris 2026-08-31): the fact is the only
+         way through — that's the point of the hold. #}
+    </div>
+    {% elif pending %}
+    {% set e = pending %}
+    {% if portal_request %}
+    {# The portal request, made actionable (Kris 2026-08-31: "no way to approve
+       it, or send a follow-up email at the same time"): the booking the
+       customer mentioned resolves to its live row, the cancel button acts on
+       it here, and the reply pen right below is the follow-up email. #}
+    <div class="flex-none w-full rounded-xl border border-violet-200 bg-violet-50/90 px-4 py-3">
+      <div class="flex items-center justify-between gap-3">
+        <p class="min-w-0 text-xs text-violet-800"><span class="font-semibold uppercase tracking-wider">Portal request</span> · mentions <span class="font-semibold">{{ portal_request.ref }}</span>{% if portal_request.date %} — {{ portal_request.date }}{% endif %}{% if portal_request.window %} · {{ portal_request.window }}{% endif %} · {{ portal_request.status }}</p>
+        {% if portal_request.status in ('confirmed', 'offered') %}
+        <form method="post" action="/app/diary/{{ portal_request.booking_id }}/status" class="flex-none">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="status" value="cancelled">
+          <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+          <button class="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition">Cancel {{ portal_request.ref }}</button>
+        </form>
+        {% else %}
+        <span class="flex-none text-xs font-semibold text-slate-500">Already {{ portal_request.status }}</span>
+        {% endif %}
+      </div>
+      <p class="mt-1 text-[11px] text-violet-700/80">Cancelling frees the slot straight away — the reply below is your follow-up email to the customer.</p>
+    </div>
+    {% endif %}
+    {# Sleek fill (Kris 2026-08-31): brand-tinted glass, no inner bordered box —
+       the textarea IS the panel. It sizes to its content now (Kris 2026-09-01)
+       instead of flex-filling the dock, so the panel is one line tall until
+       there is something to show. The skip panel is a sibling below; opening
+       it eats into the draft's ceiling rather than overflowing the stage. #}
+    <form method="post" action="/app/drafts/{{ e.id }}/send" enctype="multipart/form-data" class="glass-card draft-glass w-full min-h-0 flex flex-col p-3 sm:p-4{% if dock_flush %} draft-flush{% endif %}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+      {# One header row: the what-this-is label left, the actions right (nearer
+         the thumb on mobile). #}
+      <div class="flex-none flex items-center justify-between gap-2">
+        {# The label left: the paperclip alone (Kris 2026-09-26 — it took
+           the place of "Draft ready · Editable before approval", which the
+           box itself already says; 09-27 the words went, the clip says it). It opens the picker under the reply, and
+           says "Sending…" once the thumbs-up is pressed. An SMS reply can't
+           carry files, so it keeps the plain label; an empty pen says so in
+           the reply box's placeholder. #}
+        <div class="min-w-0">
+        {% if e.channel != 'sms' %}
+        <button type="button" data-send-status data-attach-toggle="attach-{{ e.id }}" aria-expanded="false"
+                aria-label="Attach photos or files" title="Attach photos or files"
+                onclick="var p=document.getElementById(this.dataset.attachToggle);p.hidden=!p.hidden;this.setAttribute('aria-expanded',String(!p.hidden))"
+                class="inline-flex min-w-0 items-center gap-1 truncate rounded-lg p-1.5 -m-1.5 text-xs font-semibold text-brand hover:bg-brand/10">
+          <svg class="h-5 w-5 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/></svg>
+          <span data-attach-count></span>
+        </button>
+        {% elif (e.draft_reply or '').strip() %}
+        <p class="min-w-0 truncate text-xs font-semibold text-brand" data-send-status>Draft ready · Editable before approval</p>
+        {% else %}
+        <p class="min-w-0 truncate text-xs font-semibold text-rose-700">No draft written — this reply is yours to write</p>
+        {% endif %}
+        {% if sends_with %}<p class="min-w-0 truncate text-[11px] text-amber-700" data-sends-with>Sends with a deposit invoice: £{{ '%.2f'|format(sends_with.total) }} for {{ sends_with.refs }}</p>{% endif %}
+        {# No sign-off is configured (src/app/sign_off.py appends it): say so on the waiting
+           email draft, in the same quiet line the deposit note uses. Information only. #}
+        {% if sign_off_missing and e.channel != 'sms' and (e.draft_reply or '').strip() %}<p class="min-w-0 truncate text-[11px] text-amber-700" data-sign-off-missing>Reply ends as the agent chose · <a href="/app/settings" class="underline">no sign-off set</a></p>{% endif %}
+        </div>
+        <div class="flex flex-none items-center gap-2">
+        {# Thumbs up = approve & send. Skip + thumbs-down open the panels below. #}
+        {# data-send-ack / data-busy: see the booking card's twin above. #}
+        <button type="submit" data-send-ack data-busy title="Approve &amp; send" aria-label="Approve and send"
+                class="inline-flex items-center justify-center rounded-lg bg-emerald-600 h-9 w-9 text-white hover:bg-emerald-700 transition">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.04 9.04 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.5 4.5 0 0 0 .322-1.672v-.633c0-.414.336-.75.75-.75a2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.5 4.5 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.96 8.96 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z"/></svg>
+        </button>
+        <button type="button" data-pop="skip-{{ e.id }}" title="Skip this reply" aria-label="Skip this reply"
+                class="inline-flex items-center justify-center rounded-lg border border-slate-300 h-9 w-9 text-slate-500 hover:border-slate-400 hover:text-slate-700 transition">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.062a1.125 1.125 0 0 1 0 1.953l-7.108 4.062A1.125 1.125 0 0 1 3 16.81V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.062a1.125 1.125 0 0 1 0 1.953l-7.108 4.062a1.125 1.125 0 0 1-1.683-.977V8.69Z"/></svg>
+        </button>
+        <button type="button" data-fix="{{ e.id }}" title="Something's wrong — fix it with the assistant" aria-label="Something's wrong"
+                class="inline-flex items-center justify-center rounded-lg border border-slate-300 h-9 w-9 text-slate-500 hover:border-rose-400 hover:text-rose-600 transition">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" transform="rotate(180 12 12)" d="M6.633 10.25c.806 0 1.533-.446 2.031-1.08a9.04 9.04 0 0 1 2.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.5 4.5 0 0 0 .322-1.672v-.633c0-.414.336-.75.75-.75a2.25 2.25 0 0 1 2.25 2.25c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282m0 0h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 0 1-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.5 4.5 0 0 0-1.423-.23H5.904m10.598-9.75H14.25M5.904 18.75c.083.205.173.405.27.602.197.4-.078.898-.523.898h-.908c-.889 0-1.713-.518-1.972-1.368a12 12 0 0 1-.521-3.507c0-1.553.295-3.036.831-4.398C3.387 9.953 4.167 9.5 5 9.5h1.053c.472 0 .745.556.5.96a8.96 8.96 0 0 0-1.302 4.665c0 1.194.232 2.333.654 3.375Z"/></svg>
+        </button>
+        {% if e.draft_reasoning %}
+        {# ⓘ — the agent's working (Julius 2026-09-02): swaps the draft box
+           for a plain-English account of the recorded work. #}
+        <button type="button" data-reason-toggle="{{ e.id }}" title="How the agent got here" aria-label="Show the agent's working" aria-pressed="false"
+                class="inline-flex items-center justify-center rounded-lg border border-slate-300 h-9 w-9 text-slate-500 hover:border-brand hover:text-brand transition aria-pressed:border-brand aria-pressed:text-brand">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
+        </button>
+        {% endif %}
+        </div>
+      </div>
+      {# No grounding pill row (Kris 2026-08-31): the evidence moved to the
+         recall viewer behind the ghost's match-count link. #}
+      {# The placeholder is the empty pen's only affordance (Kris 2026-08-31:
+         a blank glass panel read as a half-loaded page) — it costs nothing on
+         prefilled drafts, where the text hides it. #}
+      {# rows=1 is the FLOOR, not the size: conversation.html grows it to its
+         content on every keystroke and stops at the dock's ceiling, where it
+         starts scrolling instead. data-stage-draft picks the measured cap over
+         the plain grow-to-fit the other draft boxes use. #}
+      <textarea id="draft-{{ e.id }}" name="draft_reply" data-stage-draft rows="1" placeholder="{{ 'No draft written — this reply is yours to write. The thumbs-up sends it.' if not (e.draft_reply or '').strip() else 'Write your reply here — the thumbs-up sends it.' }}" class="mt-2 w-full resize-none bg-transparent border-0 p-1 text-sm text-slate-700 leading-relaxed overflow-y-auto focus:outline-none placeholder:text-slate-400" style="overscroll-behavior: contain;">{{ e.draft_reply or '' }}</textarea>
+      {% if e.channel != 'sms' %}
+      {# Attach (photos both ways, Kris 2026-09-26): tick a file already on
+         their record, or take / pick new ones — they go with this reply and
+         are kept on the record. #}
+      <div id="attach-{{ e.id }}" hidden class="flex-none mt-1" data-attach
+           onchange="var n=this.querySelectorAll('[name=attach_doc]:checked').length+(this.querySelector('[name=attach_new]').files||[]).length;var c=this.closest('form').querySelector('[data-attach-count]');if(c)c.textContent=n?' ('+n+')':''">
+        <div class="space-y-2">
+          {% if reply_files %}
+          <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+            {% for f in reply_files %}
+            <label class="relative flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/70 p-1 pr-2 text-xs text-slate-600 cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-blue-50">
+              <input type="checkbox" name="attach_doc" value="{{ f.id }}" class="rounded border-slate-300 text-brand">
+              {% if f.photo %}<img src="{{ f.href }}" alt="" loading="lazy" class="h-10 w-10 rounded object-cover" onerror="this.style.display='none'">{% endif %}
+              <span class="max-w-[9rem] truncate">{{ f.name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+          <input type="file" name="attach_new" multiple accept="image/*,application/pdf"
+                 class="block w-full text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-600">
+        </div>
+      </div>
+      {% endif %}
+      {% if e.draft_reasoning %}
+      <div id="reason-{{ e.id }}" hidden class="mt-2 w-full flex-1 min-h-0 overflow-y-auto rounded-lg bg-slate-50 border border-slate-200 p-3" style="overscroll-behavior: contain;">
+        <p class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">How the agent got here</p>
+        <pre class="whitespace-pre-wrap text-xs text-slate-600 leading-relaxed font-sans">{{ e.working_text }}</pre>
+        <pre hidden data-working-technical>{{ e.draft_reasoning }}</pre>
+      </div>
+      {% endif %}
+    </form>
+
+    {# Skip panel — skip this one reply. (Ignoring a contact left the thread
+       on 2026-09-20, Kris: it is done on Today at setup and on the inbox
+       row.) A flex sibling: opening it shrinks the draft above rather than
+       overflowing the dock. #}
+    <div id="skip-{{ e.id }}" class="hidden flex-none w-full rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+      <div class="flex items-center justify-between">
+        <p class="text-xs font-semibold text-slate-500">Skip this reply?</p>
+        <button type="button" data-pop="skip-{{ e.id }}" aria-label="Close" class="text-slate-400 hover:text-slate-600 text-lg leading-none px-1">&times;</button>
+      </div>
+      <form method="post" action="/app/drafts/{{ e.id }}/skip" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+        <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-slate-400 transition">Skip once</button>
+        <span class="text-xs text-slate-400">don't reply to this email</span>
+      </form>
+    </div>
+    {% elif latest and latest.status == 'sent' %}
+    <div data-working-box class="ml-auto max-w-[90%] rounded-2xl rounded-br-sm bg-emerald-50 border border-emerald-200 p-4">
+      <div class="flex items-center justify-between gap-1.5">
+        <p class="min-w-0 flex items-center whitespace-nowrap text-xs font-semibold text-emerald-700"><span class="truncate">{{ sent_label(latest) }}</span>{{ clip(latest.reply_attachments) }}</p>
+        <div class="flex-none flex items-center gap-1">{{ sent_time(latest) }}{% if latest.draft_reasoning %}{{ working_eye() }}{% endif %}</div>
+      </div>
+      <div class="mt-2 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed max-h-[26vh] overflow-auto">{{ latest.draft_reply or '' }}</div>
+      {% if latest.draft_reasoning %}{{ working_panel(latest.working_text, latest.draft_reasoning) }}{% endif %}
+    </div>
+    {% elif latest and latest.status == 'skipped' and not (latest.draft_reply or '').strip() %}
+    {# Filed, never drafted — brought in from before BLAM8, or held while
+       drafting was off. Once drafting is on, one tap drafts it (Kris
+       2026-09-13: no third page — the thread unlocks, and the reply is on
+       demand rather than spent on stale mail by itself). #}
+    <div class="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-slate-50 border border-slate-200 p-4" data-filed-thread>
+      <p class="text-xs font-semibold text-slate-400">Filed, not drafted{% if latest.category_reason %} · {{ latest.category_reason }}{% endif %}</p>
+      {% if draft_hold %}
+      <p class="mt-1 text-xs text-slate-400">Drafting is off — switch it on in <a href="/app/settings#sending-mode" class="text-brand hover:underline">Settings</a> and this thread can be answered.</p>
+      {% else %}
+      <form method="post" action="/app/drafts/{{ latest.id }}/redraft" class="mt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+        <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition" data-draft-reply>Draft a reply</button>
+        <span class="ml-2 text-[11px] text-slate-400">to their latest email — you approve it before anything is sent</span>
+      </form>
+      {% endif %}
+    </div>
+    {% elif latest and latest.status == 'skipped' %}
+    <div class="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-slate-50 border border-slate-200 p-4">
+      <p class="text-xs font-semibold text-slate-400">You · Skipped — no reply sent</p>
+      <div class="mt-1 text-sm text-slate-400 whitespace-pre-wrap leading-relaxed max-h-[26vh] overflow-auto">{{ latest.draft_reply or '' }}</div>
+      <form method="post" action="/app/drafts/{{ latest.id }}/redraft" class="mt-2 border-t border-slate-200 pt-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ contact | urlencode }}">
+        <button class="text-xs font-semibold text-brand hover:underline">Draft a reply again</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>

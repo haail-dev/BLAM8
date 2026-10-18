@@ -1,0 +1,13 @@
+{# Invoicing sections (docs/modules/module-invoicing.md), rendered INSIDE the masthead
+   dropdown (the menu_sections block) — the old tab strip folded into the one
+   menu (Counting House masthead rule, 2026-08-29). Inherits {{ item }} /
+   {{ on }} from app/base.html's menu scope. #}
+<p class="px-4 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Money</p>
+<a href="/app/money" class="{{ item }} {% if active=='money' %}{{ on }}{% endif %}"><span class="flex-1">Money</span></a>
+<a href="/app/quotes" class="{{ item }} {% if active=='quotes' %}{{ on }}{% endif %}"><span class="flex-1">Quotes</span></a>
+<a href="/app/invoices" class="{{ item }} {% if active=='invoices' %}{{ on }}{% endif %}"><span class="flex-1">Invoices</span></a>
+<a href="/app/payments" class="{{ item }} {% if active=='payments' %}{{ on }}{% endif %}"><span class="flex-1">Card payments</span></a>
+<div class="my-1 border-t border-slate-100"></div>
+{# The section's own settings left this menu on 2026-09-02: they live behind
+   the cog in the masthead, which is beside you on every page of the section
+   rather than two taps down a dropdown. Navigation stayed. #}

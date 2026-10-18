@@ -1,0 +1,531 @@
+{% extends "app/base.html" %}
+{% block title %}{{ b.booking_ref or 'Job' }} · Diary · BLAM8{% endblock %}
+{% block heading %}{{ b.booking_ref or 'Job' }}{% endblock %}
+{% set back = ('/app/diary', 'Diary') %}
+{% block content %}
+{# The diary job page (docs/modules/module-job-parties.md Phase 1): one booking, the
+   people on it, and — the receipt — where each document actually goes. #}
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Party saved.</div>{% endif %}
+  {% if msg == 'removed' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Party removed.</div>{% endif %}
+  {% if msg == 'confirmed' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Party confirmed — documents now route accordingly.</div>{% endif %}
+  {% if msg == 'noidentity' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">A party needs an email or a phone number — otherwise no document can ever reach them.</div>{% endif %}
+  {% if msg == 'omw_sent' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Sent — your on-my-way message is on its way.</div>{% endif %}
+  {% if msg == 'omw_bad_eta' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Pick an ETA — minutes from now (5–240) or a time like 10:45.</div>{% endif %}
+  {% if msg == 'omw_no_recipient' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Nobody to tell — this booking has no contact and no on-site party.</div>{% endif %}
+  {% if msg in ('omw_pre_send_failure', 'omw_send_failed') %}<div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">The message couldn't be sent just now — try again in a moment.</div>{% endif %}
+  {% if omw_action and omw_action.state == 'unknown' and not omw_action.hide_historical %}<div class="rounded-lg bg-amber-50 px-4 py-3 text-sm">We're not sure the on-my-way message reached {{ omw_action.receipt.recipient_name or omw_action.receipt.to or 'the customer' }}. Check your Sent folder, or send it again: worst case they get it twice.</div>{% endif %}
+  {% if omw_action and omw_action.state == 'unavailable' %}<div class="rounded-lg bg-amber-50 px-4 py-3 text-sm">We couldn't check whether your message was sent. Please try loading this page again.</div>{% endif %}
+  {% if msg in ('omw_in_progress', 'omw_stale_attempt', 'omw_stale_action') %}<div class="rounded-lg bg-amber-50 px-4 py-3 text-sm">Someone's sending this right now — refresh in a moment.</div>{% endif %}
+  {% if msg == 'omw_notlive' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Only a confirmed or held booking can be on its way.</div>{% endif %}
+  {% if msg == 'omw_nowhere' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Nowhere to go — the customer comes to you for this booking. On my way is for a job at their address.</div>{% endif %}
+  {% if msg in ('moved', 'renamed', 'renamed+moved') %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">{{ {'moved': 'Moved — the calendar follows.', 'renamed': 'Renamed.', 'renamed+moved': 'Renamed and moved — the calendar follows.'}[msg] }}</div>{% endif %}
+  {% if msg == 'nochange' %}<div data-flash class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">Nothing changed.</div>{% endif %}
+  {% if msg == 'editerr' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{{ request.query_params.get('why') or "That didn't save." }}</div>{% endif %}
+
+  <!-- The job itself -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0">
+        <p class="text-xl font-bold font-display text-navy">{{ b.summary or 'Booking' }}</p>
+        <p class="text-sm text-slate-500 mt-1">
+          {{ b.booking_date | pretty_date }}{% if b.window and b.window != 'day' %} · {{ b.window | window_label }}{% endif %}
+          {% if b.contact %} · {{ b.contact }}{% endif %}
+        </p>
+      </div>
+      <span class="inline-flex items-center gap-1.5 text-[13px] font-medium {{ 'text-emerald-700' if b.status == 'confirmed' else ('text-amber-700' if b.status == 'proposed' else 'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-emerald-600' if b.status == 'confirmed' else ('bg-amber-500' if b.status == 'proposed' else 'bg-slate-300') }} self-center"></span>{{ b.status }}</span>
+    </div>
+    {# Who's on it (src/app/job_people.py, plan step 2): the team, login or not.
+       Being on a job makes it theirs — their Today, Diary and calendar. #}
+    <div class="mt-3" data-whos-on-it>
+      {% if msg == 'people' %}<p class="text-xs text-emerald-700" data-flash>Saved — it's on their Today and Diary.</p>{% endif %}
+      <p class="text-xs text-slate-500">Who's on it:
+        {% if on_it %}{% for p in on_it %}<span class="font-medium text-navy">{{ p.name }}</span>{% if p.part %} <span class="text-slate-400">({{ p.part }})</span>{% endif %}{{ ', ' if not loop.last }}{% endfor %}{% else %}<span class="text-slate-400">nobody yet</span>{% endif %}
+      </p>
+      {# Job sheets (src/app/job_sheets.py): a person who doesn't sign in is sent the
+         job by text or email — where that has got to, per person. #}
+      {% for p in on_it if sheet_lines and sheet_lines.get(p.person_id) %}
+      <p class="text-[11px] text-slate-400" data-sheet-line>{{ p.name }}: {{ sheet_lines[p.person_id] }}</p>
+      {% endfor %}
+      {% if may_assign and team_choices %}
+      <details class="mt-1">
+        <summary class="list-none cursor-pointer text-xs text-brand font-medium">{{ 'Change who\'s on it' if on_it else 'Put someone on it' }}</summary>
+        <form method="post" action="/app/diary/{{ b.id }}/people" class="mt-2 space-y-1.5 text-sm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          {% for t in team_choices %}
+          <label class="flex items-center gap-2">
+            <input type="{{ 'checkbox' if people_several else 'radio' }}" name="person" value="{{ t.id }}" {{ 'checked' if t.on }} class="accent-blue-600 h-4 w-4 flex-none">
+            <span class="text-navy">{{ t.name }}</span>{% if not t.has_login %}<span class="text-[11px] text-slate-400">gets job sheets</span>{% endif %}
+            {% if people_several %}<input name="part_{{ t.id }}" value="{{ t.part }}" placeholder="their part, e.g. drop-off" maxlength="60" class="ml-auto w-40 rounded-lg border border-slate-300 px-2 py-0.5 text-xs">{% endif %}
+          </label>
+          {% endfor %}
+          {% if not people_several %}<label class="flex items-center gap-2"><input type="radio" name="person" value="" class="accent-blue-600 h-4 w-4 flex-none"><span class="text-slate-500">Nobody</span></label>{% endif %}
+          <div data-save-row class="flex items-center gap-3 pt-1">
+            <button class="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">Save</button>
+            <span class="text-[11px] text-slate-400">{{ 'Several people can be on a job — change it in Diary settings.' if people_several else 'One person per job — change it in Diary settings.' }}</span>
+          </div>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+    {% if msg == 'said' %}<p class="mt-2 text-xs text-emerald-700" data-flash>Note left — it's on their Today.</p>{% endif %}
+    {% if msg == 'saynothing' %}<p class="mt-2 text-xs text-amber-700">Pick a person and write something.</p>{% endif %}
+    {# A note for a colleague about THIS booking, and the record of what's been said. #}
+    {% include "app/_say_to.html" %}
+    {% if b.status in ('confirmed', 'proposed') %}
+    {# Move / rename BY HAND (Kris 2026-09-06): the same placement rules and
+       the same in-place write the Concierge's move card runs. #}
+    <details class="mt-3">
+      <summary class="list-none cursor-pointer text-xs text-brand font-medium">&#9998; {{ 'Change the dates or rename' if stay_arrival else 'Move or rename' }}</summary>
+      <form method="post" action="/app/diary/{{ b.id }}/edit" class="mt-2 grid sm:grid-cols-4 gap-2 items-end text-sm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <label class="sm:col-span-2 block text-xs text-slate-500">What<input name="summary" value="{{ b.summary or '' }}" maxlength="200" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700"></label>
+        {% if stay_arrival %}
+        {# A stay (docs/plan-stay-date-changes.md): drop-off and collection, not a
+           day and a slot — extend, shorten or move through record_edits'
+           plan_stay_change, the Concierge's change_stay card's own path. #}
+        <input type="hidden" name="arrival_was" value="{{ stay_arrival }}">
+        <input type="hidden" name="departure_was" value="{{ stay_departure }}">
+        <label class="block text-xs text-slate-500">Drop-off<input type="datetime-local" name="arrival" value="{{ stay_arrival }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700"></label>
+        <label class="block text-xs text-slate-500">Collection<input type="datetime-local" name="departure" value="{{ stay_departure }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700"></label>
+        <div class="sm:col-span-4 flex items-center gap-3">
+          <button data-save-row class="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">Save</button>
+          <span class="text-[11px] text-slate-400">Every night is checked for room; the price follows (an invoiced stay that grows gets a draft invoice for the extra nights). The customer isn't told from here.</span>
+        </div>
+        {% else %}
+        <label class="block text-xs text-slate-500">Day<input type="date" name="new_date" value="{{ (b.booking_date|string)[:10] }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700"></label>
+        {# Prefilled with the clock time when there is one: an unchanged "when"
+           must resolve to the SAME slot (live 2026-09-06: "am" resolved to the
+           earliest fit and a rename-only save moved the booking to 08:00). #}
+        <input type="hidden" name="when_was" value="{{ when_now }}">
+        <label class="block text-xs text-slate-500">When<input name="when" value="{{ when_now }}" placeholder="morning · afternoon · 14:00" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700"></label>
+        <div class="sm:col-span-4 flex items-center gap-3">
+          <button data-save-row class="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">Save</button>
+          <span class="text-[11px] text-slate-400">A move keeps the reference and the customer's details; the calendar event follows. The customer isn't told from here.</span>
+        </div>
+        {% endif %}
+      </form>
+    </details>
+    {% endif %}
+    {% if b.status in ('confirmed', 'proposed') and (b.contact or parties) and on_my_way_on %}
+    {# On my way (src/app/on_my_way.py): the touch on the day. One tap, one fact
+       (the ETA), and the agent tells whoever is on site — no approval after.
+       Only on a job the business travels to (on_my_way.goes_to_customer). #}
+    {% if (not omw_action or omw_action.state in ('sent', 'pre_send_failure', 'preparing', 'unknown')) and not omw_action.hide_historical and may_assign %}
+    {% if omw_action and omw_action.state == 'sent' %}<p class="mt-4 text-sm">Already sent{% if omw_action.receipt.eta %} — arriving {{ omw_action.receipt.eta }}{% endif %}. Tapping again won't send another.</p>{% endif %}
+    <form method="post" action="/app/diary/{{ b.id }}/on-my-way" class="mt-4 flex flex-wrap items-end gap-2 border-t border-slate-100 pt-4"
+          onsubmit="var b=this.querySelector('button[type=submit]'); b.disabled=true; b.textContent='Sending…';">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="return_to" value="/app/diary/{{ b.id }}">
+      <input type="hidden" name="action_key" value="{{ 'after:' ~ omw_action.id if omw_action and omw_action.state == 'sent' else (omw_action.action_key if omw_action else 'initial') }}">
+      {% if omw_action and omw_action.state == 'unknown' %}<input type="hidden" name="resend_attempt" value="{{ omw_action.attempt }}">{% endif %}
+      <label class="block text-sm">
+        <span class="block text-xs text-slate-500 mb-1">On my way — arriving in</span>
+        <select name="eta" required class="rounded-lg border-slate-300 border px-2 py-1.5 text-sm bg-white">
+          <option value="" selected>Choose an ETA</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">an hour</option>
+          <option value="90">an hour and a half</option>
+        </select>
+      </label>
+      <label class="block text-sm">
+        <span class="block text-xs text-slate-500 mb-1">or at</span>
+        <input name="eta_time" type="time" class="rounded-lg border-slate-300 border px-2 py-1.5 text-sm" oninput="this.form.eta.disabled=!!this.value; if(this.value){ this.form.querySelector('[name=eta_hidden]').value=this.value; }">
+        <input type="hidden" name="eta_hidden" value="">
+      </label>
+      <label class="block text-sm">
+        <span class="block text-xs text-slate-500 mb-1">who's coming <span class="text-slate-400">(optional)</span></span>
+        <input name="engineer" type="text" placeholder="Dan" class="rounded-lg border-slate-300 border px-2 py-1.5 text-sm w-28">
+      </label>
+      <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition"
+              onclick="var t=this.form.querySelector('[name=eta_time]'); if(t.value){ this.form.eta.disabled=true; var h=document.createElement('input'); h.type='hidden'; h.name='eta'; h.value=t.value; this.form.appendChild(h); }">{{ 'Send again' if omw_action and omw_action.state == 'unknown' else ('Send ETA correction' if omw_action and omw_action.state == 'sent' else 'Send on my way') }}</button>
+      <span class="text-xs text-slate-400">goes to whoever is on site{% if parties %} (see Parties below){% endif %} — by text once SMS is on</span>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+
+  {# After the job (src/app/after_job.py): the work this job leaves for the
+     business, each with its deadline — only for a business that uses them. #}
+  {% if after_job %}
+  <div id="after-job" class="bg-white rounded-xl border border-slate-200 overflow-hidden" data-after-job>
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">After the job</h2>
+    </div>
+    <div class="px-4 py-3 space-y-2 text-sm">
+      {% if msg and msg.startswith('done') %}<p class="text-xs text-emerald-700" data-flash>Marked done{% if msg != 'done0' %} — the deadlines below have started{% endif %}.</p>{% endif %}
+      {% if msg == 'taskdone' %}<p class="text-xs text-emerald-700" data-flash>Ticked off.</p>{% endif %}
+      {% if after_job.done_at %}
+        <p class="text-xs text-slate-500">Job done {{ after_job.done_at[:10] | pretty_date }}{% if after_job.done_by == 'day_end' %} (its day ended){% endif %}.</p>
+        {% for t in after_job.tasks %}
+        <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
+          <span class="{{ 'line-through text-slate-400' if t.status == 'done' else 'font-medium text-navy' }}">{{ t.title }}</span>
+          {% if t.status == 'done' %}
+            <span class="text-xs text-emerald-700">done {{ t.completed_on | pretty_date }}</span>
+            {% if t.evidence_doc_id %}<a href="/app/crm/documents/{{ t.evidence_doc_id }}" target="_blank" rel="noopener" class="text-xs text-brand hover:underline">proof</a>{% endif %}
+          {% else %}
+            <span class="text-xs {{ 'text-rose-700 font-semibold' if (t.due_date or '') < after_job.today else 'text-slate-500' }}">due by {{ (t.due_date or '')[:10] | pretty_date }}</span>
+            <form method="post" action="/app/diary/{{ b.id }}/after-job/{{ t.id }}/done" enctype="multipart/form-data" class="ml-auto flex items-center gap-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="file" name="proof" accept="image/*,application/pdf" aria-label="Proof (optional)"
+                     class="max-w-[10rem] text-[11px] text-slate-500 file:mr-1 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-[11px]">
+              <button data-busy class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition">Done</button>
+            </form>
+          {% endif %}
+        </div>
+        {% else %}
+        <p class="text-xs text-slate-400">This job's service has no after-job tasks.</p>
+        {% endfor %}
+      {% else %}
+        {% if after_job.planned %}
+        <p class="text-xs text-slate-500">When it's done: {% for t in after_job.planned %}{{ t.title }} ({{ t.days }} {{ 'working ' if t.unit == 'working' }}day{{ 's' if t.days != 1 }}){{ ', ' if not loop.last }}{% endfor %}.</p>
+        {% endif %}
+        {% if after_job.manual %}
+        <form method="post" action="/app/diary/{{ b.id }}/done">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button data-busy class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Mark the job done</button>
+        </form>
+        {% else %}
+        <p class="text-xs text-slate-400">Counts as done when its last day ends.</p>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# Photos (Kris 2026-09-26): the job's own — taken here on the phone — and
+     the ones the customer sent. Each opens full size; any can go with a reply
+     from the thread. #}
+  <div id="photos" class="bg-white rounded-xl border border-slate-200 overflow-hidden" data-job-photos>
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Photos</h2>
+    </div>
+    <div class="px-4 py-3 space-y-3">
+      {% if msg == 'photos' %}<p class="text-xs text-emerald-700" data-flash>Kept on the job and the customer's record.</p>{% endif %}
+      {% if msg == 'photoerr' %}<p class="text-xs text-rose-700" data-flash>That photo couldn't be kept — try again, or a smaller one.</p>{% endif %}
+      {% if job_photos %}
+      <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
+        {% for d in job_photos %}
+        <a href="/app/crm/documents/{{ d.id }}" target="_blank" rel="noopener" title="{{ d.filename }}"
+           class="relative block aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+          <img src="/app/crm/documents/{{ d.id }}" alt="{{ d.filename }}" loading="lazy" class="h-full w-full object-cover">
+          <span class="absolute bottom-0 inset-x-0 bg-black/45 px-1.5 py-0.5 text-[10px] text-white truncate">{{ 'This job' if d.pinned else 'From the customer' }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-400">No photos yet — before and after shots, the fault, the finished work.</p>
+      {% endif %}
+      <form method="post" action="/app/diary/{{ b.id }}/photos" enctype="multipart/form-data" class="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="file" name="photo" multiple accept="image/*" required
+               class="block min-w-0 flex-1 text-xs text-slate-500 file:mr-2 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-600">
+        <button data-busy class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Add photos</button>
+      </form>
+    </div>
+  </div>
+
+  {% if job_documents %}
+  <!-- Documents (src/app/documents.py): the files on this booking and on the customer's record -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Documents</h2>
+    </div>
+    <div class="px-4 py-3 space-y-1.5 text-sm">
+      {% for d in job_documents %}
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="/app/crm/documents/{{ d.id }}" target="_blank" rel="noopener" class="font-semibold text-brand hover:underline">{{ d.filename }}</a>
+        {% if d.label %}<span class="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs text-emerald-800">{{ d.label }}</span>{% endif %}
+        <span class="text-xs text-slate-400">{{ d.size_text }}{% if d.pinned %} · this booking{% else %} · on their record{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# The register, the notes and the waiting list stand on their own (run #8,
+     2026-09-05: a participant IS the customer — no dependant kind, and the
+     whole card was hidden behind dep_groups). Only the Dependants block needs a kind. #}
+  {% if dep_groups or register_on or booking_notes or (waitlist_on and waiting) %}
+  <!-- Dependants (docs/modules/module-requirement-groups.md): what this booking is ABOUT -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    {% if register_on %}
+    {# The register (src/app/wallet.py): this occurrence's outcome, and the customer's
+       wallet — a tick settles the credit per Diary settings → Cancellations & credits. #}
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Register</h2>
+    </div>
+    <div class="px-4 py-3 space-y-2 text-sm">
+      {% if msg == 'attendance' %}<p data-flash class="text-emerald-700 text-xs">Recorded.</p>{% endif %}
+      <form method="post" action="/app/diary/{{ b.id }}/attendance" class="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        {% for st in attendance_options %}
+        <button name="status" value="{{ st }}" class="rounded-lg border px-3 py-1 text-xs font-semibold transition {{ 'bg-brand text-white border-brand' if attendance and attendance.status == st else 'border-slate-300 text-slate-600 hover:bg-slate-50' }}">{{ {'attended': 'Attended', 'no_show': 'No-show', 'late_cancel': 'Late cancel', 'excused': 'Excused'}[st] }}</button>
+        {% endfor %}
+        <input name="note" placeholder="{{ ('their note: ' ~ customer_note_hint) if customer_note_hint else 'note (optional)' }}" value="{{ attendance.note if attendance and attendance.note else '' }}" class="flex-1 min-w-[10rem] rounded-lg border-slate-300 border px-2 py-1 text-xs">
+        {# 6b nit: when the customer told you — the make-up notice rule reads it. #}
+        {% if makeups_on %}<label class="text-xs text-slate-500 inline-flex items-center gap-1" title="When the customer told you they could not make it — a make-up needs the notice the rule says">told us <input name="notified_at" type="datetime-local" value="{{ (attendance.notified_at[:16] if attendance and attendance.notified_at else '') }}" class="rounded-lg border-slate-300 border px-1.5 py-0.5 text-xs"></label>{% endif %}
+      </form>
+      {% if msg == 'attendance' and makeup and makeup.kind == 'available' %}<p data-flash class="text-emerald-700 text-xs">Recorded — a make-up is available below.</p>{% endif %}
+      {% if makeup %}
+      {# Make-ups (src/app/makeups.py): this miss earns one / was used / this IS one. #}
+      {% if makeup.kind == 'available' %}
+      <p class="text-xs text-emerald-700">Make-up available{% if makeup.until %} — book by {{ makeup.until|pretty_date }}{% endif %}.
+        <a href="/app/diary?date={{ b.booking_date }}&makeup_for={{ b.booking_ref }}&service={{ (b.details or {}).get('Service', '')|urlencode }}" class="font-medium text-brand hover:underline">Book it by hand</a></p>
+      {% elif makeup.kind == 'used' %}
+      <p class="text-xs text-slate-500">Made up by {{ makeup.by }}.</p>
+      {% elif makeup.kind == 'is_makeup' %}
+      <p class="text-xs text-slate-500">This is a make-up for {{ makeup.for }}.</p>
+      {% endif %}
+      {% endif %}
+      {% if msg == 'makeup' %}<p data-flash class="text-emerald-700 text-xs">Recorded as a make-up.</p>{% elif msg == 'notmakeup' %}<p data-flash class="text-amber-700 text-xs">Added, but not as a make-up — that class does not qualify under the rule.</p>{% endif %}
+      {% if balance_lines %}
+      <p class="text-xs text-slate-500">Wallet: {{ balance_lines|join(' · ') }}</p>
+      {% elif attendance %}
+      <p class="text-xs text-slate-400">Marked {{ attendance.status|replace('_', ' ') }}{% if attendance.at %} · {{ attendance.at[:10] }}{% endif %}.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if register_on or booking_notes %}
+    {# The log (src/app/customer_log.py): the customer's own notes from the portal
+       and the business's lines, oldest first. #}
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200" id="notes">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Notes</h2>
+    </div>
+    <div class="px-4 py-3 space-y-2 text-sm">
+      {% if msg == 'note' %}<p data-flash class="text-emerald-700 text-xs">Added.</p>{% endif %}
+      {% for n in booking_notes %}
+      <div class="flex gap-2 text-sm">
+        <span class="text-xs text-slate-400 w-20 flex-none">{{ n.created_at|pretty_date }}</span>
+        <span class="text-xs font-semibold flex-none {{ 'text-violet-700' if n.author == 'customer' else 'text-slate-500' }}">{{ 'their note' if n.author == 'customer' else 'you' }}</span>
+        <span class="text-slate-700">{{ n.body }}</span>
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-400">Nothing yet. A customer who is the participant can add their own notes from the portal; a dependant's booking takes only yours.</p>
+      {% endfor %}
+      <form method="post" action="/app/diary/{{ b.id }}/notes" class="flex gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input name="note" required maxlength="600" placeholder="add a note to this booking" class="flex-1 rounded-lg border-slate-300 border px-2 py-1 text-xs">
+        <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50">Add</button>
+      </form>
+    </div>
+    {% endif %}
+    {% if waitlist_on and waiting %}
+    {# The waiting list (src/app/courses.py): who is waiting for this class, in order. #}
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Waiting list</h2>
+    </div>
+    <div class="px-4 py-3 space-y-1.5 text-sm">
+      {% if msg == 'offered' %}<p data-flash class="text-emerald-700 text-xs">Place offered.</p>{% elif msg == 'removed' %}<p data-flash class="text-slate-500 text-xs">Removed from the list.</p>{% endif %}
+      {% for w in waiting %}
+      <form method="post" action="/app/diary/{{ b.id }}/waitlist/{{ w.id }}" class="flex flex-wrap items-baseline gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <span class="text-xs font-semibold text-slate-400 w-4">{{ w.position }}</span>
+        <span class="font-medium text-slate-700">{{ w.participant or w.contact_email }}</span>
+        {% if w.participant %}<span class="text-xs text-slate-400">{{ w.contact_email }}</span>{% endif %}
+        <span class="text-xs text-slate-400">{{ w.label }}</span>
+        {% if w.status == 'offered' %}<span class="text-xs font-medium text-amber-700">offered · until {{ w.expires_at|pretty_date }}</span>{% endif %}
+        <span class="flex-1"></span>
+        {% if w.status == 'waiting' %}<button name="action" value="offer" class="text-xs font-medium text-brand hover:underline">Offer the place</button>{% endif %}
+        <button name="action" value="remove" class="text-xs text-slate-400 hover:text-rose-600">Remove</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if dep_groups %}
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Dependants</h2>
+    </div>
+    <div class="px-4 py-3 space-y-2 text-sm">
+      {% if msg == 'subject' %}<p data-flash class="text-emerald-700 text-xs">Linked.</p>{% endif %}
+      {% if msg == 'unlinked' and undo %}
+      {# Kris 2026-09-21: Unlink had no obvious way back — the dropdown below
+         always could, but not at the moment of the mistake. The undo IS the
+         link route (the same POST the dropdown makes), and the notice holds
+         until tapped rather than fading mid-read. #}
+      <form method="post" action="/app/diary/{{ b.id }}/subjects" data-flash data-flash-hold class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="instance_id" value="{{ undo.id }}">
+        <span>{{ undo.name }} unlinked from this booking.</span>
+        <button class="font-semibold text-brand hover:underline">Undo</button>
+      </form>
+      {% endif %}
+      {% if msg == 'level_sent' %}<p data-flash class="text-emerald-700 text-xs">Moved — and the customer has been told.</p>{% endif %}
+      {% if msg == 'level_queued' %}<p data-flash class="text-emerald-700 text-xs">Moved — a message is waiting in your approval queue.</p>{% endif %}
+      {% if msg == 'level' %}<p data-flash class="text-emerald-700 text-xs">Moved.</p>{% endif %}
+      {% if msg == 'badlevel' %}<p data-flash class="text-rose-700 text-xs">That isn't a level on this ladder.</p>{% endif %}
+      {% for s in subjects %}
+      {# A record, not a run-on line (Kris 2026-09-23: it wrapped badly on a
+         phone) — the same layout as the CRM card: label above value on a
+         phone, label | value from sm up; empty facts not written out. #}
+      <div class="rounded-lg border border-slate-200 px-3 py-2.5" data-subject="{{ s.id }}">
+        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span class="font-semibold text-navy">{{ s.name }}</span>
+          <span class="text-xs text-slate-400">{{ s.group.label }}</span>
+          {% if s.gaps %}<span class="text-xs font-medium text-amber-700">still needed: {{ s.gaps|join(', ') }}</span>{% endif %}
+          <form method="post" action="/app/diary/{{ b.id }}/subjects/{{ s.id }}/unlink" class="ml-auto">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="text-xs text-slate-400 hover:text-rose-600">Unlink</button>
+          </form>
+        </div>
+        {% set ns = namespace(filled=0) %}
+        <dl class="mt-1.5 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-3 sm:gap-y-1 text-sm">
+          {% for label, value, f in s.rows %}
+          {% if value is not none and (value | string).strip() %}
+          {% set ns.filled = ns.filled + 1 %}
+          <dt class="text-xs text-slate-500 mt-2 first:mt-0 sm:mt-0 sm:pt-0.5 sm:whitespace-nowrap">{{ label }}</dt>
+          <dd class="text-slate-700 min-w-0 break-words">{{ value | pretty_date }}{% if f.durability == 'expires' %} <span class="text-xs text-slate-400">until</span>{% endif %}</dd>
+          {% endif %}
+          {% endfor %}
+        </dl>
+        {% if not ns.filled %}<p class="mt-1 text-xs text-slate-400">Nothing on record yet.</p>{% endif %}
+        {% for lad in s.ladders %}
+        {# Progress ladders: the level on record and the one tap that moves it (src/app/ladders.py). #}
+        <form method="post" action="/app/diary/{{ b.id }}/subjects/{{ s.id }}/level" class="mt-2 flex flex-wrap items-center gap-1.5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="key" value="{{ lad.field.key }}">
+          <span class="text-xs text-slate-500">{{ lad.field.label }}:</span>
+          <select name="level" class="rounded-lg border-slate-300 border px-2 py-0.5 text-xs bg-white">
+            {% if not lad.current %}<option value="">— none yet —</option>{% endif %}
+            {% for lv in lad.levels %}<option value="{{ lv }}" {{ 'selected' if lad.current == lv }}>{{ lv }}</option>{% endfor %}
+          </select>
+          <button class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Move</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-slate-400">Not linked to {{ 'a' if dep_groups|length == 1 else 'any' }} {{ dep_groups|map(attribute='label')|map('lower')|join(' / ') }} yet.</p>
+      {% endfor %}
+      {% if linkable %}
+      <form method="post" action="/app/diary/{{ b.id }}/subjects" class="flex items-center gap-2 pt-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <select name="instance_id" class="rounded-lg border-slate-300 border px-2 py-1 text-xs bg-white">
+          {% for i in linkable %}<option value="{{ i.id }}">{{ i.name }} ({{ i.group.label|lower }})</option>{% endfor %}
+        </select>
+        <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Link to this booking</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# On the day (Kris 2026-09-23): the customer's logistics for THIS visit —
+     bring the food portioned, drop off at 1pm — read from this booking's own
+     thread, where whoever is on site will look. Done / Drop as on the card. #}
+  {% if day_notes %}
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden" data-day-notes>
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">On the day</h2>
+    </div>
+    <div class="px-4 py-1 divide-y divide-slate-100">
+      {% for p in day_notes %}
+      <div class="py-2.5 text-sm" data-promise="{{ p.id }}">
+        <p class="text-slate-700">{{ p.description }}{% if p.due_hint %} <span class="text-xs text-slate-400">· {{ p.due_hint }}</span>{% endif %}</p>
+        <form method="post" action="/app/crm/promises/{{ p.id }}/resolve" class="mt-1.5 flex items-center gap-1.5">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="return_to" value="/app/diary/{{ b.id }}">
+          <span class="text-xs text-slate-400 mr-auto">{{ 'we' if p.direction == 'we_owe' else 'they' }} · on the day</span>
+          <button name="status" value="done" class="rounded-lg border border-emerald-300 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Done</button>
+          <button name="status" value="dropped" class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Drop</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Parties: who's involved, and what the system does with each of them -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Parties</h2>
+    </div>
+    {# The receipt: where each document goes RIGHT NOW, fallbacks included —
+       so the routing is legible before anyone opens a form. #}
+    <div class="px-4 py-2.5 border-b border-slate-100 text-xs text-slate-500 space-y-0.5">
+      <p>Quotes go to <span class="font-medium text-navy">{{ routing.approves.name or routing.approves.email or '—' }}</span>
+         · invoices to <span class="font-medium text-navy">{{ routing.pays.name or routing.pays.email or '—' }}</span>
+         · reminders to <span class="font-medium text-navy">{{ routing.on_site.name or routing.on_site.email or '—' }}</span>{% if routing.informed %}
+         · cc {{ routing.informed | map(attribute='email') | join(', ') }}{% endif %}</p>
+      {% if not held %}<p class="text-slate-400">No extra parties — the booking's own contact holds every duty, exactly as before.</p>{% endif %}
+    </div>
+    {# Phase 2: what the THREAD claims — inert (D4) until confirmed here. A
+       money claim wears the redirection warning; the evidence is the exact
+       sentence, so the operator judges the claim, not our summary of it. #}
+    {% for p in suggested %}
+    <div class="mx-4 my-3 rounded-lg border {{ 'border-rose-200 bg-rose-50' if (p.pays or p.approves) else 'border-amber-200 bg-amber-50' }} p-4 space-y-2">
+      <p class="text-sm {{ 'text-rose-800' if (p.pays or p.approves) else 'text-amber-800' }}">
+        <span class="font-semibold">Read from the thread:</span>
+        {{ p.name or p.email or p.phone }}{% if p.label %} ({{ p.label }}){% endif %}
+        {%- set claimed = [] -%}
+        {%- if p.pays %}{% set claimed = claimed + ['pays'] %}{% endif -%}
+        {%- if p.approves %}{% set claimed = claimed + ['approves quotes'] %}{% endif -%}
+        {%- if p.on_site %}{% set claimed = claimed + ['on site'] %}{% endif -%}
+        {%- if p.informed %}{% set claimed = claimed + ['kept informed'] %}{% endif -%}
+        {% if claimed %} — {{ claimed | join(', ') }}{% endif %}
+        {% if p.email %}<span class="font-normal opacity-80">· {{ p.email }}</span>{% elif p.phone %}<span class="font-normal opacity-80">· {{ p.phone }}</span>{% endif %}
+      </p>
+      {% if p.evidence %}<p class="text-xs italic {{ 'text-rose-700' if (p.pays or p.approves) else 'text-amber-700' }}">“{{ p.evidence }}”</p>{% endif %}
+      {% if p.pays or p.approves %}
+      <p class="text-xs font-semibold text-rose-700">⚠ This changes who gets billed. Only confirm if you know this person — money never re-routes on an email's say-so.</p>
+      {% endif %}
+      <div class="flex items-center gap-3 pt-1">
+        <form method="post" action="/app/diary/{{ b.id }}/parties/{{ p.id }}/confirm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="rounded-lg {{ 'bg-rose-600 hover:bg-rose-700' if (p.pays or p.approves) else 'bg-amber-600 hover:bg-amber-700' }} px-3 py-1.5 text-xs font-semibold text-white transition">Confirm — I know them</button>
+        </form>
+        <form method="post" action="/app/diary/{{ b.id }}/parties/{{ p.id }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="text-xs font-medium text-slate-500 hover:text-slate-700 transition">Dismiss</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    {% if held %}
+    <div class="divide-y divide-slate-100">
+      {% for p in held %}
+      <div class="px-4 py-2.5 flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-none">{{ p.label or 'Party' }}</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ p.name or '' }}{% if p.name and (p.email or p.phone) %} · {% endif %}{{ p.email or p.phone or '' }}</span>
+        <span class="flex-none text-xs text-slate-500">
+          {%- set duties = [] -%}
+          {%- if p.pays %}{% set duties = duties + ['pays'] %}{% endif -%}
+          {%- if p.approves %}{% set duties = duties + ['approves'] %}{% endif -%}
+          {%- if p.on_site %}{% set duties = duties + ['on site'] %}{% endif -%}
+          {%- if p.informed %}{% set duties = duties + ['kept informed'] %}{% endif -%}
+          {{ duties | join(' · ') or '—' }}</span>
+        <form method="post" action="/app/diary/{{ b.id }}/parties/{{ p.id }}/delete" class="flex-none">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="text-xs text-slate-400 hover:text-rose-600 transition" title="Remove this party">✕</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <form method="post" action="/app/diary/{{ b.id }}/parties" class="border-t border-slate-200 p-5 space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="grid sm:grid-cols-2 gap-3">
+        <label class="block"><span class="text-xs font-medium text-slate-500">Name</span>
+          <input name="name" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+        <label class="block"><span class="text-xs font-medium text-slate-500">What do you call them? <span class="text-slate-400">(their role in this booking)</span></span>
+          <input name="label" maxlength="60" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+        <label class="block"><span class="text-xs font-medium text-slate-500">Email</span>
+          <input name="email" type="email" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+        <label class="block"><span class="text-xs font-medium text-slate-500">Phone</span>
+          <input name="phone" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+      </div>
+      <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-600">
+        {% for duty, label in duty_labels.items() %}
+        <label class="flex items-center gap-2"><input type="checkbox" name="{{ duty }}" value="1" class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"> {{ label }}</label>
+        {% endfor %}
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-xs text-slate-400">The label is yours; the ticks are what BLAM8 does — quotes to whoever approves, invoices to whoever pays, reminders to whoever's on site, cc to anyone kept informed.</p>
+        <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition whitespace-nowrap">Add party</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

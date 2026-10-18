@@ -1,0 +1,86 @@
+{% extends "app/base.html" %}
+{% block title %}Phone · BLAM8{% endblock %}
+{% block heading %}Phone{% endblock %}
+{% block content %}
+<div id="telephone-phone" class="max-w-5xl mx-auto p-4 space-y-6" data-csrf="{{ csrf_token(request) }}">
+  <p class="rounded-lg border p-3 text-sm">{% if not readiness.enabled %}Telephone service is disabled.{% else %}Live transport is enabled; supervised call verification is still required.{% endif %} Configuration checks do not prove a working call.</p>
+  <p id="phone-status" role="status" aria-live="polite" class="text-sm"></p>
+  <nav aria-label="Phone areas" class="flex gap-4"><a href="#phone-inbound" class="underline">Inbound</a><a href="#phone-outbound" class="underline">Outbound</a><a href="#phone-history" class="underline">Call records</a></nav>
+
+  <section id="phone-inbound" class="rounded-xl border p-4 space-y-4">
+    <h2 class="text-xl font-semibold">Inbound</h2>
+    <p class="text-sm">Take a message or offer the configured handover. Caller details are statements, not verified customer identity. Keeping your existing number depends on your carrier's forwarding support.</p>
+    <form id="phone-route" class="grid gap-3 sm:grid-cols-2">
+      <label>Provider account identifier<input name="account_id" required class="block w-full border rounded p-2" autocomplete="off"></label>
+      <label>Incoming telephone number<input name="phone_number" type="tel" required placeholder="+44…" class="block w-full border rounded p-2"></label>
+      <label>Original business number<input name="original_number" type="tel" required placeholder="+44…" class="block w-full border rounded p-2"></label>
+      <label>Separate handover number<input name="transfer_number" type="tel" placeholder="+44…" class="block w-full border rounded p-2"></label>
+      <label>Handover ringing limit, seconds<input name="transfer_timeout_seconds" type="number" min="5" max="60" required class="block w-full border rounded p-2"></label>
+      <label class="flex items-center gap-2"><input name="transfer_verified" type="checkbox">I checked that the handover number does not forward back here.</label>
+      <label class="sm:col-span-2">Greeting<textarea name="greeting" required maxlength="300" class="block w-full border rounded p-2"></textarea></label>
+      <label class="sm:col-span-2">Business instructions and permitted message details<textarea name="instructions" required maxlength="2000" class="block w-full border rounded p-2"></textarea></label>
+      <label class="flex items-center gap-2"><input name="enabled" type="checkbox">Enable this route after number verification</label>
+      <button data-save-row class="border rounded px-4 py-2" type="submit">Save inbound setup</button>
+    </form>
+    <button id="phone-connect" class="border rounded px-4 py-2" type="button">Connect the provider's voice webhook</button>
+    <p class="text-sm">Connecting replaces the provider's voice handler, including missed-call text-back for calls routed to this endpoint. It does not change SMS routing or your carrier's forwarding settings.</p>
+    <details><summary>Usage limits and callback eligibility</summary>
+      <p class="text-sm">Set explicit duration, capacity and reserved cost limits. Provider currency, tariffs and account spend controls must be verified before real trials. These settings do not charge or renew a subscription.</p>
+      <form id="phone-policy" class="grid gap-3 sm:grid-cols-2 mt-3">
+        <label>Daily cost reservation ceiling<input name="daily_budget_minor" type="number" min="1" max="100000" required class="block w-full border rounded p-2"></label>
+        <label>Maximum reservation per call<input name="max_call_cost_minor" type="number" min="1" max="10000" required class="block w-full border rounded p-2"></label>
+        <label>Simultaneous calls<input name="max_concurrent" type="number" min="1" max="5" required class="block w-full border rounded p-2"></label>
+        <label>Maximum total call duration, seconds<input name="max_duration_seconds" type="number" min="10" max="600" required class="block w-full border rounded p-2"></label>
+        <label><input name="enabled" type="checkbox">Allow new calls within these limits</label><button data-save-row type="submit" class="border rounded p-2">Save limits</button>
+      </form>
+      <form id="phone-eligibility" class="grid gap-3 sm:grid-cols-2 mt-3">
+        <label>Requested callback number<input name="phone" type="tel" required class="block w-full border rounded p-2"></label>
+        <label>Eligibility expires at<input name="expires_at" type="datetime-local" required class="block w-full border rounded p-2"></label>
+        <label><input name="callback_requested" type="checkbox" required>The recipient requested this callback</label><button type="submit" class="border rounded p-2">Record callback eligibility</button>
+      </form>
+    </details>
+    <details><summary>Stop service and restore your original routing</summary>
+      <p class="text-sm">Stopping this route cannot turn off forwarding at your carrier. Restore forwarding yourself, then call your original number to check the handset rings. Leave a safe destination in place until this is complete.</p>
+      <button id="phone-offboard" type="button" class="border rounded p-2">Stop new calls — forwarding restoration still required</button>
+      <label class="block mt-3"><input id="phone-restored" type="checkbox">I restored carrier forwarding and checked the original handset</label>
+      <button id="phone-attest" type="button" class="border rounded p-2">Record my restoration check</button>
+      <p class="text-sm">This records your confirmation; BLAM8 has not changed or independently tested the carrier.</p>
+    </details>
+  </section>
+
+  <section id="phone-outbound" class="rounded-xl border p-4 space-y-4">
+    <h2 class="text-xl font-semibold">Outbound</h2>
+    <p class="text-sm">Configure what to ask, what is already known and what counts as complete. Required information controls task completion, never the caller's ability to finish, refuse, opt out or ask for a human.</p>
+    <form id="phone-template" class="space-y-3">
+      <label class="block">Call purpose name<input name="name" required maxlength="100" class="block w-full border rounded p-2"></label>
+      <label class="block">Objective<textarea name="objective" required maxlength="1000" class="block w-full border rounded p-2"></textarea></label>
+      <label class="block">Facts the business provides<textarea name="provided_notes" maxlength="4000" class="block w-full border rounded p-2"></textarea></label>
+      <fieldset class="space-y-2"><legend class="font-semibold">Information to gather</legend><div id="phone-fields" class="space-y-2"></div><button id="phone-add-field" type="button" class="border rounded p-2">Add a field</button></fieldset>
+      <fieldset class="flex flex-wrap gap-4"><legend>Permitted actions</legend>
+        <label><input name="save_message" type="checkbox">Take a message</label><label><input name="request_handover" type="checkbox">Offer the configured handover</label>
+      </fieldset>
+      <fieldset class="space-y-2"><legend>External evidence required for completion</legend>
+        <label class="block"><input name="message_delivered" type="checkbox">Message actually saved to the business record</label>
+        <label class="block"><input name="handover_answered" type="checkbox">Called person presses 1 to accept handover (does not verify their identity)</label>
+      </fieldset>
+      <details><summary>Advanced structured fields</summary><p class="text-sm">Optional inline JSON Schema supports structured objects and arrays. Network references and regular-expression constraints are unavailable.</p><label>Fields schema<textarea name="advanced_fields" class="block w-full border rounded p-2 font-mono" rows="5"></textarea></label><label>Additional completion schema<textarea name="advanced_success" class="block w-full border rounded p-2 font-mono" rows="4"></textarea></label></details>
+      <button data-save-row data-save-always type="submit" class="border rounded px-4 py-2">Save a new purpose version</button>
+    </form>
+    <form id="phone-prepare" class="grid gap-3 sm:grid-cols-2 border-t pt-4">
+      <label>Purpose and version<select id="phone-purpose" required class="block w-full border rounded p-2"><option value="">Choose a saved purpose</option></select></label>
+      <label>Recipient<input name="to_number" type="tel" required placeholder="+44…" class="block w-full border rounded p-2"></label>
+      <label>Verified outgoing number<input name="from_number" type="tel" required class="block w-full border rounded p-2"></label>
+      <label>Total duration limit, seconds<input name="max_duration_seconds" type="number" min="10" max="600" required class="block w-full border rounded p-2"></label>
+      <label class="sm:col-span-2">Approved script and boundaries<textarea name="script" required maxlength="4000" class="block w-full border rounded p-2"></textarea></label>
+      <button type="submit" class="border rounded px-4 py-2">Prepare for review</button>
+    </form>
+    <div id="phone-preview" class="text-sm whitespace-pre-wrap" aria-live="polite"></div>
+  </section>
+
+  <section id="phone-history" class="rounded-xl border p-4 space-y-3"><h2 class="text-xl font-semibold">Call records and usage</h2>
+    <p class="text-sm">Transport, gathered information, business-task completion and delivery evidence are separate. Unknown price or incomplete usage stays unresolved; it is never shown as a free successful call.</p>
+    <button id="phone-refresh" type="button" class="border rounded p-2">Refresh records</button><div id="phone-calls" class="space-y-3"></div>
+  </section>
+</div>
+<script src="/static/telephone-phone.js?v={{ app_revision }}" defer></script>
+{% endblock %}

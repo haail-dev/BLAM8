@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 vs Calendly — A Booking Link, or a Booked Conversation?{% endblock %}
+{% block meta_description %}Honest comparison: Calendly is a booking link for meetings, and its new AI assistant, Callie, books meetings when you copy it into a thread. BLAM8 reads every customer email, replies in your voice from your own prices and books the job into your live diary. The email is the booking page, and it never books a date nobody chose. Prices checked September 2026.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/vs/calendly#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can Calendly answer my customer emails?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not the whole email. Calendly's own emails are confirmations and templated reminders. Its new AI assistant, Callie (in beta, on the Plus plans), can be copied into a thread to suggest times, handle the back-and-forth and book a meeting. But if a customer asks what a job costs, whether you cover their area and when you're free, nothing answers the rest of it. BLAM8 starts at the inbox: it reads the email, drafts a reply in your voice from your own prices and policies, and books the job in the same thread." }
+        },
+        {
+          "@type": "Question",
+          "name": "Calendly has an AI email assistant now, Callie. Isn't that the same?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Callie books meetings when you copy it into a thread. BLAM8 answers every customer email from your own prices and books jobs against your capacity and rules. Callie is a real step for meeting scheduling, and it's fair to say so. The difference is what gets answered and what gets booked: BLAM8 answers the whole email, and books the job against real capacity, the details it needs and any documents that must be in date." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Calendly work for jobs — service visits, deliveries, crews and vans?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It schedules people's meeting availability, not jobs. There are no job records or travel awareness, just event types with fixed durations and static buffers. Booking a resource like a van, bay or room needs the workaround of creating it as an extra user seat or wiring sub-calendars through Zapier. BLAM8's diary schedules the work itself: timed slots, whole days and multi-day jobs against real capacity, with holds that can't double-book, plus your real prices quoted in the reply." }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Calendly pricing compare to BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Calendly is priced per seat, and UK visitors see GBP: Free, Standard £8/seat/month billed yearly (£10 monthly), Teams £13/seat/month billed yearly (£17 monthly), Standard Plus £15 and Teams Plus £20 per seat per month billed yearly (these add the Notetaker and Callie), and Enterprise from $15,000/year. It's cheap per seat. BLAM8 is priced per business, not per seat: £39/month (Starter, 300 emails), £99/month (Pro, 750 emails) or £249/month (Pro + Concierge, 750 emails). Every plan answers the email and books jobs into a live diary, Pro adds the self-filling CRM, and Pro + Concierge adds the Concierge. Prices checked September 2026." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8 a Calendly alternative?",
+          "acceptedAnswer": { "@type": "Answer", "text": "For meetings, such as sales calls, demos and interviews, Calendly is excellent and BLAM8 isn't trying to replace it. But if you've been sending Calendly links to customers who emailed about actual work, like a service visit, a delivery or a fitting, BLAM8 replaces the whole exchange. The email is answered in your voice, the details gathered, and the job booked against your live diary without the customer ever leaving the thread. The email is the booking page." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 have a booking page like Calendly?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not a public one, on purpose. With BLAM8 the email is the booking page: a customer writes, the reply offers what the diary really has, and a yes books it. It never books a date or a time nobody chose. If a detail is missing, it holds the space and asks. If the date is full, it offers the nearest opening. Your existing customers also get a page at blam8.com/c/your-business where they can check, move and pay their bookings and ask questions by conversation. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use both?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Plenty of businesses will keep a Calendly link for internal meetings and sales calls while BLAM8 runs the customer inbox and the jobs diary. They only collide if you're using Calendly links as a substitute for answering customers." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Honest comparison · prices checked September 2026
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      BLAM8 vs Calendly: a booking link, or a booked conversation?
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Calendly perfected one moment: the customer clicks your link and picks a slot. Its new assistant, Callie, can now book a meeting when you copy it into a thread. But someone still has to answer the rest of the email, and the link only knows meeting availability, not jobs. <span class="font-semibold text-navy">BLAM8 owns the whole exchange: the email answered in your voice, the right slot held, the job booked, in the same thread.</span> The email is the booking page.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 grid md:grid-cols-2 gap-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When Calendly is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You book meetings, such as sales calls, demos, interviews and consultations, and invitees are happy to self-serve</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You run a team that needs round robin, lead routing and CRM handoffs</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want a free or very cheap way to publish one person's availability, and a well-known link people trust</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want an AI that books meetings from a thread you copy it into (Callie, on the Plus plans) and a meeting notetaker</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">That's Calendly's home turf, and it's genuinely best-in-class there. It now takes payments, sells packages and sends invoices too. BLAM8 doesn't do round-robin sales routing and isn't trying to.</p>
+    </div>
+    <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When BLAM8 is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>Customers email about <span class="font-semibold text-navy">work</span>, like service visits, deliveries, fittings, viewings or stays, and each one needs a proper reply, not just a link</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>What gets scheduled is a job: real capacity, timed slots, whole days or multi-day work, priced from your own prices</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want the inbox handled end to end: answered, quoted, booked and followed up, with you approving first</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want a booking you can trust: it never books a date or a time nobody chose, and asks when something's missing</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">With Calendly, the inbox is still your job. With BLAM8, the inbox is the product.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Side by side</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl">Calendly prices from <a href="https://calendly.com/pricing" rel="nofollow" class="text-brand hover:underline">calendly.com/pricing</a> as shown to UK visitors (GBP, per seat; Enterprise quoted in USD). Checked September 2026.</p>
+  <div class="mt-8 overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-navy">
+        <tr>
+          <th class="px-5 py-3.5 font-semibold w-1/3"></th>
+          <th class="px-5 py-3.5 font-semibold">Calendly</th>
+          <th class="px-5 py-3.5 font-semibold">BLAM8</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-slate-600">
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">What it is</td><td class="px-5 py-3.5">A self-serve booking link: the customer picks a slot against your meeting availability</td><td class="px-5 py-3.5">An AI agent on your mailbox: answers the email and books the job from the conversation</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Who does the work</td><td class="px-5 py-3.5">You read the email and reply; you send the link or copy Callie in; the customer self-serves</td><td class="px-5 py-3.5">The agent reads, drafts in your voice from your own knowledge and holds the slot; you approve</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Answering customer email</td><td class="px-5 py-3.5">Partly: Callie (beta, Plus plans) handles the meeting back-and-forth in a thread you copy it into; the rest of the email is yours to answer</td><td class="px-5 py-3.5">Yes: every inbound email drafted in your voice, grounded in your prices and policies, approval-first</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">What gets scheduled</td><td class="px-5 py-3.5">Meetings: event types with fixed durations; vans, rooms and crews need the extra-seat workaround</td><td class="px-5 py-3.5">Jobs: real capacity on a live diary, with timed slots, whole days and multi-day work, quoted from your own prices</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Choosing the date</td><td class="px-5 py-3.5">The customer picks from the grid</td><td class="px-5 py-3.5">Never books a date or a time nobody chose. A missing detail holds the space and asks; a full date gets the nearest opening offered and held</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Double-booking protection</td><td class="px-5 py-3.5">Yes, for a person's connected calendars (1 on Free, up to 6 on paid)</td><td class="px-5 py-3.5">Yes: holds placed the moment a slot is offered, so it can't be given away twice</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Customer-facing booking page</td><td class="px-5 py-3.5">The whole product: a public time grid anyone can pick from</td><td class="px-5 py-3.5">No public page, on purpose: the email is the booking page. Existing customers get a page at blam8.com/c/your-business to check, move and pay bookings and ask questions, reached with the reference code on every email or a code sent to the address you hold. Strangers are turned away</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">After the booking</td><td class="px-5 py-3.5">Invitees can cancel or reschedule via the event links</td><td class="px-5 py-3.5">The customer replies to the same thread and the agent handles it, or uses their customer page with the reference code from any BLAM8 email</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">On your phone</td><td class="px-5 py-3.5">Native mobile apps (App Store / Google Play)</td><td class="px-5 py-3.5">Installable app (PWA) from the browser, with push notifications when drafts are ready; no app store</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Reminders &amp; follow-ups</td><td class="px-5 py-3.5">Workflows on paid plans; SMS reminders capped at 250 credits/seat/month</td><td class="px-5 py-3.5">Built in, and if the customer replies "can we move it?", the agent handles that too</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Smart inbox labels</td><td class="px-5 py-3.5">No: Calendly never sees your inbox</td><td class="px-5 py-3.5">Yes: six categories (needs reply, draft ready, replied, booking pending, FYI, automated) that update themselves as the conversation moves</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Concierge: your own assistant</td><td class="px-5 py-3.5">No equivalent: Callie schedules meetings for you, it doesn't run the business</td><td class="px-5 py-3.5">Yes, on Pro + Concierge: chat or talk to it about your bookings, invoices and customers, and have it draft an email, block days, change a stay or hand a job to your team, each action confirmed by you first</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">Free · Standard £8/seat/mo billed yearly (£10 monthly) · Teams £13/seat/mo billed yearly (£17 monthly) · Standard Plus £15 and Teams Plus £20/seat/mo billed yearly (adds Notetaker and Callie) · Enterprise from $15k/yr</td><td class="px-5 py-3.5">Per business, not per seat: Starter £39/mo (replies, booking, diary, quotes and invoices, 300 emails) · Pro £99/mo (adds the self-filling CRM, 750 emails) · Pro + Concierge £249/mo (adds the Concierge, 750 emails) · 14-day free trial of the full product, the Concierge included, no card to start</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">The same email, through both</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl">A customer writes: <span class="italic">"Hi, any chance someone could come out Thursday to take a look? Mornings are best for us."</span></p>
+    <div class="mt-8 grid md:grid-cols-2 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy">With Calendly</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">The email sits in your inbox until you see it. You write back and paste your booking link, or copy Callie in to find a time. The customer picks from your <em>meeting</em> availability, which knows nothing about how much work Thursday can actually take, or what the job costs. If they don't click, the thread goes quiet.</p>
+      </div>
+      <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+        <h3 class="font-semibold text-navy">With BLAM8</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">A reply is drafted in your voice within minutes, quoting your actual rates. A Thursday-morning slot with the right person is held so it can't be double-booked, and the booking details sit pinned on the thread. You approve: sent, and in the diary. The customer never left their inbox.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">The email is the booking page</h2>
+  <div class="mt-6 max-w-3xl space-y-4 text-slate-600 leading-relaxed">
+    <p>Your customers already email you. BLAM8 doesn't send them somewhere else to book: the reply offers what your diary really has, and a yes books it, in the same thread.</p>
+    <p>It never books a date or a time nobody chose. If a detail is missing, it holds the space and asks for it, and the reply says the space is held. If the date is full, it offers the nearest opening and holds that until it expires.</p>
+    <p>Customers you already have can also reach their own page at <span class="font-semibold text-navy">blam8.com/c/your-business</span>, to check, move and pay their bookings and ask questions by conversation. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away.</p>
+  </div>
+  <div class="mt-8 grid md:grid-cols-3 gap-5 max-w-4xl">
+    <div class="rounded-xl border border-slate-200 p-5">
+      <h3 class="font-semibold text-navy">Booked in the thread</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">"Can you do Thursday morning?" gets a real answer from the real diary, with the details gathered on the way, so the booking is complete.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-5">
+      <h3 class="font-semibold text-navy">No guessed dates</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">Every held date is one the customer named or the diary offered. A follow-up that changes nothing never re-books.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-5">
+      <h3 class="font-semibold text-navy">For your customers only</h3>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">The customer page opens with the reference code from any BLAM8 email. No account, no password, and no strangers.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="mx-auto max-w-3xl px-5 pb-16 md:pb-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+  <div class="mt-8 divide-y divide-slate-200">
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can Calendly answer my customer emails?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Not the whole email. Calendly's own emails are confirmations and templated reminders. Its new AI assistant, Callie (in beta, on the Plus plans), can be copied into a thread to suggest times, handle the back-and-forth and book a meeting. But if a customer asks what a job costs, whether you cover their area and when you're free, nothing answers the rest of it. BLAM8 starts at the inbox: it reads the email, drafts a reply in your voice from your own prices and policies, and books the job in the same thread.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Calendly has an AI email assistant now, Callie. Isn't that the same?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Callie books meetings when you copy it into a thread. BLAM8 answers every customer email from your own prices and books jobs against your capacity and rules. Callie is a real step for meeting scheduling, and it's fair to say so. The difference is what gets answered and what gets booked: BLAM8 answers the whole email, and books the job against real capacity, the details it needs and any documents that must be in date.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Does Calendly work for jobs — service visits, deliveries, crews and vans?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">It schedules people's meeting availability, not jobs. There are no job records or travel awareness, just event types with fixed durations and static buffers. Booking a resource like a van, bay or room needs the workaround of creating it as an extra user seat or wiring sub-calendars through Zapier. BLAM8's diary schedules the work itself: timed slots, whole days and multi-day jobs against real capacity, with holds that can't double-book, plus your real prices quoted in the reply.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How does Calendly pricing compare to BLAM8?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Calendly is priced per seat, and UK visitors see GBP: Free, Standard £8/seat/month billed yearly (£10 monthly), Teams £13/seat/month billed yearly (£17 monthly), Standard Plus £15 and Teams Plus £20 per seat per month billed yearly (these add the Notetaker and Callie), and Enterprise from $15,000/year. It's cheap per seat. BLAM8 is priced per business, not per seat: £39/month (Starter, 300 emails), £99/month (Pro, 750 emails) or £249/month (Pro + Concierge, 750 emails). Every plan answers the email and books jobs into a live diary, Pro adds the self-filling CRM, and Pro + Concierge adds the Concierge. Prices checked September 2026.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8 a Calendly alternative?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">For meetings, such as sales calls, demos and interviews, Calendly is excellent and BLAM8 isn't trying to replace it. But if you've been sending Calendly links to customers who emailed about actual work, like a service visit, a delivery or a fitting, BLAM8 replaces the whole exchange. The email is answered in your voice, the details gathered, and the job booked against your live diary without the customer ever leaving the thread. The email is the booking page.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Does BLAM8 have a booking page like Calendly?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Not a public one, on purpose. With BLAM8 the email is the booking page: a customer writes, the reply offers what the diary really has, and a yes books it. It never books a date or a time nobody chose. If a detail is missing, it holds the space and asks. If the date is full, it offers the nearest opening. Your existing customers also get a page at blam8.com/c/your-business where they can check, move and pay their bookings and ask questions by conversation. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can I use both?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Yes. Plenty of businesses will keep a Calendly link for internal meetings and sales calls while BLAM8 runs the customer inbox and the jobs diary. They only collide if you're using Calendly links as a substitute for answering customers.</p>
+    </details>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Stop sending links. Start sending answers.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Run both, or just BLAM8. Calendly is a booking link. BLAM8 is a booked conversation, in the thread your customer already started. Free 14-day trial of the full product, no card.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/#pricing" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">View pricing</a>
+    </div>
+  </div>
+  <p class="mt-8 text-center text-xs text-slate-400 max-w-2xl mx-auto leading-relaxed">Calendly is a trademark of Calendly LLC. BLAM8 is not affiliated with or endorsed by Calendly. Competitor details and prices were checked against public sources in September 2026 and may have changed — see <a href="https://calendly.com/pricing" rel="nofollow" class="hover:underline">Calendly's pricing page</a> for current rates.</p>
+</section>
+
+{% endblock %}

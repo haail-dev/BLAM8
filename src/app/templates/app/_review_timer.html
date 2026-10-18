@@ -1,0 +1,29 @@
+{# HRT tracking (Kris 2026-08-31): how long the draft was actually ON SCREEN
+   before its send. Visible dwell only — a locked phone or backgrounded tab
+   pauses the clock — appended as a hidden review_seconds field to any
+   /app/drafts/{id}/send form the moment it submits (capture phase beats the
+   POST; the 303 redirect resets the clock for the next draft). The server
+   clamps again, so a stale tab can't file an hour of "review". #}
+<script>
+(function () {
+  var acc = 0, mark = Date.now(), vis = document.visibilityState === 'visible';
+  function roll() {
+    var now = Date.now();
+    if (vis) acc += now - mark;
+    mark = now;
+    vis = document.visibilityState === 'visible';
+  }
+  document.addEventListener('visibilitychange', roll);
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    var a = (f.getAttribute && f.getAttribute('action')) || '';
+    if (a.indexOf('/app/drafts/') !== 0 || a.indexOf('/send') === -1) return;
+    roll();
+    var i = document.createElement('input');
+    i.type = 'hidden';
+    i.name = 'review_seconds';
+    i.value = Math.min(Math.round(acc / 1000), 1800);
+    f.appendChild(i);
+  }, true);
+})();
+</script>

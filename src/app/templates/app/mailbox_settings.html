@@ -1,0 +1,145 @@
+{% extends "app/base.html" %}
+{% block title %}{{ box.display }} · Mailbox settings · BLAM8{% endblock %}
+{% set back = ('/app/mailboxes', 'Mailboxes') %}
+{% block heading %}{{ box.display }}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+
+  {% if saved %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+    Saved. New drafts in this mailbox will use these overrides.
+  </div>
+  {% endif %}
+
+  <p class="text-sm text-slate-500 leading-relaxed">
+    This mailbox answers as <span class="font-medium text-navy">{{ box.address or box.display }}</span>.
+    Every field left blank <em>inherits</em> the company-wide setting (shown greyed-in).
+    Fill one in to override it for this mailbox only.
+  </p>
+
+  <form method="post" action="/app/mailboxes/{{ box.id }}/settings" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+    {% set label = "block text-sm font-semibold text-navy" %}
+    {% set help = "text-xs text-slate-400 mt-0.5" %}
+    {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+
+    <!-- Identity & grouping -->
+    <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-5">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Mailbox identity</p>
+        <p class="text-sm text-slate-400">How this mailbox shows up in your lists and reporting.</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div>
+          <label class="{{ label }}" for="label">Label</label>
+          <input id="label" name="label" class="{{ field }}" value="{{ box.label or '' }}" placeholder="Orders desk">
+        </div>
+        <div>
+          <label class="{{ label }}" for="department">Department</label>
+          <input id="department" name="department" class="{{ field }}" value="{{ box.department or '' }}" placeholder="Department name">
+        </div>
+        <div>
+          <label class="{{ label }}" for="category">Category</label>
+          <input id="category" name="category" list="category-suggestions" class="{{ field }}" value="{{ box.category or '' }}" placeholder="orders">
+          <datalist id="category-suggestions">
+            {% for c in category_suggestions %}<option value="{{ c }}">{% endfor %}
+          </datalist>
+        </div>
+      </div>
+      <div>
+        <label class="{{ label }}" for="purpose">What this mailbox handles</label>
+        <p class="{{ help }}">One line — it frames the agent's role here, e.g. “this mailbox handles order intake and delivery queries”.</p>
+        <input id="purpose" name="purpose" class="{{ field }}" value="{{ mc.purpose or '' }}" placeholder="this mailbox handles order intake">
+      </div>
+      {% if fleet_branches %}
+      <div>
+        <label class="{{ label }}" for="default_branch_id">Default branch for bookings</label>
+        <p class="{{ help }}">Orders arriving in this mailbox book this branch's vehicles unless the customer names another — e.g. orders@leeds books the Leeds depot.</p>
+        <select id="default_branch_id" name="default_branch_id" class="{{ field }} bg-white">
+          <option value="">No default — the agent asks when it matters</option>
+          {% for b in fleet_branches %}
+          <option value="{{ b.id }}" {{ 'selected' if mc.default_branch_id == b.id }}>{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- Sending mode -->
+    <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Sending mode</p>
+        <p class="text-sm text-slate-400">Override the company-wide sending mode for this mailbox only — orders@ can run full-auto while complaints@ stays draft-only.</p>
+      </div>
+      {% set company_mode = 'full-auto' if tenant_cfg.auto_send else 'draft-only' %}
+      <div class="space-y-2">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" name="sending" value="inherit" {% if mc.auto_send is not defined or mc.auto_send is none %}checked{% endif %} class="h-4 w-4 border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span class="text-sm text-slate-700">Inherit company setting <span class="text-slate-400">(currently {{ company_mode }})</span></span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" name="sending" value="auto" {% if mc.auto_send %}checked{% endif %} class="h-4 w-4 border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span class="text-sm text-slate-700">Full-auto — this mailbox sends its replies itself</span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" name="sending" value="draft" {% if mc.auto_send is defined and mc.auto_send is not none and not mc.auto_send %}checked{% endif %} class="h-4 w-4 border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span class="text-sm text-slate-700">Draft-only — every reply waits for approval</span>
+        </label>
+      </div>
+      <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+        Full-auto replies go straight to customers. Escalation-matched emails are always held for review, whatever the mode.
+      </div>
+    </section>
+
+    <!-- Persona overrides -->
+    <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-5">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Voice &amp; rules overrides</p>
+        <p class="text-sm text-slate-400">Blank = inherit. Your company identity (what the business does) always comes from the main Settings.</p>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="agent_name">What the agent calls itself</label>
+        <input id="agent_name" name="agent_name" class="{{ field }}" value="{{ mc.agent_name or '' }}" placeholder="{{ tenant_cfg.agent_name or 'Inherits — neutral' }}">
+      </div>
+      <div>
+        <label class="{{ label }}" for="tone">Tone of voice</label>
+        <input id="tone" name="tone" class="{{ field }}" value="{{ mc.tone or '' }}" placeholder="{{ tenant_cfg.tone or 'Inherits — professional and warm' }}">
+      </div>
+      <div>
+        <label class="{{ label }}" for="sign_off">Sign-off</label>
+        <textarea id="sign_off" name="sign_off" rows="2" class="{{ field }}" placeholder="{{ tenant_cfg.sign_off or 'Inherits the company sign-off' }}">{{ mc.sign_off or '' }}</textarea>
+      </div>
+      <div>
+        <label class="{{ label }}" for="do_list">Always do</label>
+        <textarea id="do_list" name="do_list" rows="3" class="{{ field }}" placeholder="{{ tenant_cfg.do_list or 'Inherits the company list' }}">{{ mc.do_list or '' }}</textarea>
+      </div>
+      <div>
+        <label class="{{ label }}" for="never_do">Never do</label>
+        <p class="{{ help }}">When set, this replaces the company list for this mailbox.</p>
+        <textarea id="never_do" name="never_do" rows="3" class="{{ field }}" placeholder="{{ tenant_cfg.never_do or 'Inherits the company list' }}">{{ mc.never_do or '' }}</textarea>
+      </div>
+      <div>
+        <label class="{{ label }}" for="escalation">Always escalate to a human</label>
+        <p class="{{ help }}">When set, this replaces the company keywords for this mailbox.</p>
+        <textarea id="escalation" name="escalation" rows="2" class="{{ field }}" placeholder="{{ tenant_cfg.escalation or 'Inherits the company keywords' }}">{{ mc.escalation or '' }}</textarea>
+      </div>
+      <div>
+        <label class="{{ label }}" for="custom_instructions">Anything else</label>
+        <textarea id="custom_instructions" name="custom_instructions" rows="4" class="{{ field }}" placeholder="{{ tenant_cfg.custom_instructions or 'Inherits the company instructions' }}">{{ mc.custom_instructions or '' }}</textarea>
+      </div>
+      <div>
+        <label class="{{ label }}" for="examples">Past replies you were happy with</label>
+        <textarea id="examples" name="examples" rows="6" class="{{ field }}" placeholder="{{ 'Inherits the company examples' if tenant_cfg.examples else 'Paste 3–5 real replies from this mailbox' }}">{{ mc.examples or '' }}</textarea>
+      </div>
+    </section>
+
+    <div class="flex items-center gap-3">
+      <button type="submit" data-save-row class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save mailbox settings</button>
+      <span class="text-xs text-slate-400">Applies to the next draft in this mailbox.</span>
+    </div>
+  </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "app/base.html" %}
+{% block title %}Overdue · Money · BLAM8{% endblock %}
+{% block heading %}Overdue{% endblock %}
+{% set back = ('/app/money', 'Money') %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{# The chase board (Money's Overdue row, opened out): the debt by age, each
+   invoice's chase trail, and the engine's stated NEXT move — the proactive
+   promise made legible. #}
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if msg == 'chase_stood_down' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">No chase staged — they've written back since the last reminder, so the conversation owns it. Pick it up in the thread.</div>{% endif %}
+  {% if msg == 'chase_already_staged' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">A chase for that invoice is already drafted — it's waiting in your Inbox.</div>{% endif %}
+
+  <!-- The headline: how much, how old — the risk read before any table. -->
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200">
+    <div class="px-4 py-2.5 flex items-baseline gap-3">
+      <span class="text-sm font-medium text-navy">Overdue</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ ov.count }} invoice{{ '' if ov.count == 1 else 's' }} past due{% if ov.worst %} · oldest {{ ov.worst }}d{% endif %}</span>
+      <span class="text-xl font-bold font-display {% if ov.total > 0 %}text-rose-700{% else %}text-slate-400{% endif %}">£{{ '%.2f'|format(ov.total) }}</span>
+    </div>
+    {% for b in ov.buckets %}
+    <div class="px-4 py-2.5 flex items-baseline gap-3">
+      <span class="text-sm font-medium text-slate-600">{{ b.label }}</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ b.count }} invoice{{ '' if b.count == 1 else 's' }}</span>
+      <span class="text-base font-semibold font-display {{ 'text-rose-700' if 'month' in b.label or '15' in b.label else 'text-navy' }}">£{{ '%.2f'|format(b.total) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">What happens next</h2>
+    {% if ov.rows %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Ref</th><th class="py-2 pr-3">Customer</th>
+          <th class="py-2 pr-3 text-right">Late</th><th class="py-2 pr-3 text-right">Owed</th>
+          <th class="py-2 pr-3">Chased so far</th><th class="py-2 pr-3">Next chase</th><th></th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for r in ov.rows %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 font-medium text-navy whitespace-nowrap">{{ r.invoice_ref }}</td>
+            <td class="py-2 pr-3 text-slate-600">{{ r.customer }}</td>
+            <td class="py-2 pr-3 text-right font-medium {{ 'text-rose-700' if r.days_late >= 14 else 'text-amber-700' }}">{{ r.days_late }}d</td>
+            <td class="py-2 pr-3 text-right font-semibold text-navy">£{{ '%.2f'|format(r.outstanding) }}</td>
+            <td class="py-2 pr-3 whitespace-nowrap text-xs text-slate-500">
+              {% if r.reminders_sent %}{{ r.reminders_sent }}&times;{% if r.last_reminder_at %} · last {{ r.last_reminder_at | pretty_date }}{% endif %}{% else %}not yet{% endif %}
+            </td>
+            {# The engine's stated next move — a drafted chase outranks it. #}
+            <td class="py-2 pr-3 whitespace-nowrap text-xs">
+              {% if chase_pending.get(r.invoice_ref) %}
+              <a href="/app/conversations/view?contact={{ chase_pending[r.invoice_ref] | urlencode }}" class="inline-flex items-center gap-1.5 font-semibold text-amber-700"><span class="h-1.5 w-1.5 rounded-full bg-amber-500 self-center"></span>drafted — review &rarr;</a>
+              {% elif r.next_chase.kind == 'scheduled' %}
+              <span class="text-slate-500">{{ r.next_chase.date | pretty_date }} <span class="text-slate-400">({{ r.next_chase.milestone }}d milestone)</span></span>
+              {% elif r.next_chase.kind == 'imminent' %}
+              <span class="inline-flex items-center gap-1.5 font-medium text-amber-700"><span class="h-1.5 w-1.5 rounded-full bg-amber-500 self-center"></span>next morning run</span>
+              {% else %}
+              <span class="inline-flex items-center gap-1.5 font-medium text-rose-700"><span class="h-1.5 w-1.5 rounded-full bg-rose-600 self-center"></span>{{ r.next_chase.label }}</span>
+              {% endif %}
+            </td>
+            <td class="py-2 text-right"><a href="/app/invoices/{{ r.id }}" class="text-brand text-xs font-semibold whitespace-nowrap">View &rarr;</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-xs text-slate-400">Chases stage themselves at the 7, 14 and 30 day milestones — firmer each time, statutory interest mentioned only at 30 — and stand down the moment the customer writes back. After three reminders no fourth email goes: it&rsquo;s flagged as a phone call.</p>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">Nothing overdue. Everything issued is either paid or still within its terms.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

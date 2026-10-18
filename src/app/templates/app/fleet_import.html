@@ -1,0 +1,124 @@
+{% extends "app/base.html" %}
+{% block title %}Import orders · BLAM8{% endblock %}
+{% block heading %}Import order book{% endblock %}
+{% set back = ('/app/board', 'Board') %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm">
+    <p class="text-xs text-slate-400">Google Sheets users: File → Download → CSV. Excel: save as .xlsx or .csv.</p>
+  </div>
+
+  {% if stage == 'upload' %}
+  {% if error %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{{ error }}</div>
+  {% endif %}
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <div>
+      <h2 class="font-semibold text-navy text-sm">Upload an order book</h2>
+      <p class="mt-1 text-sm text-slate-600">Each row becomes a booking, best-fit onto a vehicle by the same capacity engine the agent uses — an import can never overload a van. You'll see a row-by-row preview before anything is booked.</p>
+    </div>
+    <form method="post" action="/app/fleet/import/preview" enctype="multipart/form-data" class="flex items-center gap-3 flex-wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="file" name="file" required accept=".csv,.xlsx,.xlsm"
+             class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand hover:file:bg-blue-100">
+      <button class="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Preview</button>
+    </form>
+    <div class="rounded-lg bg-slate-50 border border-slate-100 px-4 py-3 text-xs text-slate-500 leading-relaxed">
+      <p class="font-semibold text-slate-600 mb-1">Columns it understands (a date and a pallet quantity are required; everything else is optional):</p>
+      <p><span class="font-mono">Date</span> · <span class="font-mono">Pallets</span>/<span class="font-mono">Qty</span> · <span class="font-mono">Type</span> (full / euro / half / quarter) · <span class="font-mono">Weight kg</span> · <span class="font-mono">Ref</span>/<span class="font-mono">PO</span> · <span class="font-mono">Collection</span>/<span class="font-mono">From</span> · <span class="font-mono">Delivery</span>/<span class="font-mono">To</span> · <span class="font-mono">Customer</span> · <span class="font-mono">Notes</span> · <span class="font-mono">Branch</span>/<span class="font-mono">Depot</span></p>
+      <p class="mt-1">UK dates (13/06/2026) and ISO dates both work. Header names are matched loosely — most TMS exports just work.</p>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if stage == 'preview' %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <h2 class="font-semibold text-navy text-sm">{{ filename }}</h2>
+        <p class="text-xs text-slate-500 mt-0.5">
+          <span class="text-emerald-700 font-semibold">{{ counts.ok }} ready</span>
+          {% if counts.no_fit %} · <span class="text-rose-600 font-semibold">{{ counts.no_fit }} won't fit as things stand</span>{% endif %}
+          {% if counts.error %} · <span class="text-amber-600 font-semibold">{{ counts.error }} with problems (won't be imported)</span>{% endif %}
+        </p>
+      </div>
+      <form method="post" action="/app/fleet/import/commit" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="payload" value="{{ payload }}">
+        <a href="/app/fleet/import" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Start over</a>
+        {% if counts.ok or counts.no_fit %}
+        <button class="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Book {{ counts.ok + counts.no_fit }} row{{ '' if counts.ok + counts.no_fit == 1 else 's' }}</button>
+        {% endif %}
+      </form>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100 text-left text-xs text-slate-400">
+          <th class="px-4 py-2.5 font-semibold">Row</th>
+          <th class="px-3 py-2.5 font-semibold">Date</th>
+          <th class="px-3 py-2.5 font-semibold">Load</th>
+          <th class="px-3 py-2.5 font-semibold">Ref</th>
+          <th class="px-3 py-2.5 font-semibold">From → To</th>
+          <th class="px-4 py-2.5 font-semibold">Verdict</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for r in rows %}
+        <tr class="{{ 'bg-amber-50/40' if r.status == 'error' else ('bg-rose-50/40' if r.status == 'no_fit' else '') }}">
+          <td class="px-4 py-2.5 text-slate-400 text-xs">{{ r.line }}</td>
+          <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">{{ r.date }}</td>
+          <td class="px-3 py-2.5 text-slate-700 whitespace-nowrap">
+            {% if r.spaces %}{{ '%g'|format(r.spaces) }} sp{% if r.weight_kg %} · {{ '%g'|format(r.weight_kg) }} kg{% endif %}{% else %}—{% endif %}
+          </td>
+          <td class="px-3 py-2.5 font-mono text-xs text-slate-600">{{ r.reference or '—' }}</td>
+          <td class="px-3 py-2.5 text-slate-600 text-xs">{{ r.collection_postcode or '?' }} → {{ r.delivery_postcode or '?' }}</td>
+          <td class="px-4 py-2.5 text-xs">
+            {% if r.status == 'error' %}<span class="text-amber-700 font-semibold">{{ r.problems|join(' · ') }}</span>
+            {% elif r.status == 'no_fit' %}<span class="text-rose-600 font-semibold">no van fits today</span>
+            {% else %}<span class="text-emerald-700 font-semibold">fits</span>{% endif %}
+            {% if r.warnings %}<span class="text-slate-400"> · {{ r.warnings|join(' · ') }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="px-5 py-3 text-xs text-slate-400 border-t border-slate-100">The verdicts simulate this file against today's board, row by row in order. Booking decides for real, atomically — a "fits" can still lose a race, and the result page tells you exactly what happened.</p>
+  </section>
+  {% endif %}
+
+  {% if stage == 'result' %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3.5 flex items-center justify-between gap-3">
+      <div>
+        <h2 class="font-semibold text-navy text-sm">{{ booked_n }} of {{ results|length }} row{{ '' if results|length == 1 else 's' }} booked</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Booked rows are confirmed and on the board (and your calendar, if connected).</p>
+      </div>
+      <a href="/app/board" class="rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Open the board</a>
+    </div>
+    <table class="w-full text-sm">
+      <tbody class="divide-y divide-slate-100">
+        {% for r in results %}
+        <tr class="{{ '' if r.outcome == 'booked' else 'bg-rose-50/40' }}">
+          <td class="px-4 py-2.5 text-slate-400 text-xs w-12">{{ r.line }}</td>
+          <td class="px-3 py-2.5 text-slate-700">{{ r.summary }}</td>
+          <td class="px-3 py-2.5 text-slate-500 text-xs whitespace-nowrap">{{ r.date }}</td>
+          <td class="px-4 py-2.5 text-xs text-right whitespace-nowrap">
+            {% if r.outcome == 'booked' %}
+            {% if r.ref %}<span class="font-mono text-[11px] text-slate-500 mr-1.5">{{ r.ref }}</span>{% endif %}
+            <span class="text-emerald-700 font-semibold">Booked → {{ r.vehicle }}</span>
+            {% if r.registration %}<span class="ml-1 rounded bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-amber-900">{{ r.registration }}</span>{% endif %}
+            {% elif r.outcome == 'no_fit' %}<span class="text-rose-600 font-semibold">No van had space</span>
+            {% else %}<span class="text-amber-700 font-semibold">Bad row — not booked</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="px-5 py-3 text-xs text-slate-400 border-t border-slate-100">Vehicles shown here are internal — customers only ever hear dates and capacity.</p>
+  </section>
+  {% endif %}
+
+</div>
+{% endblock %}

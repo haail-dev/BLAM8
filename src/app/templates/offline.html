@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>You're offline — BLAM8</title>
+  <meta name="robots" content="noindex" />
+  {# Self-contained on purpose: this page is precached by /sw.js and shown when
+     the network is down, so it can't rely on the Tailwind CDN or Google Fonts. #}
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+           background: #f1f5f9; color: #0b1b34;
+           font-family: Inter, system-ui, -apple-system, sans-serif; }
+    .card { text-align: center; padding: 2rem; }
+    .card img { width: 72px; height: 72px; border-radius: 16px; }
+    h1 { font-size: 1.25rem; margin: 1rem 0 .25rem; }
+    p { color: #475569; font-size: .9rem; margin: 0 0 1.25rem; }
+    a { display: inline-block; background: #2563eb; color: #fff; text-decoration: none;
+        font-weight: 600; font-size: .875rem; padding: .5rem 1rem; border-radius: .5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="/static/icons/icon-192.png" alt="BLAM8" />
+    <h1>You're offline</h1>
+    <p>BLAM8 needs a connection to load your inbox.<br>Changes will sync when you're reconnected.</p>
+    <a href="/app">Try again</a>
+  </div>
+  {# Bare path, no ?v: this page is served from the service worker's cache,
+     and /sw.js precaches the script under exactly this name. #}
+  <script src="/static/pull_refresh.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,167 @@
+{% extends "app/base.html" %}
+{% block title %}{{ q.quote_ref }} · Quote · BLAM8{% endblock %}
+{% block heading %}Quote {{ q.quote_ref }}{% endblock %}
+{% set back = ('/app/quotes', 'All quotes') %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{# status = dot + quiet text (Counting House), never a filled pill — same maps as quotes.html #}
+{% set stone = {'draft':'text-slate-500','sent':'text-brand','accepted':'text-emerald-700','declined':'text-rose-700','expired':'text-amber-700','invoiced':'text-indigo-700','cancelled':'text-slate-400'} %}
+{% set sdot = {'draft':'bg-slate-200','sent':'bg-brand','accepted':'bg-emerald-600','declined':'bg-rose-600','expired':'bg-amber-500','invoiced':'bg-indigo-500','cancelled':'bg-slate-200'} %}
+{% set msg = request.query_params.get('msg') %}
+{% set editable = q.status in ('draft', 'sent') %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+  {% if msg == 'sent' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Quote emailed — you'll get a notification the moment they open it.</div>{% endif %}
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Lines saved.{% if q.status == 'sent' %} The customer's link now shows the revised quote.{% endif %}</div>{% endif %}
+  {% if msg == 'noemail' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">This quote has no customer email, so it can't be sent — you can still share its link directly.</div>{% endif %}
+  {% if msg == 'nolines' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">This quote has no lines, so it wasn't sent. Add at least one line, then send it.</div>{% endif %}
+  {% if msg == 'sendfail' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">Couldn't send the quote — check the mailbox connection and try again.</div>{% endif %}
+  {% if msg == 'locked' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">This quote can no longer be edited — what was accepted (or declined) is the record.</div>{% endif %}
+  {% if msg == 'notaccepted' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Only an accepted quote can be converted to an invoice.</div>{% endif %}
+
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-2xl font-bold text-navy">{{ q.quote_ref }}</p>
+        <p class="text-sm text-slate-500 mt-1">To: <span class="font-medium text-slate-700">{{ q.customer_name or q.customer_email or '—' }}</span>{% if q.customer_name and q.customer_email %} <span class="text-slate-400">· {{ q.customer_email }}</span>{% endif %}</p>
+        {% if q.title %}<p class="text-sm text-slate-600">{{ q.title }}</p>{% endif %}
+        <p class="text-xs text-slate-400">
+          {% if q.issue_date %}Issued {{ q.issue_date | pretty_date }}{% endif %}
+          {% if q.valid_until %} · Valid until {{ q.valid_until | pretty_date }}{% endif %}
+          {% if (q.version or 1) > 1 %} · v{{ q.version }}{% endif %}
+          {% if q.viewed_at %} · Viewed {{ q.viewed_at | pretty_date }}{% if (q.view_count or 0) > 1 %} ({{ q.view_count }}×){% endif %}{% endif %}
+        </p>
+        {% if q.accepted_at %}<p class="text-xs font-medium text-emerald-700 mt-1">✓ Accepted by {{ q.accepted_name }} on {{ q.accepted_at | pretty_date }}</p>{% endif %}
+        {% if q.declined_at %}<p class="text-xs font-medium text-red-600 mt-1">Declined {{ q.declined_at | pretty_date }}{% if q.decline_reason %} — “{{ q.decline_reason }}”{% endif %}</p>{% endif %}
+        {% if q.deposit_percent %}<p class="text-xs text-slate-400">Deposit on acceptance: {{ '%g'|format(q.deposit_percent|float) }}%{% if q.deposit_base is not none %} of £{{ '%.2f'|format(q.deposit_base|float) }}{% endif %}{% if deposit_inv %} → <a href="/app/invoices/{{ deposit_inv.id }}" class="text-brand">{{ deposit_inv.invoice_ref }} ({{ deposit_inv.status }})</a>{% endif %}</p>{% endif %}
+        {% if q.invoice_id %}<p class="text-xs text-slate-400">Invoiced → <a href="/app/invoices/{{ q.invoice_id }}" class="text-brand font-medium">view the invoice</a></p>{% endif %}
+        {# Their PO / works-order number. Editable in ANY state — it usually
+           arrives after the quote goes out, and it rides every invoice this
+           quote mints (deposit and final), the PDFs and the export. #}
+        <form method="post" action="/app/quotes/{{ q.id }}/reference" class="mt-1.5 flex items-center gap-2 text-xs">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <label for="cref" class="font-medium text-slate-500 whitespace-nowrap">Their ref / PO</label>
+          <input id="cref" name="customer_reference" value="{{ q.customer_reference or '' }}" placeholder="e.g. PO 4471"
+                 class="w-36 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-brand">
+          <div data-save-row><button class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Save</button></div>
+        </form>
+      </div>
+      <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-[13px] font-medium {{ stone.get(q.status,'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ sdot.get(q.status,'bg-slate-200') }} self-center"></span>{{ q.status.replace('_',' ') }}</span>
+    </div>
+
+    {% if editable %}
+    {# Editable lines — clear a row's description to remove it. Six parallel
+       inputs per row (incl. blanks) keep the posted lists index-aligned:
+       booking_id + kb_entry_id link the line to its job/price source, and
+       is_selected preserves the CUSTOMER's optional-line tick through an edit. #}
+    <form method="post" action="/app/quotes/{{ q.id }}/lines" class="space-y-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="hidden sm:flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+        <span class="flex-1">Item</span><span class="w-28 text-right">Amount (£)</span><span class="w-28">Type</span>
+      </div>
+      {% for l in lines %}
+      <div class="flex flex-wrap items-center gap-2" data-filled-row>
+        <input type="hidden" name="booking_id" value="{{ l.booking_id or '' }}">
+        <input type="hidden" name="kb_entry_id" value="{{ l.kb_entry_id or '' }}">
+        <input type="hidden" name="is_selected" value="{{ '1' if l.is_selected else '0' }}">
+        <input name="description" value="{{ l.description }}" class="w-full sm:w-0 sm:flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+        <input name="amount" type="number" step="0.01" value="{{ '%.2f'|format(l.amount|float) }}" class="w-28 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+        <select name="optionality" class="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand">
+          <option value="required" {{ 'selected' if not l.is_optional else '' }}>Required</option>
+          <option value="optional" {{ 'selected' if l.is_optional else '' }}>Optional{{ '' if l.is_selected else ' (unticked)' }}</option>
+        </select>
+        <label class="flex items-center gap-1 text-xs text-slate-500"><input type="hidden" name="counts_deposit" value="{{ '1' if l.counts_to_deposit_rule else '0' }}"><input type="checkbox" onchange="this.previousElementSibling.value=this.checked?'1':'0'" {{ 'checked' if l.counts_to_deposit_rule else '' }} class="rounded border-slate-300">Counts towards the deposit rule</label>
+      </div>
+      {% endfor %}
+      {# Spare rows (src/app/static/spare_rows.js): hidden until "+ Add a line". #}
+      {% for i in range(6) %}
+      <div class="flex flex-wrap items-center gap-2" data-spare-row hidden>
+        <input type="hidden" name="booking_id" value="">
+        <input type="hidden" name="kb_entry_id" value="">
+        <input type="hidden" name="is_selected" value="1">
+        <input name="description" placeholder="Add a line…" class="w-full sm:w-0 sm:flex-1 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+        <input name="amount" type="number" step="0.01" placeholder="0.00" class="w-28 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+        <select name="optionality" class="w-28 rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand">
+          <option value="required">Required</option>
+          <option value="optional">Optional</option>
+        </select>
+        <label class="flex items-center gap-1 text-xs text-slate-500"><input type="hidden" name="counts_deposit" value="0"><input type="checkbox" onchange="this.previousElementSibling.value=this.checked?'1':'0'" class="rounded border-slate-300">Counts towards the deposit rule</label>
+      </div>
+      {% endfor %}
+      <div><button type="button" data-add-row class="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">+ Add a line</button></div>
+      <div data-save-row class="flex justify-end"><button class="rounded-lg border border-slate-300 px-4 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Save lines</button></div>
+    </form>
+    {% else %}
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+        <th class="py-2 pr-3">Item</th><th class="py-2 text-right">Amount</th></tr></thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for l in lines %}
+        <tr class="{{ 'opacity-50' if l.is_optional and not l.is_selected else '' }}">
+          <td class="py-2 pr-3 text-slate-700">{{ l.description }}{% if l.is_optional %} <span class="text-xs text-slate-400">optional{{ ' — not taken' if not l.is_selected else '' }}</span>{% endif %}</td>
+          <td class="py-2 text-right text-slate-700">£{{ '%.2f'|format(l.amount|float) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    {% if q.prices_include_vat and s.show_vat %}<div class="ml-auto text-right text-sm"><span class="font-bold text-navy">Total £{{ '%.2f'|format(q.total|float) }}</span> <span class="text-slate-500">(includes VAT £{{ '%.2f'|format(q.vat|float) }})</span></div>{% else %}<div class="ml-auto w-56 space-y-1 text-sm">
+      <div class="flex justify-between text-slate-500"><span>Subtotal</span><span>£{{ '%.2f'|format(q.subtotal|float) }}</span></div>
+      {% if s.show_vat %}<div class="flex justify-between text-slate-500"><span>VAT ({{ '%g'|format(s.vat_rate|float) }}%)</span><span>£{{ '%.2f'|format(q.vat|float) }}</span></div>{% endif %}
+      <div class="flex justify-between font-bold text-navy border-t border-slate-200 pt-1"><span>Total</span><span>£{{ '%.2f'|format(q.total|float) }}</span></div>
+    </div>{% endif %}
+
+    <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+      {% if editable %}
+      <form method="post" action="/app/quotes/{{ q.id }}/send"
+            onsubmit="return confirm('{% if q.status == 'sent' %}Quote {{ q.quote_ref }} was already sent — email it to {{ q.customer_email }} AGAIN?{% else %}Email quote {{ q.quote_ref }} (as a view-and-accept link) to {{ q.customer_email }}?{% endif %}');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button {{ 'disabled' if not q.customer_email else '' }}
+          class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+          {{ 'Resend quote' if q.status == 'sent' else 'Send quote to customer' }}</button>
+      </form>
+      {% endif %}
+      {% if q.status == 'accepted' %}
+      <form method="post" action="/app/quotes/{{ q.id }}/convert">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">Convert to invoice</button>
+      </form>
+      {% endif %}
+      {% if q.status == 'sent' %}
+      <form method="post" action="/app/quotes/{{ q.id }}/status" class="flex items-center gap-2"
+            onsubmit="var n = prompt('Who accepted, and how? Type their name (e.g. \'Sam Patel — by phone\'):'); if (n === null) return false; this.accepted_name.value = n; return true;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="accepted">
+        <input type="hidden" name="accepted_name" value="">
+        <button class="rounded-lg border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 transition">Mark accepted</button>
+      </form>
+      <form method="post" action="/app/quotes/{{ q.id }}/status"
+            onsubmit="return confirm('Mark {{ q.quote_ref }} as declined?');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="declined">
+        <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Mark declined</button>
+      </form>
+      {% endif %}
+      {% if q.status in ('draft', 'sent') %}
+      <form method="post" action="/app/quotes/{{ q.id }}/status"
+            onsubmit="return confirm('Cancel quote {{ q.quote_ref }}? Its link stops working and its number is never reused.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="cancelled">
+        <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+      </form>
+      {% endif %}
+      {% if not q.customer_email %}<span class="text-xs text-amber-600">No customer email on this quote.</span>{% endif %}
+    </div>
+
+    {% if q.status != 'draft' %}
+    <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+      <span>Customer link:</span>
+      <a href="{{ public_url }}" target="_blank" rel="noopener" class="text-brand break-all">{{ public_url }}</a>
+      <button type="button" onclick="navigator.clipboard.writeText('{{ public_url }}'); this.textContent='Copied ✓';"
+              class="rounded border border-slate-300 px-2 py-0.5 font-semibold text-slate-600 hover:bg-slate-50 transition">Copy</button>
+    </div>
+    {% else %}
+    <p class="text-xs text-slate-400">Sending emails the customer a link where they can view the quote, tick optional extras, ask a question, and accept with their name — you'll be notified at every step. The link only goes live once the quote is sent.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

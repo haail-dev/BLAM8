@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 vs HubSpot — The CRM You Fill In, or the CRM That Fills Itself?{% endblock %}
+{% block meta_description %}Honest comparison: HubSpot is a powerful platform whose CRM still depends on your team logging things, and its answering agent starts at Professional ($90–100/seat/month plus a $1,500 onboarding fee). BLAM8's CRM fills itself in from the mail on the £99/month Pro plan, with no seats and no onboarding fee. Prices checked September 2026.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/vs/hubspot#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does HubSpot fill in the CRM automatically?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Partly. A connected Gmail or Outlook inbox logs the emails you send and their replies onto records, can create contacts for new addresses, and picks up basics like a name and phone number. HubSpot's newer Data agent helps keep records tidy too. But logging isn't doing: the answering, quoting, booking, deal creation and follow-up are still your team's work, or Professional-tier workflow building. BLAM8 works the other way round: the CRM is a by-product of the agent answering your email. Contacts, companies, deals and tracked promises are captured from the conversation itself, on the £99/month Pro plan with no seats." }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does HubSpot really cost for a small business?",
+          "acceptedAnswer": { "@type": "Answer", "text": "HubSpot shows USD to UK visitors. The Free CRM (2 users) and Sales Hub Starter ($20/seat/month list, with a new-customer promo from $7) are genuinely cheap. The catch is the jump to Professional, where the real automation lives: $90/seat/month billed yearly or $100 monthly, plus a required $1,500 onboarding fee. Enterprise is $150/seat plus $3,500 onboarding. Plans include 500, 3,000 or 5,000 credits a month for AI features. For three people, Starter at list is about $60/month; Professional is $270–300/month plus the $1,500 onboarding. BLAM8 is £39/month flat for the AI that answers the email and books the diary, £99/month with the self-filling CRM, or £249/month with the Concierge. No seats, no onboarding fees, and plans are monthly. Prices checked September 2026." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can HubSpot answer my customer emails with AI?",
+          "acceptedAnswer": { "@type": "Answer", "text": "At the top of the range, in a support-desk shape. HubSpot now calls itself an agentic customer platform, and its Customer Agent can resolve enquiries from your knowledge base. It needs a Professional-tier hub and is metered at around $0.50 per resolution. HubSpot also has Prospecting and Data agents and the Breeze Assistant. That's real progress, and it's fair to say so. BLAM8's whole product is the inbox: every inbound email drafted in your voice from your own prices and policies, approval-first, booking real jobs into a live diary, from £39/month." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8 a HubSpot alternative?",
+          "acceptedAnswer": { "@type": "Answer", "text": "For a marketing team, no. HubSpot's campaigns, landing pages, attribution reporting and huge ecosystem are the best in the small-business market, and BLAM8 doesn't do marketing automation. But if you're a small business that wanted a CRM so customer conversations stop falling through the cracks, BLAM8 attacks that problem directly: the agent answers the email, books the work, and the CRM writes itself. No seats, no onboarding fee, no admin habit to enforce." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use BLAM8 and HubSpot together?",
+          "acceptedAnswer": { "@type": "Answer", "text": "There's no integration today, and for most small businesses running both CRMs would be double bookkeeping. The realistic split: if marketing campaigns are central, HubSpot; if the customer inbox and the diary are central, BLAM8. Growing into both later is a good problem." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8's CRM as deep as HubSpot's?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and it doesn't try to be. There's no custom report builder, forecasting suite or app marketplace. It holds what a small business actually loses sleep over: who asked for what, what was promised, what it's worth and what happens next, kept current automatically because the same agent is living in the conversation." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Honest comparison · prices checked September 2026
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      BLAM8 vs HubSpot: the CRM you fill in, or the CRM that fills itself?
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Every CRM makes the same quiet demand: <span class="font-semibold text-navy">someone has to feed it.</span> HubSpot softens that with inbox logging and a growing set of AI agents, and rewards big teams with a marketing suite nothing else matches. But for a small business, the update you were supposed to log already exists: it was the email. BLAM8 reads it, answers it, books the job in it, and files the contact, the deal and the promise without anyone typing a thing.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 grid md:grid-cols-2 gap-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When HubSpot is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You run real marketing, like campaigns, landing pages, forms and attribution, and want it unified with the CRM</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You have (or will have) a sales team that needs pipelines, forecasting, permissions and reporting depth</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want a huge ecosystem of integrations, agencies and free training: a platform you won't outgrow</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">It's the default CRM for a reason, and the free tier is a genuinely good starting point. None of that is what BLAM8 does.</p>
+    </div>
+    <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When BLAM8 is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You wanted a CRM so conversations stop slipping, not another system to maintain after 6pm</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want the emails <span class="font-semibold text-navy">answered</span>, not just logged: in your voice, from your own prices and policies</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want jobs booked into a real diary and promises chased, with the record keeping itself as a side effect</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">£99/month flat with the self-filling CRM (replies and booking alone: £39). No seats, no onboarding fee, no annual lock-in, no data-entry discipline required.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Side by side</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl">HubSpot prices from <a href="https://www.hubspot.com/pricing/sales" rel="nofollow" class="text-brand hover:underline">hubspot.com/pricing</a> (Sales Hub, shown in USD to UK visitors). Checked September 2026. HubSpot bills per seat; BLAM8 bills per business.</p>
+  <div class="mt-8 overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-navy">
+        <tr>
+          <th class="px-5 py-3.5 font-semibold w-1/3"></th>
+          <th class="px-5 py-3.5 font-semibold">HubSpot</th>
+          <th class="px-5 py-3.5 font-semibold">BLAM8</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-slate-600">
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">What it is</td><td class="px-5 py-3.5">A multi-hub customer platform: CRM plus marketing, sales, service, content, operations and commerce</td><td class="px-5 py-3.5">An AI agent on your mailbox that answers customers and books jobs, and fills in its CRM as a by-product</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">How the CRM gets filled</td><td class="px-5 py-3.5">A connected inbox logs your sent emails and replies, creates contacts and picks up basics (name, phone); deals, notes and next steps are logged by your team</td><td class="px-5 py-3.5">By itself: contacts, companies, deals and tracked promises captured from the conversation the agent is already handling (Pro)</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Answering customer email</td><td class="px-5 py-3.5">The Customer Agent resolves enquiries from a knowledge base, on Professional-tier hubs, metered at around $0.50 per resolution</td><td class="px-5 py-3.5">The core product from £39/mo: every inbound email drafted in your voice from your own knowledge, approval-first, full-auto when you're ready</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Booking</td><td class="px-5 py-3.5">Meetings: a booking-link scheduler where the customer self-serves against a rep's calendar</td><td class="px-5 py-3.5">Booked from the email thread against your live diary, with holds that can't double-book. It never books a date or a time nobody chose</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Who notices an unhappy customer</td><td class="px-5 py-3.5">Your team, reading the thread; notes and tickets capture it when someone logs it</td><td class="px-5 py-3.5">The agent: every contact carries a live mood read and trend from their own emails. Frustrated customers are flagged, replies change register to match, and a heated thread is always held for a human</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Where automation lives</td><td class="px-5 py-3.5">Professional: workflows, sequences, lead routing and the Customer Agent. Reviewers often name the Starter-to-Professional price jump</td><td class="px-5 py-3.5">Flat tiers: the agent, booking, quotes and invoices from £39/mo; the self-filling CRM at £99/mo; the Concierge at £249/mo. Never per seat, never an onboarding fee</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">AI assistant and agents</td><td class="px-5 py-3.5">The Breeze Assistant, plus Customer, Prospecting and Data agents that each do one job; the Customer Agent needs Professional</td><td class="px-5 py-3.5">On Pro + Concierge, the Concierge: chat or talk to it about your bookings, invoices and customers, and have it draft an email, block days, change a stay or hand a job to your team, each action staged for your confirmation first</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Customer-facing side</td><td class="px-5 py-3.5">Support-ticket portal (Service Hub)</td><td class="px-5 py-3.5">Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">On your phone</td><td class="px-5 py-3.5">Native mobile app (separate download)</td><td class="px-5 py-3.5">Installable app (PWA) straight from the browser, with push notifications; no app store</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Smart inbox labels</td><td class="px-5 py-3.5">No: inbox triage is your team's job (help-desk views on Service tiers)</td><td class="px-5 py-3.5">Yes: six categories (needs reply, draft ready, replied, booking pending, FYI, automated) that update themselves as the conversation moves</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">Free (2 users) · Starter $20/seat/mo list (new-customer promo from $7) · Professional $90/seat/mo yearly or $100 monthly, plus $1,500 required onboarding · Enterprise $150/seat/mo plus $3,500 onboarding · 500, 3,000 or 5,000 AI credits a month included</td><td class="px-5 py-3.5">Starter £39/mo (replies, booking, diary, quotes and invoices, 300 emails) · Pro £99/mo (adds the self-filling CRM, 750 emails) · Pro + Concierge £249/mo (adds the Concierge, 750 emails) · no seats, no onboarding fees, monthly · 14-day free trial of the full product, the Concierge included</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">The same email, through both</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl">A new customer writes: <span class="italic">"Hi — Sarah from Fenwick Interiors. Could you do our two offices monthly? What would that run us, and could you start next week?"</span></p>
+    <div class="mt-8 grid md:grid-cols-2 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy">In HubSpot</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">If your inbox is connected, Sarah becomes a contact and the thread logs to her record, which is genuinely useful. But the reply is yours to write, the price is yours to look up, the deal is yours to create, and the follow-up is yours to remember (or to automate, once you're on Professional). The CRM knows the conversation happened; it didn't do any of it.</p>
+      </div>
+      <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+        <h3 class="font-semibold text-navy">In BLAM8</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">The reply is drafted with your actual monthly rate for two sites and offers a start date the diary can honour. Sarah, Fenwick Interiors, the deal and the "start next week" promise are already on the record, created from the thread, not typed. If she goes quiet, the agent follows up. You approved one draft; the CRM wrote itself.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="mx-auto max-w-3xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+  <div class="mt-8 divide-y divide-slate-200">
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Does HubSpot fill in the CRM automatically?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Partly. A connected Gmail or Outlook inbox logs the emails you send and their replies onto records, can create contacts for new addresses, and picks up basics like a name and phone number. HubSpot's newer Data agent helps keep records tidy too. But logging isn't doing: the answering, quoting, booking, deal creation and follow-up are still your team's work, or Professional-tier workflow building. BLAM8 works the other way round: the CRM is a by-product of the agent answering your email. Contacts, companies, deals and tracked promises are captured from the conversation itself, on the £99/month Pro plan with no seats.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How much does HubSpot really cost for a small business?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">HubSpot shows USD to UK visitors. The Free CRM (2 users) and Sales Hub Starter ($20/seat/month list, with a new-customer promo from $7) are genuinely cheap. The catch is the jump to Professional, where the real automation lives: $90/seat/month billed yearly or $100 monthly, plus a required $1,500 onboarding fee. Enterprise is $150/seat plus $3,500 onboarding. Plans include 500, 3,000 or 5,000 credits a month for AI features. For three people, Starter at list is about $60/month; Professional is $270–300/month plus the $1,500 onboarding. BLAM8 is £39/month flat for the AI that answers the email and books the diary, £99/month with the self-filling CRM, or £249/month with the Concierge. No seats, no onboarding fees, and plans are monthly. Prices checked September 2026.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can HubSpot answer my customer emails with AI?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">At the top of the range, in a support-desk shape. HubSpot now calls itself an agentic customer platform, and its Customer Agent can resolve enquiries from your knowledge base. It needs a Professional-tier hub and is metered at around $0.50 per resolution. HubSpot also has Prospecting and Data agents and the Breeze Assistant. That's real progress, and it's fair to say so. BLAM8's whole product is the inbox: every inbound email drafted in your voice from your own prices and policies, approval-first, booking real jobs into a live diary, from £39/month.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8 a HubSpot alternative?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">For a marketing team, no. HubSpot's campaigns, landing pages, attribution reporting and huge ecosystem are the best in the small-business market, and BLAM8 doesn't do marketing automation. But if you're a small business that wanted a CRM so customer conversations stop falling through the cracks, BLAM8 attacks that problem directly: the agent answers the email, books the work, and the CRM writes itself. No seats, no onboarding fee, no admin habit to enforce.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can I use BLAM8 and HubSpot together?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">There's no integration today, and for most small businesses running both CRMs would be double bookkeeping. The realistic split: if marketing campaigns are central, HubSpot; if the customer inbox and the diary are central, BLAM8. Growing into both later is a good problem.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8's CRM as deep as HubSpot's?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">No, and it doesn't try to be. There's no custom report builder, forecasting suite or app marketplace. It holds what a small business actually loses sleep over: who asked for what, what was promised, what it's worth and what happens next, kept current automatically because the same agent is living in the conversation.</p>
+    </details>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">You already wrote the CRM update. It was the email.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Free 14-day trial of the full product, no card. Connect the mailbox and watch the contacts, deals and promises appear on their own.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/#pricing" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">View pricing</a>
+    </div>
+  </div>
+  <p class="mt-8 text-center text-xs text-slate-400 max-w-2xl mx-auto leading-relaxed">HubSpot is a trademark of HubSpot, Inc. BLAM8 is not affiliated with or endorsed by HubSpot. Competitor details and prices were checked against public sources in September 2026 (promotional and grandfathered pricing varies) and may have changed — see <a href="https://www.hubspot.com/pricing/sales" rel="nofollow" class="hover:underline">HubSpot's pricing page</a> for current rates.</p>
+</section>
+
+{% endblock %}

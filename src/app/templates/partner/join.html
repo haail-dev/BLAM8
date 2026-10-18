@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Become a partner · BLAM8</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/tw-plain.css?v={{ asset_rev }}">
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+  <main class="max-w-2xl mx-auto px-5 py-12">
+    <div class="text-center">
+      <a href="/" class="font-bold tracking-tight text-navy text-xl">BLAM8</a>
+      <h1 class="mt-6 text-2xl font-bold text-navy">Become a BLAM8 partner</h1>
+      <p class="mt-3 text-sm text-slate-600 max-w-lg mx-auto">
+        Earn <span class="font-semibold">20% of every subscription you refer — for life.</span>
+        Read the agreement below, sign it with your name, and your referral code is issued instantly.
+      </p>
+    </div>
+
+    <form method="post" action="/partner/enroll" class="mt-8 rounded-2xl bg-white border border-slate-200 shadow-xl shadow-slate-200/50 p-6 space-y-5">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+      <!-- the agreement, read in place -->
+      <div>
+        <div class="flex items-baseline justify-between">
+          <label class="block text-sm font-semibold text-navy">The agreement you're signing</label>
+          <a href="/partner/terms" target="_blank" class="text-xs font-semibold text-brand hover:underline">Open full page ↗</a>
+        </div>
+        <div class="mt-2 h-72 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+          {% include "partner/_agreement_body.html" %}
+        </div>
+      </div>
+
+      <!-- the digital signature block -->
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="block text-sm font-semibold text-navy" for="signed_name">Your full name <span class="font-normal text-slate-400">(this is your signature)</span></label>
+          <input id="signed_name" name="signed_name" required
+                 class="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+                 placeholder="Jo Sterling">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-navy" for="partner_name">Business / trading name <span class="font-normal text-slate-400">(optional)</span></label>
+          <input id="partner_name" name="partner_name" value="{{ default_name }}"
+                 class="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"
+                 placeholder="Sterling Accounts">
+          <p class="mt-1 text-xs text-slate-400">Only if you're referring as a business — your referral code is minted from this, or from your name if left blank.</p>
+        </div>
+      </div>
+      <div class="text-sm text-slate-500">Contact email (from your sign-in): <span class="font-semibold text-slate-700">{{ email }}</span></div>
+
+      {% if err == 'sign' %}
+      <p class="text-sm text-rose-600">Please type your full name — it's how you sign the agreement.</p>
+      {% elif err == 'name' %}
+      <p class="text-sm text-rose-600">Please give us your business or trading name — your code is minted from it.</p>
+      {% endif %}
+
+      <label class="flex items-start gap-2.5 text-sm text-slate-600">
+        <input type="checkbox" name="agree" value="1" required class="mt-0.5 rounded border-slate-300">
+        <span>I have read the Partner Referral Agreement (v{{ terms_version }}) above and agree to be bound by its terms.
+        I understand typing my name and clicking "Agree &amp; sign" constitutes my electronic signature.</span>
+      </label>
+      {% if err == 'agree' %}
+      <p class="text-sm text-rose-600">You'll need to accept the agreement to join.</p>
+      {% endif %}
+
+      <button type="submit" class="w-full rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">
+        Agree &amp; sign — get my referral code</button>
+    </form>
+
+    <p class="mt-4 text-center text-xs text-slate-400">Your signed acceptance (name, business, email, date and agreement
+      version) is recorded and shown on your partner page. Want a countersigned copy?
+      <a href="mailto:hello@blam8.com" class="font-semibold text-slate-500 hover:underline">hello@blam8.com</a></p>
+    <p class="mt-6 text-center"><a href="/app" class="text-sm text-slate-400 hover:text-slate-600">← Back to my dashboard</a></p>
+  </main>
+  <script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

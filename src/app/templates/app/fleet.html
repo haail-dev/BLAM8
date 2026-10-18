@@ -1,0 +1,179 @@
+{% extends "app/base.html" %}
+{% block title %}Fleet · BLAM8{% endblock %}
+{% block heading %}Fleet{% endblock %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'badvehicle' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">A vehicle needs a name and a pallet-space capacity between 0 and 9999.</div>
+  {% elif msg in ('vehicleadded', 'vehiclesaved', 'vehicleremoved', 'branchadded', 'branchremoved') %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+    {% if msg == 'vehicleadded' %}Vehicle added — the agent books against it from the next availability check.
+    {% elif msg == 'vehiclesaved' %}Vehicle saved.
+    {% elif msg == 'vehicleremoved' %}Vehicle removed. Its future bookings keep their dates and show as unassigned on the Diary.
+    {% elif msg == 'branchadded' %}Branch added.
+    {% else %}Branch removed — its vehicles are now unassigned (still bookable fleet-wide).{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>{{ active_count }} active vehicle{{ '' if active_count == 1 else 's' }} · {{ '%g'|format(total_spaces) }} pallet spaces bookable per day · capacity the agent can promise comes from this page.</p>
+    <a href="/app/board" class="text-brand font-medium hover:underline">Open the board →</a>
+  </div>
+
+  <!-- Vehicles -->
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="border-b border-slate-100 px-5 py-3.5 flex items-center justify-between gap-2">
+      <h2 class="font-semibold text-navy text-sm">Vehicles</h2>
+      <span class="text-xs text-slate-400">Inactive vehicles take no new bookings but keep their history.</span>
+    </div>
+    {% if vehicles %}
+    <ul class="divide-y divide-slate-100">
+      {% for v in vehicles %}
+      <li class="px-5 py-4">
+        <form method="post" action="/app/fleet/vehicles/{{ v.id }}/update" class="grid sm:grid-cols-12 gap-3 items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <div class="sm:col-span-3">
+            <label class="block text-xs text-slate-500 mb-1">Vehicle</label>
+            <input name="name" value="{{ v.name }}" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm {{ '' if v.active else 'text-slate-400' }}">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Registration</label>
+            <input name="registration" value="{{ v.registration or '' }}" placeholder="—" maxlength="16" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm uppercase">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Pallet spaces</label>
+            <input name="capacity_spaces" type="number" step="0.5" min="0.5" max="9999" value="{{ '%g'|format(v.capacity_spaces) }}" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Max payload kg</label>
+            <input name="max_payload_kg" type="number" step="1" min="1" max="99999" value="{{ '%g'|format(v.max_payload_kg) if v.max_payload_kg is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-3">
+            <label class="block text-xs text-slate-500 mb-1">Branch</label>
+            <select name="branch_id" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="">—</option>
+              {% for b in branches %}
+              <option value="{{ b.id }}" {{ 'selected' if v.branch_id == b.id }}>{{ b.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="sm:col-span-12 flex items-center justify-end gap-2">
+            <label class="inline-flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+              <input type="checkbox" name="active" value="1" {{ 'checked' if v.active }} class="accent-blue-600">Active
+            </label>
+            <button data-save-row class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand-50 transition">Save</button>
+            <button type="submit" form="del-{{ v.id }}"
+                    onclick="return confirm('Remove this vehicle? Future bookings keep their dates and show as unassigned for you to re-place.');"
+                    class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Remove</button>
+          </div>
+        </form>
+        <form id="del-{{ v.id }}" method="post" action="/app/fleet/vehicles/{{ v.id }}/delete">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No vehicles yet — until you add one, the agent tells customers a colleague will confirm capacity.</p>
+    {% endif %}
+    <!-- Add vehicle -->
+    <form method="post" action="/app/fleet/vehicles/add" class="border-t border-slate-100 px-5 py-4 grid sm:grid-cols-12 gap-3 items-end bg-slate-50/50 rounded-b-xl">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="sm:col-span-3">
+        <label class="block text-xs text-slate-500 mb-1">New vehicle</label>
+        <input name="name" required placeholder="18t curtainsider" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Registration</label>
+        <input name="registration" placeholder="BL66 AMV" maxlength="16" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm uppercase">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Pallet spaces</label>
+        <input name="capacity_spaces" type="number" step="0.5" min="0.5" max="9999" required placeholder="8" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Max payload kg</label>
+        <input name="max_payload_kg" type="number" step="1" min="1" max="99999" placeholder="optional" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-3">
+        <label class="block text-xs text-slate-500 mb-1">Branch</label>
+        <select name="branch_id" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+          <option value="">—</option>
+          {% for b in branches %}
+          <option value="{{ b.id }}">{{ b.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="sm:col-span-12 flex justify-end">
+        <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Add vehicle</button>
+      </div>
+    </form>
+  </section>
+
+  <div class="grid md:grid-cols-2 gap-5">
+    <!-- Branches -->
+    <section class="bg-white rounded-xl border border-slate-200">
+      <div class="border-b border-slate-100 px-5 py-3.5">
+        <h2 class="font-semibold text-navy text-sm">Branches</h2>
+        <p class="text-xs text-slate-400 mt-0.5">With one branch you never think about this. With more, each mailbox can default to its own depot (set in Mailboxes), and the agent asks the customer when it matters.</p>
+      </div>
+      <ul class="divide-y divide-slate-100">
+        {% for b in branches %}
+        <li class="px-5 py-3">
+          <form method="post" action="/app/fleet/branches/{{ b.id }}/update" class="flex items-end gap-2 flex-wrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <div class="flex-1 min-w-28">
+              <label class="block text-xs text-slate-500 mb-1">Branch</label>
+              <input name="name" value="{{ b.name }}" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div class="w-28">
+              <label class="block text-xs text-slate-500 mb-1">Postcode</label>
+              <input name="postcode" value="{{ b.postcode or '' }}" placeholder="—" maxlength="16" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm uppercase">
+            </div>
+            <button data-save-row class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-brand hover:bg-brand-50 transition">Save</button>
+            <button type="submit" form="delbr-{{ b.id }}"
+                    onclick="return confirm('Remove {{ b.name }}? Its vehicles stay, unassigned to any branch.');"
+                    class="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Remove</button>
+          </form>
+          <form id="delbr-{{ b.id }}" method="post" action="/app/fleet/branches/{{ b.id }}/delete">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          </form>
+          <p class="text-xs text-slate-400 mt-1">{{ vehicles|selectattr('branch_id', 'equalto', b.id)|list|length }} vehicle(s){% if not b.postcode %} · no postcode — routes will start at the first drop{% endif %}</p>
+        </li>
+        {% else %}
+        <li class="px-5 py-4 text-sm text-slate-400">No branches — vehicles book fleet-wide.</li>
+        {% endfor %}
+      </ul>
+      <form method="post" action="/app/fleet/branches/add" class="border-t border-slate-100 px-5 py-4 flex gap-2 bg-slate-50/50 rounded-b-xl">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input name="name" required placeholder="Branch name" class="flex-1 rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        <input name="postcode" placeholder="LS9 8AS" maxlength="16" class="w-28 rounded-lg border-slate-300 border px-3 py-2 text-sm uppercase">
+        <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Add branch</button>
+      </form>
+    </section>
+
+    <!-- Pallet types (read-only v1) -->
+    <section class="bg-white rounded-xl border border-slate-200">
+      <div class="border-b border-slate-100 px-5 py-3.5">
+        <h2 class="font-semibold text-navy text-sm">Pallet types</h2>
+        <p class="text-xs text-slate-400 mt-0.5">How pallet types convert to spaces when the agent sizes an order. A type it doesn't recognise counts as a full pallet — and the reply says so.</p>
+      </div>
+      <table class="w-full text-sm">
+        <tbody class="divide-y divide-slate-100">
+          {% for t in pallet_types %}
+          <tr>
+            <td class="px-5 py-2.5 text-slate-700">{{ t.name|title }}</td>
+            <td class="px-5 py-2.5 text-right text-slate-500">{{ '%g'|format(t.space_factor) }} space{{ '' if t.space_factor == 1 else 's' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="px-5 py-3 text-xs text-slate-400 border-t border-slate-100">Need a custom type or factor? Ask us — editable factors are on the roadmap.</p>
+    </section>
+  </div>
+
+  <p class="text-xs text-slate-400">Working days, notice and blackout dates still come from <a href="/app/diary/settings" class="text-brand hover:underline">Diary settings</a> — this page is the capacity itself.</p>
+</div>
+{% endblock %}

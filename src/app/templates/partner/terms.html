@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Partner Referral Agreement · BLAM8</title>
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/tw-plain.css?v={{ asset_rev }}">
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+  <main class="max-w-2xl mx-auto px-5 py-16">
+    <a href="/" class="font-bold tracking-tight text-navy text-xl">BLAM8</a>
+    <div class="mt-6 rounded-2xl bg-white border border-slate-200 p-6 sm:p-8">
+      {% include "partner/_agreement_body.html" %}
+    </div>
+    <p class="mt-4 text-xs text-slate-400">Agreement version {{ terms_version }}. Partners sign this electronically when
+      they <a href="/partner/join" class="font-semibold text-slate-500 hover:underline">join the programme</a>.</p>
+  </main>
+  <script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

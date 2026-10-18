@@ -1,0 +1,101 @@
+{% extends "app/base.html" %}
+{% block title %}Outreach · BLAM8{% endblock %}
+{% block heading %}Outreach{% endblock %}
+{% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-6 text-sm">
+  <p class="text-slate-600">Run a reviewed contact list through a <a href="/app/crm/sequences" class="text-brand underline">CRM sequence</a>. Its briefs are written in your business's voice. Drafts and replies use your normal inbox.</p>
+  {% if msg %}<p role="status" class="rounded border bg-emerald-50 p-3">{{ msg }}</p>{% endif %}
+  {% if err %}<p role="alert" class="rounded border bg-amber-50 p-3">{{ err }}</p>{% endif %}
+  <section class="rounded-xl border bg-white p-5 space-y-3">
+    <h2 class="font-semibold text-lg">Outreach is {{ 'on' if outreach_settings.enabled else 'off' }}</h2>
+    <form method="post" action="/app/outreach/settings" class="flex flex-wrap items-end gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label><input type="checkbox" name="enabled" {% if outreach_settings.enabled %}checked{% endif %}> Enable outreach</label>
+      <label>Shared cap across all campaigns, per 24 hours<input type="number" name="daily_cap" min="1" max="1000" required value="{{ outreach_settings.daily_cap }}" class="block rounded border p-2"></label>
+      <div data-save-row><button class="rounded bg-brand text-white px-4 py-2">Save</button></div>
+    </form>
+    <p class="text-xs text-slate-500">Off by default. Switching off holds new drafts and all outreach sends, including approved drafts. A send already handed to the mailbox cannot be recalled. The shared cap covers outreach from this business; your mail provider may impose additional limits.</p>
+  </section>
+  <section class="space-y-3">
+    <h2 class="font-semibold text-lg">Contact lists</h2>
+    <form action="/app/outreach/lists" method="post" class="flex gap-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><label class="flex-1">New list name<input name="name" maxlength="100" required class="block w-full rounded border p-2"></label><button class="self-end rounded bg-brand text-white px-4 py-2">Create list</button>
+    </form>
+    <form method="get" action="/app/outreach" class="flex gap-2"><label class="flex-1">Find a CRM contact<input name="q" value="{{ request.query_params.get('q','') }}" class="block rounded border p-2 w-full"></label><button class="self-end border rounded px-4 py-2">Search</button></form>
+    {% for list in lists %}
+    <details class="rounded-xl border bg-white p-5"><summary class="font-semibold cursor-pointer">{{ list.name }} · {{ list.targets|length }} contacts</summary>
+      <div class="space-y-4 mt-4">
+        <form action="/app/outreach/lists/{{ list.id }}/import" method="post" enctype="multipart/form-data" class="space-y-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <label>Import CSV (up to 500 rows)<input type="file" name="file" accept=".csv,text/csv" required class="block"></label>
+          <p class="text-xs">Use <code>permission</code> or <code>corporate</code> for basis and <code>true</code>/<code>false</code> for verification fields. Corporate rows need a company number. <a class="text-brand underline" href="/app/outreach/template.csv">Download columns</a></p>
+          <button class="rounded border px-4 py-2">Import contacts</button>
+        </form>
+        <details><summary class="cursor-pointer font-medium">Add from CRM</summary>
+          <form action="/app/outreach/lists/{{ list.id }}/contact" method="post" class="space-y-3 mt-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <label>Contact (use search above to narrow the list)<select name="contact_id" required class="block rounded border p-2 w-full">{% for contact in contacts %}{% if contact.email %}<option value="{{ contact.id }}">{{ contact.name or contact.email }} · {{ contact.email }}</option>{% endif %}{% endfor %}</select></label>
+            {% with t={} %}{% include "app/_outreach_evidence.html" %}{% endwith %}
+            <button class="rounded border px-4 py-2">Add contact</button>
+          </form>
+        </details>
+        {% for t in list.targets %}
+        <details class="border-t pt-2"><summary class="cursor-pointer">{{ t.email }} · {% if t.blocked %}Stopped: {{ t.blocked }}{% elif t.email_verified and not t.soft_match %}Evidence recorded{% else %}Needs verification{% endif %}</summary>
+          <form action="/app/outreach/targets/{{ t.id }}" method="post" class="space-y-3 mt-3">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">{% include "app/_outreach_evidence.html" %}
+            <div data-save-row><button class="rounded border px-4 py-2">Save evidence</button></div>
+          </form>
+        </details>
+        {% endfor %}
+      </div>
+    </details>
+    {% else %}<p class="text-slate-500">Create a list, then import contacts or select them from your CRM. Unverified recipients cannot send.</p>{% endfor %}
+  </section>
+  <section class="space-y-3">
+    <h2 class="font-semibold text-lg">Campaigns</h2>
+    <details class="rounded-xl border bg-white p-5"><summary class="font-semibold cursor-pointer">New campaign</summary>
+      <form action="/app/outreach/campaigns" method="post" class="mt-4 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <label>Campaign name<input name="name" required maxlength="100" class="block w-full rounded border p-2"></label>
+        <label>List<select name="list_id" required class="block w-full rounded border p-2">{% for list in lists %}<option value="{{ list.id }}">{{ list.name }}</option>{% endfor %}</select></label>
+        <label>Sequence<select name="sequence_id" required class="block w-full rounded border p-2">{% for s in sequences %}{% if not s.outreach_managed and s.trigger_type=='manual' %}<option value="{{ s.id }}">{{ s.name }}</option>{% endif %}{% endfor %}</select></label>
+        <p class="text-xs text-slate-500">Choose an unused manual sequence with 1–7 email steps and stop-on-reply. <a class="text-brand underline" href="/app/crm/sequences">Create or edit sequences</a>.</p>
+        {% with cfg=defaults, box_id='' %}{% include "app/_outreach_config.html" %}{% endwith %}
+        <button class="rounded bg-brand text-white px-4 py-2">Create paused campaign</button>
+      </form>
+    </details>
+    {% for c in campaigns %}
+    <article class="rounded-xl border bg-white p-5 space-y-3">
+      <h3 class="font-semibold text-lg">{{ c.name }} · {{ 'Running' if c.enabled and outreach_settings.enabled else 'Paused' }}</h3>
+      <p role="status">{{ c.last_result }} · {{ c.draft_count }} drafts · {{ c.sent_count }} sent</p>
+      <form action="/app/outreach/campaigns/{{ c.id }}/control" method="post" class="flex flex-wrap gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button name="action" value="{{ 'pause' if c.enabled else 'resume' }}" class="rounded bg-brand text-white px-4 py-2">{{ 'Pause campaign' if c.enabled else 'Resume campaign' }}</button>
+        <button name="action" value="enroll" class="rounded border px-4 py-2">Add eligible list contacts</button>
+      </form>
+      <p class="text-xs text-slate-500">The sequence runner checks due contacts every 15 minutes. Drafts wait for your approval before the next step is scheduled. Replies stop the sequence; stop requests apply across every outreach list in this business.</p>
+      <details><summary class="cursor-pointer font-medium">Campaign settings</summary><form action="/app/outreach/campaigns/{{ c.id }}" method="post" class="space-y-3 mt-3"><input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">{% with cfg=c.config, box_id=c.mailbox_id %}{% include "app/_outreach_config.html" %}{% endwith %}<div data-save-row><button class="rounded border px-4 py-2">Save and pause</button></div></form></details>
+      <details><summary class="cursor-pointer font-medium">Recipients ({{ c.enrollments|length }})</summary><ul class="mt-2 space-y-1">{% for e in c.enrollments %}<li>{{ e.email }} · {{ e.status }}{% if e.exit_reason %} · {{ e.exit_reason|replace('_',' ') }}{% endif %} · {{ e.current_step }} steps completed</li>{% else %}<li>Add eligible list contacts to begin.</li>{% endfor %}</ul></details>
+      {% for m in c.messages %}
+      <div class="border-t pt-3 space-y-2">
+        <p>{{ m.email }} · step {{ m.step_index+1 }} · {{ m.status }}{% if m.error %} · {{ m.error }}{% endif %}</p>
+        {% if m.status=='draft' and m.email_log_id %}<a href="/app/drafts/{{ m.email_log_id }}" class="text-brand underline">Review draft in inbox</a>{% endif %}
+        {% if m.status in ['draft','preparing','unknown','sending'] %}
+        <details><summary class="cursor-pointer text-xs">Review or cancel this send</summary>
+          <p class="text-xs my-2">Switch outreach off and pause this campaign first. For an uncertain send, check the sending mailbox's Sent folder. Cancelling permanently prevents a retry.</p>
+          <form action="/app/outreach/messages/{{ m.id }}/review" method="post" class="flex flex-wrap gap-3 items-center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            {% if m.status in ['draft','preparing'] %}<button name="action" value="refresh" class="rounded border px-3 py-1">Refresh draft on next run</button>{% else %}<label><input type="checkbox" name="checked_sent"> I verified this email in the Sent folder</label><button name="action" value="confirm_sent" class="rounded border px-3 py-1">Record as sent</button>{% endif %}
+            <button name="action" value="cancel" class="rounded border px-3 py-1">Cancel permanently</button>
+          </form>
+        </details>{% endif %}
+      </div>{% endfor %}
+    </article>
+    {% endfor %}
+  </section>
+  <section class="rounded-xl border bg-white p-5 space-y-3"><h2 class="font-semibold">Do not contact</h2><p>Exclude an address from all outreach in this business. Reimporting it or changing its evidence cannot remove the stop.</p>
+    <form action="/app/outreach/suppress" method="post" class="flex flex-wrap gap-2"><input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><label>Email<input name="email" type="email" required class="block rounded border p-2"></label><label>Reason<input name="reason" maxlength="300" value="Do not contact" class="block rounded border p-2"></label><button class="self-end rounded border px-4 py-2">Permanently exclude</button></form>
+  </section>
+</div>
+{% endblock %}

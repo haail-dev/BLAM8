@@ -1,0 +1,89 @@
+{% extends "app/base.html" %}
+{% block title %}{{ order.title }} · Wholesale OS · BLAM8{% endblock %}
+{% block heading %}{{ order.title }}{% endblock %}
+{% set back = ('/app/wholesale/orders', 'Order book') %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'created' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Order created.</div>{% endif %}
+  {% if msg == 'advanced' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Order advanced.</div>{% endif %}
+  {% if msg == 'allocated' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Allocation saved{% if order.wholesale_status == 'on_hold_short' %} — short lines carry the balance (on_hold_short){% endif %}.</div>{% endif %}
+  {% if msg == 'held' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Order held.</div>{% endif %}
+  {% if msg == 'terminal' %}<div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">This order is at the end of its ladder.</div>{% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>
+      <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+        {{ 'bg-amber-100 text-amber-700' if order.wholesale_status in ('held', 'on_hold_short') else 'bg-blue-100 text-blue-700' }}">
+        {{ (order.wholesale_status or 'quote') | upper }}</span>
+      <span class="ml-2">{{ buyer.name or '—' }}</span>
+      · required by {{ order.required_by or '—' }}
+      · £{{ '%.2f' | format(order.total) }}
+    </p>
+  </div>
+
+  {% if gate and gate.limit is not none %}
+  <div class="rounded-lg px-4 py-3 text-sm border
+    {{ 'bg-red-50 border-red-200 text-red-800' if gate.over else 'bg-emerald-50 border-emerald-200 text-emerald-800' }}">
+    <span class="font-semibold">Credit stance:</span>
+    exposure £{{ '%.2f' | format(gate.exposure) }} of a £{{ '%.2f' | format(gate.limit) }} limit
+    (£{{ '%.2f' | format(gate.unpaid_invoices) }} unpaid invoices · £{{ '%.2f' | format(gate.open_orders) }} open orders).
+    {% if gate.over %}This order takes them over — the drafter will hold and refuse politely.{% else %}£{{ '%.2f' | format(gate.headroom) }} headroom.{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- lines + allocation -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Lines</h2>
+    </div>
+    <form method="post" action="/app/wholesale/orders/{{ order.id }}/allocate">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <table class="w-full text-sm">
+        <thead><tr class="text-xs text-slate-400 text-left border-b border-slate-100">
+          <th class="px-5 py-2">Line</th><th class="px-2 py-2">Qty</th>
+          <th class="px-2 py-2">Unit £</th><th class="px-2 py-2">Total £</th>
+          <th class="px-2 py-2">Allocated</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for ln in lines %}
+          <tr>
+            <td class="px-5 py-2.5 font-medium text-navy">{{ ln.description }}{% if ln.sku %} <span class="text-xs text-slate-400">({{ ln.sku }})</span>{% endif %}</td>
+            <td class="px-2 py-2.5">{{ ln.quantity }} {{ ln.unit or '' }}</td>
+            <td class="px-2 py-2.5">{{ ('%.2f' | format(ln.unit_price)) if ln.unit_price is not none else '—' }}</td>
+            <td class="px-2 py-2.5">{{ ('%.2f' | format(ln.quantity * ln.unit_price)) if ln.unit_price is not none else '—' }}</td>
+            <td class="px-2 py-2.5">
+              <input name="alloc_{{ ln.id }}" value="{{ ln.allocated_qty if ln.allocated_qty is not none else '' }}"
+                     placeholder="{{ ln.quantity }}" inputmode="decimal"
+                     class="w-20 rounded-lg border-slate-300 text-sm">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="px-5 py-3 border-t border-slate-100 flex items-center gap-3">
+        <button data-save-row class="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-navy hover:bg-slate-200">Save allocation</button>
+        <span class="text-xs text-slate-400">Allocating less than ordered flags the balance to carry (on_hold_short).</span>
+      </div>
+    </form>
+  </section>
+
+  <!-- ladder controls -->
+  <div class="flex items-center gap-3">
+    {% if next_status %}
+    <form method="post" action="/app/wholesale/orders/{{ order.id }}/advance">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Advance → {{ next_status }}</button>
+    </form>
+    {% endif %}
+    {% if order.wholesale_status not in ('held', 'complete') %}
+    <form method="post" action="/app/wholesale/orders/{{ order.id }}/hold">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-200">Hold</button>
+    </form>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

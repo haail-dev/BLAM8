@@ -1,0 +1,111 @@
+{% extends "app/base.html" %}
+{% block title %}Events OS · BLAM8{% endblock %}
+{% block heading %}Events OS{% endblock %}
+
+{# A supplier/staff status light (§2): ✅ confirmed / ⚠ needs-something / ⏳ chasing #}
+{% macro light(l) %}
+  <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium
+    {{ 'bg-emerald-100 text-emerald-700' if l.tone == 'good' else
+       'bg-amber-100 text-amber-700' if l.tone == 'warn' else
+       'bg-slate-100 text-slate-500' if l.tone == 'muted' else
+       'bg-sky-100 text-sky-700' }}">
+    {{ '✓' if l.tone == 'good' else '!' if l.tone == 'warn' else '…' }}
+    {{ l.role|replace('_', ' ') }}{% if l.outstanding %} <span class="text-slate-400">({{ l.outstanding }})</span>{% endif %}
+  </span>
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Event updated.</div>{% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>{{ board.week_label }} — every event as one flow. Guests, dietaries, suppliers and staff fill themselves in from your inbox; the board is your morning at a glance.</p>
+  </div>
+
+  <!-- THIS WEEK — event rollup cards (§2) -->
+  <section class="space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-navy">This week</h2>
+      <span class="text-xs text-slate-400">{{ board.this_week_count }} event{{ '' if board.this_week_count == 1 else 's' }}</span>
+    </div>
+
+    {% if board.this_week %}
+    {% for c in board.this_week %}
+    <a href="/app/events/{{ c.id }}" class="block bg-white rounded-xl border border-slate-200 hover:border-brand/40 hover:shadow-md transition overflow-hidden">
+      <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex-wrap">
+        <span class="font-semibold text-navy">{{ c.event_date }}</span>
+        <span class="font-medium text-navy">· {{ c.title }}</span>
+        {% if c.company %}<span class="text-slate-500 text-sm">{{ c.company }}</span>{% endif %}
+        <span class="ml-auto flex items-center gap-3 text-sm text-slate-500">
+          {% if c.guest_count is not none %}<span>{{ c.guest_count }} guest{{ '' if c.guest_count == 1 else 's' }}{% if not c.guest_count_final %} <span class="text-amber-600">(not final)</span>{% endif %}</span>{% endif %}
+          {% if c.value %}<span class="font-semibold text-navy">£{{ '{:,.0f}'.format(c.value) }}</span>{% endif %}
+        </span>
+      </div>
+      <div class="px-5 py-3 space-y-2 text-sm">
+        {% if c.timings %}
+        <p class="text-slate-600"><span class="text-slate-400 font-medium">Timings</span>
+          {% for t in c.timings %}{{ t.label }} {{ t.time }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+        {% endif %}
+        {% if c.dietary_matrix %}
+        <p class="text-slate-600"><span class="text-slate-400 font-medium">Dietary</span>
+          {% for tag, n in c.dietary_matrix.items() %}{{ n }} {{ tag|replace('_', ' ') }}{% if not loop.last %} · {% endif %}{% endfor %}</p>
+        {% endif %}
+        {% if c.lights %}
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="text-slate-400 font-medium">Suppliers &amp; staff</span>
+          {% for l in c.lights %}{{ light(l) }}{% endfor %}
+        </div>
+        {% elif c.guests_recorded %}
+        <p class="text-slate-400 text-xs">{{ c.guests_recorded }} guest record{{ '' if c.guests_recorded == 1 else 's' }} · no suppliers or staff added yet</p>
+        {% else %}
+        <p class="text-slate-400 text-xs">Filling itself in from the enquiry thread — open to see what's landed.</p>
+        {% endif %}
+        {# Run-sheet line (§2): "run sheet ● Draft ready — N gaps". #}
+        <p class="text-slate-600 flex items-center gap-1.5">
+          <span class="text-slate-400 font-medium">Run sheet</span>
+          {% if c.run_sheet_assembled %}
+            {% if c.run_sheet_gaps %}
+            <span class="text-amber-600">● Draft ready — {{ c.run_sheet_gaps }} gap{{ '' if c.run_sheet_gaps == 1 else 's' }} flagged</span>
+            {% else %}
+            <span class="text-emerald-600">● Ready — no gaps</span>
+            {% endif %}
+          {% else %}
+          <span class="text-slate-400">not assembled yet</span>
+          {% endif %}
+        </p>
+      </div>
+    </a>
+    {% endfor %}
+    {% else %}
+    <div class="bg-white rounded-xl border border-slate-200 px-5 py-8 text-sm text-slate-400 text-center">
+      No events this week. Enquiries become events automatically — a dated occasion in your inbox lands here with its date, headcount and dietaries already read off the email.
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- NEXT 4 WEEKS — summary strip (§2) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Next 4 weeks</h2>
+      <span class="text-xs text-slate-400">{{ board.next_weeks_count }} event{{ '' if board.next_weeks_count == 1 else 's' }}{% if board.next_weeks_value %} · £{{ '{:,.0f}'.format(board.next_weeks_value) }} in play{% endif %}</span>
+    </div>
+    {% if board.next_weeks %}
+    <ul class="divide-y divide-slate-50">
+      {% for e in board.next_weeks %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="text-slate-400 w-24">{{ e.event_date }}</span>
+        <a href="/app/events/{{ e.id }}" class="font-medium text-navy hover:text-brand">{{ e.title }}</a>
+        {% if e.guest_count is not none %}<span class="text-slate-500">{{ e.guest_count }} guests</span>{% endif %}
+        {% if e.value %}<span class="ml-auto font-semibold text-navy">£{{ '{:,.0f}'.format(e.value) }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">Nothing else booked in the next four weeks.</p>
+    {% endif %}
+  </section>
+
+  <p class="text-xs text-slate-400">Every event is a deal in your <a href="/app/crm" class="text-brand hover:underline">CRM</a> — the pipeline, activity feed and promises all live there. The multi-stakeholder chase that turns these ⏳ lights green is coming next.</p>
+</div>
+{% endblock %}

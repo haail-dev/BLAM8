@@ -1,0 +1,249 @@
+{% extends "app/base.html" %}
+{% block title %}{{ (deal.title or 'Event') }} · Events OS · BLAM8{% endblock %}
+{% block heading %}{{ deal.title or 'Event' }}{% endblock %}
+{% set back = ('/app/events', 'This week') %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Event updated.</div>{% endif %}
+  {% if msg == 'chased' %}<div class="rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">Chase drafted — it's waiting in your inbox to review and send.</div>{% endif %}
+  {% if msg == 'chase_failed' %}<div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Couldn't draft that chase — please try again.</div>{% endif %}
+  {% if msg == 'assembled' %}<div class="rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">Run sheet assembled from the latest facts — gaps flagged below.</div>{% endif %}
+  {% if msg == 'blasted' %}<div class="rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-800">Final run sheet drafted to each supplier &amp; staff member — waiting in your inbox to review and send.</div>{% endif %}
+  {% if msg == 'blast_failed' %}<div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Couldn't draft the run-sheet blast — please try again.</div>{% endif %}
+
+  {# Deal facts header — reuse the deal's shape (an event IS a deal). #}
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-2">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <h2 class="font-semibold text-navy">{{ deal.title or 'Event' }}</h2>
+        <p class="text-sm text-slate-500">
+          {% if deal.crm_companies and deal.crm_companies.name %}{{ deal.crm_companies.name }}{% endif %}
+          {% if deal.crm_contacts and deal.crm_contacts.name %} · {{ deal.crm_contacts.name }}{% endif %}
+        </p>
+      </div>
+      <div class="text-right text-sm">
+        {% if deal.value_estimate %}<p class="font-semibold text-navy text-lg">£{{ '{:,.0f}'.format(deal.value_estimate) }}</p>{% endif %}
+        {% if deal.crm_stages and deal.crm_stages.name %}<span class="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">{{ deal.crm_stages.name }}</span>{% endif %}
+      </div>
+    </div>
+    <a href="/app/crm/pipeline" class="text-xs text-brand hover:underline">Open the deal in CRM — stage, activity &amp; promises live there →</a>
+  </section>
+
+  {# Timings & event fields — editable (§8). #}
+  <section class="bg-white rounded-xl border border-slate-200 p-5">
+    <h3 class="text-sm font-semibold text-navy mb-3">Timings &amp; details</h3>
+    {% if event.timings %}
+    <ul class="mb-4 flex flex-wrap gap-2 text-sm">
+      {% for t in event.timings %}
+      <li class="rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1"><span class="font-medium text-navy">{{ t.label }}</span> <span class="text-slate-500">{{ t.time }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-slate-400 mb-4">No timings read yet — they fill in as the planning thread develops.</p>
+    {% endif %}
+    <form method="post" action="/app/events/{{ event.id }}/update" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label class="block">Event date
+        <input type="date" name="event_date" value="{{ event.event_date or '' }}"
+               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+      <label class="block">Type
+        <input type="text" name="event_type" value="{{ event.event_type or '' }}"
+               placeholder="Event type"
+               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+      <label class="block">Headcount
+        <input type="number" name="guest_count" value="{{ event.guest_count if event.guest_count is not none else '' }}"
+               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+      <label class="block">Drink licence
+        <input type="text" name="drink_licence" value="{{ event.drink_licence or '' }}"
+               placeholder="held / applied / not_required"
+               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"></label>
+      <label class="block sm:col-span-2">Contingency notes
+        <textarea name="contingency_notes" rows="2"
+                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">{{ event.contingency_notes or '' }}</textarea></label>
+      <div data-save-row class="sm:col-span-2"><button class="rounded-lg bg-brand text-white px-4 py-2 text-sm font-semibold hover:bg-brand/90">Save</button></div>
+    </form>
+  </section>
+
+  {# Run-of-show — the assembled sheet + LOUD gap flags + action row (§8, §14). #}
+  {% set ros = run_of_show or {} %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex-wrap gap-2">
+      <h3 class="text-sm font-semibold text-navy">Run-of-show</h3>
+      <div class="flex items-center gap-2">
+        {% if ros.gaps %}
+        <span class="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-semibold">{{ ros.gaps|length }} gap{{ '' if ros.gaps|length == 1 else 's' }} flagged</span>
+        {% elif ros.lines %}
+        <span class="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">no gaps</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="px-5 py-4 space-y-4 text-sm">
+      {# The assembled schedule — ordered lines, each with its responsible party. #}
+      {% if ros.lines %}
+      <div>
+        <p class="text-slate-400 font-medium text-xs mb-1.5">Schedule</p>
+        <ul class="divide-y divide-slate-50 border border-slate-100 rounded-lg overflow-hidden">
+          {% for ln in ros.lines %}
+          <li class="flex items-center gap-3 px-3 py-1.5">
+            <span class="font-mono text-navy w-14">{{ ln.time }}</span>
+            <span class="font-medium text-navy">{{ ln.label }}</span>
+            {% if ln.responsible and ln.responsible.role %}
+            <span class="ml-auto text-slate-500 text-xs">{{ ln.responsible.role|replace('_', ' ') }}{% if ln.responsible.name %} · {{ ln.responsible.name }}{% endif %}</span>
+            {% else %}
+            <span class="ml-auto text-amber-600 text-xs font-medium">⚠ unassigned</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% elif ros.assembled_at %}
+      <p class="text-slate-400">No timings pinned yet — add them above, then assemble.</p>
+      {% else %}
+      <p class="text-slate-400">Not assembled yet. Press <span class="font-medium text-slate-600">Assemble</span> to build the run sheet from the timings, suppliers and staff — gaps are flagged, never filled in.</p>
+      {% endif %}
+
+      {% if ros.staff_call_times %}
+      <div>
+        <p class="text-slate-400 font-medium text-xs mb-1">Staff call-times</p>
+        <ul class="flex flex-wrap gap-2 text-xs">
+          {% for s in ros.staff_call_times %}
+          <li class="rounded-lg bg-violet-50 border border-violet-200 px-2 py-0.5 text-violet-700">{{ s.role|replace('_', ' ') }}{% if s.outstanding %} · {{ s.outstanding }}{% endif %}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if ros.contingency_notes %}
+      <div>
+        <p class="text-slate-400 font-medium text-xs mb-1">Contingency</p>
+        <p class="text-slate-600">{{ ros.contingency_notes }}</p>
+      </div>
+      {% endif %}
+
+      {# GAPS — shown LOUDLY, one ⚠ line per gap with what's missing (§14). #}
+      {% if ros.gaps %}
+      <div class="rounded-lg bg-amber-50 border border-amber-200 p-3">
+        <p class="text-amber-800 font-semibold text-xs mb-1.5">⚠ {{ ros.gaps|length }} gap{{ '' if ros.gaps|length == 1 else 's' }} to close before the day</p>
+        <ul class="space-y-1">
+          {% for g in ros.gaps %}
+          <li class="text-amber-800 text-xs flex gap-1.5"><span>⚠</span><span>{{ g.detail }}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% elif ros.lines %}
+      <p class="text-emerald-700 text-xs font-medium">No gaps — the sheet reads clean.</p>
+      {% endif %}
+
+      {# Action row — Assemble / Send run sheet / Export PDF. #}
+      <div class="flex items-center gap-2 flex-wrap pt-1">
+        <form method="post" action="/app/events/{{ event.id }}/run-of-show/assemble" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="rounded-lg bg-brand text-white px-3 py-1.5 text-xs font-semibold hover:bg-brand/90">Assemble</button>
+        </form>
+        <form method="post" action="/app/events/{{ event.id }}/run-of-show/send" class="inline"
+              onsubmit="return confirm('Draft the final run sheet to every supplier and staff member with an email address?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="rounded-lg border border-brand text-brand px-3 py-1.5 text-xs font-semibold hover:bg-brand/5">Send run sheet</button>
+        </form>
+        <a href="/app/events/{{ event.id }}/run-of-show/export.pdf"
+           class="rounded-lg border border-slate-300 text-slate-600 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50">Export PDF</a>
+        {% if ros.assembled_at %}<span class="text-slate-400 text-xs ml-auto">assembled {{ ros.assembled_at | pretty_date }}</span>{% endif %}
+      </div>
+    </div>
+  </section>
+
+  {# Guests & dietary matrix (§8) — guests are NOT contacts (§14). #}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h3 class="text-sm font-semibold text-navy">Guests &amp; dietary</h3>
+      <span class="text-xs text-slate-400">{{ guests|length }} record{{ '' if guests|length == 1 else 's' }}</span>
+    </div>
+    {% if dietary_matrix %}
+    <div class="px-5 pt-3 flex flex-wrap gap-2 text-xs">
+      {% for tag, n in dietary_matrix.items() %}
+      <span class="rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5">{{ n }} {{ tag|replace('_', ' ') }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if guests %}
+    <ul class="divide-y divide-slate-50 mt-2">
+      {% for g in guests %}
+      <li class="px-5 py-2.5 flex items-center gap-3 text-sm">
+        <span class="font-medium text-navy">{{ g.name or 'Guest' }}</span>
+        {% if g.party_size and g.party_size != 1 %}<span class="text-slate-400">×{{ g.party_size }}</span>{% endif %}
+        <span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs">{{ g.rsvp }}</span>
+        {% if g.dietary %}<span class="text-slate-500 ml-auto">{{ g.dietary }}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No guests recorded yet. Dietary counts and RSVPs land here from the inbox — guests are never added to your CRM contacts.</p>
+    {% endif %}
+  </section>
+
+  {# Suppliers & staff (§7/§8) — the chase substrate + the multi-stakeholder chase. #}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h3 class="text-sm font-semibold text-navy">Suppliers &amp; staff</h3>
+      <span class="text-xs text-slate-400">{{ stakeholders|length }} · BLAM8 chases each one to the run sheet</span>
+    </div>
+    {% if stakeholders %}
+    <ul class="divide-y divide-slate-50">
+      {% for s in stakeholders %}
+      <li class="px-5 py-2.5 text-sm">
+        <div class="flex items-center gap-3 flex-wrap">
+          <span class="rounded px-1.5 py-0.5 text-xs font-semibold {{ 'bg-sky-100 text-sky-700' if s.kind == 'supplier' else 'bg-violet-100 text-violet-700' }}">{{ s.kind }}</span>
+          <span class="font-medium text-navy">{{ s.role|replace('_', ' ') }}</span>
+          {% if s.name %}<span class="text-slate-500">{{ s.name }}</span>{% endif %}
+          {# Status light — reflects the CHASE state, not just the raw confirmation. #}
+          <span class="ml-auto rounded-full px-2 py-0.5 text-xs font-medium
+            {{ 'bg-emerald-100 text-emerald-700' if s.tone == 'good' else
+               'bg-amber-100 text-amber-700' if s.tone == 'warn' else
+               'bg-rose-100 text-rose-700' if s.tone == 'needs_human' else
+               'bg-slate-100 text-slate-500' if s.tone == 'muted' else
+               'bg-sky-100 text-sky-700' }}">
+            {% if s.tone == 'good' %}✓ confirmed
+            {% elif s.tone == 'warn' %}⚠ needs info
+            {% elif s.tone == 'needs_human' %}needs a human
+            {% elif s.tone == 'muted' %}{{ 'muted' if s.confirmation == 'muted' else s.confirmation }}
+            {% else %}⏳ chasing{% if s.chase_count and s.chase_count > 0 %} ({{ s.chase_count }}){% endif %}{% endif %}
+          </span>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap mt-1 pl-1">
+          {% if s.outstanding %}<span class="text-slate-500 text-xs">Waiting on: {{ s.outstanding }}</span>{% endif %}
+          {% if s.last_chased_at %}<span class="text-slate-400 text-xs">last chased {{ s.last_chased_at | pretty_date }}</span>{% endif %}
+          {% if s.needs_human %}<span class="text-rose-600 text-xs font-medium">chased {{ max_chases }}× with no reply — over to you</span>{% endif %}
+          <span class="ml-auto flex items-center gap-2">
+            {% if s.confirmation != 'confirmed' and s.confirmation != 'declined' and s.confirmation != 'muted' and s.email %}
+            <form method="post" action="/app/events/stakeholders/{{ s.id }}/chase" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <button class="rounded-lg border border-brand text-brand px-2.5 py-1 text-xs font-semibold hover:bg-brand/5">Chase now</button>
+            </form>
+            {% endif %}
+            {% if s.confirmation == 'muted' %}
+            <form method="post" action="/app/events/stakeholders/{{ s.id }}/mute" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="on" value="0">
+              <button class="rounded-lg border border-slate-300 text-slate-600 px-2.5 py-1 text-xs hover:bg-slate-50">Resume chasing</button>
+            </form>
+            {% elif s.confirmation != 'confirmed' and s.confirmation != 'declined' %}
+            <form method="post" action="/app/events/stakeholders/{{ s.id }}/mute" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="on" value="1">
+              <button class="rounded-lg border border-slate-200 text-slate-400 px-2.5 py-1 text-xs hover:bg-slate-50" title="Stop BLAM8 chasing this one">Mute</button>
+            </form>
+            {% endif %}
+          </span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No suppliers or staff added yet. Named suppliers and assigned staff from the thread land here — and BLAM8 chases each one to the run sheet automatically.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

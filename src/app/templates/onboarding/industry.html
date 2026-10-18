@@ -1,0 +1,96 @@
+{% extends "onboarding/base.html" %}
+{% block title %}Industry · Set up BLAM8{% endblock %}
+{% block heading %}{% if shapes %}What shape is your business?{% else %}What does your business do?{% endif %}{% endblock %}
+{% block subheading %}{% if shapes %}Pick the shape that fits how you work. It sets the workflows, home screen and integrations you get. Not sure? Choose the closest — you can change it anytime.{% else %}Pick your sector. Every business gets the full platform now — replies in your voice, scheduling and the self-filling CRM, tailored to how you work. It tunes the agent's vocabulary to your trade — change this anytime.{% endif %}{% endblock %}
+{% block content %}
+{% if shapes %}
+{# Step 1 · Shape grid — the seven OSes. Live ones drill into their industries;
+   the rest are shown but disabled. "Something else" is the free-text escape. #}
+<div class="grid gap-3">
+  {% for os in shapes %}
+  {% if os.live %}
+  <a href="/onboarding/industry?shape={{ os.id }}" class="block">
+    <div class="rounded-xl border border-slate-300 p-4 flex items-start justify-between gap-3 hover:border-slate-400 hover:bg-slate-50 transition">
+      <div>
+        <p class="font-semibold text-navy">{{ os.label }}</p>
+        <p class="text-sm text-slate-500">{{ os.blurb }}</p>
+      </div>
+      <span class="flex-none self-center text-slate-400">→</span>
+    </div>
+  </a>
+  {% else %}
+  <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 flex items-start justify-between gap-3 opacity-70 cursor-not-allowed">
+    <div>
+      <p class="font-semibold text-slate-500">{{ os.label }}</p>
+      <p class="text-sm text-slate-400">{{ os.blurb }}</p>
+    </div>
+    <span class="flex-none self-center rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-medium">Coming soon</span>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+<div class="mt-4 flex items-center justify-between gap-4">
+  <a href="/onboarding/interview" class="text-sm text-slate-500 underline decoration-slate-300 hover:text-slate-700">← Back to the assistant</a>
+  <a href="/onboarding/industry?shape=field" class="text-sm text-slate-500 underline decoration-slate-300 hover:text-slate-700">Something else? Start here and tell us your sector.</a>
+</div>
+{% else %}
+{# Step 2 · Industry cards, filtered to the chosen Shape. #}
+<form method="post" action="/onboarding/industry" class="space-y-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  {# Same capture as the interview step — the classic path must not leave the
+     email-derived placeholder as the portal's customer-facing name. #}
+  <div>
+    <label class="block text-sm font-medium text-slate-700" for="business_name">Business name</label>
+    <input id="business_name" name="business_name" maxlength="120" value="{{ business_name or '' }}"
+           placeholder="The trading name your customers know you by."
+           class="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition">
+    <p class="mt-1 text-xs text-slate-400">Shown to your customers — on your booking portal and in the agent's replies.</p>
+  </div>
+  <div class="grid gap-3">
+    {% for ind in industries %}
+    <label class="block cursor-pointer">
+      <input type="radio" name="industry" value="{{ ind.id }}" class="peer sr-only" {% if selected==ind.id %}checked{% endif %} required>
+      <div class="rounded-xl border border-slate-300 p-4 flex items-start justify-between gap-3 hover:border-slate-400 peer-checked:border-brand peer-checked:ring-2 peer-checked:ring-brand/20 peer-checked:bg-brand-50 transition">
+        <div>
+          <p class="font-semibold text-navy">{{ ind.label }}</p>
+          <p class="text-sm text-slate-500">{{ ind.blurb }}</p>
+        </div>
+        {% if ind.live %}
+        <span class="flex-none rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">Module live</span>
+        {% elif ind.id != 'other' %}
+        <span class="flex-none rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-medium">Module planned</span>
+        {% endif %}
+      </div>
+    </label>
+    {% endfor %}
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-slate-700">Your sector <span class="font-normal text-slate-400">(if you chose “Something else” — helps us decide what to build next)</span></label>
+    <input id="industry_other" name="industry_other" type="text" placeholder="Describe your business type" class="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition">
+  </div>
+  <script>
+    // Free-text sector only applies to the "Something else" radio — disabled
+    // (and dimmed) otherwise so the empty box never reads as unfinished.
+    (function () {
+      var radios = document.querySelectorAll('input[name="industry"]');
+      var other = document.getElementById("industry_other");
+      if (!radios.length || !other) return;
+      function sync() {
+        var on = !!document.querySelector('input[name="industry"][value="other"]:checked');
+        other.disabled = !on;
+        other.classList.toggle("opacity-50", !on);
+      }
+      radios.forEach(function (r) { r.addEventListener("change", sync); });
+      sync();
+    })();
+  </script>
+  <div class="flex items-center justify-between">
+    <span class="flex items-center gap-4">
+      <a href="/onboarding/industry" class="text-sm text-slate-500 underline decoration-slate-300 hover:text-slate-700">← Choose a different shape</a>
+      <a href="/onboarding/interview" class="text-sm text-slate-400 underline decoration-slate-300 hover:text-slate-600">Back to the assistant</a>
+    </span>
+    <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</button>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

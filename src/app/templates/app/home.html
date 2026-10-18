@@ -1,0 +1,637 @@
+{% extends "app/base.html" %}
+{% from "app/_promise_popup.html" import promise_card %}
+{% from "app/_card_popup.html" import card_popup %}
+{% set page_flip = true %}{# Today ↔ Inbox page-flip transition (base.html) #}
+{% block title %}Home · BLAM8{% endblock %}
+{# The top bar already says BLAM8 (the brand) — repeating the tenant name here
+   read as "BLAM8 BLAM8 · today" on the company's own account (Kris 2026-07-04). #}
+{% block heading %}Today{% endblock %}
+
+{% block dockbar %}
+{# Today's lens on the rail: the day slot-by-slot. The old in-page strip,
+   pinned to the bottom of the screen instead of the bottom of the page. #}
+{% if strip %}
+  <span class="flex-none text-[10px] font-semibold uppercase tracking-wider text-slate-500 pr-1">Today's diary</span>
+  {% if strip.closed %}
+  {# min-w-0 truncate, not flex-none: one sentence must never make the rail
+     scroll sideways on a phone the way a row of booking chips may. #}
+  <span class="min-w-0 truncate text-xs text-slate-500">Closed today{% if strip.next_label %} — next open {{ strip.next_label }}{% endif %}</span>
+  {% else %}
+  {% for b in strip.allday %}
+  <a href="/app/diary" class="flex-none inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">All day · {{ b.summary }}</a>
+  {% endfor %}
+  {% for s_ in strip.slots %}{% for b in s_.bookings %}
+  <a href="/app/diary" class="flex-none inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium {% if b.status == 'proposed' %}border-amber-200 bg-amber-50 text-amber-700{% else %}border-emerald-200 bg-emerald-50 text-emerald-700{% endif %}">
+    <span class="font-semibold">{{ s_.label }}</span> {{ b.summary }}{% if b.status == 'proposed' %} · proposed{% endif %}</a>
+  {% endfor %}{% endfor %}
+  {% if strip.stay_mode %}
+  {# Spaces, not windows (Kris 2026-09-13): "3 subjects in · 27 of 30 spaces free" #}
+  {% for a in strip.appointments %}<a href="/app/diary" class="flex-none inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500" data-diary-appts>{{ a.count }} {{ a.name | lower }}{{ '' if a.count == 1 else 's' }} today</a>{% endfor %}
+  <a href="/app/diary" class="flex-none inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500" data-diary-spaces>{% if strip.used %}{{ strip.used }} {{ strip.noun_plural if strip.used != 1 else strip.noun_plural[:-1] }} in · {{ strip.remaining }} of {{ strip.capacity }} space{{ '' if strip.capacity == 1 else 's' }} free{% else %}{{ strip.capacity }} space{{ '' if strip.capacity == 1 else 's' }} free{% endif %}</a>
+  {% else %}
+  {% set free = strip.slots | rejectattr('bookings') | list %}
+  {% if free %}<a href="/app/diary" class="flex-none inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-500">{{ free | length }} free slot{{ '' if free|length == 1 else 's' }}</a>{% endif %}
+  {% endif %}
+  {% endif %}
+{% endif %}
+{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="/static/today_drawer.css?v={{ asset_rev }}">
+<style>
+  /* ── The deck (Flight Deck, 2026-08-31) ─────────────────────────────────
+     One frosted-glass card per person, stacked; scrolling piles them under
+     the masthead (position: sticky with a per-card offset). Glass lives ONLY
+     here — the rest of the app stays flat paper. */
+  /* The page sky (app/base.html) is the wash behind the glass now — the
+     deck's own radial glow doubled it and its edge read as a hard line. */
+  .deck { position: relative; }
+  /* Today, tighter (Kris 2026-10-16): less room above the name and between it and the first card once the tagline has gone,
+     and cards that hug their text, so more of the day fits on the screen. Today's own page only (the wrapper holds the deck). */
+  main.app-sky > div:has(> .today-regions) { padding-top: .375rem; gap: .25rem; }
+  /* The tagline hands its row back: what follows it (the deck, or the notes above it) loses the gap the tagline had made, as it fades. */
+  .deck-stage.space-y-4 > .today-tagline-gone ~ .deck, .deck-stage.space-y-4 > .today-tagline-gone ~ [data-my-notes] { margin-top: 0; transition: margin .6s ease; }
+  .deck-face.p-4 { padding-top: .625rem; padding-bottom: .625rem; }
+  /* The deck's big z numbers (waiting ~300, travelling ~600) are pile-order,
+     not page-order: isolate the stage so they only rank cards against each
+     other, and the app's chrome — the menu (header z-30), the push toast and
+     concierge (z-50) — stays in front of the whole deck (Kris 2026-08-31:
+     the menu and the toast were unclickable under travelling cards). */
+  .deck-stage { isolation: isolate; overflow-x: hidden; }
+  /* overflow-x hidden: the stage scrolls up and down only. A single element a
+     few pixels past its edge (the Inbox link's -mx-1.5, on a phone) was enough
+     to let the whole deck drag sideways (Kris 2026-09-20: "I am able to drag
+     the screen left & right for no reason"). */
+  /* Material comes from .glass-card (base.html) — here only the deck's layout. */
+  .deck-card { position: sticky; }
+  /* Buried cards keep their words frosted until the card is 90% shown
+     (Kris 2026-08-31) — the piles read as paper edges, not walls of text.
+     The blur sits on the faces, not the inner: a filter there would flatten
+     preserve-3d and kill the flip. */
+  .deck-face { transition: filter .3s ease; }
+  .deck-card.is-buried .deck-face { filter: blur(3px); }
+  /* flip: front = why they're here; back = their diary today */
+  .deck-card-inner { transform-style: preserve-3d; transition: transform 0.45s cubic-bezier(.2,.7,.2,1); position: relative; }
+  .deck-card.is-flipped .deck-card-inner { transform: rotateY(180deg); }
+  .deck-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .deck-face-back { position: absolute; inset: 0; transform: rotateY(180deg); overflow: hidden; }
+  /* This morning's brief, scrolling right to left in the header row
+     (2026-09-25). The track starts one strip-width to the right and runs
+     until its last word has gone off the left; the speed is set per brief
+     by the script below, so a long brief isn't a fast one. */
+  .brief-track { display: inline-block; white-space: nowrap; padding-left: 100%;
+                 animation: brief-scroll var(--brief-dur, 30s) linear infinite; }
+  .brief-marquee:hover .brief-track, .brief-marquee:focus-visible .brief-track { animation-play-state: paused; }
+  @keyframes brief-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @media (prefers-reduced-motion: reduce) {
+    .brief-track { animation: none; padding-left: 0; white-space: normal;
+                   display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  }
+</style>
+
+{# No bottom padding: the overview rests on the diary rail; the cards fill
+   their own viewport immediately above the sheet. #}
+<div class="max-w-5xl mx-auto w-full px-4 pt-4 sm:px-6 sm:pt-6 pb-0 h-full flex flex-col min-h-0 gap-3">
+
+  {# ── The name: truly fixed — it is outside the scroller entirely. #}
+  <div class="flex-none text-center">
+    <p class="font-semibold text-navy text-lg leading-tight truncate">{{ tenant.name or 'Your company' }}</p>
+  </div>
+
+  {# Something has STOPPED (Kris 2026-09-04). Outside the scroller with the
+     name, because a deck full of people waiting for replies is a lie while the
+     mailbox those replies come from is dead — and this is the page they open.
+     Rose, not amber: amber in this app means "this wants you", and this is
+     past wanting. Only shown once the failure has outlasted the same grace
+     period as the notification (src/app/health.py), so the strip never appears for
+     a blip the owner is never told about. #}
+  {% if problems %}
+  <div class="flex-none rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+    {% for p_ in problems %}
+    <div class="flex items-start gap-2{% if not loop.first %} mt-2 pt-2 border-t border-rose-200{% endif %}">
+      <span class="flex-none mt-1.5 h-2 w-2 rounded-full bg-rose-500"></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-rose-900 leading-snug">
+          {{ p_.address }} {{ p_.what }} for {{ p_.how_long }}
+        </p>
+        {# Two facts and no more: nothing is being answered, and fixing it is
+           one click and then nothing. Three lines of reassurance cost a
+           quarter of a phone screen on the page they open in a panic. #}
+        <p class="text-xs text-rose-700 mt-0.5">No email is being answered — reconnect and it resumes on its own.</p>
+      </div>
+      <a href="/app/settings" class="flex-none rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 transition">Reconnect</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="today-regions">
+  <div class="deck-stage flex-1 min-h-0 overflow-y-auto space-y-4" style="scrollbar-width: none;" role="region" aria-label="Today's cards" tabindex="0">
+  {# The line under the name says what the product stands for (Kris
+     2026-09-13), not the plan's infrastructure — the trial countdown lives on the
+     usage tile, the modules under Menu. #}
+    {# Shown on every landing, then fades and gives its row back (Kris
+       2026-09-30): noticeable without being a permanent line. #}
+    <p class="text-sm text-slate-500 text-center overflow-hidden" data-today-tagline style="transition: opacity .6s ease, max-height .6s ease, margin .6s ease; max-height: 2rem;">Your business logistics, automated</p>
+    <script>
+      (function () {
+        var el = document.querySelector("[data-today-tagline]");
+        if (!el) return;
+        var still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (still) el.style.transition = "none";
+        setTimeout(function () {
+          el.style.opacity = "0"; el.style.maxHeight = "0"; el.style.margin = "0"; el.classList.add("today-tagline-gone");
+          setTimeout(function () { el.style.display = "none"; }, still ? 0 : 700);
+        }, 4000);
+      })();
+    </script>
+
+  {# ── The deck — one card per person, whoever needs you next on top ─────── #}
+  {# Asked of you (docs/plan-people.md slice 3): what somebody said to you,
+     fastened to the work it was about. Above the deck deliberately — a person
+     asking you something outranks a machine's ranking of your day. #}
+  {% if my_notes %}
+  <section class="space-y-2 mb-4" data-my-notes aria-label="Asked of you">
+    {% for n in my_notes %}
+    <article class="rounded-xl border px-4 py-3 {{ 'border-slate-200 bg-white' if n.seen_at else 'border-amber-300 bg-amber-50' }}" data-note="{{ n.id }}">
+      <p class="text-sm text-navy"><span class="font-semibold">{{ n.from_name or 'Someone' }}</span>{% if n.about_label %} <span class="font-normal text-slate-500">· about {{ n.about_label }}</span>{% endif %}</p>
+      <p class="mt-0.5 text-sm text-slate-600">{{ n.body }}</p>
+      <div class="mt-2 flex flex-wrap items-center gap-3">
+        {% if n.about_href %}<a href="{{ n.about_href }}" class="text-xs font-semibold text-brand hover:underline">Open it &rarr;</a>{% endif %}
+        <form method="post" action="/app/people/note/{{ n.id }}/done" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="return_to" value="/app/">
+          <button class="text-xs font-semibold text-emerald-700 hover:underline">Done</button>
+        </form>
+        {% if not n.seen_at %}
+        <form method="post" action="/app/people/note/{{ n.id }}/seen" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="return_to" value="/app/">
+          <button class="text-xs text-slate-500 hover:underline">Seen it</button>
+        </form>
+        {% endif %}
+      </div>
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section class="deck" aria-label="Who needs you next">
+    {# The header row. This morning's brief scrolls where "Who needs you next
+       · N drafts waiting" was (Kris 2026-09-25: the brief came through on the
+       phone "but there's nowhere in app that displays it"; the brief already
+       says how many drafts are waiting). A small × on its left puts it away
+       for the day (the feed row's dismiss); a tap on the words opens the
+       Concierge, where the brief is the opening turn and asks its question.
+       Today's order (the arrows) keeps the right-hand end. #}
+    <div class="flex items-center justify-between gap-2 pb-1 relative">
+      {% if brief %}
+      <div class="flex-1 min-w-0 flex items-center gap-1.5 h-7 rounded-full border border-slate-200 bg-white pl-1 pr-3" data-brief-strip data-brief-id="{{ brief.id }}">
+        <button type="button" class="flex-none h-5 w-5 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" aria-label="Close this morning's brief" title="Close" data-brief-close>
+          <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+        </button>
+        {# Where a tap goes (Kris 2026-09-25): the brief offers to start on the
+           drafts. With Pro + Concierge she's who answers that offer; on any
+           other plan the tap goes to the Inbox's waiting drafts, to watch them
+           being written. #}
+        {% if concierge_on %}
+        <button type="button" class="brief-marquee flex-1 min-w-0 overflow-hidden text-left text-xs text-slate-600" aria-label="This morning's brief — open the Concierge" data-brief-open>
+          <span class="brief-track" data-brief-track>{{ brief.text }}</span>
+        </button>
+        {% else %}
+        <a href="/app/conversations?cat=waiting" class="brief-marquee flex-1 min-w-0 overflow-hidden text-left text-xs text-slate-600" aria-label="This morning's brief — see the drafts waiting" data-brief-inbox>
+          <span class="brief-track" data-brief-track>{{ brief.text }}</span>
+        </a>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="flex-1"></div>
+      {% endif %}
+      {% include "app/_deck_cog.html" %}
+    </div>
+    {% if deck_saved %}<p data-flash class="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-800">Today's order saved — the cards stack that way from now on.</p>{% endif %}
+
+    {% if deck %}
+    <div class="space-y-3">
+      {% set deck_show = deck[:50] %}
+      {% for p in deck_show %}
+      {% set ti = [loop.index0, 3] | min %}
+      {% set ri = [(deck_show | length) - loop.index, 3] | min %}
+      <article class="deck-card glass-card" style="top: {{ 6 + ti * 12 }}px; bottom: {{ ri * 10 }}px; z-index: {{ loop.index }};"{% if loop.first %} data-tour="next"{% endif %}>
+        <div class="deck-card-inner">
+          <div class="deck-face p-4">
+            <div class="flex items-baseline gap-2">
+              {# No unread dot beside the name (Kris 2026-09-27: "remove the blue
+                 dot from next to the customer's name"). An unread line still
+                 shows at full strength on its own row below. #}
+              {# The name opens the card's pop-up — every line in full
+                 (_card_popup.html; Kris 2026-09-21) — as does blank space on
+                 the face; the name is the button so a keyboard reaches it. #}
+              <button type="button" data-card-open aria-haspopup="dialog" class="min-w-0 flex-1 truncate text-left font-display font-semibold text-navy text-[15px]" {% if p.email %}title="{{ p.email }}"{% endif %}>
+                {# A namesake wears its handle (deck.namesakes): two Hannahs
+                   read "Hannah · hannah.b" and "Hannah · hannah" (Kris 2026-09-20). #}
+                {{ p.name }}{% if p.handle %} <span class="text-slate-500 font-sans font-normal text-sm">· {{ p.handle }}</span>{% endif %}{% if p.company %} <span class="text-slate-500 font-sans font-normal text-sm">· {{ p.company }}</span>{% endif %}
+              </button>
+              {# The CRM, top right (Kris 2026-09-20): the two-people mark
+                 alone, no word, straight to this person's card — by id when
+                 the CRM knows them, by address otherwise (crm/open finds
+                 them or searches). Not for a card with neither, and not
+                 behind a door this person cannot open. #}
+              {% if crm_on and 'crm' in (my_doors or ['crm']) and (p.contact_id or p.email) %}
+              <a href="{% if p.contact_id %}/app/crm/contacts/{{ p.contact_id }}{% else %}/app/crm/open?email={{ p.email | urlencode }}{% endif %}"
+                 class="flex-none self-center -my-1 -mr-1 rounded-full p-1 text-slate-400 hover:text-brand hover:bg-slate-100 transition"
+                 aria-label="{{ p.name }} in the CRM" title="Open in the CRM" data-crm-link>
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+              </a>
+              {% endif %}
+            </div>
+
+            {# One row per fact, uniform (Kris 2026-09-04). The card used to
+               promote its loudest fact to a headline and demote the rest to
+               chips, which read as a profile. A person's card is a STACK now:
+               same shape for every line, what it is on the left, when it
+               happened on the right, and the swipe on the ones that happened.
+               State facts carry no time — nothing happened, it simply is. #}
+            <ul class="mt-2 space-y-1.5" data-facts>
+              {% for x in p.facts %}
+              {# Four tones plus the brand default. Amber earns its own branch:
+                 "wants to move" and "asked you" are the app's this-wants-you
+                 colour everywhere else, and falling through to brand made them
+                 read as the same weight as a finished draft. #}
+              {% set ink = {'rose': 'text-rose-700', 'emerald': 'text-emerald-700', 'amber': 'text-amber-700', 'ink': 'text-slate-500'}.get(x.tone, 'text-brand') %}
+              {% set dot = {'rose': 'bg-rose-600', 'emerald': 'bg-emerald-600', 'amber': 'bg-amber-500', 'ink': 'bg-slate-400'}.get(x.tone, 'bg-brand') %}
+              <li class="flex items-baseline gap-2{% if loop.index0 >= 4 %} hidden{% endif %}"
+                  {% if loop.index0 >= 4 %}data-extra{% endif %}
+                  {% if x.nid %}data-note="{{ x.nid }}"{% endif %}>
+                {% if x.promise %}
+                {# What is owed opens a pop-up, not the CRM (Kris 2026-09-20):
+                   the promise and what caused it, without leaving Today. The
+                   same three spans as the link below, so the row reads
+                   uniform; the details ship rendered in an inert <template>
+                   beside it (_promise_popup.html) and nothing is fetched. #}
+                <button type="button" data-promise-open="{{ x.promise.id or '' }}" data-promise-title="{{ x.promise.name }}"
+                        aria-haspopup="dialog" class="group flex-1 min-w-0 flex items-baseline gap-2 text-left">
+                  <span class="flex-none h-1.5 w-1.5 rounded-full self-center {{ dot }}"></span>
+                  <span class="flex-none whitespace-nowrap text-[13px] font-medium {{ ink }}">{{ x.chip }}</span>
+                  {% if x.text %}<span class="min-w-0 truncate text-[13px] text-slate-500 group-hover:text-brand">{{ x.text }}</span>{% endif %}
+                </button>
+                {{ promise_card(x.promise) }}
+                {% else %}
+                <a href="{{ x.href }}" class="group flex-1 min-w-0 flex items-baseline gap-2">
+                  <span class="flex-none h-1.5 w-1.5 rounded-full self-center {{ dot }}{% if not x.unseen and x.kind == 'event' %} opacity-40{% endif %}"></span>
+                  <span class="flex-none whitespace-nowrap text-[13px] font-medium {{ ink }}">{{ x.chip }}</span>
+                  {% if x.text %}<span class="min-w-0 truncate text-[13px] text-slate-500 group-hover:text-brand">{{ x.text }}</span>{% endif %}
+                </a>
+                {% endif %}
+                {% if x.at %}<span class="flex-none text-[11px] tabular-nums text-slate-400">{{ x.at }}</span>{% endif %}
+                {% if x.nid %}
+                {# Quiet to look at, big enough to hit: the glyph stays small and
+                   pale so it never competes with the fact, and the padding gives
+                   it a thumb-sized target on a phone. #}
+                <button type="button" data-dismiss="{{ x.nid }}" aria-label="Dismiss {{ x.chip }}"
+                        class="flex-none -my-2 -mr-2 px-2.5 py-2 text-slate-300 hover:text-slate-600 active:text-slate-700 leading-none text-base">&times;</button>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            {# "+6 more" was a dead label: it said there were six things and
+               gave you no way to see them (Kris 2026-09-04). It opens the card
+               now. #}
+            {# Both controls on one row with a real gap. They were adjacent
+               inline elements before, so a card with extras and a diary read
+               "+3 more ⇄ Their day" as though it were one broken sentence. #}
+            {% if p.facts | length > 4 or p.diary %}
+            <div class="mt-2 flex items-center gap-4">
+              {% if p.facts | length > 4 %}
+              <button type="button" data-more
+                      class="text-xs font-medium text-slate-500 hover:text-brand"
+                      aria-expanded="false"
+                      data-more-label="+{{ p.facts | length - 4 }} more"
+              >+{{ p.facts | length - 4 }} more</button>
+              {% endif %}
+              {% if p.diary %}
+              <button type="button" data-flip class="text-xs font-medium text-slate-500 hover:text-brand">⇄ Their day</button>
+              {% endif %}
+            </div>
+            {% endif %}
+            {# The card's lines in full, inert until the name or the face is tapped. #}
+            {{ card_popup(p) }}
+          </div>
+          {% if p.diary %}
+          <div class="deck-face deck-face-back p-4">
+            <div class="flex items-baseline justify-between gap-3">
+              <p class="min-w-0 truncate font-display font-semibold text-navy text-[15px]">{{ p.name }} <span class="text-slate-500 font-sans font-normal text-sm">{% if p.handle %}· {{ p.handle }} {% endif %}· today</span></p>
+              <a href="/app/diary" class="flex-none text-xs font-medium text-brand hover:underline">Diary →</a>
+            </div>
+            <ul class="mt-1 space-y-1">
+              {% for d in p.diary[:3] %}
+              <li class="text-sm text-slate-600 truncate">
+                <span class="font-medium text-emerald-700">{{ d.window or 'Today' }}</span> · {{ d.summary }}{% if d.status == 'proposed' %} <span class="text-amber-700">(proposed)</span>{% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+            <button type="button" data-flip class="mt-2 text-xs font-medium text-slate-500 hover:text-brand">⇄ Back</button>
+          </div>
+          {% endif %}
+        </div>
+      </article>
+      {% endfor %}
+      {% if deck | length > 50 %}
+      <p class="text-center text-xs text-slate-500 pt-1">{{ deck | length - 50 }} more — open the Inbox or CRM for the rest</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="deck-card glass-card p-8 text-center" data-tour="next">
+      {% if before_blam8 %}
+      {# Brought in from before BLAM8 and never answered by the agent — not
+         "nothing waiting" (run #10 (qqq)). #}
+      <p class="text-sm font-medium text-slate-600">Nothing new needs you — but your inbox came with history.</p>
+      <p class="text-xs text-slate-400 mt-1" data-before-blam8-line><span class="font-semibold text-navy">{{ before_blam8 }} message{{ '' if before_blam8 == 1 else 's' }}</span> from before BLAM8 {{ 'is' if before_blam8 == 1 else 'are' }} in your inbox. Skim them and ignore any sender the agent should never answer — do it now and nothing is wasted on them later.</p>
+      {% if 'inbox' in (my_doors or ['inbox']) %}<a href="/app/conversations" class="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline">Open the inbox <span aria-hidden="true">&rarr;</span></a>{% endif %}
+      {% else %}
+      <p class="text-sm font-medium text-slate-600">All clear — nothing waiting for you.</p>
+      <p class="text-xs text-slate-400 mt-1">People land here the moment they need you: a draft to approve, a promise coming due, today's bookings.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+
+  </div>{# /deck-stage: cards scroll independently of the numbers #}
+  {# The sheet rests at the rail, revealing only through the email row.
+     Its measured height gives space back to the card viewport as it closes. #}
+  <section class="today-drawer" aria-label="Business overview" data-pull-refresh="off">
+    <button type="button" class="today-drawer-handle" aria-expanded="false" aria-controls="today-overview" aria-label="Show more business overview" hidden>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m6 15 6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="today-drawer-viewport" id="today-overview">
+  <div class="today-drawer-sheet rounded-xl border border-slate-200 bg-white divide-y divide-slate-200">
+    {% if (scheduling_on or tms_on or fsm_on) and not strip %}
+    {% set board_href = '/app/fsm' if fsm_on else ('/app/board' if tms_on else '/app/diary') %}
+    {% set board_label = 'Engineer board' if fsm_on else ('Transport board' if tms_on else 'Diary') %}
+    {# "0 booked" read as a diary that exists (run #10); before the diary is set
+       up the tile says so and points at the step. #}
+    {% set diary_step = (setup_strip_raw.steps if setup_strip_raw else []) | selectattr('key', 'equalto', 'diary') | list | first %}
+    {% if diary_step and not diary_step.done %}
+    <a href="{{ diary_step.href }}" class="block px-4 py-2.5 hover:bg-slate-50 transition" data-diary-unset>
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">Today · {{ board_label }}</span>
+        <span class="text-sm font-semibold text-brand">Not set up yet →</span>
+      </div>
+      <p class="text-xs text-slate-400">Bookings can't be placed until the diary settings are saved.</p>
+    </a>
+    {% else %}
+    <a href="{{ board_href }}" class="block px-4 py-2.5 hover:bg-slate-50 transition">
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">Today · {{ board_label }}</span>
+        <span class="text-xl font-bold font-display text-navy">{{ board.total }}<span class="text-sm font-medium text-slate-400"> booked</span></span>
+      </div>
+      <p class="text-xs text-slate-400">{{ board.confirmed }} confirmed{% if board.proposed %} · {{ board.proposed }} proposed{% endif %}</p>
+    </a>
+    {% endif %}
+    {% endif %}
+    {% if people_admin is not defined or people_admin %}
+    {# Closer to the container (Kris 2026-10-16): less above the name and at the sides, so the text fills the box; the box is as wide as the cards. #}
+    <a href="/app/usage" class="block px-2.5 pt-1 pb-2 hover:bg-slate-50 transition" data-tour="emails">
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">Emails this month</span>
+        <span class="text-xl font-bold font-display {% if u.over %}text-rose-700{% elif u.warn %}text-amber-700{% else %}text-navy{% endif %}">{{ "{:,}".format(u.emails) }}<span class="text-sm font-medium text-slate-400"> / {{ "{:,}".format(u.allowance) }}</span></span>
+      </div>
+      <div class="mt-1.5 h-1 rounded-full bg-slate-100 overflow-hidden">
+        <div class="h-full rounded-full {% if u.over %}bg-rose-500{% elif u.warn %}bg-amber-500{% else %}bg-brand{% endif %}" style="width: {{ [u.pct, 100] | min }}%"></div>
+      </div>
+      {% if trial.status in ('active', 'grace_active') %}
+      <p class="text-xs text-slate-400 mt-1">Trial: {{ trial.emails_used }} / {{ trial.cap }} trial emails used · {{ trial.days_remaining }} day{{ '' if trial.days_remaining == 1 else 's' }} left</p>
+      {% endif %}
+      {# The two other surfaces that can run up a bill (Kris 2026-09-13):
+         the assistant, against its daily fair-use cap, and the portal. #}
+      <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-400" data-usage-more>
+        <span>Assistant <span class="font-semibold text-navy">{{ "{:,}".format(u.assistant_turns or 0) }}</span> chat{{ '' if u.assistant_turns == 1 else 's' }}{% if u.assistant_day_cap %} · {{ u.assistant_today or 0 }} of {{ u.assistant_day_cap }} today{% endif %}</span>
+        <span>Portal <span class="font-semibold text-navy">{{ "{:,}".format(u.portal_bookings or 0) }}</span> booking{{ '' if u.portal_bookings == 1 else 's' }} · <span class="font-semibold text-navy">{{ "{:,}".format(u.portal_turns or 0) }}</span> chat{{ '' if u.portal_turns == 1 else 's' }}</span>
+      </div>
+    </a>
+    {% endif %}
+    {% if crm_card and 'crm' in (my_doors or ['crm']) %}
+    <a href="/app/crm" class="block px-4 py-2.5 hover:bg-slate-50 transition" data-tour="crm"{% if crm_card.locked %} data-locked="1"{% endif %}>
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">CRM{% if crm_card.locked %} <span class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 align-middle">Locked</span>{% endif %}</span>
+        <span class="text-xl font-bold font-display {{ 'text-slate-400' if crm_card.locked else 'text-navy' }}">{{ crm_card.contacts }}<span class="text-sm font-medium text-slate-400"> contact{{ '' if crm_card.contacts == 1 else 's' }}</span></span>
+      </div>
+      <p class="text-xs text-slate-400">
+        {% if crm_card.locked %}{% if crm_card.contacts %}Already filled in from your inbox · unlock on Pro to open them{% else %}Fills itself in from your inbox · unlock on Pro{% endif %}
+        {% elif crm_card.open_deals %}{{ crm_card.open_deals }} open deal{{ '' if crm_card.open_deals == 1 else 's' }}{% if crm_card.value %} · £{{ '{:,.0f}'.format(crm_card.value) }} in play{% endif %}
+        {% else %}Fills itself in from your inbox{% endif %}
+      </p>
+    </a>
+    {% endif %}
+    {# The Concierge (Kris 2026-09-25): her ⏳ waiting and ✓ done-today counts,
+       the same lists as her own badges; a tap opens her. Without Pro +
+       Concierge the row stays, locked, and goes to the plans — as the CRM
+       row does on Starter. #}
+    {% if concierge_card %}
+    {% if concierge_card.locked %}
+    <a href="/billing/plans?concierge=1" class="block px-4 py-2.5 hover:bg-slate-50 transition" data-concierge-row data-concierge-locked>
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">Concierge <span class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 align-middle">Locked</span></span>
+        <span class="text-sm font-semibold text-slate-400">Pro + Concierge</span>
+      </div>
+      <p class="text-xs text-slate-400">Ask anything about your business, and she drafts, moves, chases and books · unlock on Pro + Concierge</p>
+    </a>
+    {% else %}
+    <a href="/app/concierge" data-concierge-open class="block px-4 py-2.5 hover:bg-slate-50 transition" data-concierge-row>
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">Concierge</span>
+        <span class="text-xl font-bold font-display text-navy">{{ concierge_card.waiting }}<span class="text-sm font-medium text-slate-400"> waiting</span></span>
+      </div>
+      <p class="text-xs text-slate-400">{% if concierge_card.done %}{{ concierge_card.done }} done for you today{% else %}Nothing done yet today{% endif %} · tap to ask her anything</p>
+    </a>
+    {% endif %}
+    {% endif %}
+    {% if events_card %}
+    <a href="/app/events" class="block px-4 py-2.5 hover:bg-slate-50 transition">
+      <div class="flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy flex-1 min-w-0 truncate">Events this week</span>
+        <span class="text-xl font-bold font-display text-navy">{{ events_card.this_week_count }}</span>
+      </div>
+      <p class="text-xs text-slate-400">
+        {% if events_card.next_weeks_count %}{{ events_card.next_weeks_count }} more in the next 4 weeks{% if events_card.next_weeks_value %} · £{{ '{:,.0f}'.format(events_card.next_weeks_value) }} in play{% endif %}
+        {% else %}Guests, dietaries and suppliers fill themselves in{% endif %}
+      </p>
+    </a>
+    {% endif %}
+  </div>
+    </div>{# /today-drawer-viewport #}
+  </section>
+  </div>{# /today-regions #}
+</div>
+<script src="/static/today_drawer.js?v={{ asset_rev }}"></script>
+
+{% include "app/_promise_popup.html" %}
+{% include "app/_card_popup.html" %}
+
+<script>
+  // Today's order (the arrows) drop-down: open/close, close on Cancel, outside click or Escape.
+  // The arrows sit in the header row (Kris 2026-09-21), not on a card: the
+  // list paints above the pile on the root's own z (_deck_cog.html), so
+  // there is no card to lift while it is open.
+  (function () {
+    var root = document.querySelector("[data-deck-order-root]"); if (!root) return;
+    var btn = root.querySelector("[data-deck-order-toggle]"), panel = root.querySelector("[data-deck-order-panel]");
+    function setOpen(open) {
+      panel.classList.toggle("hidden", !open); btn.setAttribute("aria-expanded", open ? "true" : "false");
+      document.dispatchEvent(new CustomEvent("blam8:deck-order", { detail: { open: !!open } }));   // the tour's bubble steps aside
+    }
+    window.blam8DeckOrderOpen = setOpen;
+    btn.addEventListener("click", function () { setOpen(panel.classList.contains("hidden")); });
+    root.querySelector("[data-deck-order-close]").addEventListener("click", function () { setOpen(false); });
+    document.addEventListener("click", function (e) { if (!root.contains(e.target) && !e.target.closest(".tour-bubble")) setOpen(false); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
+  })();
+
+  // The flip is per-card and pure presentation; nothing is fetched.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-flip]");
+    if (!btn) return;
+    var card = btn.closest(".deck-card");
+    if (card) card.classList.toggle("is-flipped");
+  });
+
+  // Show the rest of a card's facts. The extras ship rendered-and-hidden, so
+  // this only flips a class — and a card whose script never ran is merely
+  // longer, never a dead "+6 more" with nothing behind it.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-more]");
+    if (!btn) return;
+    var card = btn.closest(".deck-card");
+    var open = btn.getAttribute("aria-expanded") === "true";
+    (card ? card.querySelectorAll("[data-extra]") : []).forEach(function (li) {
+      li.classList.toggle("hidden", open);
+    });
+    btn.setAttribute("aria-expanded", open ? "false" : "true");
+    btn.textContent = open ? btn.getAttribute("data-more-label") : "Show less";
+  });
+
+  // This morning's brief (2026-09-25): about 45px a second whatever its
+  // length; × dismisses its feed row (optimistic, like the facts below);
+  // a tap on the words opens the Concierge (Pro + Concierge), where it is
+  // the opening turn — otherwise the words link to the waiting drafts.
+  (function () {
+    var strip = document.querySelector("[data-brief-strip]");
+    if (!strip) return;
+    var track = strip.querySelector("[data-brief-track]");
+    if (track) track.style.setProperty("--brief-dur", Math.max(12, track.scrollWidth / 45) + "s");
+    strip.querySelector("[data-brief-close]").addEventListener("click", function () {
+      var id = strip.getAttribute("data-brief-id");
+      var slot = document.createElement("div");
+      slot.className = "flex-1";
+      strip.replaceWith(slot);
+      var m = document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/);
+      fetch("/concierge/notifications/" + encodeURIComponent(id) + "/dismiss", {
+        method: "POST",
+        headers: { "X-CSRF-Token": m ? decodeURIComponent(m[1]) : "" },
+      }).catch(function () { /* best-effort; it comes back on the next load at worst */ });
+    });
+    var open = strip.querySelector("[data-brief-open]");
+    if (open) open.addEventListener("click", function () {
+      var cz = document.getElementById("concierge-btn");
+      if (cz) cz.click();
+    });
+  })();
+
+  // Dismiss one event (Kris 2026-09-04) — the swipe. Optimistic: the row goes
+  // straight away and the POST follows, because a dismiss that waits on the
+  // network feels broken and the worst case is a row that comes back on the
+  // next load. A card whose last fact goes takes the card with it, otherwise
+  // Today keeps an empty pane of glass with somebody's name on it.
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-dismiss]");
+    if (!btn) return;
+    e.preventDefault();
+    var row = btn.closest("li");
+    var list = btn.closest("[data-facts]");
+    var card = btn.closest(".deck-card");
+    var id = btn.getAttribute("data-dismiss");
+    if (row) row.remove();
+    if (card && list && !list.querySelector("li")) card.remove();
+    // Token read off the cookie, not stamped into the page: the endpoint
+    // compares header to cookie, so the cookie is the one thing guaranteed to
+    // match after a session refresh (same helper shape as concierge.js).
+    var m = document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/);
+    fetch("/concierge/notifications/" + encodeURIComponent(id) + "/dismiss", {
+      method: "POST",
+      headers: { "X-CSRF-Token": m ? decodeURIComponent(m[1]) : "" },
+    }).catch(function () { /* best-effort, same as every other feed write */ });
+  });
+
+  // Deck z-order (Kris 2026-08-31): a card lives in one of three states and
+  // each stacks differently —
+  //   waiting (pinned in the bottom pile): descending z, so the NEXT card up
+  //     sits on the pile's face with the rest peeking from behind below it;
+  //   travelling (picked, between piles): above everything — the card lifts
+  //     OFF the pile's face and rides over both piles while it moves;
+  //   landed (pinned on the top pile): ascending z, each arrival placed on top.
+  (function () {
+    var stage = document.querySelector(".deck-stage");
+    var cards = Array.prototype.slice.call(document.querySelectorAll(".deck-card"));
+    if (!stage || !cards.length) return;
+    function restack() {
+      var sr = stage.getBoundingClientRect();
+      var n = cards.length;
+      var rects = [], zs = [];
+      cards.forEach(function (c, i) {
+        var r = c.getBoundingClientRect();
+        var topPin = 6 + Math.min(i, 3) * 12;            // matches the inline sticky top
+        var botPin = Math.min(n - 1 - i, 3) * 10;        // matches the inline sticky bottom (the deepest card sits at the stage edge)
+        var z;
+        if (r.bottom >= sr.bottom - botPin - 2) {
+          z = 300 - i;                                   // waiting: next-up on the face
+        } else if (r.top - sr.top <= topPin + 2) {
+          z = i + 1;                                     // landed: placed on top of the pile
+        } else {
+          z = 600 + i;                                   // travelling: over everything
+        }
+        c.style.zIndex = String(z);
+        rects.push(r); zs.push(z);
+      });
+      // The 90% rule (Kris 2026-08-31): a card's words stay frosted while the
+      // card is mostly buried — under higher cards, or past the stage's edge —
+      // and sharpen once at least 90% of its height shows. Occlusion is the
+      // merged span of every higher-z card over this one (same width, so 1-D).
+      cards.forEach(function (c, i) {
+        var r = rects[i], h = Math.max(1, r.bottom - r.top);
+        var segs = [];
+        if (sr.top > r.top) segs.push([r.top, Math.min(sr.top, r.bottom)]);
+        if (sr.bottom < r.bottom) segs.push([Math.max(sr.bottom, r.top), r.bottom]);
+        for (var j = 0; j < n; j++) {
+          if (j === i || zs[j] <= zs[i]) continue;
+          var a = Math.max(r.top, rects[j].top), b = Math.min(r.bottom, rects[j].bottom);
+          if (b > a) segs.push([a, b]);
+        }
+        segs.sort(function (p, q) { return p[0] - q[0]; });
+        var hidden = 0, end = -1e9;
+        segs.forEach(function (s) {
+          if (s[1] <= end) return;
+          hidden += s[1] - Math.max(s[0], end);
+          end = s[1];
+        });
+        c.classList.toggle("is-buried", hidden / h > 0.1);
+      });
+    }
+    var queued = false;
+    function schedule() {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () { queued = false; restack(); });
+    }
+    // Capture-phase on the document: whichever element ends up scrolling —
+    // the stage, or an ancestor iOS decides to scroll instead — we hear it.
+    document.addEventListener("scroll", schedule, { capture: true, passive: true });
+    window.addEventListener("resize", schedule);
+    if (window.ResizeObserver) new ResizeObserver(schedule).observe(stage);
+    // The webfonts reflow every card AFTER the first pass; without these
+    // re-runs the z-order freezes on pre-font geometry — which is exactly the
+    // later-card-over-earlier inversion Kris photographed (2026-08-31).
+    window.addEventListener("load", schedule);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+    restack();
+  })();
+</script>
+{% endblock %}

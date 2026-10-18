@@ -1,0 +1,22 @@
+{# CRM sections, rendered INSIDE the masthead dropdown (the
+   menu_sections block) — the old tab strip folded into the one menu
+   (Counting House masthead rule, 2026-08-29). Exports live on the CRM
+   settings page, not here (menu diet 2026-08-30). Inherits {{ item }} / {{ on }}
+   from app/base.html's menu scope. #}
+<p class="px-4 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">CRM</p>
+<a href="/app/crm" class="{{ item }} {% if active=='crm' %}{{ on }}{% endif %}"><span class="flex-1">{{ 'Your customers' if crm_mine else 'Contacts' }}</span></a>
+{# The whole book — every company, every deal, the reports, the schema. A
+   person whose CRM is the customers behind their own work has no version of
+   these, so the menu doesn't offer what the route would bounce. #}
+{% if not crm_mine %}
+<a href="/app/crm/companies" class="{{ item }} {% if active=='crm_companies' %}{{ on }}{% endif %}"><span class="flex-1">Companies</span></a>
+<a href="/app/crm/pipeline" class="{{ item }} {% if active=='crm_pipeline' %}{{ on }}{% endif %}"><span class="flex-1">Pipeline</span></a>
+<a href="/app/crm/tasks" class="{{ item }} {% if active=='crm_tasks' %}{{ on }}{% endif %}"><span class="flex-1">Tasks</span></a>
+<a href="/app/crm/sequences" class="{{ item }} {% if active=='crm_sequences' %}{{ on }}{% endif %}"><span class="flex-1">Sequences</span></a>
+{% if people_admin %}<a href="/app/outreach" class="{{ item }} {% if active=='outreach' %}{{ on }}{% endif %}"><span class="flex-1">Outreach</span></a>{% endif %}
+<a href="/app/crm/reports" class="{{ item }} {% if active=='crm_reports' %}{{ on }}{% endif %}"><span class="flex-1">Reports</span></a>
+{% endif %}
+<div class="my-1 border-t border-slate-100"></div>
+{# The section's own settings left this menu on 2026-09-02: they live behind
+   the cog in the masthead, which is beside you on every page of the section
+   rather than two taps down a dropdown. Navigation stayed. #}

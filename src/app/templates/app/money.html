@@ -1,0 +1,221 @@
+{% extends "app/base.html" %}
+{% block title %}Money · BLAM8{% endblock %}
+{% block heading %}Money{% endblock %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block dockbar %}
+{% if dock %}
+<span class="flex-none text-[10px] font-semibold uppercase tracking-wider text-slate-500 pr-1">Money diary</span>
+{% for d in dock %}
+<a href="{{ d.href }}" class="flex-none inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium {% if d.tone == 'rose' %}border-rose-200 bg-rose-50 text-rose-700{% elif d.tone == 'emerald' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-white text-slate-600{% endif %}">{{ d.label }}</a>
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if msg == 'chase_stood_down' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">No chase staged — they've written back since the last reminder, so the conversation owns it. Pick it up in the thread.</div>{% endif %}
+  {% if msg == 'chase_no_email' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That invoice has no customer email to chase.</div>{% endif %}
+  {% if msg == 'chase_already_staged' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">A chase for that invoice is already drafted — it's waiting in your Inbox.</div>{% endif %}
+
+  <!-- Headline figures: stat ROWS, not tiles — the number IS the content.
+       Ordered as the cash journey reads: quoted → accepted → owed → overdue →
+       collected. Each stage upstream of the next, so the sheet is the funnel. -->
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200" data-tour="sheet">
+    {# Money not yet won (docs/modules/module-quotes.md Phase 2) — same sheet, same rows.
+       Shown at zero like every other stage (Kris 2026-09-13, on the walk's first
+       stop: "it says Accepted as one of the listed stats but it's not on the
+       list?") — a funnel with two stages missing is not a funnel. #}
+    {% if m.quotes %}
+    <a href="/app/quotes" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Quoted, awaiting an answer</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ m.quotes.awaiting_count }} quote{{ '' if m.quotes.awaiting_count == 1 else 's' }} out</span>
+      <span class="text-xl font-bold font-display {% if m.quotes.awaiting_count %}text-navy{% else %}text-slate-400{% endif %}">£{{ '%.2f'|format(m.quotes.awaiting_value) }}</span>
+    </a>
+    <a href="/app/quotes?status=accepted" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Accepted, not yet invoiced</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ m.quotes.accepted_count }} quote{{ '' if m.quotes.accepted_count == 1 else 's' }}{% if m.quotes.accepted_deposits %} · £{{ '%.2f'|format(m.quotes.accepted_deposits) }} already invoiced as deposits{% endif %}</span>
+      <span class="text-xl font-bold font-display {% if m.quotes.accepted_count %}text-emerald-700{% else %}text-slate-400{% endif %}">£{{ '%.2f'|format(m.quotes.accepted_value) }}</span>
+    </a>
+    {% endif %}
+    {% if packages_m and packages_m.sold_count %}
+    {# Packages (src/app/wallet.py): sold, and the unspent balance — the deferred
+       liability an accountant asks about. #}
+    <a href="/app/invoices/settings#packages" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Packages</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ packages_m.sold_count }} sold · {{ '%g'|format(packages_m.unspent_units) }} unspent across {{ packages_m.customers }} customer{{ '' if packages_m.customers == 1 else 's' }}</span>
+      <span class="text-xl font-bold font-display text-navy">£{{ '%.2f'|format(packages_m.unspent_value) }}</span>
+    </a>
+    {% endif %}
+    <a href="/app/invoices" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Owed to you</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ m.owing_count }} unpaid invoice{{ '' if m.owing_count == 1 else 's' }}</span>
+      <span class="text-xl font-bold font-display {% if m.owed_total > 0 %}text-navy{% else %}text-slate-400{% endif %}">£{{ '%.2f'|format(m.owed_total) }}</span>
+    </a>
+    <a href="/app/money/overdue" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Overdue</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ m.overdue|length }} past their due date</span>
+      <span class="text-xl font-bold font-display {% if m.overdue_total > 0 %}text-rose-700{% else %}text-slate-400{% endif %}">£{{ '%.2f'|format(m.overdue_total) }}</span>
+    </a>
+    {# Cash RECEIVED this month, dated by settlement — an August invoice paid
+       on 3rd Sep is September's money (money.collections_view, same maths as
+       the page behind this row). #}
+    <a href="/app/money/collected?month={{ m.this_month_key }}" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Collected this month</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ m.month_receipts.count }} payment{{ '' if m.month_receipts.count == 1 else 's' }} landed</span>
+      <span class="text-xl font-bold font-display {% if m.month_receipts.collected > 0 %}text-emerald-700{% else %}text-slate-400{% endif %}">£{{ '%.2f'|format(m.month_receipts.collected) }}</span>
+    </a>
+    <a href="/app/money/collected" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+      <span class="text-sm font-medium text-navy">Collected all time</span>
+      <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{% if m.all_time.avg_days_to_pay is not none %}paid in {{ m.all_time.avg_days_to_pay|round|int }} days avg{% endif %}</span>
+      <span class="text-xl font-bold font-display text-navy">£{{ '%.2f'|format(m.all_time.collected|float) }}</span>
+    </a>
+  </div>
+
+  <!-- The chase list -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5" data-tour="chase">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Overdue — chase these</h2>
+      <a href="/app/invoices" class="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">All invoices</a>
+    </div>
+    {% if m.overdue %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Ref</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3">Due</th>
+          <th class="py-2 pr-3 text-right">Late</th><th class="py-2 pr-3 text-right">Owed</th>
+          <th class="py-2 pr-3">Chase</th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for r in m.overdue %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 font-medium"><a href="/app/invoices/{{ r.id }}" class="text-navy underline decoration-slate-300 underline-offset-2 hover:decoration-navy">{{ r.invoice_ref }}</a></td>
+            <td class="py-2 pr-3 text-slate-600">{{ r.customer }}</td>
+            {% set due_parts = (r.due_date | pretty_date).split(' ', 1) %}
+            <td class="py-2 pr-3 text-slate-500"><span class="whitespace-nowrap">{{ due_parts[0] }}</span>{% if due_parts | length > 1 %}<br class="sm:hidden"><span class="whitespace-nowrap"> {{ due_parts[1] }}</span>{% endif %}</td>
+            <td class="py-2 pr-3 text-right font-medium {{ 'text-rose-700' if r.days_late >= 14 else 'text-amber-700' }}">{{ r.days_late }}d</td>
+            <td class="py-2 pr-3 text-right font-semibold text-navy">£{{ '%.2f'|format(r.outstanding) }}</td>
+            {# The chase trail: a staged draft outranks everything (one tap to
+               review it); otherwise what's gone already + the go-early lever. #}
+            <td class="py-2 pr-3 whitespace-nowrap">
+              {% if chase_pending.get(r.invoice_ref) %}
+              <a href="/app/conversations/view?contact={{ chase_pending[r.invoice_ref] | urlencode }}" class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition"><span class="h-1.5 w-1.5 rounded-full bg-amber-500 self-center"></span>drafted — review &rarr;</a>
+              {% else %}
+              <form method="post" action="/app/invoices/{{ r.id }}/chase" class="inline-flex items-center gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                {% if r.reminders_sent %}<span class="text-xs text-slate-400">{{ r.reminders_sent }}&times;{% if r.last_reminder_at %} · {{ r.last_reminder_at | pretty_date }}{% endif %}</span>{% endif %}
+                {% if my_can is not defined or my_can.get('money:chase', True) %}<button class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Chase now</button>{% endif %}
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-xs text-slate-400">These chase themselves — a reminder is drafted at 7, 14 and 30 days late, firmer each time, and stands down the moment the customer writes back. It waits in your Inbox for your yes (or goes straight out, if you&rsquo;ve turned auto-send on). &ldquo;Chase now&rdquo; jumps the queue.</p>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">Nothing overdue. Everything issued is either paid or still within its terms.</p>
+    {% endif %}
+  </div>
+
+  <!-- Who owes -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Who owes you</h2>
+    {% if m.by_customer %}
+    <ul class="space-y-1.5 text-sm">
+      {% for c in m.by_customer %}
+      <li class="flex items-center gap-2.5">
+        <span class="flex-1 min-w-0 truncate text-slate-600">{{ c.customer }}
+          <span class="text-slate-400">· {{ c.count }} invoice{{ '' if c.count == 1 else 's' }}</span>
+          {% if c.worst_days_late %}<span class="ml-1 text-[13px] font-medium text-rose-700">· {{ c.worst_days_late }}d late</span>{% endif %}
+        </span>
+        <span class="shrink-0 font-semibold text-navy">£{{ '%.2f'|format(c.outstanding) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">Nobody owes you anything right now.</p>
+    {% endif %}
+  </div>
+
+  <!-- The handover: month-by-month source documents for whoever keeps the books.
+       Same ruled-sheet idiom as the headline figures — each row states its month
+       and what the download will contain, one tap to take it. -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden" data-tour="accountant">
+    {# flex-wrap: the format select is wider than what's left beside the label on a
+       phone, and a crushed three-line eyebrow is worse than the select taking its
+       own row. #}
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <h2 class="flex-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wider text-slate-500">Hand to your accountant</h2>
+      {% if m.months or m.quarters %}
+      <label class="sr-only" for="acct-format">Export format</label>
+      <select id="acct-format" class="min-w-0 rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-brand">
+        {% for key, label in export_formats.items() %}
+        <option value="{{ key }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      {% endif %}
+    </div>
+    {% if m.months or m.quarters %}
+    {# MTD Income Tax quarters first: since April 2026 this is the window the
+       bookkeeper actually chases — the income side of the quarterly update,
+       cut on the standard 6th-to-5th boundaries, one tap to take. #}
+    {% if m.quarters %}
+    <p class="px-4 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">MTD Income Tax quarters</p>
+    <div class="divide-y divide-slate-200 border-b border-slate-200">
+      {% for q in m.quarters %}
+      <a data-acct-export href="/app/invoices/export.csv?format=accountant&from={{ q.date_from }}&to={{ q.date_to }}"
+         class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy whitespace-nowrap">{{ q.label }}</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ q.date_from | pretty_date }} – {{ q.date_to | pretty_date }} · {{ q.count }} invoice{{ '' if q.count == 1 else 's' }} · £{{ '%.2f'|format(q.invoiced) }}</span>
+        {# The deadline is the row's whole point — it never truncates. #}
+        {% if q.due_open %}<span class="flex-none text-xs font-medium text-amber-700 whitespace-nowrap"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 mr-1 align-middle"></span>file by {{ q.deadline | pretty_date }}</span>
+        {% elif q.ended %}<span class="flex-none text-xs text-slate-400 whitespace-nowrap">was due {{ q.deadline | pretty_date }}</span>
+        {% else %}<span class="flex-none text-xs text-slate-400 whitespace-nowrap">runs to {{ q.date_to | pretty_date }}</span>{% endif %}
+        <span class="text-brand text-xs font-semibold whitespace-nowrap">Download &darr;</span>
+      </a>
+      {% endfor %}
+    </div>
+    <p class="px-4 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Months</p>
+    {% endif %}
+    <div class="divide-y divide-slate-200">
+      {% for mo in m.months %}
+      <a data-acct-export href="/app/invoices/export.csv?format=accountant&from={{ mo.date_from }}&to={{ mo.date_to }}"
+         class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy">{{ mo.label }}</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ mo.count }} invoice{{ '' if mo.count == 1 else 's' }} · £{{ '%.2f'|format(mo.invoiced) }} invoiced</span>
+        <span class="text-brand text-xs font-semibold whitespace-nowrap">Download &darr;</span>
+      </a>
+      {% endfor %}
+    </div>
+    <p class="px-4 py-2.5 border-t border-slate-100 text-xs text-slate-400 leading-relaxed">
+      Each row is everything issued in its window — who was billed, what&rsquo;s been paid and when.
+      The quarters follow the Making Tax Digital standard boundaries (6th to 5th); BLAM8 holds your income side, and your accountant or bridging software files from it.
+      The accountant format opens in any spreadsheet; Xero and QuickBooks match their invoice imports, so check the account code and tax rate against your own chart before importing.
+    </p>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">Nothing to hand over yet — your first invoice starts the first month.</p>
+    {% endif %}
+  </div>
+
+  <p class="text-xs text-slate-400 leading-relaxed">
+    This is a cashflow view, not your books — it reports the invoices BLAM8 raised and what came back.
+    The monthly downloads above hand your bookkeeper clean source documents; the ledger stays theirs.
+  </p>
+</div>
+
+<script>
+  // The format choice rewrites every month row's download link in place — the
+  // rows stay plain GETs, so middle-click, long-press and share all still work.
+  (() => {
+    const sel = document.getElementById('acct-format');
+    if (!sel) return;
+    sel.addEventListener('change', () => {
+      document.querySelectorAll('a[data-acct-export]').forEach(a => {
+        a.setAttribute('href', a.getAttribute('href')
+          .replace(/format=[^&]*/, 'format=' + encodeURIComponent(sel.value)));
+      });
+    });
+  })();
+</script>
+{% endblock %}

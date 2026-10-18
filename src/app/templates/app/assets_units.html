@@ -1,0 +1,133 @@
+{% extends "app/base.html" %}
+{% block title %}Units · Assets OS · BLAM8{% endblock %}
+{% block heading %}Units{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'badunit' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">A unit needs a name.</div>
+  {% elif msg == 'baddates' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Give an arrival date and a number of nights.</div>
+  {% elif msg == 'full' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That unit is already booked across those dates.</div>
+  {% elif msg in ('unitadded', 'unitsaved') %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+    {{ 'Unit added — the agent books hires against it.' if msg == 'unitadded' else 'Unit saved.' }}
+  </div>
+  {% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>{{ active_count }} active unit{{ '' if active_count == 1 else 's' }}. A named unit books against itself; give several units the same <em>pool</em> name to book them interchangeably (best-fit at handover).</p>
+    <a href="/app/assets" class="text-brand font-medium hover:underline">Open the board →</a>
+  </div>
+
+  <!-- Existing units (list + edit in place) -->
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="border-b border-slate-100 px-5 py-3.5 flex items-center justify-between gap-2">
+      <h2 class="font-semibold text-navy text-sm">Units</h2>
+      <span class="text-xs text-slate-400">Inactive units take no new hires but keep their history.</span>
+    </div>
+    {% if units %}
+    <ul class="divide-y divide-slate-100">
+      {% for u in units %}
+      <li class="px-5 py-4 space-y-3">
+        <form method="post" action="/app/assets/units/{{ u.id }}/update" class="grid sm:grid-cols-12 gap-3 items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <div class="sm:col-span-3">
+            <label class="block text-xs text-slate-500 mb-1">Unit</label>
+            <input name="name" value="{{ u.name }}" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm {{ '' if u.active else 'text-slate-400' }}">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Category</label>
+            <input name="category" value="{{ u.category or '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Pool key</label>
+            <input name="resource_type" value="{{ u.resource_type or '' }}" placeholder="named" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">£/day</label>
+            <input name="rate_daily" type="number" step="0.01" min="0" value="{{ '%g'|format(u.rate_daily) if u.rate_daily is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">£/week</label>
+            <input name="rate_weekly" type="number" step="0.01" min="0" value="{{ '%g'|format(u.rate_weekly) if u.rate_weekly is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Deposit £</label>
+            <input name="deposit_default" type="number" step="0.01" min="0" value="{{ '%g'|format(u.deposit_default) if u.deposit_default is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Asset ref</label>
+            <input name="asset_ref" value="{{ u.asset_ref or '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Next service</label>
+            <input name="next_service_due" type="date" value="{{ u.next_service_due or '' }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <label class="sm:col-span-2 flex items-center gap-2 text-sm text-slate-600 pb-2">
+            <input type="checkbox" name="active" value="1" {{ 'checked' if u.active }} class="rounded border-slate-300"> Active
+          </label>
+          <div class="sm:col-span-2">
+            <button data-save-row class="w-full rounded-lg bg-navy text-white px-3 py-2 text-sm font-medium hover:bg-navy-800">Save</button>
+          </div>
+        </form>
+        <!-- Take a hire against this unit -->
+        <form method="post" action="/app/assets/units/{{ u.id }}/book" class="grid sm:grid-cols-12 gap-3 items-end bg-slate-50/60 rounded-lg px-3 py-3">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <div class="sm:col-span-3">
+            <label class="block text-xs text-slate-500 mb-1">Arrival</label>
+            <input name="arrival" type="date" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs text-slate-500 mb-1">Nights</label>
+            <input name="nights" type="number" min="1" value="1" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-4">
+            <label class="block text-xs text-slate-500 mb-1">Hirer email</label>
+            <input name="contact" type="email" placeholder="name@example.com" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div class="sm:col-span-3">
+            <button class="w-full rounded-lg bg-brand text-white px-3 py-2 text-sm font-medium hover:bg-blue-700">Hold hire →</button>
+          </div>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No units yet — add your first below.</p>
+    {% endif %}
+  </section>
+
+  <!-- Add a unit -->
+  <section class="bg-white rounded-xl border border-slate-200 px-5 py-4">
+    <h2 class="font-semibold text-navy text-sm mb-3">Add a unit</h2>
+    <form method="post" action="/app/assets/units/add" class="grid sm:grid-cols-12 gap-3 items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="sm:col-span-3">
+        <label class="block text-xs text-slate-500 mb-1">Name</label>
+        <input name="name" required placeholder="Rose Cottage" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Category</label>
+        <input name="category" placeholder="cottage" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Pool key</label>
+        <input name="resource_type" placeholder="named" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">£/day</label>
+        <input name="rate_daily" type="number" step="0.01" min="0" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-2">
+        <label class="block text-xs text-slate-500 mb-1">Deposit £</label>
+        <input name="deposit_default" type="number" step="0.01" min="0" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+      </div>
+      <div class="sm:col-span-1">
+        <button class="w-full rounded-lg bg-navy text-white px-3 py-2 text-sm font-medium hover:bg-navy-800">Add</button>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

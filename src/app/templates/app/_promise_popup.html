@@ -1,0 +1,174 @@
+{# Today's promise pop-up (Kris 2026-09-20). "You owe" / "They owe" on a
+   person's card used to be a link into the CRM; it opens THIS now — the
+   promise, and the exchange it was read out of — with a cross to close it.
+
+   One file, two uses:
+     · {% from "app/_promise_popup.html" import promise_card %} — the macro
+       renders one promise's details into an inert <template> beside its row
+       (home.html), so opening is a copy into the shell and nothing is fetched;
+     · {% include "app/_promise_popup.html" %} — the shell itself, once per
+       page, and the script that fills it.
+   The data is crm.promise_card(): pure, off rows the page already holds. #}
+
+{% macro promise_card(p) %}
+{% set o = p.origin %}
+<template data-promise-card="{{ p.id or '' }}">
+  <div class="space-y-4">
+    <div>
+      <p class="text-[11px] font-semibold uppercase tracking-wider {{ 'text-rose-700' if p.owe else 'text-brand' }}">{{ p.chip }}{% if p.due_hint %} <span class="font-medium normal-case tracking-normal text-slate-500">· {{ p.due_hint }}</span>{% endif %}</p>
+      <p class="mt-1 text-[15px] leading-snug text-navy">{{ p.description }}</p>
+      {% if p.looks_done %}
+      <p class="mt-1 text-xs text-amber-700">Looks cleared{% if p.evidence %} — {{ p.evidence }}{% endif %} · confirm it in the CRM</p>
+      {% endif %}
+    </div>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+      <dt class="text-slate-400">Who</dt>
+      <dd class="min-w-0 text-slate-700">{{ p.name }}{% if p.company %} <span class="text-slate-500">· {{ p.company }}</span>{% endif %}{% if p.email and p.email != p.name %} <span class="text-slate-400 break-all">· {{ p.email }}</span>{% endif %}</dd>
+      {% if p.deal %}
+      <dt class="text-slate-400">Deal</dt>
+      <dd class="min-w-0 text-slate-700">{{ p.deal }}</dd>
+      {% endif %}
+      {% if p.created_at %}
+      <dt class="text-slate-400">Recorded</dt>
+      <dd class="min-w-0 text-slate-700">{{ p.created_at | pretty_date }}{% if p.mention_count > 1 %} <span class="text-slate-500">· brought up {{ p.mention_count }} times{% if p.last_seen_at %}, last {{ p.last_seen_at | pretty_date }}{% endif %}</span>{% endif %}</dd>
+      {% endif %}
+    </dl>
+    {# What caused it: the exchange the promise was read out of. #}
+    <section class="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3" data-promise-origin>
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Where it came from</p>
+      <p class="mt-1 text-sm text-slate-700">{{ o.label }}{% if o.when %} <span class="text-slate-400">· {{ o.when | pretty_date }}</span>{% endif %}</p>
+      {% if o.subject %}<p class="mt-0.5 text-xs text-slate-500 truncate">{{ o.subject }}</p>{% endif %}
+      {% if o.asked %}<p class="mt-2 text-xs"><span class="font-semibold text-slate-500">They asked</span> <span class="text-slate-700">{{ o.asked }}</span></p>{% endif %}
+      {% if o.replied %}<p class="mt-0.5 text-xs"><span class="font-semibold text-slate-500">You replied</span> <span class="text-slate-700">{{ o.replied }}</span></p>{% endif %}
+      {% if o.snippet %}<blockquote class="mt-2 border-l-2 border-slate-300 pl-2.5 text-xs italic text-slate-600">“{{ o.snippet }}”</blockquote>{% endif %}
+      {% if o.href %}<a href="{{ o.href }}" class="mt-2 inline-block text-xs font-semibold text-brand hover:underline">Open the {{ 'message' if o.sms else 'email' }} &rarr;</a>{% endif %}
+    </section>
+    {% if p.action %}
+    {# The route that fulfils it (Kris 2026-09-21): a diary task opens the
+       Add form prefilled and ready to submit; money the invoice; a reply
+       the thread. Done clears the promise on the way through. #}
+    <div class="mt-3 text-center"><a href="{{ p.action.href }}" data-promise-action="{{ p.action.kind }}" class="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">{{ p.action.label }} &rarr;</a></div>
+    {% endif %}
+    {# No "Open in the CRM" here any more (Kris 2026-09-20): the card's own
+       corner carries the CRM mark, one tap away with the pop-up closed. #}
+  </div>
+</template>
+{% endmacro %}
+
+{# The shell — one per page, filled from the row's own <template>. Centre
+   screen (Kris 2026-09-21: "make both pop-ups appear centre screen" — this
+   and the person pop-up, _card_popup.html), z-50 like every modal, so it
+   covers the app bar (z-30) and the deck's pile. #}
+<div data-promise-modal class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="promise-modal-title">
+  <div data-promise-backdrop class="absolute inset-0 bg-navy/40" style="backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); background: radial-gradient(ellipse at center, rgba(11,19,43,.22) 0%, rgba(11,19,43,.62) 100%);"></div>
+  <div class="relative w-full max-w-md max-h-[80vh] overflow-y-auto rounded-2xl bg-white shadow-2xl p-5">
+    <div class="flex items-center justify-between gap-3">
+      <p id="promise-modal-title" class="min-w-0 truncate text-sm font-semibold text-navy">Promise</p>
+      {# The cross: quiet to look at, thumb-sized to hit (same as the row's dismiss). #}
+      <button type="button" data-promise-close aria-label="Close" class="flex-none -my-2 -mr-2 px-2.5 py-2 text-xl leading-none text-slate-400 hover:text-slate-600">&times;</button>
+    </div>
+    {# The slides: every promise on this person's card, the tapped one in view
+       when the pop-up opens and the rest a swipe away (Kris 2026-09-20).
+       Native scroll-snap does the swipe — no gesture code to get wrong on a
+       phone; a trackpad, the dots or the arrow keys do it elsewhere. #}
+    <div class="mt-3 flex overflow-x-auto snap-x snap-mandatory overscroll-x-contain promise-track" data-promise-track></div>
+    {# One dot per promise, the one in view filled. A card with one promise
+       shows none — a lone dot would only say "there is nowhere to go". #}
+    <div class="mt-4 flex items-center justify-center gap-1 hidden" data-promise-dots></div>
+  </div>
+</div>
+
+<style>
+  .promise-track { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .promise-track::-webkit-scrollbar { display: none; }
+</style>
+
+<script>
+  // Today's promise pop-up. Opening copies the card's promise <template>s
+  // into the shell — nothing is fetched — with the tapped one in view and
+  // the rest a swipe away, one dot each. Closes on the cross, the backdrop
+  // or Escape, and hands focus back to the row it came from.
+  (function () {
+    var modal = document.querySelector("[data-promise-modal]");
+    if (!modal) return;
+    var track = modal.querySelector("[data-promise-track]");
+    var dots = modal.querySelector("[data-promise-dots]");
+    var title = modal.querySelector("#promise-modal-title");
+    var closeBtn = modal.querySelector("[data-promise-close]");
+    var opener = null, count = 0, current = 0;
+
+    function mark(i) {
+      current = Math.max(0, Math.min(count - 1, i));
+      Array.prototype.forEach.call(dots.children, function (dot, k) {
+        var on = k === current;
+        dot.firstChild.className = "block h-2 w-2 rounded-full transition " + (on ? "bg-navy" : "bg-slate-300");
+        if (on) dot.setAttribute("aria-current", "true"); else dot.removeAttribute("aria-current");
+      });
+    }
+    function goTo(i, smooth) {
+      i = Math.max(0, Math.min(count - 1, i));
+      track.scrollTo({ left: i * track.clientWidth, behavior: smooth ? "smooth" : "auto" });
+      mark(i);
+    }
+    function open(btn) {
+      var row = btn.closest("li") || btn.parentNode;
+      var mine = row && row.querySelector("template[data-promise-card]");
+      if (!mine) return;
+      // Every promise on this person's card, in the card's own order — the
+      // hidden "+N more" rows included, they are promises too.
+      var card = btn.closest(".deck-card");
+      var all = card ? Array.prototype.slice.call(card.querySelectorAll("[data-facts] template[data-promise-card]")) : [];
+      if (all.indexOf(mine) < 0) all = [mine];
+      track.innerHTML = "";
+      dots.innerHTML = "";
+      all.forEach(function (tpl, i) {
+        var slide = document.createElement("div");
+        slide.className = "w-full shrink-0 snap-start";
+        slide.setAttribute("data-promise-slide", String(i + 1));
+        slide.appendChild(tpl.content.cloneNode(true));
+        track.appendChild(slide);
+        var dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "p-1.5";                       // a thumb-sized target round an 8px dot
+        dot.setAttribute("aria-label", "Promise " + (i + 1) + " of " + all.length);
+        dot.setAttribute("data-promise-dot", String(i + 1));
+        dot.appendChild(document.createElement("span"));
+        dot.addEventListener("click", function () { goTo(i, true); });
+        dots.appendChild(dot);
+      });
+      count = all.length;
+      dots.classList.toggle("hidden", count < 2);
+      title.textContent = btn.getAttribute("data-promise-title") || "Promise";
+      modal.classList.remove("hidden");
+      goTo(all.indexOf(mine), false);               // measured once the shell is on screen
+      opener = btn;
+      closeBtn.focus();
+    }
+    function close() {
+      if (modal.classList.contains("hidden")) return;
+      modal.classList.add("hidden");
+      track.innerHTML = "";
+      dots.innerHTML = "";
+      count = 0;
+      if (opener) { opener.focus(); opener = null; }
+    }
+    // A swipe (native scroll-snap) carries the filled dot along with it.
+    track.addEventListener("scroll", function () {
+      if (track.clientWidth) mark(Math.round(track.scrollLeft / track.clientWidth));
+    }, { passive: true });
+    document.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-promise-open]");
+      if (!btn) return;
+      e.preventDefault();
+      open(btn);
+    });
+    closeBtn.addEventListener("click", close);
+    modal.querySelector("[data-promise-backdrop]").addEventListener("click", close);
+    document.addEventListener("keydown", function (e) {
+      if (modal.classList.contains("hidden")) return;
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowRight") goTo(current + 1, true);
+      else if (e.key === "ArrowLeft") goTo(current - 1, true);
+    });
+  })();
+</script>

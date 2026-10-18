@@ -1,0 +1,327 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ d.name }} · Operator{% endblock %}
+{% block content %}
+{% if not d.cost_complete %}<p class="text-sm text-amber-700">Cost totals are incomplete. Shown amounts are recorded subtotals; unknown usage is not zero. Any margin shown is provisional.</p>{% endif %}
+<a href="/admin" class="text-sm text-slate-500 hover:text-navy">← Overview</a>
+<h1 class="text-xl font-bold text-navy mt-2 mb-1">{{ d.name }}</h1>
+<p class="text-sm text-slate-500 mb-2">{{ d.plan.label }} · billing month {{ d.period_start.strftime('%d %b') }}–{{ d.period_end.strftime('%d %b %Y') }}</p>
+{% if d.trial %}
+{% set tr = d.trial %}
+<p class="text-xs mb-5">
+  <span class="font-semibold uppercase tracking-wide text-slate-400">Trial</span>
+  <span class="ml-1.5 inline-flex items-center rounded-full px-2 py-0.5 font-semibold
+    {% if tr.status == 'converted' %}bg-emerald-100 text-emerald-700
+    {% elif tr.active %}bg-sky-100 text-sky-700
+    {% else %}bg-amber-100 text-amber-800{% endif %}">{{ tr.status }}</span>
+  {% if tr.status != 'converted' %}
+  <span class="ml-2 text-slate-500">{{ "{:,}".format(tr.emails_used) }} / {{ "{:,}".format(tr.cap) }} emails{% if tr.days_remaining is not none %} · {{ tr.days_remaining }} day{{ '' if tr.days_remaining == 1 else 's' }} left{% endif %}</span>
+  {% endif %}
+</p>
+{% endif %}
+
+{# Journey (src/app/journey.py) — the "did they actually get in?" card: signup →
+   wizard funnel → visits. The stalled badge is the operator's cue to reach out
+   before a silent signup becomes silent churn. #}
+{% set j = journey %}
+<div class="rounded-xl border border-slate-200 bg-white p-5 mb-6">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h2 class="font-semibold text-navy text-sm">Journey</h2>
+    {% if j.funnel.onboarded %}
+    <span class="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">Onboarded{% if j.onboarded_at %} · {{ j.onboarded_at.strftime('%d %b %Y') }}{% endif %}</span>
+    {% else %}
+    <span class="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-xs font-semibold">
+      Stalled in onboarding — {{ {'interview':'interview / industry','mailbox':'connect mailbox','finish':'final step'}.get(j.funnel.stalled_at, j.funnel.stalled_at) }}{% if j.days_on_platform is not none %} · day {{ j.days_on_platform + 1 }}{% endif %}
+    </span>
+    {% endif %}
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4 text-sm">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Signed up</p>
+      <p class="mt-1 text-slate-700">{{ j.signed_up_at.strftime('%d %b %Y · %H:%M') if j.signed_up_at else '—' }}</p>
+      {% if j.owner %}<p class="text-xs text-slate-500 mt-0.5">{{ j.owner.email }}{% if j.owner.provider %} · {{ j.owner.provider }} SSO{% endif %}</p>{% endif %}
+    </div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Last seen</p>
+      <p class="mt-1 text-slate-700">{{ j.visits.last_seen.strftime('%d %b %Y · %H:%M') if j.visits.last_seen else (j.last_sign_in_at.strftime('%d %b %Y · %H:%M') if j.last_sign_in_at else '—') }}</p>
+      {% if not j.visits.last_seen and j.last_sign_in_at %}<p class="text-xs text-slate-500 mt-0.5">from auth sign-in (visit tracking began 14 Aug)</p>{% endif %}
+    </div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Visits</p>
+      <p class="mt-1 text-slate-700">{{ j.visits.count }} visit{{ '' if j.visits.count == 1 else 's' }} · {{ j.visits.active_days }} day{{ '' if j.visits.active_days == 1 else 's' }} active</p>
+      {% if j.visits.count %}<p class="text-xs text-slate-500 mt-0.5">≈ {{ j.visits.minutes }} min on platform</p>{% endif %}
+    </div>
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Activity</p>
+      <p class="mt-1 text-xs text-slate-600 leading-5">
+        {{ j.counts.crm_contacts if j.counts.crm_contacts is not none else '—' }} contacts ·
+        {{ j.counts.bookings if j.counts.bookings is not none else '—' }} bookings ·
+        {{ j.counts.knowledge_chunks if j.counts.knowledge_chunks is not none else '—' }} knowledge chunks</p>
+      {% if j.mailboxes %}<p class="text-xs text-slate-500 mt-0.5">{% for m in j.mailboxes %}{{ m.address }} ({{ m.provider }}){% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    {% for step in j.funnel.steps %}
+    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium
+      {% if step.done %}bg-emerald-50 text-emerald-700 border border-emerald-200
+      {% elif step.id == j.funnel.stalled_at %}bg-amber-50 text-amber-800 border border-amber-300
+      {% else %}bg-slate-50 text-slate-400 border border-slate-200{% endif %}">
+      {% if step.done %}✓{% elif step.id == j.funnel.stalled_at %}⏸{% else %}·{% endif %}
+      {{ step.label }}<span class="font-normal opacity-70">— {{ step.detail }}</span>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid gap-4 sm:grid-cols-4 mb-6">
+  <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Emails</p><p class="mt-1 text-2xl font-bold text-navy">{{ "{:,}".format(d.emails) }}<span class="text-base font-medium text-slate-400"> / {{ "{:,}".format(d.allowance) }}</span></p></div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Revenue / mo</p><p class="mt-1 text-2xl font-bold text-navy">£{{ "%.0f"|format(d.revenue_gbp) }}</p></div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Cost</p><p class="mt-1 text-2xl font-bold text-navy">£{{ "%.2f"|format(d.cost_gbp) }}</p></div>
+  <div class="rounded-xl border border-slate-200 bg-white p-4"><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Margin</p><p class="mt-1 text-2xl font-bold {% if d.margin_gbp < 0 %}text-red-600{% else %}text-emerald-600{% endif %}">£{{ "%.2f"|format(d.margin_gbp) }}</p></div>
+</div>
+
+<div class="grid gap-6 md:grid-cols-2">
+  <div class="space-y-4">
+    <div class="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy text-sm mb-1">Account type</h2>
+      <p class="text-xs text-slate-500 mb-3">Enterprise unlocks multiple mailboxes — each with its own persona and knowledge — and flips reporting to enterprise in the same switch. Downgrading returns the tenant to Pilot.</p>
+      {% if request.query_params.get('err') == 'mailboxes' %}
+      <div class="mb-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-700">
+        This tenant has {{ d.mailbox_count }} mailboxes connected. Have them disconnect the extras first — downgrading never silently drops a mailbox's tokens.
+      </div>
+      {% endif %}
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-medium text-navy">
+          {% if d.plan_key == 'enterprise' %}Enterprise
+          <span class="ml-1.5 rounded-full bg-indigo-100 text-indigo-700 px-2 py-0.5 text-xs font-semibold">{{ d.mailbox_count }} mailbox{{ '' if d.mailbox_count == 1 else 'es' }}</span>
+          {% else %}Standard <span class="text-slate-400 font-normal">({{ d.plan.label }})</span>{% endif %}
+        </p>
+        <form method="post" action="/admin/tenants/{{ tenant_id }}/account">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          {% if d.plan_key == 'enterprise' %}
+          <input type="hidden" name="account_type" value="standard">
+          <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Switch to Standard</button>
+          {% else %}
+          <input type="hidden" name="account_type" value="enterprise">
+          <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Switch to Enterprise</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy text-sm mb-1">OS founding access</h2>
+      <p class="text-xs text-slate-500 mb-3">Unlocks the Core + your OS checkout for this tenant (the founding-partner gate on /billing/plans). Grant directly for partners recruited in person; requests queue at <a href="/admin/os-access" class="text-brand hover:underline">OS access</a>. Revoking re-locks the checkout only — a live subscription keeps working.</p>
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-medium text-navy">
+          {% if trec.os_access_approved %}<span class="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">Granted — OS checkout unlocked</span>
+          {% else %}<span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-semibold">Locked — request-only</span>{% endif %}
+        </p>
+        <form method="post" action="/admin/tenants/{{ tenant_id }}/os-access">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          {% if trec.os_access_approved %}
+          <input type="hidden" name="granted" value="off">
+          <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Revoke</button>
+          {% else %}
+          <input type="hidden" name="granted" value="on">
+          <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Grant access</button>
+          {% endif %}
+        </form>
+      </div>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy text-sm mb-1">Free access (comp)</h2>
+      <p class="text-xs text-slate-500 mb-3">Grant free access independent of tier and billing — indefinite, or until a date — for free-for-feedback users. Overrides the trial/subscription gate; the Stripe webhook never touches it.</p>
+      {% set ca = trec.comp_access %}
+      <p class="text-sm font-medium text-navy mb-3">
+        {% if ca == 'indefinite' %}<span class="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">Comped · indefinite</span>
+        {% elif ca == 'until_date' %}<span class="rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">Comped · until {{ trec.comp_until[:10] if trec.comp_until else '—' }}</span>
+        {% else %}<span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-semibold">Off — normal billing</span>{% endif %}
+      </p>
+      <form method="post" action="/admin/tenants/{{ tenant_id }}/comp" class="space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <div class="flex flex-wrap items-center gap-4 text-sm text-navy">
+          <label class="inline-flex items-center gap-1.5"><input type="radio" name="comp_mode" value="off" {% if not ca %}checked{% endif %}> Off</label>
+          <label class="inline-flex items-center gap-1.5"><input type="radio" name="comp_mode" value="indefinite" {% if ca == 'indefinite' %}checked{% endif %}> Indefinite</label>
+          <label class="inline-flex items-center gap-1.5"><input type="radio" name="comp_mode" value="until_date" {% if ca == 'until_date' %}checked{% endif %}> Until</label>
+          <input name="comp_until" type="date" value="{{ trec.comp_until[:10] if trec.comp_until else '' }}"
+                 class="rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:border-brand">
+        </div>
+        <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Save</button>
+      </form>
+      {# Separate from comp on purpose: comp is free access and real customers
+         are comped too; this lifts the Concierge's daily allowance, for the
+         operator's own accounts (src/app/fairuse.py). #}
+      <form method="post" action="/admin/tenants/{{ tenant_id }}/fair-use" class="mt-4 pt-4 border-t border-slate-100">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <label class="flex items-start gap-2 text-sm text-navy">
+          <input type="checkbox" name="exempt" class="mt-0.5" {% if trec.fair_use_exempt %}checked{% endif %} onchange="this.form.submit()">
+          <span><span class="font-medium">No daily Concierge limit</span>
+            <span class="block text-xs text-slate-500">Lifts the daily question allowance. For our own accounts, not for comped customers.</span></span>
+        </label>
+      </form>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy text-sm mb-1">Contract value (MSA)</h2>
+      <p class="text-xs text-slate-500 mb-3">Monthly revenue used for margin. Leave blank to use the plan list price (£{{ "%.0f"|format(d.plan.price_gbp) }}).</p>
+      <form method="post" action="/admin/tenants/{{ tenant_id }}/revenue" class="flex gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <div class="relative flex-1"><span class="absolute left-3 top-2.5 text-slate-400 text-sm">£</span>
+          <input name="contract_monthly_gbp" type="number" step="0.01" min="0" value="{{ d.contract_monthly_gbp if d.contract_monthly_gbp is not none else '' }}" placeholder="list price"
+                 class="w-full rounded-lg border border-slate-300 pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-brand"></div>
+        <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Save</button>
+      </form>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy text-sm mb-1">Modules</h2>
+      <p class="text-xs text-slate-500 mb-3">Flipping a module is the whole rollout — the tenant's hub card lights up and the agent gains its tools. Email is always on. Field OS · Transport supersedes Scheduling's window capacity — a tenant runs one or the other, not both.</p>
+      <div class="space-y-4">
+        {% for mod_id, mod_name, mod_desc in [
+          ('scheduling', 'Scheduling', 'Capacity diary + booking tools on the draft call.'),
+          ('concierge', 'Concierge', 'Pro + Concierge (£249): the person icon, her chat, cards and live voice. Off = App help in search only.'),
+          ('tms', 'Field OS · Transport', 'The logistics add-on: vehicles & pallet-space capacity, routing + load planner, pricing, POD, driver app, customer tracking, live fleet view and compliance. Activation seeds pallet types, a Main branch and a default rate card.'),
+        ] %}
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-sm font-medium text-navy">{{ mod_name }}
+              {% if mod_id in modules %}<span class="ml-1.5 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">Active</span>
+              {% else %}<span class="ml-1.5 rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-semibold">Off</span>{% endif %}
+            </p>
+            <p class="text-xs text-slate-500">{{ mod_desc }}</p>
+          </div>
+          <form method="post" action="/admin/tenants/{{ tenant_id }}/modules">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="module" value="{{ mod_id }}">
+            {% if mod_id in modules %}
+            <input type="hidden" name="active" value="0">
+            <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Switch off</button>
+            {% else %}
+            <input type="hidden" name="active" value="1">
+            <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Switch on</button>
+            {% endif %}
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy text-sm mb-1">Reporting tier</h2>
+      <p class="text-xs text-slate-500 mb-3">Enterprise unlocks the customer-facing breakdown + CSV export. Neither tier exposes your cost.</p>
+      <form method="post" action="/admin/tenants/{{ tenant_id }}/reporting" class="flex gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <select name="reporting_tier" class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-brand">
+          <option value="standard" {% if d.reporting_tier!='enterprise' %}selected{% endif %}>Standard (SMB meter)</option>
+          <option value="enterprise" {% if d.reporting_tier=='enterprise' %}selected{% endif %}>Enterprise (breakdown + export)</option>
+        </select>
+        <button class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-800 transition">Save</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="space-y-4">
+  {% set q = d.quality %}
+  <div class="rounded-xl border border-slate-200 bg-white p-5">
+    <h2 class="font-semibold text-navy text-sm mb-1">Draft quality (this period)</h2>
+    <p class="text-xs text-slate-500 mb-4">How well the agent answers from this tenant's config + knowledge. Approval = drafts good enough to send (vs skipped). Edit rate = human-approved sends where the text was changed first. Aggregates only.</p>
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Approval</p>
+        <p class="mt-1 text-2xl font-bold {% if q.approval_pct is none %}text-slate-300{% elif q.approval_pct >= 80 %}text-emerald-600{% elif q.approval_pct >= 50 %}text-amber-600{% else %}text-red-600{% endif %}">
+          {{ "%.0f%%"|format(q.approval_pct) if q.approval_pct is not none else "—" }}</p>
+        <p class="text-xs text-slate-400">{{ q.sent }} sent · {{ q.skipped }} skipped</p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Edit rate</p>
+        <p class="mt-1 text-2xl font-bold {% if q.edit_pct is none %}text-slate-300{% elif q.edit_pct <= 20 %}text-emerald-600{% elif q.edit_pct <= 50 %}text-amber-600{% else %}text-red-600{% endif %}">
+          {{ "%.0f%%"|format(q.edit_pct) if q.edit_pct is not none else "—" }}</p>
+        <p class="text-xs text-slate-400">{{ q.verbatim }} verbatim · {{ q.edited }} edited</p>
+      </div>
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Auto-sent</p>
+        <p class="mt-1 text-2xl font-bold text-navy">{{ q.auto_sent }}</p>
+        <p class="text-xs text-slate-400">of {{ q.sent }} sent · {{ q.pending }} pending</p>
+      </div>
+    </div>
+    {% if q.hrt %}
+    {# HRT — the quoting line: average human seconds per email, all-time. #}
+    <p class="text-sm text-navy mb-1.5"><span class="font-semibold">HRT {{ q.hrt.avg }}</span> <span class="text-slate-500">avg over {{ q.hrt.n }} tracked send{{ '' if q.hrt.n == 1 else 's' }} · {{ q.hrt.total }} total human review time (all-time)</span></p>
+    {% endif %}
+    {% if q.saved %}
+    {# Time saved — src/app/time_saved.py; estimates until calibrated. #}
+    <p class="text-sm text-navy mb-1.5"><span class="font-semibold text-emerald-600">{{ q.saved.total }} saved</span> <span class="text-slate-500">(all-time, net of review) · {{ q.saved.emails_n }} email{{ '' if q.saved.emails_n == 1 else 's' }} {{ q.saved.emails }} · {{ q.saved.actions_n }} Concierge action{{ '' if q.saved.actions_n == 1 else 's' }} {{ q.saved.actions }}</span></p>
+    {% endif %}
+    {% if q.removed %}
+    <p class="text-xs text-amber-600 mb-1.5">{{ q.removed }} handled email{{ '' if q.removed == 1 else 's' }} from this period {{ 'was' if q.removed == 1 else 'were' }} removed from the tenant's inbox (reset or Ignore &amp; Remove) — usage still counts them, but quality can only reflect the {{ q.handled }} that remain.</p>
+    {% endif %}
+    <p class="text-xs text-slate-400">Send-mode stamps began 10 Jun 2026 — earlier sends count toward approval but not the edit split.</p>
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3"><h2 class="font-semibold text-navy text-sm">Usage by operation (this period)</h2></div>
+    {% if d.by_op %}
+    <table class="w-full text-sm">
+      <thead class="text-xs uppercase tracking-wide text-slate-400"><tr><th class="px-5 py-2 text-left font-semibold">Operation</th><th class="px-5 py-2 text-right font-semibold">Calls</th><th class="px-5 py-2 text-right font-semibold">Tokens</th><th class="px-5 py-2 text-right font-semibold">Cost</th></tr></thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for op, b in d.by_op.items() %}
+        <tr><td class="px-5 py-2.5 text-slate-700">{{ {'draft':'Drafting','redraft':'Redrafting','embed_query':'Knowledge recall','embed_ingest':'Knowledge import','concierge_help':'Chatbot — in-app help','concierge_onboard':'Chatbot — onboarding','concierge_ask':'Chatbot — public Q&A','scenario_ask':'FAQ scenario box','concierge_fix':'Chatbot — draft fixes'}.get(op, op) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">{{ "{:,}".format(b.events) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">{{ "{:,}".format(b.input + b.output + b.embed) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">£{{ "%.4f"|format(b.cost * rate) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="px-5 py-6 text-sm text-slate-400">No usage this period.</p>{% endif %}
+  </div>
+
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3"><h2 class="font-semibold text-navy text-sm">Usage by source (this period)</h2></div>
+    {% if d.by_source %}
+    <table class="w-full text-sm">
+      <thead class="text-xs uppercase tracking-wide text-slate-400"><tr><th class="px-5 py-2 text-left font-semibold">Triggered by</th><th class="px-5 py-2 text-right font-semibold">Calls</th><th class="px-5 py-2 text-right font-semibold">Tokens</th><th class="px-5 py-2 text-right font-semibold">Cost</th></tr></thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for src, b in d.by_source.items() %}
+        <tr><td class="px-5 py-2.5 text-slate-700">{{ {'owner':'Owner actions','inbound_email':'Inbound email','portal':'Customer Portal (verified)','portal_unverified':'Portal — unverified visitors (platform cost)','portal_general':'Portal — general questions (platform cost)','automation':'Automated jobs','prospect':'Public chatbot','retrieval':'Knowledge recall','other':'Other'}.get(src, src) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">{{ "{:,}".format(b.events) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">{{ "{:,}".format(b.input + b.output + b.embed) }}</td>
+          <td class="px-5 py-2.5 text-right text-slate-600">£{{ "%.4f"|format(b.cost * rate) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="px-5 py-6 text-sm text-slate-400">No usage this period.</p>{% endif %}
+  </div>
+
+  {# Tenant-side invoicing revenue (directive §8.1) — their money processed through
+     BLAM8, beside the LLM cost it took to run them. #}
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="border-b border-slate-100 px-5 py-3"><h2 class="font-semibold text-navy text-sm">Invoicing revenue (their money)</h2></div>
+    {% if d.invoices and (d.invoices_all_time.paid or d.invoices_all_time.sent) %}
+    <div class="px-5 py-4 space-y-2 text-sm">
+      <p class="text-slate-700">This period: <span class="font-semibold">{{ d.invoices.sent + d.invoices.paid }}</span> invoice(s) —
+        £{{ "%.2f"|format(d.invoices.invoiced) }} invoiced,
+        <span class="text-emerald-700 font-semibold">£{{ "%.2f"|format(d.invoices.collected) }} collected</span>,
+        £{{ "%.2f"|format(d.invoices.outstanding) }} outstanding{% if d.invoices.overdue %},
+        <span class="text-red-600 font-semibold">{{ d.invoices.overdue }} overdue</span>{% endif %}.</p>
+      <p class="text-slate-500">All time: £{{ "%.2f"|format(d.invoices_all_time.collected) }} collected across {{ d.invoices_all_time.paid }} paid invoice(s){% if d.invoices_all_time.avg_days_to_pay is not none %} · avg {{ d.invoices_all_time.avg_days_to_pay }} days to pay{% endif %}.</p>
+      <p class="text-xs text-slate-400">Money the business collected from THEIR customers via BLAM8 invoicing — not platform revenue. BLAM8 takes no cut.</p>
+    </div>
+    {% else %}<p class="px-5 py-6 text-sm text-slate-400">No invoices yet.</p>{% endif %}
+  </div>
+
+  <!-- Quote funnel (docs/modules/module-quotes.md Phase 2) — upstream of the invoice £ -->
+  <div class="bg-white rounded-xl border border-slate-200">
+    <div class="border-b border-slate-100 px-5 py-3"><h2 class="font-semibold text-navy text-sm">Quote funnel (their pipeline)</h2></div>
+    {% if d.quotes_all_time and d.quotes_all_time.sent %}
+    <div class="px-5 py-4 space-y-2 text-sm">
+      <p class="text-slate-700">This period: <span class="font-semibold">{{ d.quotes.sent }}</span> quote(s) —
+        £{{ "%.2f"|format(d.quotes.quoted) }} quoted,
+        <span class="text-emerald-700 font-semibold">£{{ "%.2f"|format(d.quotes.won) }} won</span>{% if d.quotes.outstanding %},
+        {{ d.quotes.outstanding }} awaiting an answer{% endif %}{% if d.quotes.expired %},
+        <span class="text-amber-600">{{ d.quotes.expired }} expired</span>{% endif %}.</p>
+      <p class="text-slate-500">All time: £{{ "%.2f"|format(d.quotes_all_time.won) }} won from £{{ "%.2f"|format(d.quotes_all_time.quoted) }} quoted{% if d.quotes_all_time.acceptance_rate is not none %} · {{ d.quotes_all_time.acceptance_rate }}% acceptance{% endif %}.</p>
+      <p class="text-xs text-slate-400">Work the business quoted THEIR customers via BLAM8 — the stage before the invoicing revenue above.</p>
+    </div>
+    {% else %}<p class="px-5 py-6 text-sm text-slate-400">No quotes yet.</p>{% endif %}
+  </div>
+  </div>
+</div>
+{% endblock %}

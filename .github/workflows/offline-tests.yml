@@ -1,0 +1,48 @@
+name: Offline tests and agnostic guard
+# One run per PR push (pull_request) plus one when a merge lands on main (push).
+# Pushing a branch with an open PR used to trigger both: the same suite twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install and expose disposable PostgreSQL binaries
+        run: |
+          # ubuntu-latest ships PostgreSQL; use its binaries (installing
+          # postgresql-server-dev-all clashes with the runner's PGDG packages).
+          pg_bin="$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)"
+          if [ -z "$pg_bin" ]; then
+            sudo apt-get update && sudo apt-get install -y postgresql
+            pg_bin="$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)"
+          fi
+          echo "PostgreSQL binaries: $pg_bin"
+          test -x "$pg_bin/initdb"
+          test -x "$pg_bin/postgres"
+          echo "$pg_bin" >> "$GITHUB_PATH"
+          echo "OUTREACH_TEST_POSTGRES_BIN=$pg_bin" >> "$GITHUB_ENV"
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Database tests must execute without skips
+        run: |
+          python tests/run_offline.py tests/test_booking_capacity_database.py tests/test_offer_deadlines_database.py tests/test_booking_guarantees_rollback.py tests/test_no_defaults_rollback.py tests/test_offer_merge.py tests/test_concierge_live_allowance_database.py tests/test_telephone_database.py tests/test_telephone_inbound_database.py tests/test_telephone_objectives_database.py tests/test_telephone_human_handover_database.py -q -rs --tb=short --basetemp=.cache/pytest-db --junitxml=.cache/database-tests.xml
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          report = ET.parse(".cache/database-tests.xml")
+          assert report.findall(".//testcase"), "No database tests executed"
+          assert not report.findall(".//skipped"), "Database tests skipped; PostgreSQL proof is missing"
+          PY
+      - name: Always run the agnostic guard
+        run: python tests/run_offline.py tests/test_agnostic_context.py tests/test_agnostic_surfaces.py tests/test_agnostic_outcomes.py tests/test_agnostic_inventory.py -q --tb=short --basetemp=.cache/pytest-guard
+      - name: Local speech protocol tests (fake models, no downloads)
+        run: |
+          python tests/run_offline.py tests/speech -q --tb=short
+      - name: Full offline suite
+        run: python tests/run_offline.py tests -q --tb=short --disable-warnings --basetemp=.cache/pytest-full

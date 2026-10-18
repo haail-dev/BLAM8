@@ -1,0 +1,121 @@
+{% extends "admin/base.html" %}
+{% block title %}LLM calls · Operator · BLAM8{% endblock %}
+{% block content %}
+{% if not totals.cost_complete %}<p class="text-sm text-amber-700">Cost totals are incomplete. Shown amounts are recorded subtotals; unknown usage is not zero. Any margin shown is provisional.</p>{% endif %}
+<div class="space-y-6">
+  <div>
+    <h1 class="text-xl font-bold text-navy">LLM calls</h1>
+    <p class="mt-1 text-sm text-slate-500">
+      Every Anthropic call, grouped into exchanges by request&nbsp;id — one owner question is usually several calls.
+      Costs use the observed usage and the recorded rate version. Incomplete attempts and older records
+      keep their recorded subtotals; they cannot establish a complete cost or margin.
+      Log mode: <span class="font-semibold">{{ log_mode }}</span>{% if log_mode != 'full' %} — prompt bodies are not being stored{% endif %}.
+    </p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" action="/admin/llm" class="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4">
+    <label class="block"><span class="text-xs font-medium text-slate-500">Tenant id</span>
+      <input name="tenant" value="{{ tenant }}" placeholder="all tenants" class="mt-1 w-56 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+    <label class="block"><span class="text-xs font-medium text-slate-500">Operation</span>
+      <select name="operation" class="mt-1 w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand">
+        <option value="">any</option>
+        {% for op in operations %}<option value="{{ op }}" {% if op == operation %}selected{% endif %}>{{ op }}</option>{% endfor %}
+      </select></label>
+    <label class="block"><span class="text-xs font-medium text-slate-500">Rows</span>
+      <input name="limit" type="number" min="10" max="500" value="{{ limit }}" class="mt-1 w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+    <button class="whitespace-nowrap rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Filter</button>
+    {% if tenant or operation %}<a href="/admin/llm" class="whitespace-nowrap rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Clear</a>{% endif %}
+  </form>
+
+  <!-- Slice totals -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="rounded-xl border border-slate-200 bg-white p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Calls</p>
+      <p class="mt-1 text-2xl font-bold text-navy">{{ totals.calls }}</p>
+      <p class="mt-1 text-xs text-slate-400">{{ exchanges|length }} exchange{{ '' if exchanges|length == 1 else 's' }}</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Tokens</p>
+      <p class="mt-1 text-2xl font-bold text-navy">{{ '{:,}'.format(totals.tokens) }}</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Recorded subtotal</p>
+      <p class="mt-1 text-2xl font-bold text-navy">${{ '%.4f'|format(totals.cost_usd) }}</p>
+      <p class="mt-1 text-xs text-slate-400">≈ £{{ '%.4f'|format(totals.cost_usd * rate) }}</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 bg-white p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Failed</p>
+      <p class="mt-1 text-2xl font-bold {% if totals.failed %}text-red-600{% else %}text-emerald-600{% endif %}">{{ totals.failed }}</p>
+    </div>
+  </div>
+
+  <!-- Exchanges -->
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-100"><h2 class="text-xs font-semibold uppercase tracking-wide text-brand">Exchanges</h2></div>
+    {% if exchanges %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="px-4 py-2">When</th><th class="px-4 py-2">Operation</th><th class="px-4 py-2">Source</th>
+          <th class="px-4 py-2">Model</th><th class="px-4 py-2 text-right">Calls</th>
+          <th class="px-4 py-2 text-right">Tokens</th><th class="px-4 py-2 text-right">Est. $</th>
+          <th class="px-4 py-2 text-right">Took</th><th class="px-4 py-2">Tenant</th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for e in exchanges %}
+          <tr class="{% if e.failed %}bg-red-50/50{% endif %} hover:bg-slate-50/60">
+            <td class="px-4 py-2 whitespace-nowrap text-slate-500">{{ (e.last_at or '')[:19]|replace('T', ' ') }}</td>
+            <td class="px-4 py-2 font-medium text-navy">{{ e.operation }}
+              {% if e.failed %}<span class="ml-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700">{{ e.stop_reasons|join(', ') }}</span>{% endif %}</td>
+            <td class="px-4 py-2 text-slate-500">{{ e.source }}</td>
+            <td class="px-4 py-2 text-slate-500">{{ e.model }}</td>
+            <td class="px-4 py-2 text-right text-slate-600">{{ e.calls }}</td>
+            <td class="px-4 py-2 text-right text-slate-600">{{ '{:,}'.format(e.tokens) }}</td>
+            <td class="px-4 py-2 text-right text-slate-600">{{ '%.5f'|format(e.cost_usd) }}{% if not e.cost_complete %} (incomplete){% endif %}</td>
+            <td class="px-4 py-2 text-right text-slate-500">{{ (e.duration_ms / 1000)|round(1) }}s</td>
+            <td class="px-4 py-2"><a href="/admin/llm?tenant={{ e.tenant_id }}" class="text-brand text-xs font-mono">{{ (e.tenant_id or '—')[:8] }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-4 py-8 text-center text-sm text-slate-400">No calls logged for this slice.</p>
+    {% endif %}
+  </div>
+
+  <!-- Individual calls -->
+  {% if rows %}
+  <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-100"><h2 class="text-xs font-semibold uppercase tracking-wide text-brand">Individual calls</h2></div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="px-4 py-2">When</th><th class="px-4 py-2">Operation</th><th class="px-4 py-2">Module</th>
+          <th class="px-4 py-2 text-right">In</th><th class="px-4 py-2 text-right">Out</th>
+          <th class="px-4 py-2 text-right">Took</th><th class="px-4 py-2">Stop</th><th class="px-4 py-2"></th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for r in rows %}
+          <tr class="{% if r.failed %}bg-red-50/50{% endif %} hover:bg-slate-50/60">
+            <td class="px-4 py-2 whitespace-nowrap text-slate-500">{{ (r.created_at or '')[:19]|replace('T', ' ') }}</td>
+            <td class="px-4 py-2 text-navy">{{ r.operation or '—' }}</td>
+            <td class="px-4 py-2 text-slate-500">{{ r.module or '—' }}</td>
+            <td class="px-4 py-2 text-right text-slate-600">{{ '{:,}'.format(r.input_tokens or 0) }}</td>
+            <td class="px-4 py-2 text-right text-slate-600">{{ '{:,}'.format(r.output_tokens or 0) }}</td>
+            <td class="px-4 py-2 text-right text-slate-500">{{ r.duration_ms or 0 }}ms</td>
+            <td class="px-4 py-2 text-slate-500">{{ r.stop_reason or '—' }}</td>
+            <td class="px-4 py-2 text-right"><a href="/admin/llm/{{ r.id }}" class="text-brand text-xs font-semibold">Open &rarr;</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <p class="text-xs text-slate-400 leading-relaxed">
+    Operator-only. These rows can contain customer email content when log mode is <code>full</code>;
+    nothing on this page renders it — open a single call and opt in explicitly.
+  </p>
+</div>
+{% endblock %}

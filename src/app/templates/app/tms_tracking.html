@@ -1,0 +1,59 @@
+{% extends "app/base.html" %}
+{% block title %}Live tracking · Field OS · Transport · BLAM8{% endblock %}
+{% block heading %}Live tracking{% endblock %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-4">
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+    <strong>Simulated for the demo.</strong> Each van points at its next drop — there's no GPS feed yet. This is exactly where your existing tracker (Webfleet, Teletrac, Quartix…) plugs in.
+  </div>
+
+  {% if not maps_key %}
+  <div class="rounded-lg bg-slate-100 border border-slate-200 px-4 py-3 text-sm text-slate-600">
+    The map needs <code>GOOGLE_PLACES_API_KEY</code> (with the Maps JavaScript API enabled). The live list below works without it.
+  </div>
+  {% else %}
+  <div id="map" class="w-full rounded-xl border border-slate-200" style="height:420px"></div>
+  {% endif %}
+
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+    {% for v in vehicles_live %}
+    <div class="p-4 flex items-center gap-4">
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-navy">{{ v.name }}{% if v.registration %} <span class="text-slate-400 font-normal">· {{ v.registration }}</span>{% endif %}</p>
+        <p class="text-sm text-slate-500 truncate">{{ v.status }} → {{ v.postcode or '—' }} · next: {{ v.next_summary }}</p>
+      </div>
+      <div class="w-40 flex-none">
+        <div class="flex justify-between text-xs text-slate-400"><span>{{ v.delivered }}/{{ v.total }}</span><span>{{ v.pct }}%</span></div>
+        <div class="mt-1 h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-brand" style="width: {{ v.pct }}%"></div></div>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-10 text-center">No vehicles out today.</p>
+    {% endfor %}
+  </div>
+</div>
+
+{% if maps_key %}
+<script>
+  const VANS = {{ vehicles_live|tojson }};
+  function initTracking() {
+    const map = new google.maps.Map(document.getElementById('map'),
+      { center: { lat: 53.8, lng: -1.55 }, zoom: 7 });
+    const geocoder = new google.maps.Geocoder();
+    const bounds = new google.maps.LatLngBounds();
+    VANS.filter(v => v.postcode).forEach(v => {
+      geocoder.geocode({ address: v.postcode + ', UK' }, (res, status) => {
+        if (status === 'OK' && res[0]) {
+          const pos = res[0].geometry.location;
+          new google.maps.Marker({ map, position: pos, label: (v.name || '?')[0],
+            title: v.name + ' — ' + v.status + ' (' + v.delivered + '/' + v.total + ')' });
+          bounds.extend(pos); map.fitBounds(bounds);
+        }
+      });
+    });
+  }
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&callback=initTracking"></script>
+{% endif %}
+{% endblock %}

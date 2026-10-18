@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 vs Fyxer AI — Your Inbox Tidied, or Your Business Answered?{% endblock %}
+{% block meta_description %}Honest comparison: Fyxer AI triages a professional's own inbox and drafts replies in their tone, per seat, draft-only, with Fyxer Chat to search your mail. BLAM8 runs the business mailbox: replies grounded in your real prices, jobs booked into a live diary, the CRM filled in. Prices checked September 2026.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/vs/fyxer#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the difference between Fyxer AI and BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "They automate different inboxes. Fyxer is a personal email assistant: it sorts an individual professional's mailbox into categories, drafts replies in their tone learned from their sent mail, and Fyxer Chat searches their inbox, meetings and files. It's priced per seat and aimed at executives and knowledge workers. BLAM8 is a business agent: it runs the company mailbox (info@, bookings@), grounds every reply in your actual prices, policies and services from a knowledge base you control, labels every email by where the job stands (Needs Reply, Draft Ready, Replied, Booked, FYI, Automated), books real jobs into a live diary with holds that can't double-book, and, on Pro, fills in a CRM from the mail. On Pro + Concierge you also get the Concierge, an assistant you can chat or talk to that takes confirmed actions." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Fyxer AI know my prices and policies?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Fyxer learns how you write from your sent mail. BLAM8 does the same, one click at setup, but it also learns what your business charges. BLAM8 drafts from both your writing style and a knowledge base you curate: your rate card, services and policies. A Fyxer draft sounds right but may quote the wrong price. A BLAM8 draft sounds right and quotes the right price. When BLAM8 doesn't know the answer, it holds the email and asks you rather than guess." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can Fyxer AI book appointments or jobs?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It proposes meeting times from your calendar and offers scheduling links, which is genuinely useful for meetings. It doesn't hold slots, prevent double-booking beyond suggesting free times, or know about jobs, staff, resources, quotes or invoices. BLAM8 books the work itself, into a live diary, with holds. It never books a date or a time nobody chose: a missing detail holds the space and asks." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can Fyxer run a shared business mailbox like info@?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Fyxer is built per seat, for an individual's own mailboxes, and isn't designed as a shared operational inbox for a team. BLAM8 is the opposite: the business mailbox is the whole point, with every conversation, booking and CRM record belonging to the company, not a seat." }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Fyxer AI pricing compare to BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Fyxer is per seat, in USD even to UK visitors: Starter $30/user/month ($22.50 billed annually) for one inbox and one calendar, Professional $50/user/month ($37.50 annually) for more inboxes and team scheduling, and Enterprise from 50 seats, with a 7-day trial. BLAM8 is per business, in GBP: £39/month (Starter: replies, booking, diary, quotes and invoices, 300 emails), £99/month (Pro: adds the self-filling CRM, 750 emails) or £249/month (Pro + Concierge: adds the Concierge, 750 emails), with a 14-day free trial of the full product, the Concierge included, and no card to start. Prices checked September 2026." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8 a Fyxer AI alternative?",
+          "acceptedAnswer": { "@type": "Answer", "text": "If what you want is your own inbox sorted and pre-drafted, or a meeting notetaker, Fyxer is the right shape and BLAM8 isn't. If what you want is customers answered accurately and the work behind their emails booked and tracked, that's BLAM8. It's one price per business, not per seat, so adding a colleague doesn't add a bill." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Honest comparison · prices checked September 2026
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      BLAM8 vs Fyxer AI: a tidier inbox, or an answered business?
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Fyxer and BLAM8 both learn your voice from your sent mail and draft replies that sound like you. Up close they're solving different problems. <span class="font-semibold text-navy">Fyxer makes one professional faster at their own inbox. BLAM8 runs the business's inbox</span>: it learns your voice and grounds every reply in your real prices, books real jobs, and fills in the CRM as it goes.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 grid md:grid-cols-2 gap-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When Fyxer AI is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You're an executive, consultant or recruiter drowning in your own correspondence</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want your mailbox sorted into "to respond", "FYI" and "marketing", plus drafts in your tone, inside Gmail or Outlook with no setup</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You'd value Fyxer Chat, which searches your inbox, meetings and files and writes emails, and a meeting notetaker in the same subscription</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">Personal productivity is Fyxer's game and it's a good one, from a strong UK brand. BLAM8 doesn't sort your personal inbox or take meeting notes.</p>
+    </div>
+    <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When BLAM8 is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>The inbox that matters is the <span class="font-semibold text-navy">business's</span>, like info@, bookings@ or orders@, where every email is a customer</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>Replies must quote your actual prices and policies, from a knowledge base you control, not whatever old emails imply</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want the job behind the email <span class="font-semibold text-navy">done</span>: booked into a live diary, quoted, and the CRM filled in by itself</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">Fyxer stops at the draft, by design. BLAM8 starts there.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Side by side</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl">Fyxer prices from <a href="https://www.fyxer.com/pricing" rel="nofollow" class="text-brand hover:underline">fyxer.com/pricing</a>, listed in USD per user even to UK visitors. Checked September 2026.</p>
+  <div class="mt-8 overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-navy">
+        <tr>
+          <th class="px-5 py-3.5 font-semibold w-1/3"></th>
+          <th class="px-5 py-3.5 font-semibold">Fyxer AI</th>
+          <th class="px-5 py-3.5 font-semibold">BLAM8</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-slate-600">
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Built for</td><td class="px-5 py-3.5">A professional's personal inbox: executives, consultants, recruiters, per seat</td><td class="px-5 py-3.5">The business's customer mailbox, like info@, bookings@ or orders@, per company</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">What grounds the replies</td><td class="px-5 py-3.5">Your writing style, learned from ~300 recent sent emails; no business knowledge base. Prices in drafts are echoes of old emails, not a curated rate card</td><td class="px-5 py-3.5">Your writing style, learned from your sent emails, and a knowledge base you curate: your real rate card, services, policies and FAQs. Thumbs-down a bad line once and it becomes a standing rule. If the answer isn't known, the email is held and you're asked</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Sending</td><td class="px-5 py-3.5">Draft-only, always: Fyxer says it will never send on your behalf. A deliberate safety choice some users prefer</td><td class="px-5 py-3.5">Also draft-first: approval by default, sends on your approval; flip to full-auto per category once it's earned your trust</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Scheduling</td><td class="px-5 py-3.5">Meetings: drafts proposing free times, plus Calendly-style scheduling links</td><td class="px-5 py-3.5">Jobs: live-diary booking with holds that can't double-book; never books a date or a time nobody chose; booking details gathered and pinned on every thread</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Whose tone it reads</td><td class="px-5 py-3.5">Yours: learns from ~300 sent emails, sets itself up on connection</td><td class="px-5 py-3.5">Yours, learned from up to 300 of your sent emails, one click at setup. And the customer's: every contact carries a live mood read from their own emails. A third chase reads as frustrated, so the thread gets flagged, the reply changes register, and heated threads always wait for your approval</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Inbox categorisation</td><td class="px-5 py-3.5">Yes: sorts your mailbox into "to respond", "FYI" and "marketing"; one of its original strengths</td><td class="px-5 py-3.5">Yes: six smart labels that follow the job, not just the mail: Needs Reply &rarr; Draft Ready &rarr; Replied &rarr; Booked, plus FYI and Automated. Labels move on by themselves as the conversation progresses; no rules to set up, one click to override</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Assistant</td><td class="px-5 py-3.5">Fyxer Chat: searches your inbox, meetings and files, and writes emails</td><td class="px-5 py-3.5">On Pro + Concierge, the Concierge: chat to it, or hold the button and talk. It answers from your records and acts: draft or send an email, block days, change a stay, ask a customer for a renewal, hand a job to your team. Every action is a card you confirm; a card you didn't answer waits and comes back rebuilt against today's diary</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Customer-facing side</td><td class="px-5 py-3.5">None: Fyxer works inside your inbox only</td><td class="px-5 py-3.5">Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">On your phone</td><td class="px-5 py-3.5">Works in your mail client's own apps</td><td class="px-5 py-3.5">Installable app (PWA) on phone, desktop or tablet, with a push notification when a draft is ready to approve; no app store</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Beyond the inbox</td><td class="px-5 py-3.5">Meeting notetaker; no CRM of its own (HubSpot integration), no SMS, no quotes or invoicing</td><td class="px-5 py-3.5">Quotes and invoices on every plan; a self-filling CRM (contacts, deals, promises from the mail) on Pro. SMS and missed-call text-back are built and being tested; they switch on when testing is done</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">Starter $30/user/mo ($22.50 annual): 1 inbox, 1 calendar · Professional $50/user/mo ($37.50 annual) · Enterprise from 50 seats · 7-day trial</td><td class="px-5 py-3.5">Starter £39/mo (replies, booking, diary, quotes and invoices, 300 emails) · Pro £99/mo (adds the self-filling CRM, 750 emails) · Pro + Concierge £249/mo (adds the Concierge, 750 emails) · 14-day free trial of the full product, the Concierge included, no card to start</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">The same email, through both</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl">A customer writes to your business address: <span class="italic">"Hi, what would you charge to service two units, and could anyone come Thursday morning?"</span></p>
+    <div class="mt-8 grid md:grid-cols-2 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy">In Fyxer</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">The thread is labelled "To Respond" and a draft appears in the mailbox, written in your tone, just like BLAM8 would. But the price in it is whatever your past emails suggest, not a curated rate card. If your last email mentioned a discount, the draft echoes it. Thursday morning is a suggestion of free time on your own calendar, not a held slot. Whoever owns the seat still checks the number, fixes the quote, and books the job somewhere else.</p>
+      </div>
+      <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+        <h3 class="font-semibold text-navy">In BLAM8</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">The draft quotes the two-unit service off your actual rate card, offers Thursday 9–11 with the right team member, and holds that slot so nobody can double-book it while the customer decides. On Pro, the contact, the deal and the promise are already in the CRM. You approve: sent, booked, tracked.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">What Fyxer reviewers raise, and how BLAM8 handles it</h2>
+  <div class="mt-6 max-w-3xl space-y-4 text-slate-600 leading-relaxed">
+    <p><span class="font-semibold text-navy">Emails lost in the auto-filing.</span> Some reviewers say mail went missing once Fyxer sorted it. BLAM8's labels mark where each job stands, like Needs Reply, Replied or Booked, and you can change any label in one click.</p>
+    <p><span class="font-semibold text-navy">Seats billed when the trial ends.</span> Reviewers report the trial charging for every seat that was invited. BLAM8 is one price per business, with no seats, and the trial needs no card.</p>
+    <p><span class="font-semibold text-navy">Fixed categories, little control.</span> BLAM8's labels are set too, but they follow the job rather than the sender, and what the agent says comes from a knowledge base you write and correct.</p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">Where BLAM8 pulls ahead</h2>
+    <div class="mt-6 max-w-3xl space-y-4 text-slate-600 leading-relaxed">
+      <p>BLAM8 isn't just an email assistant: it's a front desk. On Pro + Concierge, you can chat or talk to the Concierge to draft emails, block days, change a stay or hand a job to your team, each action confirmed by you before it happens. Smart inbox labels organise every email without setup, and because they track the job, not just the mail, "Needs Reply" becomes "Draft Ready" becomes "Replied" on its own. Your existing customers can check and move their bookings on their own page. And it all installs as an app with push notifications, no app store.</p>
+      <p><span class="font-semibold text-navy">Fyxer is a good email assistant, and Fyxer Chat and its meeting notetaker are edges BLAM8 doesn't match.</span> But on grounding, booking and the CRM, Fyxer stops at the inbox, and BLAM8 is only getting started there.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="mx-auto max-w-3xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+  <div class="mt-8 divide-y divide-slate-200">
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">What is the difference between Fyxer AI and BLAM8?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">They automate different inboxes. Fyxer is a personal email assistant: it sorts an individual professional's mailbox into categories, drafts replies in their tone learned from their sent mail, and Fyxer Chat searches their inbox, meetings and files. It's priced per seat and aimed at executives and knowledge workers. BLAM8 is a business agent: it runs the company mailbox (info@, bookings@), grounds every reply in your actual prices, policies and services from a knowledge base you control, labels every email by where the job stands (Needs Reply, Draft Ready, Replied, Booked, FYI, Automated), books real jobs into a live diary with holds that can't double-book, and, on Pro, fills in a CRM from the mail. On Pro + Concierge you also get the Concierge, an assistant you can chat or talk to that takes confirmed actions.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Does Fyxer AI know my prices and policies?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Fyxer learns how you write from your sent mail. BLAM8 does the same, one click at setup, but it also learns what your business charges. BLAM8 drafts from both your writing style and a knowledge base you curate: your rate card, services and policies. A Fyxer draft sounds right but may quote the wrong price. A BLAM8 draft sounds right and quotes the right price. When BLAM8 doesn't know the answer, it holds the email and asks you rather than guess.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can Fyxer AI book appointments or jobs?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">It proposes meeting times from your calendar and offers scheduling links, which is genuinely useful for meetings. It doesn't hold slots, prevent double-booking beyond suggesting free times, or know about jobs, staff, resources, quotes or invoices. BLAM8 books the work itself, into a live diary, with holds. It never books a date or a time nobody chose: a missing detail holds the space and asks.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can Fyxer run a shared business mailbox like info@?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Fyxer is built per seat, for an individual's own mailboxes, and isn't designed as a shared operational inbox for a team. BLAM8 is the opposite: the business mailbox is the whole point, with every conversation, booking and CRM record belonging to the company, not a seat.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How does Fyxer AI pricing compare to BLAM8?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Fyxer is per seat, in USD even to UK visitors: Starter $30/user/month ($22.50 billed annually) for one inbox and one calendar, Professional $50/user/month ($37.50 annually) for more inboxes and team scheduling, and Enterprise from 50 seats, with a 7-day trial. BLAM8 is per business, in GBP: £39/month (Starter: replies, booking, diary, quotes and invoices, 300 emails), £99/month (Pro: adds the self-filling CRM, 750 emails) or £249/month (Pro + Concierge: adds the Concierge, 750 emails), with a 14-day free trial of the full product, the Concierge included, and no card to start. Prices checked September 2026.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8 a Fyxer AI alternative?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">If what you want is your own inbox sorted and pre-drafted, or a meeting notetaker, Fyxer is the right shape and BLAM8 isn't. If what you want is customers answered accurately and the work behind their emails booked and tracked, that's BLAM8. It's one price per business, not per seat, so adding a colleague doesn't add a bill.</p>
+    </details>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Don't just draft the reply. Do the job behind it.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Fyxer matches BLAM8 on drafting and adds a notetaker. BLAM8 answers with your real prices, books the work, labels the inbox and fills the CRM. Free 14-day trial of the full product, no card.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/#pricing" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">View pricing</a>
+    </div>
+  </div>
+  <p class="mt-8 text-center text-xs text-slate-400 max-w-2xl mx-auto leading-relaxed">Fyxer is a trademark of its owner; BLAM8 is not affiliated with or endorsed by Fyxer. Competitor details and prices were checked against public sources in September 2026 and may have changed — see <a href="https://www.fyxer.com/pricing" rel="nofollow" class="hover:underline">Fyxer's pricing page</a> for current rates.</p>
+</section>
+
+{% endblock %}

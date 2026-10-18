@@ -1,0 +1,53 @@
+{% extends "app/base.html" %}
+{% block title %}Ignored · BLAM8{% endblock %}
+{% block heading %}Ignored{% endblock %}
+{% block content %}
+<div class="divide-y divide-slate-200 bg-white">
+  {% if not ignored %}
+  <div class="p-10 text-center text-slate-400 text-sm">
+    No ignored contacts. Open a conversation and choose <span class="font-medium text-slate-500">Ignore this contact</span>
+    to stop the agent drafting to a sender and hide their thread.
+  </div>
+  {% endif %}
+  {% for c in ignored %}
+  <div class="flex items-center justify-between gap-3 px-5 py-4">
+    <div class="min-w-0">
+      <p class="font-medium text-navy truncate"><a href="/app/conversations/view?contact={{ c.address | urlencode }}" class="hover:underline" title="Read messages from this sender">{{ c.address }}</a></p>
+      <p class="text-xs text-slate-400 truncate">{% if c.reason %}{{ c.reason }} · {% endif %}ignored {{ c.created_at | pretty_date }}</p>
+    </div>
+    <form method="post" action="/app/ignored/remove" class="flex-none">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="contact" value="{{ c.address }}">
+      <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-brand hover:text-brand transition">Un-ignore</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+
+{% if suppressed %}
+{# Draft suppression (docs/modules/module-draft-suppression.md): contacts the AI stopped
+   drafting to because their drafts kept going unanswered. Softer than the list
+   above — their mail still arrives and files under FYI, it just isn't drafted. #}
+<h2 class="mt-8 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Drafting paused</h2>
+<p class="mb-3 text-xs text-slate-400">The AI stopped drafting replies to these contacts because previous drafts went unanswered. Their emails still arrive, filed under FYI. Un-ignore to start drafting again.</p>
+<div class="divide-y divide-slate-200 bg-white">
+  {% for s in suppressed %}
+  <div class="flex items-center justify-between gap-3 px-5 py-4">
+    <div class="min-w-0">
+      <p class="font-medium text-navy truncate">{{ s.address }}</p>
+      <p class="text-xs text-slate-400 truncate">
+        {% if s.status == 'permanently_ignored' %}Ignored permanently{% if s.suppressed_by == 'auto' %} (automatically — no response after {{ s.total_unsent_drafts + s.emails_since_suppressed }} emails){% endif %}{% else %}Paused — {{ s.consecutive_unsent_drafts }} drafts went unanswered{% endif %}
+        {% if s.suppressed_at %} · since {{ s.suppressed_at | pretty_date }}{% endif %}
+      </p>
+    </div>
+    <form method="post" action="/app/suppression/resume" class="flex-none">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="contact" value="{{ s.address }}">
+      <input type="hidden" name="return_to" value="/app/ignored">
+      <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-brand hover:text-brand transition">Un-ignore</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

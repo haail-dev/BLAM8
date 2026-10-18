@@ -1,0 +1,44 @@
+{% extends "app/base.html" %}
+{% block title %}Pricing · Field OS · Trades · BLAM8{% endblock %}
+{% block heading %}Pricing{% endblock %}
+{% block menu_sections %}{% include "app/_fsm_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set inp = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand" %}
+<div class="max-w-2xl mx-auto p-6 space-y-5">
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>{% endif %}
+
+  <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <div>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Your rate card</h2>
+      <p class="mt-1 text-sm text-slate-500">A quote = call-out + labour (estimated hours × hourly rate), unless a job type carries a fixed price. It's floored at the minimum charge, and VAT is added on top. The assistant quotes this in its replies as an estimate.</p>
+    </div>
+    <form method="post" action="/app/fsm/pricing" class="grid sm:grid-cols-2 gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label class="block"><span class="text-xs font-medium text-slate-500">Call-out charge (£)</span>
+        <input name="callout_charge" type="number" step="0.01" min="0" value="{{ rate.callout_charge }}" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Hourly labour rate (£)</span>
+        <input name="hourly_rate" type="number" step="0.01" min="0" value="{{ rate.hourly_rate }}" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Minimum charge (£)</span>
+        <input name="min_charge" type="number" step="0.01" min="0" value="{{ rate.min_charge }}" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">VAT (%)</span>
+        <input name="vat_pct" type="number" step="0.1" min="0" value="{{ rate.vat_pct }}" class="{{ inp }}"></label>
+      <div class="sm:col-span-2 flex justify-end">
+        <button data-save-row class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save rates</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Sample quote -->
+  <div class="bg-slate-50 rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Sample — a 1-hour job</h2>
+    <div class="space-y-1 text-sm">
+      <div class="flex justify-between text-slate-500"><span>Call-out</span><span>£{{ '%.2f'|format(sample.callout) }}</span></div>
+      <div class="flex justify-between text-slate-500"><span>Labour (1 hr)</span><span>£{{ '%.2f'|format(sample.labour) }}</span></div>
+      <div class="flex justify-between text-slate-500"><span>VAT ({{ sample.vat_pct }}%)</span><span>£{{ '%.2f'|format(sample.vat) }}</span></div>
+      <div class="flex justify-between font-bold text-navy border-t border-slate-200 pt-1"><span>Total</span><span>£{{ '%.2f'|format(sample.total) }}</span></div>
+      {% if sample.min_applied %}<p class="text-xs text-amber-600">Minimum charge applied.</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

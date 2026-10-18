@@ -1,0 +1,4 @@
+{
+  "sha256": "155f5ad392ccfa3c6190b01e10aa5cffce6369c678fe2e8fd95d4c983689e130",
+  "excerpt": "{\"calls\":[{\"messages\":[{\"content\":\"Write the message now.\",\"role\":\"user\"}],\"operation\":\"reminder\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":fa"
+}

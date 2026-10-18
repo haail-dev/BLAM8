@@ -1,0 +1,126 @@
+{% extends "admin/base.html" %}
+{% block title %}Outreach · Operator{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+  <div><h1 class="text-2xl font-bold text-navy">Outreach</h1>
+    <p class="text-sm text-slate-600">Your Voice CRM pipeline, run by the server.</p></div>
+  <a class="text-sm underline" href="/admin/voice-crm">Open Voice CRM</a>
+</div>
+{% if notice %}<p role="status" class="rounded-lg bg-sky-50 p-3 mb-4">{{ notice }}</p>{% endif %}
+<section class="rounded-xl bg-white border p-4 mb-4 space-y-3">
+  <h2 class="font-bold">{{ 'Running' if current.enabled else 'Paused' }}</h2>
+  <p class="text-sm">Draft mode requires approval for each email. Auto mode uses the saved campaign copy. Both obey the working window, daily cap and minimum gap. Pause stops new sends; an email already handed to the provider cannot be recalled.</p>
+  <div class="flex flex-wrap gap-3">
+  {% for action, label in [('pause', 'Pause all sending'), ('preview', 'Sync and prepare drafts'), ('resume', 'Resume server job')] %}
+  <form method="post" action="/admin/outreach/control">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <button name="action" value="{{ action }}" class="rounded-lg px-4 py-2 {{ 'bg-rose-700 text-white' if action == 'pause' else 'border border-slate-300' }}">{{ label }}</button>
+  </form>{% endfor %}</div>
+  {% if missing %}<p class="text-amber-800">Setup needed: {{ missing|join(', ') }}</p>{% endif %}
+  <p class="text-sm">Last successful sync: {{ current.last_sync_at or 'Not yet' }}</p>
+  <pre class="whitespace-pre-wrap text-sm">{{ current.last_result|tojson(indent=2) }}</pre>
+</section>
+{% if uncertain %}<section class="rounded-xl bg-amber-50 border p-4 mb-4">
+  <h2 class="font-bold">Uncertain sends — sending is blocked</h2>
+  <p>Check these messages in the provider before reconciling the ledger. They will never be retried automatically.</p>
+  {% for m in uncertain %}<p class="mt-2 text-sm">{{ m.email }} · {{ m.id }} · {{ m.error or m.status }}</p>
+  <form method="post" action="/admin/outreach/reconcile/{{ m.id }}" class="my-3 flex flex-wrap gap-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input name="provider_id" aria-label="Provider email ID" placeholder="Provider email ID" class="border rounded p-2" required>
+    <button class="border rounded px-3 py-2">Verify provider receipt</button>
+  </form>
+  <form method="post" action="/admin/outreach/reconcile/{{ m.id }}" class="mb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <button class="border rounded px-3 py-2">Cancel permanently — never retry this email</button>
+  </form>{% endfor %}
+</section>{% endif %}
+<section class="rounded-xl bg-white border p-4 mb-4">
+  <h2 class="font-bold mb-3">Daily summary</h2>
+  <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead><tr>
+    <th class="p-2">Day</th><th>First emails</th><th>Follow-ups</th><th>Replies</th><th>Stops</th><th>Bounces / complaints</th><th>Shortfall</th>
+  </tr></thead><tbody>{% for d in digests %}<tr class="border-t">
+    <td class="p-2">{{ d.day }}</td><td>{{ d.summary.first_sent }}</td><td>{{ d.summary.followups_sent }}</td>
+    <td>{{ d.summary.replied }}</td><td>{{ d.summary.stopped }}</td><td>{{ d.summary.bounced }} / {{ d.summary.complained }}</td>
+    <td class="{{ 'text-rose-700 font-bold' if d.summary.failed_day }}">{{ d.summary.shortfall }}{{ ' — failed day' if d.summary.failed_day }}</td>
+  </tr>{% else %}<tr><td colspan="7" class="py-3">The server records each day's outcome here.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+<details class="rounded-xl bg-white border p-4 mb-4">
+  <summary class="font-bold cursor-pointer">Campaign and sending settings</summary>
+  <form method="post" action="/admin/outreach/settings" class="space-y-4 mt-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {% set control = "mt-1 w-full rounded-lg border border-slate-300 p-2 text-sm" %}
+    <div class="grid sm:grid-cols-2 gap-4">
+      <label>Campaign name<input name="name" value="{{ cfg.name }}" class="{{ control }}" required></label>
+      <label>Prospect list<select name="kind" class="{{ control }}">{% for value in ['partner', 'customer'] %}<option value="{{ value }}" {{ 'selected' if cfg.kind == value }}>{{ value|capitalize }}s</option>{% endfor %}</select></label>
+      <label>Sending mode<select name="mode" class="{{ control }}"><option value="draft" {{ 'selected' if cfg.mode == 'draft' }}>Approve each draft</option><option value="auto" {{ 'selected' if cfg.mode == 'auto' }}>Automatically send campaign emails</option></select></label>
+      <label>Timezone<input name="timezone" value="{{ cfg.timezone }}" class="{{ control }}" required></label>
+      <label>Window opens<input type="time" name="start_time" value="{{ cfg.start_time }}" class="{{ control }}" required></label>
+      <label>Window closes<input type="time" name="end_time" value="{{ cfg.end_time }}" class="{{ control }}" required></label>
+      <label>Provider cap per 24 hours<input type="number" min="1" max="10000" name="daily_cap" value="{{ cfg.daily_cap }}" class="{{ control }}" required></label>
+      <label>Minimum seconds between emails<input type="number" min="60" max="86400" name="min_gap_seconds" value="{{ cfg.min_gap_seconds }}" class="{{ control }}" required></label>
+    </div>
+    <fieldset><legend class="mb-2">Working days</legend><div class="flex flex-wrap gap-3">{% for day in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<label><input type="checkbox" name="working_days" value="{{ loop.index0 }}" {{ 'checked' if loop.index0 in cfg.working_days }}> {{ day }}</label>{% endfor %}</div></fieldset>
+    <div class="grid sm:grid-cols-2 gap-4">
+      <label>Daily first-email targets<textarea name="plan_text" rows="5" placeholder="2026-10-12, 40" class="{{ control }}">{{ plan_text }}</textarea><span class="text-xs text-slate-500">One date and count per line. Missed targets carry forward. Follow-ups take priority and share the cap.</span></label>
+      <label>Holidays / days off<textarea name="holidays" rows="5" placeholder="2026-12-25" class="{{ control }}">{{ cfg.holidays|join('\n') }}</textarea><span class="text-xs text-slate-500">One YYYY-MM-DD date per line.</span></label>
+      <label>Send as<input name="sender" value="{{ cfg.sender }}" placeholder="Name &lt;sender@example.com&gt;" class="{{ control }}"><span class="text-xs text-slate-500">Use an address on your verified provider domain.</span></label>
+      <label>Unsubscribe address<input type="email" name="unsubscribe_email" value="{{ cfg.unsubscribe_email }}" class="{{ control }}"></label>
+      <label>Reply-To addresses<textarea name="reply_to" rows="3" class="{{ control }}">{{ cfg.reply_to|join('\n') }}</textarea><span class="text-xs text-slate-500">One address per line; include the connected inbox receiving replies.</span></label>
+      <label>Connected inbox tenant ID<input name="inbox_tenant_id" value="{{ cfg.inbox_tenant_id }}" class="{{ control }}"><span class="text-xs text-slate-500">The account whose connected inbox receives campaign replies. Server keys stay in environment settings.</span></label>
+    </div>
+    <label class="block">Stop line added to every email<textarea name="stop_line" rows="2" class="{{ control }}" required>{{ cfg.stop_line }}</textarea></label>
+    <label class="block">Fallback tailoring line<textarea name="fallback_line" rows="2" class="{{ control }}">{{ cfg.fallback_line }}</textarea><span class="text-xs text-slate-500">A true, general statement about your offer. The tailored paragraph quotes the prospect's recorded description, then adds this line.</span></label>
+    <p class="text-sm">Email copy supports {% raw %}{{contact.name}}, {{company.name}} and {{tailored_line}}{% endraw %}.</p>
+    {% for step in cfg.steps %}<fieldset class="border-t pt-3 space-y-2"><legend class="font-semibold">{{ 'First email' if loop.index0 == 0 else 'One follow-up, then stop' }}</legend>
+      <label class="block">Subject<input name="subject_{{ loop.index0 }}" value="{{ step.template_subject }}" maxlength="200" class="{{ control }}"></label>
+      <label class="block">Email body<textarea name="body_{{ loop.index0 }}" rows="8" class="{{ control }}">{{ step.template_body }}</textarea></label>
+      {% if loop.index0 == 1 %}<label class="block">Days after first email<input type="number" name="followup_days" min="1" max="365" value="{{ step.delay_days }}" class="{{ control }}"></label>{% endif %}
+    </fieldset>{% endfor %}
+    <label class="block">Subjects used by the previous campaign<textarea name="legacy_subjects" rows="3" class="{{ control }}">{{ cfg.legacy_subjects|join('\n') }}</textarea><span class="text-xs text-slate-500">One subject or distinctive subject phrase per line, so replies to the old PC campaign stop its follow-ups.</span></label>
+    <button class="rounded-lg bg-navy text-white px-4 py-2">Save settings and pause sending</button>
+  </form>
+</details>
+<section class="rounded-xl bg-white border p-4 mb-4">
+  <h2 class="font-bold mb-3">Drafts and approvals</h2>
+  {% for m in drafts %}<details class="border-t py-3">
+    <summary class="cursor-pointer">{{ m.email }} · {{ 'Follow-up' if m.step else 'First email' }} · {{ m.status }}</summary>
+    <p class="font-semibold mt-3">{{ m.payload.subject }}</p>
+    <p class="text-xs my-2">From: {{ m.payload['from'] }} · Reply-To: {{ m.payload.reply_to|join(', ') }}</p>
+    <pre class="whitespace-pre-wrap font-sans text-sm">{{ m.payload.text }}</pre>
+    {% if m.status == 'draft' %}<form method="post" action="/admin/outreach/approve/{{ m.id }}" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg border px-4 py-2">Approve this email</button>
+    </form>{% endif %}
+  </details>{% else %}<p class="text-sm text-slate-500">No pending drafts. Save the campaign, verify prospects, then prepare drafts.</p>{% endfor %}
+</section>
+<details class="rounded-xl bg-white border p-4 mb-4">
+  <summary class="font-bold cursor-pointer">Import and verify prospects</summary>
+  <p class="text-sm my-3">CSV columns: business_name, email, company_number, email_source, email_verified, soft_match. Flags use true/false. Optional: description, contact_name, source. Existing email addresses are skipped. Only a published, verified address with a company number and no soft match is eligible.</p>
+  <form method="post" action="/admin/outreach/import" enctype="multipart/form-data" class="mb-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="file" name="file" accept=".csv" aria-label="Prospect CSV" required>
+    <button class="rounded-lg border px-4 py-2">Import CSV</button>
+  </form>
+  {% for p in prospects %}<details class="border-t py-2">
+    <summary class="cursor-pointer">{{ p.business_name }} · {{ p.email or 'No email' }} · {{ p.status }}</summary>
+    <p class="text-sm my-2 whitespace-pre-wrap">{{ p.notes or '' }}</p>
+    <form method="post" action="/admin/outreach/verify/{{ p.id }}" class="space-y-2 my-2">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label class="block">Company number <input name="company_number" value="{{ p.company_number or '' }}" class="border rounded p-2" required></label>
+      <label class="block">Published email source <input name="email_source" value="{{ p.email_source or '' }}" class="border rounded p-2" required></label>
+      <label class="block">Email verified <select name="email_verified" class="border rounded p-2"><option value="false">No</option><option value="true" {{ 'selected' if p.email_verified }}>Yes</option></select></label>
+      <label class="block">Soft match <select name="soft_match" class="border rounded p-2"><option value="true">Yes — block sending</option><option value="false" {{ 'selected' if p.soft_match == false }}>No — identity confirmed</option></select></label>
+      <button class="rounded border px-3 py-2">Save verification</button>
+      <a class="ml-3 underline" href="/admin/voice-crm/{{ p.id }}">Open prospect</a>
+    </form>
+  </details>{% endfor %}
+</details>
+<section class="rounded-xl bg-white border p-4">
+  <h2 class="font-bold mb-2">Never contact again</h2>
+  <form method="post" action="/admin/outreach/suppress" class="flex flex-wrap gap-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="email" name="email" aria-label="Email to suppress" placeholder="Email address" class="rounded border p-2" required>
+    <button class="rounded border border-rose-700 text-rose-700 px-4 py-2">Stop all outreach to this address</button>
+  </form>
+</section>
+{% endblock %}

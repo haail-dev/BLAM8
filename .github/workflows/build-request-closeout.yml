@@ -1,0 +1,31 @@
+name: Build request close-out
+# A claude/req-<issue> PR was merged or closed: tell BLAM8 so the request's
+# storyline moves to Shipped (or back to Plan if it was closed unmerged).
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  closeout:
+    if: startsWith(github.event.pull_request.head.ref, 'claude/req-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Report to BLAM8
+        env:
+          BLAM8_URL: ${{ vars.BLAM8_URL }}
+          BUILD_REQUEST_SECRET: ${{ secrets.BUILD_REQUEST_SECRET }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          PR: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          issue="${HEAD_REF#claude/req-}"
+          case "$issue" in ''|*[!0-9]*) echo "not a request branch"; exit 0;; esac
+          if [ "$MERGED" = "true" ]; then ev=merged; note="Merged to main"; else ev=pr_closed; note="PR closed without merging"; fi
+          python scripts/ci/build_request_notify.py "$issue" "$ev" --pr "$PR" --url "$PR_URL" --note "$note"

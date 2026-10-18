@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 for Businesses — AI Front Desk &amp; Inbox Agent{% endblock %}
+{% block meta_description %}BLAM8 answers your emails in your voice, books jobs into your live diary and fills your CRM automatically. From £39/month, 14-day free trial of the full product, no card to start. Sign up or log in.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "@id": "{{ base_url }}/for-businesses#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ base_url }}/" },
+        { "@type": "ListItem", "position": 2, "name": "For Businesses", "item": "{{ base_url }}/for-businesses" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/for-businesses#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What does BLAM8 do for my business?",
+          "acceptedAnswer": { "@type": "Answer", "text": "BLAM8 is an AI front desk on your existing business email. It reads every inbound customer email, drafts the reply in your voice from your real prices and policies, books the job into a live diary that can't double-book (synced to Outlook or Google Calendar), and writes the CRM — contact, deal, promises — straight from the thread. Your customers, the ones your emails already reach, also get a portal where they check, move and pay their bookings and ask questions, reached with the reference code on every email. Your team goes on it too, including people who never sign in." }
+        },
+        {
+          "@type": "Question",
+          "name": "Will it send emails without my approval?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not unless you tell it to. BLAM8 is draft-only by default — you approve every reply before it sends. Auto-send is optional, switched on per mailbox, only when you choose." }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does BLAM8 cost?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Starter is £39/month — AI-drafted replies in your voice, scheduling with calendar sync, quotes and invoices, on one mailbox with 300 emails a month. Pro is £99/month — adds the self-filling CRM (contacts, deals, promises, follow-up sequences), 750 emails a month, additional mailboxes at £39 each and priority support. Pro + Concierge is £249/month — everything in Pro plus the Concierge, an assistant that knows your business and acts once you confirm, on the same allowance as Pro. Every account starts with a free 14-day trial of the full product — every feature open, the Concierge included, no card to start — and plans are monthly with no contract." }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I get started?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sign in with your Microsoft 365 / Outlook or Google account at blam8.com/login, connect the mailbox you want BLAM8 to work, and a short guided setup captures your voice, services and prices. A new account holds its drafts until you've checked the setup and said go; from then it drafts on your real enquiries, and you approve everything until you trust it." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> BLAM8 for businesses
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      Your AI front desk — it answers the email, books the job, fills the CRM.
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      BLAM8 sits on the business mailbox you already have. Every customer email gets a reply drafted in your voice with your real prices, the job goes into a live diary that can't double-book, and the CRM writes itself from the thread. Draft-only by default — you approve every reply until you switch on auto-send. {% if invite_gate %}Microsoft 365 / Outlook available now; Gmail by invite while verification completes.{% else %}Works with Microsoft 365 / Outlook and Gmail.{% endif %}
+    </p>
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free 14-day trial</a>
+      <a href="/login" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-400 transition">Log in</a>
+      <a href="/how-it-works" class="inline-flex items-center px-2 py-3 text-sm font-semibold text-brand hover:underline">See how onboarding works →</a>
+    </div>
+    <p class="mt-6 text-sm text-slate-500 flex flex-wrap items-center gap-x-5 gap-y-1">
+      <span class="inline-flex items-center gap-1.5"><svg class="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> Draft-only by default</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> No new inbox — your existing mailbox</span>
+      <span class="inline-flex items-center gap-1.5"><svg class="h-4 w-4 text-brand" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg> 14-day free trial — full product, no card</span>
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy max-w-2xl">One loop on every email</h2>
+    <div class="mt-10 grid md:grid-cols-3 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <span class="text-sm font-bold text-brand">1 · Answered</span>
+        <h3 class="mt-2 font-semibold text-navy text-lg">Every enquiry gets a reply in your voice</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed">Grounded in your uploaded prices, policies and FAQs — it quotes your actual numbers and says what it doesn't know instead of inventing.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <span class="text-sm font-bold text-brand">2 · Booked</span>
+        <h3 class="mt-2 font-semibold text-navy text-lg">The job lands in a live diary</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed">Real availability, holds that can't double-book, timed slots, whole days or multi-day jobs — confirmed in the same email thread and synced to Outlook or Google Calendar. It never books a date or a time nobody chose: a missing time reserves the space and asks.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <span class="text-sm font-bold text-brand">3 · On record</span>
+        <h3 class="mt-2 font-semibold text-navy text-lg">The CRM fills itself in</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed">Contacts, deals with stage and value, promises owed in both directions — written from the mail flow with no typing. Frustrated customers are flagged to a human.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 pt-16 md:pt-20">
+  <div class="rounded-2xl border border-slate-200 bg-white p-7 md:p-9 grid md:grid-cols-[1fr_auto] gap-6 items-center">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">See it set up for a business like yours</p>
+      <h2 class="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-navy">How your BLAM8 would be set up</h2>
+      <p class="mt-3 text-slate-600 leading-relaxed max-w-2xl">For each kind of business we have run through BLAM8 from the first email to the paid deposit, one page shows exactly what onboarding hands it: the diary shape, the services and how each is timed, the details gathered before booking, the CRM pipeline, the rules the agent enforces — and the customer journey we proved. {% for s in setups %}<a href="/setups/{{ s.slug }}" class="text-brand font-semibold hover:underline">{{ s.trade }}</a>{% if not loop.last %} · {% endif %}{% endfor %}.</p>
+    </div>
+    <a href="/setups" class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-400 transition whitespace-nowrap">All worked setups →</a>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <div class="grid md:grid-cols-2 gap-10 items-start">
+    <div>
+      <h2 class="text-3xl font-bold tracking-tight text-navy">Three plans, monthly, cancel anytime</h2>
+      <ul class="mt-6 space-y-4 text-slate-600 leading-relaxed">
+        <li><span class="font-semibold text-navy">Starter, £39/mo.</span> AI-drafted replies in your voice, scheduling with calendar sync, quotes and invoices. The CRM pre-fills quietly, ready to open on Pro. 1 mailbox, 300 emails/month.</li>
+        <li><span class="font-semibold text-navy">Pro, £99/mo.</span> Adds the self-filling CRM — contacts, deals, promises, follow-up sequences, customer-mood flags — plus 750 emails/month, additional mailboxes at £39 each and priority support.</li>
+        <li><span class="font-semibold text-navy">Pro + Concierge, £249/mo.</span> Everything in Pro, plus the Concierge — ask her anything about your business, by typing or by voice, and she drafts the card and acts once you confirm. Same allowance as Pro.</li>
+      </ul>
+      <p class="mt-4 text-slate-600 leading-relaxed"><span class="font-semibold text-navy">People, on every plan.</span> Your team, including people who never sign in. Choose what each person can see and do, see the app exactly as they do with "View as", and put one or several people on a job. No seat charges.</p>
+      <a href="/#pricing" class="mt-6 inline-flex items-center text-sm font-semibold text-brand hover:underline">See full pricing and FAQ →</a>
+    </div>
+    <div class="rounded-2xl border border-brand/30 bg-brand-50/60 p-7 md:p-8">
+      <p class="text-sm font-semibold uppercase tracking-wider text-slate-400">Your customers get a page too</p>
+      <p class="mt-3 text-slate-700 leading-relaxed">Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away. No customer login, no separate booking tool.</p>
+      <a href="/for-customers" class="mt-4 inline-flex items-center text-sm font-semibold text-brand hover:underline">See the customer side →</a>
+    </div>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Watch it draft on your real enquiries by tomorrow.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Connect your mailbox, set your voice and prices, approve the first replies. Free 14-day trial of the full product, no card to start.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free trial</a>
+      <a href="/login" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">Log in</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

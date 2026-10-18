@@ -1,0 +1,4 @@
+{
+  "sha256": "faa8a4f86ce961c93feb45f5b98e56143956652139afce10e8ae1cc424b65820",
+  "excerpt": "{\"model_calls\":[],\"outcome\":\"could_not_verify\",\"saved\":{\"args\":[\"tenant-a\",\"customer@example.invalid\",\"Enquiry\",\"What information do you need?\",\"\"],\"kwargs\":{\"a"
+}

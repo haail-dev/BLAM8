@@ -1,0 +1,4 @@
+{
+  "sha256": "a3dd46e2c6e3e52d23bc4718d11b11100298f9c49a145020d14fcca796019b54",
+  "excerpt": "[{\"messages\":[{\"content\":\"Score this appointment now.\",\"role\":\"user\"}],\"operation\":\"no_show_score\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":f"
+}

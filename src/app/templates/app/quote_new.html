@@ -1,0 +1,134 @@
+{% extends "app/base.html" %}
+{% block title %}New quote · BLAM8{% endblock %}
+{% block heading %}New quote{% endblock %}
+{% set back = ('/app/quotes', 'All quotes') %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{% set inp = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand" %}
+{% set pl = prefill or {} %}
+<div class="max-w-2xl mx-auto p-6 space-y-5">
+  {% if msg == 'nocustomer' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Add a customer (email or name) first.</div>{% endif %}
+  {% if msg == 'nolines' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Add at least one line.</div>{% endif %}
+  {% if msg == 'failed' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">Couldn't create the quote — try again.</div>{% endif %}
+
+  <p class="text-sm text-slate-500">It starts as a draft you can edit, then goes out as a link the customer opens, asks about, and accepts online — with their name and the date recorded against exactly what was quoted.</p>
+
+  <form method="post" action="/app/quotes/new" class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {# quote_booking_id, NOT booking_id — the per-ROW hidden booking_id carriers
+       below share that name, and a stray extra value would shear the row
+       alignment the line parser depends on. #}
+    <input type="hidden" name="quote_booking_id" value="{{ pl.booking_id or '' }}">
+    <div class="grid sm:grid-cols-2 gap-3">
+      <label class="block"><span class="text-xs font-medium text-slate-500">Customer email</span>
+        <input name="customer_email" type="email" value="{{ pl.customer_email or '' }}" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Customer name</span>
+        <input name="customer_name" value="{{ pl.customer_name or '' }}" class="{{ inp }}"></label>
+      <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">What's it for? <span class="text-slate-400">(shown as the quote's title)</span></span>
+        <input name="title" placeholder="e.g. Bathroom refit — first floor" class="{{ inp }}"></label>
+      {# A quote raised FROM a job walks to that job's deal on its own. A quote
+         started from scratch can't, and a repeat customer with two live jobs is
+         exactly where guessing would file it wrong — so we ask, and only when
+         there is genuinely something to ask about (two or more open deals). #}
+      <label class="hidden sm:col-span-2" id="deal-pick">
+        <span class="text-xs font-medium text-slate-500">Which job is this for? <span class="text-slate-400">(this customer has more than one on the go)</span></span>
+        <select name="deal_id" class="{{ inp }}">
+          <option value="">Not one of these — leave it unassigned</option>
+        </select>
+      </label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Valid until <span class="text-slate-400">(blank = your default)</span></span>
+        <input name="valid_until" type="date" class="{{ inp }}"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">Deposit % on acceptance <span class="text-slate-400">(blank = default, 0 = none)</span></span>
+        <input name="deposit_percent" type="number" step="1" min="0" max="100" class="{{ inp }}"></label>
+      {# Their number, not ours — it rides quote → invoice → export untouched. #}
+      <label class="block"><span class="text-xs font-medium text-slate-500">Their ref / PO <span class="text-slate-400">(optional — prints on the quote and every invoice from it)</span></span>
+        <input name="customer_reference" placeholder="e.g. PO 4471" class="{{ inp }}"></label>
+    </div>
+
+    <div class="space-y-2">
+      <div class="hidden sm:flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+        <span class="flex-1">Item</span><span class="w-28 text-right">Amount (£)</span><span class="w-28">Type</span>
+      </div>
+      {% set pre_lines = pl.lines or [] %}
+      {% for i in range(6) %}
+      {% set l = pre_lines[i] if i < pre_lines|length else None %}
+      <div class="flex flex-wrap items-center gap-2" {{ 'data-filled-row' if (l or i == 0) else 'data-spare-row hidden' }}>
+        <input type="hidden" name="booking_id" value="{{ (l.booking_id if l else '') or '' }}">
+        <input type="hidden" name="kb_entry_id" value="">
+        <input type="hidden" name="is_selected" value="1">
+        <input name="description" value="{{ (l.description if l else '') or '' }}"
+               placeholder="{{ 'e.g. Supply and fit new suite' if i == 0 else 'Add a line…' }}"
+               class="w-full sm:w-0 sm:flex-1 rounded-lg border {{ 'border-slate-300' if i == 0 or l else 'border-dashed border-slate-300' }} px-3 py-1.5 text-sm outline-none focus:border-brand">
+        <input name="amount" type="number" step="0.01"
+               value="{{ '%.2f'|format(l.amount|float) if l and l.amount else '' }}" placeholder="0.00"
+               class="w-28 rounded-lg border {{ 'border-slate-300' if i == 0 or l else 'border-dashed border-slate-300' }} px-3 py-1.5 text-sm text-right outline-none focus:border-brand">
+        <select name="optionality" class="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand">
+          <option value="required">Required</option>
+          <option value="optional">Optional</option>
+        </select>
+        <label class="flex items-center gap-1 text-xs text-slate-500"><input type="hidden" name="counts_deposit" value="0"><input type="checkbox" onchange="this.previousElementSibling.value=this.checked?'1':'0'" class="rounded border-slate-300">Counts towards the deposit rule</label>
+      </div>
+      {% endfor %}
+      <div><button type="button" data-add-row class="inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline">+ Add a line</button></div>
+      <p class="text-xs text-slate-400">Amounts are before VAT — VAT is added per your <a href="/app/invoices/settings" class="text-brand">settings</a>. Optional lines appear as tickable extras the customer can add or remove; the total updates as they choose.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-3">
+      <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">Intro note (optional — appears above the lines)</span>
+        <input name="intro" placeholder="e.g. Thanks for having us round — here's the price we discussed." class="{{ inp }}"></label>
+      <label class="block sm:col-span-2"><span class="text-xs font-medium text-slate-500">Small print (optional — appears under the lines)</span>
+        <input name="notes" placeholder="e.g. Price assumes clear access; parking to be provided." class="{{ inp }}"></label>
+      <label class="flex items-center gap-2 text-sm text-slate-600 sm:col-span-2">
+        <input type="hidden" name="show_item_prices" value="0" id="sip-hidden" disabled>
+        <input type="checkbox" name="show_item_prices" value="1" checked
+               onchange="document.getElementById('sip-hidden').disabled = this.checked"
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand">
+        Show a price per line <span class="text-xs text-slate-400">(untick for one lump-sum total)</span>
+      </label>
+    </div>
+
+    <div class="flex justify-end">
+      <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Create draft quote</button>
+    </div>
+  </form>
+
+<script>
+  // Ask which job a from-scratch quote belongs to — but only when the answer
+  // isn't already knowable. One open deal is inherited automatically and none is
+  // nothing to ask about, so the picker stays hidden for both.
+  (function () {
+    var emailEl = document.querySelector('input[name="customer_email"]');
+    var wrap = document.getElementById("deal-pick");
+    if (!emailEl || !wrap) return;
+    var select = wrap.querySelector("select");
+    var last = null;
+
+    async function refresh() {
+      var email = (emailEl.value || "").trim();
+      if (email === last) return;
+      last = email;
+      var deals = [];
+      if (email) {
+        try {
+          var res = await fetch("/app/quotes/deals?email=" + encodeURIComponent(email));
+          if (res.ok) { deals = (await res.json()).deals || []; }
+        } catch (e) { /* the picker is an aid; the form still posts without it */ }
+      }
+      while (select.options.length > 1) { select.remove(1); }
+      if (deals.length < 2) { wrap.classList.add("hidden"); return; }
+      deals.forEach(function (d) {
+        var o = document.createElement("option");
+        o.value = d.id;
+        o.textContent = d.stage ? d.title + " — " + d.stage : d.title;
+        select.appendChild(o);
+      });
+      wrap.classList.remove("hidden");
+    }
+
+    emailEl.addEventListener("change", refresh);
+    emailEl.addEventListener("blur", refresh);
+    if (emailEl.value) refresh();     // prefilled from a job
+  })();
+</script>
+</div>
+{% endblock %}

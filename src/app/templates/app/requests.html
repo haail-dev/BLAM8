@@ -1,0 +1,60 @@
+{% extends "app/base.html" %}
+{% block title %}Requests & reports · BLAM8{% endblock %}
+{% block heading %}Requests & reports{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+  {% if msg == 'thanks' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Thanks — it's on our list.</div>{% endif %}
+  {% if msg == 'empty' %}<div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Tell us a little about what you need.</div>{% endif %}
+
+  <p class="text-sm text-slate-500 max-w-2xl">What would make BLAM8 work better for your business? We build the roadmap from what operators actually ask for — so tell us what's missing or what would save you time. Spotted something not working right? Report it here too, or just tell the assistant in the corner and it'll draft the report for you.</p>
+
+  <form method="post" action="/app/requests" class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <div class="flex gap-2" role="radiogroup" aria-label="What are you sending?">
+      <label class="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-brand-50 has-[:checked]:text-brand">
+        <input type="radio" name="kind" value="feature" checked class="accent-current">
+        Feature idea
+      </label>
+      <label class="flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-brand-50 has-[:checked]:text-brand">
+        <input type="radio" name="kind" value="bug" class="accent-current">
+        Report an issue
+      </label>
+    </div>
+    <label class="block">
+      <span class="text-xs font-medium text-slate-500">Area</span>
+      <select name="category" class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">
+        {% for c in categories %}<option>{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-xs font-medium text-slate-500">What would help?</span>
+      <textarea name="body" rows="4" placeholder="e.g. text the customer a tracking link automatically when we book their job"
+                class="mt-1 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none"></textarea>
+    </label>
+    <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Send request</button>
+  </form>
+
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Your requests & reports</h2>
+    {% if items %}
+    <ul class="divide-y divide-slate-50">
+      {% for it in items %}
+      <li class="py-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="flex items-center gap-2 text-sm font-medium text-navy">
+            {{ it.category or ('Issue report' if it.kind == 'bug' else 'Feature idea') }}
+            {% if it.kind == 'bug' %}<span class="rounded-full bg-rose-50 text-rose-600 px-2 py-0.5 text-[11px] font-semibold">Issue</span>{% endif %}
+          </span>
+          <span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs font-semibold">{{ status_labels.get(it.status, it.status) if status_labels else it.status }}</span>
+        </div>
+        <p class="text-sm text-slate-600 mt-1">{{ it.body }}</p>
+        {% if it.status_note %}<p class="text-xs text-slate-500 mt-1 rounded bg-slate-50 border border-slate-100 px-2 py-1">From the team: {{ it.status_note }}</p>{% endif %}
+        <p class="text-xs text-slate-400 mt-1">{% if it.reference %}<span class="font-mono">{{ it.reference }}</span>{% if it.created_at %} · {% endif %}{% endif %}{% if it.created_at %}{{ it.created_at | pretty_date }}{% endif %}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="text-sm text-slate-400 py-4 text-center">No requests yet — be the first.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

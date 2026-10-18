@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Every page | BLAM8{% endblock %}
+{% block meta_description %}Every page BLAM8 serves, grouped for navigation: the public site, help centre and worked setups, sign-in and onboarding, every page of the app, the Operating System modules, the pages your customers open from a link, the partner portal and the operator console.{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-12 md:pt-24 md:pb-14">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Every page
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      Every page BLAM8 serves, in one place.
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      {{ total }} pages in {{ sections|length }} sections. Public pages open for anyone; app pages need a sign-in; a customer's pages open from the link BLAM8 sent them. A page shown as a pattern is one per record, reached from the page beside it.
+    </p>
+    <div class="mt-8 max-w-md">
+      <label for="pages-filter" class="sr-only">Filter pages</label>
+      <input id="pages-filter" type="search" placeholder="Filter — try “invoice”, “diary”, “Stripe”"
+             autocomplete="off"
+             class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-brand">
+      <p id="pages-filter-count" class="mt-2 text-xs text-slate-400" hidden></p>
+    </div>
+    <nav class="mt-8 flex flex-wrap gap-2" aria-label="Sections">
+      {% for sec in sections %}
+      <a href="#{{ sec.key }}" class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 hover:border-brand hover:text-brand transition">{{ sec.title }}</a>
+      {% endfor %}
+    </nav>
+  </div>
+</section>
+
+<div id="pages-index" class="mx-auto max-w-6xl px-5 pb-20 md:pb-28">
+  {% for sec in sections %}
+  <section id="{{ sec.key }}" class="pt-14 md:pt-16 scroll-mt-16" data-section>
+    <h2 class="text-3xl font-bold tracking-tight text-navy">{{ sec.title }}</h2>
+    <p class="mt-2 text-sm text-slate-500 max-w-2xl">{{ sec.blurb }}</p>
+    <div class="mt-6 space-y-6">
+      {% for g in sec.groups %}
+      {% set linkable = admin or g.access != 'admin' %}
+      <div class="rounded-xl border border-slate-200 bg-white" data-group>
+        <div class="flex flex-wrap items-baseline justify-between gap-2 px-6 pt-5 pb-3 border-b border-slate-100">
+          <h3 class="font-semibold text-navy text-lg">{{ g.title }}</h3>
+          <span class="text-xs text-slate-400">{{ access_labels[g.access] }}</span>
+        </div>
+        <ul class="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 px-6 py-4">
+          {% for p in g.pages %}
+          <li class="py-1.5 min-w-0" data-page data-text="{{ (p.label ~ ' ' ~ p.route ~ ' ' ~ (p.note or ''))|lower }}">
+            {% if p.href and linkable %}
+            <a href="{{ p.href }}" class="text-sm font-medium text-brand hover:underline">{{ p.label }}</a>
+            {% else %}
+            <span class="text-sm font-medium text-navy">{{ p.label }}</span>
+            {% endif %}
+            <div class="text-xs text-slate-500 leading-snug">
+              <code class="font-mono text-[11px] text-slate-400 break-all">{{ p.route }}</code>
+              {% if p.note %}<span class="block">{{ p.note }}</span>{% endif %}
+              {% if not p.href and p.via and linkable %}<span class="block">opened from <a href="{{ p.via }}" class="text-brand hover:underline">{{ p.via }}</a></span>{% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+  <p id="pages-empty" class="mt-14 text-sm text-slate-500" hidden>Nothing matches that. Try a shorter word.</p>
+</div>
+
+<script src="/static/pages.js?v={{ asset_rev }}" defer></script>
+{% endblock %}

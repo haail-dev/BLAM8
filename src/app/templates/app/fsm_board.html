@@ -1,0 +1,79 @@
+{% extends "app/base.html" %}
+{% block title %}Engineer board · Field OS · Trades · BLAM8{% endblock %}
+{% block heading %}Engineer board{% endblock %}
+{% block menu_sections %}{% include "app/_fsm_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+<div class="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if msg == 'done' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Job marked done — it's now ready to invoice.</div>{% endif %}
+
+  <p class="text-sm text-slate-500">{{ summary }}</p>
+
+  {% if not has_engineers %}
+  <div class="rounded-xl bg-amber-50 border border-amber-200 px-5 py-4 flex items-center justify-between gap-4">
+    <p class="text-sm text-amber-800">No engineers configured yet, so the assistant can't book jobs. Set up your field service to get started.</p>
+    <a href="/app/fsm/engineers" class="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Set up &rarr;</a>
+  </div>
+  {% endif %}
+
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+  {% for day in days %}
+    <div class="flex items-center justify-between px-4 py-1.5 bg-slate-50 border-b border-slate-200 {% if not loop.first %}border-t{% endif %}">
+      <h2 class="text-[11px] font-semibold uppercase tracking-wider {{ 'text-navy' if day.is_today else 'text-slate-400' }}">
+        {{ day.label }}{% if day.is_today %} <span class="text-brand">· Today</span>{% endif %}
+      </h2>
+      <div class="flex items-center gap-2.5 text-xs">
+        {% if day.emergencies %}<span class="inline-flex items-center gap-1.5 font-medium text-rose-700"><span class="h-1.5 w-1.5 rounded-full bg-rose-600 self-center"></span>{{ day.emergencies }} emergency</span>{% endif %}
+        <span class="text-slate-400">{{ day.total_jobs }} job(s)</span>
+      </div>
+    </div>
+    <div class="divide-y divide-slate-200">
+      {% for ev in day.engineers %}
+      <div class="px-4 py-2.5">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="font-medium text-slate-700 truncate">{{ ev.engineer.name }}</span>
+            {% for s in ev.engineer.skills %}<span class="rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[11px]">{{ s }}</span>{% endfor %}
+          </div>
+          <span class="text-xs text-slate-400 whitespace-nowrap">{{ ev.used_min }}/{{ ev.daily_minutes }} min</span>
+        </div>
+        <!-- load bar -->
+        <div class="mt-1.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+          <div class="h-full rounded-full {{ 'bg-red-400' if ev.pct >= 100 else 'bg-brand' }}" style="width: {{ ev.pct }}%"></div>
+        </div>
+        {% if ev.jobs %}
+        <ul class="mt-2 space-y-1">
+          {% for j in ev.jobs %}
+          <li class="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                {% if j.priority == 'emergency' %}<span class="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700"><span class="h-1.5 w-1.5 rounded-full bg-rose-600 self-center"></span>EMERGENCY</span>{% endif %}
+                <span class="text-sm font-medium text-slate-700 truncate">{{ j.job_type or 'Job' }}</span>
+                <span class="text-xs text-slate-400">{{ j.minutes }} min</span>
+                {% if j.ref %}<span class="text-xs text-slate-400">· {{ j.ref }}</span>{% endif %}
+                <span class="inline-flex items-center gap-1 text-[11px] font-medium {{ 'text-emerald-700' if j.status=='confirmed' else 'text-amber-700' }}"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-emerald-600' if j.status=='confirmed' else 'bg-amber-500' }} self-center"></span>{{ j.status }}</span>
+              </div>
+              <div class="text-xs text-slate-400 truncate">{{ j.summary }}{% if j.contact %} · {{ j.contact }}{% endif %}</div>
+            </div>
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              {% if j.quoted_amount is not none %}<span class="text-xs text-slate-500">£{{ '%.2f'|format(j.quoted_amount|float) }}</span>{% endif %}
+              <form method="post" action="/app/fsm/jobs/{{ j.id }}/done">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <button class="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Mark done</button>
+              </form>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="mt-1 text-xs text-slate-300">No jobs.</p>
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="px-4 py-3 text-sm text-slate-400">No active engineers.</p>
+      {% endfor %}
+    </div>
+  {% endfor %}
+  </div>
+</div>
+{% endblock %}

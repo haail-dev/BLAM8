@@ -1,0 +1,249 @@
+{# Concierge widget (docs/modules/module-concierge.md) — included on every page via both
+   base templates. `concierge_authed` (set by the including base) tells the widget
+   whether the visitor is logged in: public pages show the "Start setup" CTA when
+   the concierge offers it; in-app it's suppressed (they're already a customer).
+   Logic + transcript handling live in /static/concierge.js; the transcript is
+   kept in sessionStorage (per-tab, ephemeral) so it survives page navigation
+   without anything being stored server-side. #}
+{# Public assistant launcher: the animated BLAM8 mark sits in the bottom-right
+   corner; opening it docks the chat to the right. Public site + onboarding only:
+   the app hides it (base.html) and opens App help from the search box. #}
+<div id="blam8-concierge" data-pull-refresh="off"
+     data-authed="{{ 'true' if concierge_authed else 'false' }}"
+     {# Browser storage is per-BROWSER, not per-account: signing a second tenant
+        in on the same machine inherited the first one's thread, snooze stamps
+        and "setup done" flag (live 2026-09-04 — the whole tuning walk-through
+        stayed hidden). Every key the widget writes is suffixed with this. #}
+     data-scope="{{ (request.state.tenant_id or '')[:12] }}"
+     data-setup-scope="{{ request.state.tenant_id or '' }}"
+     data-onboarding-step="{{ concierge_onboarding_step or '' }}"
+     data-in-app="{{ 'true' if concierge_in_app else 'false' }}"
+     class="fixed bottom-4 right-4 z-50 font-sans">
+
+  <!-- Panel -->
+  <section id="bc-panel" aria-live="polite" aria-label="BLAM8 assistant"
+           class="hidden w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+           style="height: 32rem; max-height: calc(100vh - 6rem);">
+    <header class="flex items-center gap-2 bg-navy px-4 py-2 text-white flex-none">
+      <span class="grid h-7 w-7 place-items-center rounded-full bg-white/15 text-sm font-bold">B</span>
+      {# One line only (Kris 2026-08-31): the subtitle went — the bar is thinner
+         and the caveat line inside the history carries the honesty instead. #}
+      <div class="min-w-0">
+        <p id="bc-title" class="text-sm font-semibold leading-tight">BLAM8 assistant</p>
+      </div>
+      <div class="ml-auto -mr-1 flex items-center gap-0.5">
+        <button id="bc-clear" type="button" aria-label="Clear conversation" title="Clear conversation"
+                class="rounded-lg p-1.5 text-white/80 hover:bg-white/10 transition">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M3.985 19.644v-4.992h4.992M19.5 9.348a7.5 7.5 0 0 0-13.137-3.036L3.985 8.66m0 0V4.356m16.03 10.992a7.5 7.5 0 0 1-13.136 3.036L4.5 15.34"/></svg>
+        </button>
+        <button id="bc-close" type="button" aria-label="Close assistant"
+                class="rounded-lg p-1.5 text-white/80 hover:bg-white/10 transition">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="bc-messages" class="flex flex-1 min-h-0 flex-col gap-2.5 overflow-y-auto px-3 py-3 bg-slate-50 text-sm"></div>
+
+    <!-- Conversion CTA (injected when the concierge offers signup; public pages only) -->
+    <div id="bc-cta" class="hidden flex-none border-t border-slate-100 bg-white px-3 py-2.5"></div>
+
+    {% if not concierge_authed %}
+    <div id="bc-usage" role="status" aria-live="polite"
+         class="flex-none border-t border-slate-100 bg-slate-50 px-3 py-2 text-[11px] leading-snug text-slate-500">
+      Checking this browser session’s question allowance…
+    </div>
+    {% endif %}
+
+    <form id="bc-form" class="flex-none border-t border-slate-200 bg-white p-2.5">
+      <div class="flex items-end gap-2">
+        <textarea id="bc-input" rows="1" maxlength="4000"
+                  placeholder="Ask a question…"
+                  class="flex-1 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm leading-snug focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                  style="max-height: 7rem;"></textarea>
+        <button id="bc-send" type="submit" aria-label="Send"
+                class="grid h-9 w-9 flex-none place-items-center rounded-xl bg-brand text-white hover:bg-blue-700 transition disabled:opacity-40">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.27 3.78a.5.5 0 0 1 .66-.62l16.5 7.5a.5.5 0 0 1 0 .91l-16.5 7.5a.5.5 0 0 1-.66-.62L6 12Zm0 0h6"/></svg>
+        </button>
+      </div>
+      {# The caveat line lives in the history now (concierge.js renders it):
+         pinned to the sheet's foot while the chat is empty, then riding at the
+         very top of the transcript once messages exist — screen space back. #}
+    </form>
+  </section>
+
+  {% set landing_glass_logo = request.url.path == '/' %}
+  <!-- The landing glass mark retains a still for reduced motion and no JS. -->
+  <button id="bc-bubble" type="button" aria-label="Open BLAM8 assistant" aria-expanded="false"
+          {% if landing_glass_logo %}data-assistant-glass-logo{% endif %}
+          class="relative ml-auto grid h-16 w-16 select-none place-items-center {% if landing_glass_logo %}bg-transparent{% else %}rounded-full bg-white shadow-lg{% endif %} p-0 text-white transition hover:scale-105"
+          style="-webkit-touch-callout: none; touch-action: manipulation;">
+    {% if landing_glass_logo %}
+    <img src="/static/img/blam8-assistant-glass.png?v={{ asset_rev }}" alt="" aria-hidden="true"
+         width="64" height="64" class="h-16 w-16 select-none" draggable="false">
+    {% else %}
+    <picture>
+      <source media="(prefers-reduced-motion: reduce)" srcset="/static/img/blam8-assistant.png?v={{ asset_rev }}">
+      <img src="/static/img/blam8-assistant-animated.png?v={{ asset_rev }}" alt="" aria-hidden="true"
+           class="h-16 w-16 select-none" draggable="false">
+    </picture>
+    {% endif %}
+  </button>
+</div>
+
+<style>
+  /* The animated BLAM8 launcher stays visible at the bottom-right edge. */
+  #bc-bubble {
+    transform: translateX(0);
+    transition: transform 0.2s cubic-bezier(.2,.7,.2,1);
+  }
+  #bc-bubble[data-assistant-glass-logo] {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  #bc-bubble .bc-glass-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  @media (hover: hover) {
+    #bc-bubble:hover { transform: scale(1.05); }
+  }
+
+  /* Assistant replies carry the explanation; let them use nearly the full
+     message column. User bubbles keep their existing narrower measure. */
+  #bc-messages [data-bc-role="assistant"] > div { max-width: 95%; }
+
+  /* Side dock: above the phone breakpoint the panel is a fixed card on the
+     right edge, and on a
+     half-snapped Chrome window (~960px on a 1920 monitor) it sat ON TOP of the
+     page. Rather than detect "split screen", the page reserves the panel's
+     column by exactly as much as it needs: right padding on the scroller moves
+     centred content left by half the padding, so padding = page-width + 2 x
+     panel-width - viewport clears the panel and no more. clamp() makes it
+     continuous — full screen: no shift at all; the content starts sliding
+     left one pixel per pixel below --bc-clear (110rem = a 64rem max-w-5xl
+     page + 2 x 23rem) and has fully cleared the panel at 87rem; narrower
+     still, the page column shrinks and the panel keeps its 22rem. A page wider
+     than 5xl sets --bc-clear on :root (page width + 46rem; invoice_settings +
+     wholesale_orders do). PADDING, not margin (Kris: "do NOT resize the
+     background gradient"): the sky is painted on <main>, and padding keeps it
+     full width behind the chat. The scroller's scrollbar stays at the far
+     right — the panel no longer shares that edge, so the widget needs no
+     offset — but the reserve maths still reads the scroller's inner width
+     (100vw minus the bar, --bc-sbw, measured by concierge.js). Public +
+     onboarding shells scroll the body: the same reserve goes on <body> (fixed
+     elements ignore it, so the panel stays put, and a body scrollbar already
+     sits outside the fixed viewport). */
+  main.app-sky, body { transition: padding-right 0.25s cubic-bezier(.2,.7,.2,1); }
+  /* Counter the body's animated reserve in the same frame, so the masthead
+     and its contents stay put throughout opening and closing the assistant. */
+  body > header.sticky, [data-bc-full-width] {
+    transition: margin-right 0.25s cubic-bezier(.2,.7,.2,1);
+  }
+  @media (min-width: 768px) {
+    body:has(#bc-panel:not(.hidden)) main.app-sky {
+      padding-right: clamp(0px, var(--bc-clear, 110rem) - (100vw - var(--bc-sbw, 0px)), 23rem);
+    }
+    body:not(:has(main.app-sky)):has(#bc-panel:not(.hidden)) {
+      padding-right: clamp(0px, var(--bc-clear, 118rem) - 100vw, 23rem);
+    }
+    /* The public site's sticky top bar keeps its full width (Kris 2026-09-25:
+       at 1080 wide the assistant squeezed the bar until its links wrapped and
+       the wordmark clipped, though the panel starts BELOW the bar). It takes
+       the reserve back as a negative margin; the content under it still
+       clears the chat. Nested shell headers opt in with data-bc-full-width. */
+    body:not(:has(main.app-sky)):has(#bc-panel:not(.hidden)) > header.sticky,
+    body:not(:has(main.app-sky)):has(#bc-panel:not(.hidden)) [data-bc-full-width] {
+      margin-right: calc(-1 * clamp(0px, var(--bc-clear, 118rem) - 100vw, 23rem));
+    }
+    /* …and the panel starts under that bar, not over its wordmark (it sat 24px
+       from the top, hidden only because the squeezed bar had moved aside). */
+    body:not(:has(main.app-sky)):has(> header.sticky) #bc-panel {
+      top: calc(4rem + env(safe-area-inset-top, 0px)) !important;
+      height: calc(100vh - 8.5rem - env(safe-area-inset-top, 0px)) !important;
+    }
+  }
+  /* Full height at every desktop width (Kris 2026-09-05, "keep its new
+     height in full screen"): a short card floating in a tall column reads
+     half-built; the panel runs from just under the bar to the bottom edge
+     whether it floats over free space or owns a docked column. The inline
+     max-height is the same figure, so this only lifts the 32rem card
+     height; on pages with a diary rail the widget already sits 3.4rem up,
+     so the top stays clear of the bar there too. */
+  #bc-panel { transition: height 0.25s cubic-bezier(.2,.7,.2,1); }
+  @media (min-width: 768px) {
+    #bc-panel { height: calc(100vh - 6rem) !important; }
+    body:has(.dockbar) #bc-panel { height: calc(100vh - 8.4rem) !important; }
+  }
+
+  /* The panel itself is UNCHANGED by the tab (Kris 2026-08-31): the docked
+     three-quarter sheet stays, so the site behind remains readable and
+     navigable while talking. Phones: it spans the screen bar a sliver each
+     side; position:fixed re-anchors it to the viewport. 767px, not 640
+     (Kris 2026-09-05): side-by-side below ~768px leaves the page under
+     400px, so the sheet takes over there — the same edge the app shell's
+     bottom strip already uses. concierge.js syncPageSpace() mirrors it. */
+  @media (max-width: 767px) {
+    #bc-panel {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: auto;
+      max-width: none;
+      margin: 0;
+      /* Full width, 60% height (Kris 2026-08-31, "75 too tall"): the page
+         above stays readable and navigable while talking. */
+      height: 60vh !important;
+      max-height: 60vh !important;
+      /* Docked, not floating: square bottom corners so no page shows through
+         beneath it (Kris 2026-08-13). */
+      border-left: 0;
+      border-right: 0;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+  }
+
+  /* Thinking bubble: the outline breathes baby blue and one blue dot cycles
+     through the ellipsis — motion so it never reads as frozen. A status line
+     swaps the dots for status text but keeps .bc-typing, so the glow runs for
+     the whole wait. */
+  @keyframes bc-think-glow {
+    0%, 100% { border-color: #bae6fd; box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); }
+    50%      { border-color: #7dd3fc; box-shadow: 0 0 5px 1px rgba(125, 211, 252, 0.45); }
+  }
+  .bc-typing { animation: bc-think-glow 1.6s ease-in-out infinite; }
+  /* The bubble must keep the old "…" glyph's 38px footprint — it reads
+     oversized otherwise (Julius 2026-08-02). Dots are wider than the glyph
+     was, so the typing bubble alone gives back 3px of px-3 per side. */
+  .bc-typing { padding-left: 9px; padding-right: 9px; }
+  .bc-typing .bc-dot {
+    display: inline-block; width: 4px; height: 4px; margin: 0 1px;
+    border-radius: 9999px; background: currentColor; vertical-align: middle;
+    animation: bc-dot-cycle 0.9s linear infinite;
+  }
+  .bc-typing .bc-dot:nth-child(2) { animation-delay: 0.3s; }
+  .bc-typing .bc-dot:nth-child(3) { animation-delay: 0.6s; }
+  /* Blue for exactly one third of the cycle, offset a third apart: one blue
+     dot at a time, walking left to right on loop. */
+  @keyframes bc-dot-cycle {
+    0%, 32%   { background: #38bdf8; }
+    33%, 100% { background: currentColor; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bc-typing, .bc-typing .bc-dot { animation: none; }
+  }
+</style>
+
+<link rel="stylesheet" href="/static/setup_cards.css?v={{ asset_rev }}">
+<script src="/static/setup_cards.js?v={{ asset_rev }}" defer></script>
+<script src="/static/concierge.js?v={{ asset_rev }}" defer></script>
+{% if landing_glass_logo %}
+<script src="/static/assistant-glass-logo.js?v={{ asset_rev }}" defer></script>
+{% endif %}

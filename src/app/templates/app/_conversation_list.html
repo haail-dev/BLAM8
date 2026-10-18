@@ -1,0 +1,273 @@
+{# The live half of the Inbox — the smart-label filter chips + the month deck.
+   Included by conversations.html TWICE (part='pills' fills the dockbar rail,
+   part='list' fills the page) AND returned whole by GET /conversations/fragment
+   with no part set: live.js copies the innerHTML of #convo-pills and #convo-list
+   from the fragment into the page wherever those ids live (element identity is
+   preserved, so the delegated long-press handlers on #convo-list survive).
+   Glass deck (Kris 2026-08-31): one .glass-card per month, collapsed months
+   show their stats line, the current month arrives open (open_key). Row
+   internals are Counting House and pinned by tests — dot + quiet text states,
+   one gist line, never a row wash.
+   Needs: convos, month_groups, open_key, enterprise, sel, cat_sel, cat_counts,
+   cat_meta, total_convos, box_names, default_id, boxes, drafting,
+   drafting_addrs; optional part ('pills' | 'list'). #}
+{% set mb = ('&mailbox=' ~ sel) if (enterprise and sel != 'all') else '' %}
+{% set mb0 = ('?mailbox=' ~ sel) if (enterprise and sel != 'all') else '' %}
+{% macro ordinal(day) %}{{ day }}{% if day % 100 in (11, 12, 13) %}th{% elif day % 10 == 1 %}st{% elif day % 10 == 2 %}nd{% elif day % 10 == 3 %}rd{% else %}th{% endif %}{% endmacro %}
+{# Compact by 2px a side, and the rail's gap with it: dropping All got Booked
+   to within 13px of a 375px screen, and this is what carries it over the line
+   (Kris 2026-09-01, "we can almost fit Booked"). The four working states now
+   all sit on the phone at once, which is the whole point of the rail — it is
+   the legend for the row colours, and a legend you have to scroll is not one. #}
+{% set chip = 'flex-none inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium whitespace-nowrap transition' %}
+{% if part != 'list' %}
+<div id="convo-pills" class="flex flex-1 items-center gap-1" data-tour="pills">
+  {# All is the way BACK, not a filter (Kris 2026-09-01) — an unfiltered rail
+     already IS everything, so the chip only said what the list was already
+     saying, and it cost the width that pushed Booked off the edge of the
+     phone. It appears the moment a filter is on, as the way to drop it. #}
+  {% if cat_sel != 'all' %}
+  <a href="/app/conversations{{ mb0 }}"
+     class="{{ chip }} border-slate-200 bg-white text-slate-500 hover:border-slate-400 hover:text-navy"
+     title="Clear the filter — show every conversation">All <span class="ml-1 text-slate-400 font-normal">{{ total_convos }}</span></a>
+  {% endif %}
+  {# Smart-label filters (auto-categorisation): the four working states always
+     show; FYI/Automated appear only once they have rows — quiet bookkeeping
+     shouldn't cost rail space on day one. #}
+  {# The KEY (Kris 2026-08-31): each chip wears its state's colour — dot + tinted
+     text at rest, filled with the state colour while its filter is on. The rows
+     carry the same colour as their glow, so the rail reads as the legend. #}
+  {% if cat_sel == 'waiting' %}
+  {# "Waiting for you": every draft awaiting a yes, whatever its label — what
+     Today's "N drafts waiting" link opens. Shown while it's the filter. #}
+  <a href="/app/conversations?cat=waiting{{ mb }}" class="{{ chip }} bg-brand border-transparent text-white"
+     title="Every draft waiting for your yes, whatever the thread is about"><span class="h-1.5 w-1.5 rounded-full bg-white/80 self-center mr-1.5"></span>Waiting for you <span class="ml-1 text-white/70">{{ waiting_count }}</span></a>
+  {% endif %}
+  {% for k, m in cat_meta.items() %}
+  {% if k in ('needs_reply', 'draft_ready', 'quote_sent', 'booking_pending') or cat_counts[k] or cat_sel == k %}
+  <a href="/app/conversations?cat={{ k }}{{ mb }}"
+     class="{{ chip }} {% if cat_sel == k %}{{ m.fill }} border-transparent text-white{% else %}border-slate-200 bg-white {{ m.tone }} hover:border-slate-400{% endif %}"
+     title="{{ m.hint }}"><span class="h-1.5 w-1.5 rounded-full {% if cat_sel == k %}bg-white/80{% else %}{{ m.dot }}{% endif %} self-center mr-1.5"></span>{{ m.label }} <span class="ml-1 {% if cat_sel == k %}text-white/70{% else %}text-slate-400 font-normal{% endif %}">{{ cat_counts[k] }}</span></a>
+  {% endif %}
+  {% endfor %}
+  {# Booking requirements — what the agent collects when a customer asks to book.
+     An EMAIL-side concern for every tier (2026-07-04, Kris): email-only tenants
+     gather-and-confirm, diary tenants hard-require these before a hold — so the
+     link shows for everyone, and the Diary page no longer carries it. #}
+  <a href="/app/diary/intake"
+     class="{{ chip }} ml-auto border-transparent text-slate-500 hover:text-navy"
+     title="Set what the agent collects when a customer asks to book">Booking details</a>
+</div>
+{% endif %}
+{% if part != 'pills' %}
+<div id="convo-list" class="convo-list space-y-3"
+     data-fragment-url="/app/conversations/fragment?cat={{ cat_sel }}{{ mb }}">
+  {# Said once, at the top, rather than left for the operator to infer from a
+     tooltip (Kris 2026-09-01: "there was no sign of why the Agent wasn't
+     writing a draft when the email landed"). Every row on the page is
+     un-drafted for the same reason, so the page says it, not the cards. #}
+  {% if draft_hold %}
+  {# Title on its own line, the explanation as a paragraph under it (Kris
+     2026-09-01). Sharing one flex line made the sentence start halfway across
+     and wrap into a narrow ragged column beside the heading; given the full
+     width it reads as prose. #}
+  <div class="glass-card px-4 py-3 text-sm" data-tour="drafting">
+    <p class="flex items-center gap-2 font-medium text-navy">
+      <span class="h-1.5 w-1.5 flex-none rounded-full bg-slate-400"></span>Drafting is off
+    </p>
+    <p class="mt-1 text-slate-500 leading-relaxed">Mail arrives and files as normal — go through it and
+      <a href="/app/ignored" class="text-brand hover:underline">ignore the senders</a>
+      you never want answered, then turn drafting on in
+      <a href="/app/settings#sending-mode" class="text-brand hover:underline" data-tour="settings">Settings</a>.</p>
+  </div>
+  {% endif %}
+  {% if not convos and not drafting %}
+  <div class="glass-card p-10 text-center text-slate-500 text-sm">
+    {% if total_convos %}
+    Nothing in this view. <a href="/app/conversations{{ mb0 }}" class="text-brand font-semibold">Show all</a>
+    {% else %}
+    No conversations yet. As the agent drafts replies, each contact's thread shows up here.
+    {% endif %}
+  </div>
+  {% endif %}
+  {# Live "instant chat": an inbound the AI is answering RIGHT NOW. A sender who
+     already has a row gets the writing chip on it (below); a brand-new sender has
+     no row yet, so they surface here at the top while the reply is written. #}
+  {% set convo_addrs = convos | map(attribute='contact') | list %}
+  {# A link, not a dead card (Kris 2026-09-21: "it shouldn't block people"). This
+     row exists BECAUSE a draft is already running, so opening it starts nothing —
+     and the thread is the better place to wait: it paints the inbound being
+     answered and the "Agent writing reply" indicator from the same drafting
+     entry this row is rendered from, then swaps the reply in when it lands.
+     Deliberately NOT .convo-row: that class is the swipe surface, and a swipe
+     here would commit Ignore & Remove with no bin under it, or open a CRM card
+     that does not exist yet — there is no logged conversation to act on. It
+     wears its own class for the same card look and hover. #}
+  {% for d in drafting if d.from_address not in convo_addrs %}
+  <a href="/app/conversations/view?contact={{ d.from_address | urlencode }}"
+     data-contact="{{ d.from_address }}"
+     class="convo-draft-row glass-card relative block px-4 sm:px-5 py-3 select-none">
+    <div class="flex items-center justify-between gap-3">
+      <p class="font-semibold text-navy truncate" title="{{ d.from_address }}">{{ d.from_name or d.from_address or 'New message' }}</p>
+      <span class="inline-flex items-center gap-1.5 text-brand text-[13px] font-medium flex-none" title="The AI is writing a reply now">
+        AI writing<span class="typing-dots inline-flex gap-0.5 ml-0.5"><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span></span>
+      </span>
+    </div>
+    <p class="text-sm text-slate-400 truncate">{{ d.subject or 'New enquiry' }}</p>
+  </a>
+  {% endfor %}
+  {% for g in month_groups %}{% set outer = loop %}
+  <details data-month="{{ g.key }}"{% if g.key == open_key %} open{% endif %}>
+    {# The month's face: name + the numbers that matter while it's folded.
+       Card grammar matches the deck — display face name, dot + quiet text.
+       The glass sits on the summary and on EACH row (Kris 2026-08-31: rows are
+       thin cards of their own — a swipe gesture will ride them later). #}
+    <summary class="month-summary glass-card flex items-baseline gap-3 px-4 sm:px-5 py-3.5 cursor-pointer select-none list-none">
+      <svg class="month-chev h-3.5 w-3.5 text-slate-400 self-center flex-none transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+      <span class="font-display font-semibold text-navy text-[15px] flex-1 min-w-0 truncate">{{ g.label }}</span>
+      <span class="flex-none flex items-baseline gap-2.5 text-[13px] font-medium">
+        {% if g.hist %}
+        {# History months read as ledger lines: what shipped, and HRT — how long
+           drafts actually sat under human eyes before their sends. No HRT chip
+           before tracking began (2026-08-31) or on all-auto months. #}
+        {% if g.needs %}
+        <span class="inline-flex items-center gap-1.5 text-rose-700 whitespace-nowrap"><span class="h-1.5 w-1.5 rounded-full bg-rose-600 self-center"></span>{{ g.needs }} need{{ 's' if g.needs == 1 }} you</span>
+        {% endif %}
+        <span class="text-xs text-slate-400 font-normal whitespace-nowrap">{{ g.hist.sent }} sent · {{ g.hist.drafted }} drafted</span>
+        {% if g.hist.hrt %}
+        <span class="inline-flex items-center gap-1.5 text-brand whitespace-nowrap" title="Human Review Time — on average, how long a draft was on screen before you sent it"><span class="h-1.5 w-1.5 rounded-full bg-brand self-center"></span>HRT {{ g.hist.hrt }}</span>
+        {% endif %}
+        {% else %}
+        {# The live month keeps only its quiet count (Kris 2026-08-31): the row
+           glows already say who needs you and which drafts wait. #}
+        <span class="text-xs text-slate-400 font-normal whitespace-nowrap">{{ g.convos | length }} conversation{{ '' if g.convos | length == 1 else 's' }}</span>
+        {% endif %}
+      </span>
+    </summary>
+    {# The month's emails are a DECK (Kris 2026-09-24: "the Card style added
+       to the Inbox too. Make the Emails stack inside each month, the months
+       can scroll like they do now"): the Today page's sticky piles, inside
+       the month's own capped scroller — the page still scrolls the months.
+       Pins and z-order match home.html; conversations.html restacks. #}
+    <div class="convo-deck space-y-1.5">
+    {% for c in g.convos %}
+    {# `contact` rides along on a New row so /open can show the thread straight away
+       and leave the draft to finish behind it — without the address there is nothing
+       to open until the draft lands (dashboard.open_conversation). #}
+    {% set href = ('/app/conversations/open?message_id=' ~ (c.new_message_id | urlencode) ~ ('&contact=' ~ (c.contact | urlencode)) ~ ('&mailbox=' ~ c.mailbox_id if c.mailbox_id else '')) if c.state == 'new' else ('/app/conversations/view?contact=' ~ (c.contact | urlencode)) %}
+    {% set alert = c.disp_state == 'needs_attention' and c.state != 'new' %}
+    {# Swipe-to-ignore (Kris 2026-08-31, replaces press & hold): the bin waits
+       under the card's left edge; dragging right reveals it, past the threshold
+       it arms, releasing armed applies Ignore & Remove (conversations.html).
+       Layer-1 state rides the wrapper as the card's GLOW (glow-<category>,
+       colours keyed to the toolbar chips) — a New sender glows needs_reply,
+       because that's its chip in the key and it does need you. The old label's
+       hint + the classifier's reason survive as the card's tooltip. #}
+    {# While drafting is held, EVERY row is un-drafted and none of them is
+       urgent — the operator is triaging, which is the point. Rose on all of them
+       reads as a wall of alarm (Kris 2026-09-01: "still flashed Rose suggesting
+       frustration but it's a new email"). The category stays needs_reply, so
+       the chip, the counts and the filter are unchanged; only the glow goes
+       quiet. #}
+    {% set gk = 'held' if draft_hold else ('needs_reply' if c.state == 'new' else (c.category or 'fyi')) %}
+    {% set gm = cat_meta.get('needs_reply' if c.state == 'new' else (c.category or 'fyi')) %}
+    {# Customer temperature (Kris 2026-08-31): no words either — a warm contact's
+       card blinks a faint amber wash, a frustrated/angry one red (mood-* CSS in
+       conversations.html). The read and its reason join the card tooltip. #}
+    {# Not while drafting is held (Kris 2026-09-01: "still flashed Rose
+       suggesting frustration but it's a new email"). Mood lives on the CONTACT,
+       not the conversation — so a customer who was angry this morning tints
+       every message they send afterwards, and his was a fresh appliance enquiry
+       wearing a refund row's temper. During a hold that is worse than
+       misleading: crm_intel returns before it ever sees the mail, so the mood
+       on screen was measured on a DIFFERENT email and nothing has read this
+       one. Better to show no temperature than one we did not take. #}
+    {% set _t = none if draft_hold else (temps.get(c.contact) if temps else none) %}
+    {# ...and only on the conversation it was actually read from (Kris
+       2026-09-01: "Mood should belong to the thread it was read from"). The
+       contact's rolling mood stays exactly as it is in the CRM; the Inbox just
+       stops lending it to a different conversation. A read with no thread on it
+       predates the column and tints nothing — we cannot honestly place it, and
+       the next inbound from that contact re-stamps it. #}
+    {% set temp = _t if (_t and _t.thread_id and _t.thread_id == c.thread_id) else none %}
+    {% set ti = [loop.index0, 3] | min %}{% set ri = [loop.length - 1 - loop.index0, 3] | min %}
+    <div{% if outer.first and loop.first %} data-tour="row"{% endif %} class="convo-swipe relative glow-{{ gk }}{% if temp %} mood-{{ 'hot' if temp.mood in ['frustrated', 'angry'] else 'warm' }}{% endif %}" style="top: {{ 6 + ti * 12 }}px; bottom: {{ ri * 10 }}px; z-index: {{ loop.index }};"{% if gm or temp %} title="{% if gm %}{{ gm.hint }}{% if c.category_reason %} — {{ c.category_reason }}{% endif %}{% endif %}{% if temp %}{% if gm %} · {% endif %}Reads {{ temp.mood }}{{ ' — ' ~ temp.reason if temp.reason }}{% endif %}"{% endif %}>
+      <div class="swipe-under" aria-hidden="true">
+        <svg class="swipe-bin h-4 w-4 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L5.772 5.79m13.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+        <span>Ignore</span>
+      </div>
+      {# Under the card's RIGHT edge (Kris 2026-09-13): a leftward swipe opens
+         the customer's contact card. #}
+      <div class="swipe-under swipe-under-right" aria-hidden="true">
+        <span>Contact card</span>
+        <svg class="swipe-card-icon h-4 w-4 flex-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+      </div>
+    <a href="{{ href }}" data-contact="{{ c.contact }}" class="convo-row glass-card relative block px-4 sm:px-5 py-2.5 select-none">
+      <div class="flex items-center justify-between gap-3">
+        {# The person, not the address: stated name beats header display name beats the
+           bare address (which stays one hover away, and always shows in the thread). #}
+        <p class="font-semibold text-navy truncate" title="{{ c.contact }}">{{ c.display_name or c.contact }}{% if c.contact_company %} <span class="text-slate-500 font-normal text-sm">· {{ c.contact_company }}</span>{% endif %}
+          {# SMS threads are keyed by the phone number (docs/modules/module-sms-channel.md §3),
+             so the contact shape IS the channel — no view-model change needed. #}
+          {% if c.contact and c.contact[:1] == '+' %}
+          <span class="ml-1.5 rounded bg-violet-100 text-violet-600 px-1.5 py-0.5 text-[10px] font-semibold align-middle" title="SMS conversation">SMS</span>
+          {% endif %}
+          {% if enterprise and sel == 'all' and boxes|length > 1 %}
+          <span class="ml-1.5 rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[10px] font-semibold align-middle">{{ box_names.get(c.mailbox_id) or box_names.get(default_id) or 'Mailbox' }}</span>
+          {% endif %}
+          {# The date rides the name line now (Kris 2026-08-31) — after the
+             company, so the right edge belongs to the action marks alone. #}
+          {% if c.last_at %}<span class="text-slate-400 font-normal text-sm"> · {{ ordinal(c.last_at[8:10] | int) }}</span>{% endif %}
+        </p>
+        {# State column: compact facts as quiet dot + text, the date as an
+           ordinal (its month lives on the card's face above). #}
+        <span class="flex items-baseline gap-2.5 flex-none text-[13px] font-medium">
+          {% if c.contact in drafting_addrs %}
+          <span class="ai-writing-chip inline-flex items-center gap-1 text-brand whitespace-nowrap" title="The AI is writing a reply now">
+            AI writing<span class="typing-dots inline-flex gap-0.5 ml-0.5"><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span><span class="h-1 w-1 rounded-full bg-current"></span></span>
+          </span>
+          {% endif %}
+          {# A draft waiting for a yes says so whatever the thread is labelled
+             (Kris 2026-09-24: Jess's booking draft, labelled Booking pending,
+             read as nothing to do) — on EVERY such row, Draft Ready-labelled
+             ones too (Kris 2026-09-26: side by side, four rows leaning on the
+             blue glow alone read as if they had no draft). #}
+          {% if c.state == 'pending' and not c.gap %}<span class="inline-flex items-center gap-1.5 text-brand whitespace-nowrap" title="A reply is drafted and waiting for your yes" data-draft-waiting><span class="h-1.5 w-1.5 rounded-full bg-brand self-center"></span>Draft ready</span>{% endif %}
+          {% if c.state == 'skipped' %}<span class="text-slate-400 whitespace-nowrap" title="{{ c.category_reason or 'No reply sent' }}">Skipped</span>{% endif %}
+          {% if c.gap %}<span class="inline-flex items-center gap-1.5 text-amber-700 whitespace-nowrap" title="Knowledge gap: {{ c.gap }}"><span class="h-1.5 w-1.5 rounded-full bg-amber-500 self-center"></span>Gap</span>{% endif %}
+          {# Backlog brought in at connect (src/app/backlog.py): filed, never drafted —
+             the row says so, so an old thread never reads as a promise. #}
+          {% if (c.category_reason or '').startswith('Before BLAM8') %}<span class="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-500 whitespace-nowrap" title="{{ c.category_reason }}" data-before-blam8>before BLAM8</span>{% endif %}
+          {# Attention rides ALONGSIDE the state only when the category doesn't
+             already say "you're needed" — a Needs Reply row saying Attention too
+             would just shout the same thing twice. #}
+          {% if alert and c.category != 'needs_reply' %}<span class="inline-flex items-center gap-1.5 text-rose-700 whitespace-nowrap" title="Something here needs you — open the thread to see why"><span class="h-1.5 w-1.5 rounded-full bg-rose-600 self-center"></span><span class="hidden sm:inline">Attention</span><span class="sm:hidden">!</span></span>{% endif %}
+          {# Layer-1 state has no words here any more — it's the card's glow
+             (wrapper above); the toolbar chips are the key. The date lives on
+             the name line, so this column holds only the action marks. #}
+        </span>
+      </div>
+      {# Outcome, not raw email: what the customer wants, then what the agent did
+         about it. TWO lines, not one (Kris 2026-09-01): both sentences shared a
+         single truncated line, so the agent's half was the half that got cut —
+         the row showed "— AI ·" and then ran out of width, which is the worst
+         possible place to stop. The customer's ask keeps the top line with the
+         message count; the agent's answer gets a line of its own underneath.
+         Rows drafted before these summaries existed (and brand-new undrafted
+         senders) fall back to the subject + message preview, still on one. #}
+      {% if c.request_summary or c.action_summary %}
+      <p class="mt-0.5 text-sm truncate"><span class="text-slate-700">{{ c.request_summary or c.subject }}</span> <span class="text-slate-400">· {{ c.count }} message{{ '' if c.count == 1 else 's' }}</span></p>
+      {% if c.action_summary %}
+      <p class="text-sm leading-snug truncate text-slate-400"><span class="font-medium">AI</span> · {{ c.action_summary }}</p>
+      {% endif %}
+      {% else %}
+      <p class="mt-0.5 text-sm truncate"><span class="text-slate-700">{{ c.subject }}</span> <span class="text-slate-400">— {{ c.preview }} · {{ c.count }} message{{ '' if c.count == 1 else 's' }}</span></p>
+      {% endif %}
+    </a>
+    </div>
+    {% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+</div>
+{% endif %}

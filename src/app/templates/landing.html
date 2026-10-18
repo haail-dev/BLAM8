@@ -1,0 +1,1129 @@
+{% extends "base.html" %}
+
+{% block title %}BLAM8 — The AI front desk that answers, books, quotes, invoices and fills your CRM from the inbox{% endblock %}
+{# meta description inherited from base.html — one copy, invite-gate-aware #}
+{# The landing draws its own pull to refresh (below: the video stage comes
+   down, the bar stays locked), so the shared one stands down here. #}
+{% block pull_refresh %}{% endblock %}
+
+{# Ripples (Kris 2026-10-16): a soft, slight water behind the landing's deck, on for every visitor (a visitor has no settings; reduced
+   motion and data saver turn it off). The water is water-page.js, which sits it inside the element marked data-water-host; the
+   Pro + Concierge card has a small ripple of its own (water-ambient.js, data-water-card). Both load after the page is idle, so
+   nothing waits for them. #}
+{% block head_extra %}
+<script>
+  (function () {
+    document.documentElement.setAttribute('data-water', 'on');
+    (window.requestIdleCallback || function (f) { setTimeout(f, 300); })(function () {
+      import('/static/water-page.js?v={{ asset_rev }}').catch(function () {});
+      import('/static/water-ambient.js?v={{ asset_rev }}').catch(function () {});
+    });
+  })();
+</script>
+{% endblock %}
+
+
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "{{ base_url }}/#organization",
+      "name": "BLAM8",
+      "alternateName": ["Blam 8", "BLAM8 — Business Logistics Automated", "Business Logistics Automated"],
+      "url": "{{ base_url }}/",
+      "logo": "{{ base_url }}/static/img/blam8-logo.png",
+      "email": "hello@blam8.com",
+      "sameAs": ["https://www.linkedin.com/company/blam8"],
+      "description": "BLAM8 is the AI front desk for service businesses: it reads every customer email, replies in the business's own voice with its real prices, books the job into a live diary that can't double-book, sends the quote, raises and chases the invoice, and writes the CRM automatically — contacts, deals, promises, documents and dependants captured from the mail flow with no typing. Customers a business already has get a portal to check, move and pay their bookings and ask questions, reached with the reference code on every email. Draft-only by default. Your data stored in the UK. {% if invite_gate %}Microsoft 365 / Outlook now · Gmail by invite.{% else %}Outlook and Gmail.{% endif %}"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "{{ base_url }}/#website",
+      "url": "{{ base_url }}/",
+      "name": "BLAM8",
+      "alternateName": "Blam 8",
+      "publisher": { "@id": "{{ base_url }}/#organization" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{{ base_url }}/for-customers?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "@id": "{{ base_url }}/#sitenav",
+      "name": ["For Businesses", "For Customers", "How it works", "Worked setups", "Pricing", "Compare", "Help centre"],
+      "url": [
+        "{{ base_url }}/for-businesses",
+        "{{ base_url }}/for-customers",
+        "{{ base_url }}/how-it-works",
+        "{{ base_url }}/setups",
+        "{{ base_url }}/#pricing",
+        "{{ base_url }}/compare",
+        "{{ base_url }}/help"
+      ]
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "{{ base_url }}/#software",
+      "name": "BLAM8",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "AI email agent, booking scheduling, quoting, invoicing & self-filling CRM",
+      "operatingSystem": "Web",
+      "url": "{{ base_url }}/",
+      "description": "One loop, done automatically: a customer email arrives, BLAM8 drafts the reply in the business's voice with its real prices, holds the slot so the diary can't double-book, drops the confirmed job into Outlook or Google Calendar, sends the quote for the customer to accept online, raises the invoice and chases it when overdue, and writes the CRM — contact, company, deal, promise, documents and dependants — straight from the thread. Draft-only by default; a human approves every reply until auto-send is switched on per mailbox. Also includes an invite-only customer portal for the customers a business already has (checking, moving and paying bookings, invoices and Q&A), People (the team, including staff who never sign in, with what each may see and do), packages and credits, progress ladders, job parties, an accountant hand-off with MTD quarters, and an installable app (PWA) with push notifications. Proven end to end on {{ setups|length }} kinds of business.",
+      "offers": {
+        "@type": "AggregateOffer",
+        "priceCurrency": "GBP",
+        "lowPrice": "39",
+        "highPrice": "249",
+        "offerCount": "3",
+        "description": "Starter £39/month (AI-drafted replies, scheduling, quotes, invoices, People and the customer portal), Pro £99/month (adds the self-filling CRM with dependants, packages and progress) or Pro + Concierge £249/month (everything in Pro plus the Concierge, an assistant for the owner that knows the business and acts once you confirm, by chat or by voice). Free trial of the full product, the Concierge included, no card to start — 14 days or {{ trial_email_cap }} handled emails, whichever comes first."
+      },
+      "publisher": { "@id": "{{ base_url }}/#organization" }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "BLAM8 is the AI front desk for service businesses. It reads every inbound customer email, drafts the reply in your voice from your real prices and policies, holds the slot so your diary can't double-book, sends the quote, raises and chases the invoice, and writes the contact, deal, promises and documents into the CRM with no typing. Your customers, the ones your emails already reach, get a portal where they check, move and pay their bookings and ask questions, answered by the same AI." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 do quotes and invoices?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, on every plan. A quote is drafted from the thread with optional lines and a deposit; the customer accepts it online by typing their name, and the deposit invoice is raised on acceptance carrying their PO reference. Invoices are paid by card or bank transfer, chased at 7, 14 and 30 days overdue in a tone that firms up each time and stands down the moment the customer replies, and handed to your accountant as one export per month or per Making Tax Digital quarter. Existing Xero history imports from two CSV files." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which kinds of business does BLAM8 work for?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Any service business that books work by email: trades, garages, kennels, farriers, stonemasons, hot tub servicing, swim schools and more. Each of those has been run through the live system end to end, from the first email to the paid deposit, and the worked setup for each is published at blam8.com/setups. For a trade not listed, the setup assistant proposes the diary shape, services, booking checklist and pipeline from a few questions." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can my customers manage their bookings themselves?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away. No customer login, no separate booking tool." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there a BLAM8 mobile app?",
+          "acceptedAnswer": { "@type": "Answer", "text": "BLAM8 installs as an app on your phone, desktop or tablet straight from the browser (Chrome, Edge or Safari) — no app store. Once installed it opens in its own window and sends push notifications when a draft is ready for your approval, a customer books through your portal, or a mailbox stops syncing." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 send emails on its own?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. BLAM8 is draft-only by default: you approve every reply before it sends. Auto-send is optional and switched on per mailbox, only when you choose." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 answer my phone?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. It answers email and runs the diary. The Concierge's voice is for you, not your callers." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 work with my email?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Microsoft 365 / Outlook is open to everyone now. Gmail works the same way, and sign-in is open to everyone — but connecting a Gmail inbox is invite-only while our Google verification completes." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does BLAM8 book into my calendar?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes — Outlook and Google Calendar. When an email asks for a date, BLAM8 checks your live availability, places a hold that can't double-book, and drops the confirmed job into your calendar. It handles timed slots, arrival windows, whole days, multi-day stays and weekly series." }
+        },
+        {
+          "@type": "Question",
+          "name": "Will BLAM8 use my real prices and policies?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Your knowledge base — prices, policies, FAQs, the rules of your trade — can be drafted from your website in one step, and every reply is grounded in it. The agent quotes your actual numbers and, when the answer isn't there, holds the draft and asks you the one question instead of inventing." }
+        },
+        {
+          "@type": "Question",
+          "name": "Where is my data?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Your database is hosted in the UK; the app runs in the EU (Frankfurt). Data handling is built around UK GDPR, every company is isolated with row-level security, and the full sub-processor list is public before you sign up." }
+        },
+        {
+          "@type": "Question",
+          "name": "How much does BLAM8 cost?",
+          "acceptedAnswer": { "@type": "Answer", "text": "From £39 per month. Starter (£39/month) includes AI-drafted replies in your voice, scheduling with calendar sync, quotes, invoices and the customer portal, on one mailbox with 300 emails a month. Pro (£99/month) adds the self-filling CRM — contacts, deals, promises, documents, dependants, packages and follow-up sequences — plus 750 emails a month, additional mailboxes at £39/month each, and priority support. Pro + Concierge (£249/month) is everything in Pro plus the Concierge — ask her anything about your business, by typing or by voice, and she drafts the card and acts once you confirm — on the same allowance as Pro. Every account starts with a free trial of the full product — every feature open, the Concierge included, no card to start: it runs for 14 days or {{ trial_email_cap }} handled emails, whichever comes first." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is there a contract?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No contract — plans are monthly and you can cancel anytime, self-serve from inside the app. The price you join on is the price you keep, and if you leave you can download everything — contacts, invoices, quotes, diary and knowledge — in one file, even after cancelling." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{# ── The landing as a deck (Kris 2026-09-05): "give a taste of the cards style
+   we use in Today & Inbox — screen-size specific, scroll/flip through cards
+   instead of scrolling down a page." One glass card per screen, stacked under
+   the masthead exactly like the Today deck (position: sticky, later cards ride
+   over earlier ones, buried faces frost), on the app's sky wash; scroll-snap
+   makes each flick land on the next card; a dot rail jumps between them. Every
+   card is exactly one screen tall — content that doesn't fit scrolls INSIDE the
+   card (phones), the page never grows. All copy stays in the DOM for search. #}
+<style>
+  /* --peek = where the first card rests over the opener: 24px under the
+     video, which is as wide as the cards (16:9 at the deck's width). Clamped so
+     a short screen shrinks the video (the band caps its height) rather than
+     pushing the card off the bottom, and a wide phone keeps a real peek. */
+  :root {
+    --deck-top: calc(3rem + env(safe-area-inset-top, 0px));
+    --deck-pad: 2rem;
+  }
+  @media (min-width: 768px) { :root { --deck-pad: 3rem; } }
+  /* The page rests only where a card is fully expanded (or the opener / the
+     footer): snap points on the STATIC anchors, never on the moving cards
+     (Kris: a card fully expanding should stop the scroll; a swipe starts it
+     again). A card's own text scrolls natively under the finger first. */
+  html { scroll-snap-type: y mandatory; scroll-padding-top: calc(var(--deck-top) + 16px); }
+  /* No overscroll bounce or pull-to-refresh: at the top of the page a swipe
+     down dragged the whole viewport — the bar with it — and the fixed cards
+     were re-anchored mid-bounce (Kris, phone). The bar stays locked; the
+     video's pull-down becomes a deliberate gesture of its own (the refresh
+     action), not the browser's bounce. */
+  html, body { overscroll-behavior-y: none; }
+  /* The sky: the same wash the app paints behind its glass. */
+  /* This layer spans the viewport even while the open assistant reserves a
+     right column by padding the body. Keeping it outside .deck-sky prevents the
+     glow from ending at the content column's left edge. */
+  .deck-ambient {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 12% 8%, rgb(46 91 255 / 0.16), transparent 70%),
+      radial-gradient(50% 45% at 88% 92%, rgb(46 91 255 / 0.10), transparent 70%),
+      radial-gradient(40% 40% at 80% 20%, rgb(255 190 120 / 0.10), transparent 70%);
+  }
+  .deck-sky {
+    background: transparent; position: relative; z-index: 1;
+    container-type: inline-size;
+  }
+  /* Size the opener and first-card overlap from the actual content column.
+     When the assistant is docked, that column is narrower than 100vw. */
+  .deck-video, .deck { --peek: clamp(40svh, calc(var(--deck-top) + 40px + (min(100cqw, 72rem) - var(--deck-pad)) * 0.5625), 80svh); }
+  /* The opener: the 30-second loop video pinned under the masthead, on the
+     sky. The first card starts half a screen up so its top half peeks over the
+     video; pull it up and the pile covers the video (which pauses beneath). */
+  .deck-video {
+    position: sticky; top: var(--deck-top); z-index: 0;
+    height: calc(100svh - var(--deck-top));
+    /* The gap under the bar is PADDING on the sticky stage, not a margin on
+       the band: a first child's top margin collapses through the stage, so the
+       stage pinned with the video flush against the bar (Kris, on mobile). */
+    padding-top: 16px;
+  }
+  /* The opener's snap point must NOT live on the sticky stage — a stuck
+     element's snap area travels with the scroll, so there was nothing fixed
+     at the top to snap back to (Kris: "it keeps resisting"). A static 1px
+     anchor at the page top is the snap target instead. */
+  .deck-anchor { height: 1px; margin-bottom: -1px; scroll-snap-align: start; }
+  /* The band the video may fill: from 16px under the masthead to 24px above
+     the first card's resting top (--peek), so the two can never overlap. */
+  .deck-video .deck-band { height: calc(var(--peek) - var(--deck-top) - 40px); }
+  .deck-video { will-change: transform; }
+  .deck-video.is-settling { transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+  .deck-pull {
+    position: absolute; left: 0; right: 0; top: -30px; text-align: center;
+    font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: #8493A5; opacity: 0; transition: opacity .15s; pointer-events: none;
+  }
+  .deck-video video {
+    display: block; max-width: 100%; max-height: 100%; width: auto; height: auto;
+    border-radius: 10px; border: 1px solid #E5E2DC; background: #F7F6F3;
+  }
+  .deck { position: relative; z-index: 1; isolation: isolate; margin-top: calc(var(--peek) - 100svh); }
+  /* The material, verbatim from the app shell's .glass-card (app/base.html). */
+  .glass-card {
+    border-radius: 18px;
+    border: 1px solid rgb(255 255 255 / 0.65);
+    background: rgb(255 255 255 / 0.66);
+    -webkit-backdrop-filter: blur(14px) saturate(1.35);
+    backdrop-filter: blur(14px) saturate(1.35);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 16px 40px -18px rgb(11 18 32 / 0.28);
+  }
+  /* One screen per card: the card pins under the masthead with a per-card
+     step so earlier cards peek above later ones (the Today pile's paper edges);
+     the flow slot each occupies is exactly one viewport, so one flick = one card. */
+  /* The pile, driven by JS (restack) the way the Today deck's stage is —
+     with screen-tall cards CSS sticky can't give the Today look, so every
+     card is position:fixed and placed each frame:
+       waiting    — a SHORT card behind the front one, bottom edge --edge above
+                    the screen foot (edges measured from the deck's end, so the
+                    last three cards' bottoms peek below the front card as
+                    staggered, frosted paper edges);
+       travelling — its top rises with the scroll while its bottom stays put,
+                    so the card EXPANDS as it is pulled up, in front;
+       pinned     — full height under the masthead, each earlier card's top
+                    edge peeking 10px above the next.
+     The .deck-snap anchors are the flow: one viewport per card, and the snap
+     points. Without JS the cards simply stack in flow. */
+  .deck-card { position: relative; }
+  /* The box is always full height; the visible part is a clip. Only transform
+     and clip-path change per frame — no layout, no reflow of the card's text
+     (Kris: the drag was slow and jittery on a phone). */
+  .deck.is-live .deck-card { position: fixed; will-change: transform, clip-path; }
+  /* Each anchor is 1px with the slot carried by its margin: a snap AREA taller
+     than the snapport lets Chrome rest anywhere in the surplus (that was the
+     6px creep and the refusal to scroll back to the opener). */
+  .deck.is-live .deck-snap { height: 1px; margin-bottom: calc(100svh - var(--deck-top) - 1px); }
+  .deck-snap { scroll-snap-align: start; scroll-snap-stop: always; scroll-margin-top: calc(min(var(--n), 3) * 10px); }
+  .deck-snap:first-child { scroll-margin-top: 0; }
+  /* A card cut short (the front card at rest, or a body with more below the
+     fold) fades to white at its foot — the prompt to pull it up (Kris). The
+     foot row (Next ↓) stays above the fade. */
+  .deck-face { position: relative; }
+  .deck-fade {
+    /* Most of the glow sits BELOW the clipped edge (Kris): only its last
+       ~56px show above the edge, reaching near-white right at it. */
+    position: absolute; left: 0; right: 0; bottom: -40px; height: 96px;
+    border-radius: 0 0 18px 18px; pointer-events: none;
+    background: linear-gradient(to bottom, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / 0.85) 55%, #fff 70%, #fff 100%);
+    opacity: 0; transition: opacity .2s ease; will-change: transform;
+  }
+  .deck-card.has-more .deck-fade { opacity: 1; }
+  /* The matching soft edge at the TOP of a body that has been scrolled, so
+     text never sits cut flat under the card's label. */
+  .deck-fade-top {
+    position: absolute; left: 0; right: 0; height: 32px; pointer-events: none;
+    background: linear-gradient(to bottom, #fff 0%, rgb(255 255 255 / 0.85) 40%, rgb(255 255 255 / 0) 100%);
+    opacity: 0; transition: opacity .2s ease;
+  }
+  .deck-card.has-above .deck-fade-top { opacity: 1; }
+  .deck-face > .deck-foot { position: relative; z-index: 1; }
+  .deck-face { transition: filter .3s ease; }
+  .deck-card.is-buried .deck-face { filter: blur(3px); }
+  @media (prefers-reduced-motion: reduce) { .deck-card.is-buried .deck-face { filter: none; } }
+  .deck-body { scrollbar-width: none; }
+  .deck-body::-webkit-scrollbar { display: none; }
+  /* Folded rows: hide the native marker, keep the + as the only hint. */
+  .deck details > summary { list-style: none; }
+  .deck details > summary::-webkit-details-marker { display: none; }
+  .deck details[open] > summary .fold-mark { transform: rotate(45deg); }
+  /* The rail: one dot per card, the current one lit. */
+  .deck-rail button { width: 8px; height: 8px; border-radius: 9999px; background: #D6D2CA; transition: background .2s, transform .2s; }
+  .deck-rail button.is-current { background: #1D4FD7; transform: scale(1.35); }
+  /* The footer after the deck is the page's last snap point. */
+  footer { position: relative; z-index: 1; scroll-snap-align: end; }
+</style>
+
+<div class="deck-ambient" aria-hidden="true"></div>
+<div class="deck-sky" data-water-host>
+  <div class="deck-anchor" aria-hidden="true"></div>
+  <nav class="deck-rail hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 flex-col items-center gap-2.5 z-20" aria-label="Cards">
+    {% for i in range(9) %}<button type="button" data-go="{{ i }}" aria-label="Card {{ i + 1 }}"></button>{% endfor %}
+  </nav>
+  <section class="deck-video" aria-label="BLAM8 in 30 seconds">
+    <div class="deck-pull" aria-hidden="true">Pull to refresh</div>
+    <div class="deck-band mx-auto max-w-6xl px-4 md:px-6 flex items-start justify-center">
+      <video id="loop-video" class="cursor-pointer" muted loop playsinline controls autoplay
+             preload="auto" poster="/static/img/blam8-loop-poster.jpg"
+             aria-label="BLAM8 in 30 seconds: one email in — the reply drafted in your voice, the slot held, approved, the quote accepted online, the invoice paid, the CRM filled">
+        <source src="/static/video/blam8-loop.mp4" type="video/mp4">
+      </video>
+    </div>
+  </section>
+  <div class="deck mx-auto max-w-6xl px-4 md:px-6">
+  <div class="deck-snap" style="--n: 0;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="1" data-title="The front desk" style="--n: 0; --edge: 40px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">01 · The front desk</p>
+        <p class="text-[11px] font-medium text-slate-400">1 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <div class="deck-hero grid md:grid-cols-2 gap-8 md:gap-12 md:items-start" style="will-change: transform;">
+          <div>
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-navy leading-[1.08]">From the first email to the paid invoice, without the typing.</h1>
+            <p class="mt-4 md:mt-5 text-base md:text-lg text-slate-600 leading-relaxed max-w-md">BLAM8 is the AI front desk for service businesses. It answers customer emails in your voice, books the job into a live diary, sends the quote, raises and chases the invoice, and fills the CRM as it goes. The customers you already have get a portal to check, move and pay their bookings. Nothing sends until you say so.</p>
+            <div class="mt-6 md:mt-8 flex flex-wrap items-center gap-5">
+              <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition">Start free 14-day trial</a>
+              <button type="button" class="deck-next text-sm font-medium text-slate-500 hover:text-navy transition" data-next="1">See how it works ↓</button>
+            </div>
+            <p class="mt-4 md:mt-5 text-sm text-slate-500">Draft-only by default · Data stored in the UK · {% if invite_gate %}Microsoft 365 / Outlook now · Gmail by invite{% else %}Outlook &amp; Gmail{% endif %} · No card to start</p>
+            {% if invite_gate %}
+            <p class="mt-2 text-xs text-slate-400">Sign in with Microsoft or Google — open to everyone. Connecting a Gmail inbox is invite-only while our Google verification completes.</p>
+            {% endif %}
+          </div>
+          <!-- Hero visual: the inbox, each row showing what the agent did.
+               Product UI with sample data — an example scenario, not a customer. -->
+          <figure class="hidden md:block">
+            <div class="rounded-xl border border-slate-200 bg-white overflow-hidden">
+              <img src="/static/img/landing-inbox@2x.png" alt="The BLAM8 inbox: customer emails answered, quoted and booked by the agent, each row showing what the AI did" width="1080" height="560" class="block w-full h-auto" fetchpriority="high">
+            </div>
+            <figcaption class="mt-2 text-xs text-slate-400 text-center">The BLAM8 inbox — example scenario.</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="1">The loop ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 1;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="2" data-title="The loop" style="--n: 1; --edge: 40px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">02 · The loop</p>
+        <p class="text-[11px] font-medium text-slate-400">2 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy max-w-3xl">One email in. A booked job, a sent quote, a raised invoice and a full CRM out.</h2>
+        <p class="mt-2 md:mt-3 text-slate-600 leading-relaxed max-w-2xl">No copying into a diary. No retyping into a quote. No spreadsheet of who owes what. BLAM8 does it while you work — and you approve before anything sends.</p>
+        <!-- The seven steps as one ruled sheet: rows on a phone, columns on a
+             wide screen. The loop IS a sequence, so the numbers carry information. -->
+        <ol class="mt-3 md:mt-4 rounded-xl border border-slate-200 bg-white/70 divide-y divide-slate-200 lg:divide-y-0 lg:divide-x lg:grid lg:grid-cols-7">
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">1</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">Customer emails</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">“Can you fit me in Tuesday morning, and what would it cost?”</p></div>
+          </li>
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">2</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">BLAM8 drafts the reply</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">In your voice, from your real prices, availability and policies.</p></div>
+          </li>
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">3</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">It holds the slot</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">A real hold in the diary, so it can't be double-booked. Timed, half-day, whole day, multi-day or weekly.</p></div>
+          </li>
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">4</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">The job lands in your calendar</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">Outlook or Google, confirmed in the same thread.</p></div>
+          </li>
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">5</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">The quote goes out</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">Drafted from the thread. The customer accepts online by typing their name.</p></div>
+          </li>
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">6</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">The invoice follows</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">Deposit raised on acceptance, paid by card or transfer, chased when overdue in a tone that firms up.</p></div>
+          </li>
+          <li class="p-3 lg:p-4 flex gap-3 lg:block">
+            <span class="text-sm font-bold text-brand w-4 flex-none">7</span>
+            <div><h3 class="text-sm font-semibold text-navy lg:mt-1">The CRM writes itself</h3>
+            <p class="mt-0.5 text-xs text-slate-600 leading-relaxed">Contact, company, deal, promise, follow-up and every document, pulled straight from the mail.</p></div>
+          </li>
+        </ol>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="2">Everything inside ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 2;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="3" data-title="Everything inside" style="--n: 2; --edge: 40px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">03 · Everything inside</p>
+        <p class="text-[11px] font-medium text-slate-400">3 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">Everything a front desk does. One sheet.</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed">Each line is live today. The CRM lines open on Pro, and the Concierge on Pro + Concierge. Open one for the detail. The full list, including what it deliberately doesn't do, is on the <a href="/capabilities" class="text-brand font-medium hover:underline">capabilities page</a>.</p>
+        <div id="inside" class="mt-4 rounded-xl border border-slate-200 bg-white/70 divide-y divide-slate-200 text-sm md:text-base">
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Replies</span> <span class="text-slate-600">Your voice, your prices — and “I'll check” when it doesn't know</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Drafted from your knowledge: prices, policies, FAQs, the rules of your trade. When the answer isn't there, the draft waits and a card asks you the one question; answer it once and it becomes knowledge. Thumbs-down a line and it becomes a standing rule.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Diary</span> <span class="text-slate-600">Holds that can't double-book, in whatever shape your work takes</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Timed slots, arrival windows, half-days, whole days, multi-night stays, weekly series that skip half-term. Capacity by van, bay or class place, with travel gaps and notice. It never books a date or a time nobody chose. When it's full, you choose: hold the space while details come in, and it can also offer the nearest opening or keep a waiting list. A move is re-checked like a new booking; if the new slot doesn't fit, it says no and offers times that do. Stays change too: extend, shorten or move one, and the price follows the nights.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Quotes</span> <span class="text-slate-600">Drafted from the thread, accepted online, deposit raised</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Optional lines and a deposit percentage. The customer accepts on a public page by typing their name; the deposit invoice is raised on acceptance, carrying their PO reference through. A quote that goes quiet is chased for you.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Getting paid</span> <span class="text-slate-600">Invoices raised, paid, chased, and handed to your accountant</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Card through your own Stripe account, or bank transfer; your VAT treatment, your terms. Settings you choose: a deposit to secure the booking, a higher deposit on peak dates, the balance billed the day before collection, and no separate quote when the diary already set the price. Overdue invoices are chased at 7, 14 and 30 days in a register that firms up each time — statutory interest mentioned, never invented — and the chase stands down the moment the customer writes back. One export per month or per Making Tax Digital quarter, in your accountant's format. Your Xero history imports from two CSV files.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">CRM</span> <span class="text-slate-600">Contacts, deals, promises and documents, with no typing</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">New enquiries become contacts. Several people at one firm roll up into a company. Quotes cluster into deals with a stage and a value. Every promise, from both sides, is logged. Certificates and photos sent by email are filed on the record. Gone quiet for two weeks? The check-in is drafted for you, one click to send.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Dependants</span> <span class="text-slate-600">Each named subject or asset has its own record</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Name the kind and what to know about each one. Every dependant sits under the customer with its own facts, its own certificate expiry and its own bookings: a required certificate that holds a stay back, an expiry date that reminds, a progress level the business moves with one tap and a message drafted to the customer.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Packages</span> <span class="text-slate-600">Blocks of sessions, sold and spent by your rules</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Sell ten sessions on an invoice and the credits appear the moment it is issued. Attendance, late cancellations and no-shows spend them by rules you set. The agent and the portal both know the balance, and Money shows what is sold and still unspent.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Job parties</span> <span class="text-slate-600">Who pays, who approves, who is on site</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">One person who pays, another on site, a third kept informed. Name the parties on a job and the invoice, the certificate and the day-before reminder each go to the right person. A “the other party pays” read from an email is never acted on until you confirm it.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Customer portal</span> <span class="text-slate-600">Check, move, pay and ask — for the customers you already have</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away. No customer login, no separate booking tool.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">People</span> <span class="text-slate-600">Your team, including people who never sign in</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Add the people who work with you, even the ones who never sign in. Choose what each person can see and do, see the app exactly as they do with “View as”, and put one or several people on a job. On every plan, with no seat charges.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Concierge</span> <span class="text-slate-600">Say it, see the proposal, confirm — on Pro + Concierge</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">“Block next Friday and send Mrs Patel the draft that's waiting.” The Concierge answers from your records and shows exactly what will happen as a card before she does it. You confirm, she does it, and every step lands in the audit log. Type it, or hold the icon and say it out loud. A card you didn't answer waits for you and comes back checked against today's diary. She comes with the Pro + Concierge plan.</p>
+          </details>
+          <details class="group">
+            <summary class="flex items-baseline gap-4 px-4 py-2.5 cursor-pointer">
+              <span class="flex-1 md:grid md:grid-cols-[10rem,1fr] md:gap-6"><span class="font-semibold text-navy">Setup</span> <span class="text-slate-600">From your website, in minutes — then it runs on your phone</span></span>
+              <span class="fold-mark text-brand text-xl leading-none transition">+</span>
+            </summary>
+            <p class="px-4 pb-4 md:pl-[12.5rem] text-sm text-slate-600 leading-relaxed">Point it at your website and it drafts your knowledge for review. The setup assistant proposes your diary shape, services, booking checklist and pipeline from a few questions. Installs as an app with push notifications, and a mailbox or calendar that stops syncing reaches you within the hour. Configuration, not code — <a href="/how-it-works" class="text-brand font-medium hover:underline">how onboarding works</a>.</p>
+          </details>
+        </div>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="3">Proven end to end ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 3;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="4" data-title="Proven end to end" style="--n: 3; --edge: 40px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">04 · Proven end to end</p>
+        <p class="text-[11px] font-medium text-slate-400">4 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">Proven on {{ setups|length }} kinds of business, end to end.</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed max-w-3xl">Each one ran through the live system from the first email to the paid deposit, with the honest gaps written down and fixed. The businesses are fictional test rigs; the runs are real. Every page shows exactly how your BLAM8 would be set up.</p>
+        <div class="mt-4 rounded-xl border border-slate-200 bg-white/70 overflow-hidden lg:grid lg:grid-cols-2">
+          {% for s in setups %}
+          <a href="/setups/{{ s.slug }}" class="group block px-4 py-3 border-slate-200 [&:not(:first-child)]:border-t lg:[&:nth-child(2)]:border-t-0 lg:[&:nth-child(odd)]:border-r hover:bg-white transition">
+            <span class="font-semibold text-navy group-hover:text-brand transition">{{ s.trade }}</span>
+            <span class="block sm:inline sm:ml-2 text-xs text-slate-400 whitespace-nowrap">{{ s.proven }}</span>
+            <span class="block mt-0.5 text-sm text-slate-600 leading-relaxed">{{ s.hook }}</span>
+          </a>
+          {% endfor %}
+        </div>
+        <p class="mt-3 text-sm text-slate-500">Your trade not here yet? The setup assistant works the same way for any business — <a href="/setups" class="text-brand font-medium hover:underline">see the worked setups</a>.</p>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="4">It stays you ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 4;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="5" data-title="It stays you" style="--n: 4; --edge: 40px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">05 · It stays you</p>
+        <p class="text-[11px] font-medium text-slate-400">5 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">It sounds like you. It can't promise a Tuesday you don't have.</h2>
+        <p class="mt-2 text-slate-600 leading-relaxed max-w-3xl">Most AI tools are a chatbot bolted onto an inbox: fluent, confident, and perfectly capable of inventing a price. BLAM8 replies from what you taught it, and checks the live state of your business before anything is quoted, booked, moved, invoiced or sent.</p>
+        <div id="grounded" class="mt-4 rounded-xl border border-slate-200 bg-white/70 divide-y divide-slate-200">
+          <div class="p-4 md:grid md:grid-cols-[220px,1fr] md:gap-6">
+            <h3 class="text-base font-semibold text-navy">Your voice, your numbers</h3>
+            <p class="mt-1 md:mt-0 text-slate-600 leading-relaxed">Replies are drafted in your tone from your prices, policies and FAQs. When the answer isn't in your knowledge, the draft holds and asks you — it doesn't invent one. A rule you wrote once, like “a safety concern: follow our emergency instructions first”, is applied without being asked.</p>
+          </div>
+          <div class="p-4 md:grid md:grid-cols-[220px,1fr] md:gap-6">
+            <h3 class="text-base font-semibold text-navy">A diary that can't be talked into it</h3>
+            <p class="mt-1 md:mt-0 text-slate-600 leading-relaxed">A held slot is a real record, checked against your actual capacity, hours and travel gaps. Moves are re-checked the same way. Money is the same: a chase never names a payment route you don't offer, and a quote never promises a deposit that isn't set up.</p>
+          </div>
+          <div class="p-4 md:grid md:grid-cols-[220px,1fr] md:gap-6">
+            <h3 class="text-base font-semibold text-navy">Nothing acts on a claim</h3>
+            <p class="mt-1 md:mt-0 text-slate-600 leading-relaxed">A customer who says they are a known contact is challenged with a code to the address on file. A “send the invoice to the other payer” read from an email becomes a card you confirm. And nothing sends until you hit approve — auto-send is per mailbox, once the queue has earned it, and every action lands in the audit log.</p>
+          </div>
+        </div>
+        <p class="mt-3 text-sm text-slate-500 leading-relaxed">No one selling AI can honestly promise zero mistakes, so we wrote down how the safety actually works: <a href="/help/does-blam8-hallucinate" class="text-brand font-medium hover:underline">will the AI make things up?</a></p>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="5">Safety and data ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 5;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="6" data-title="Safety and data" style="--n: 5; --edge: 40px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">06 · Safety and data</p>
+        <p class="text-[11px] font-medium text-slate-400">6 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <div class="h-full flex flex-col justify-center">
+          <h2 id="security" class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">Built for a nervous compliance team.</h2>
+          <p class="mt-2 text-slate-600 leading-relaxed max-w-3xl">What we store, where it's hosted, and who we share it with is public before you sign up — on the <a href="/security" class="text-brand font-medium hover:underline">security &amp; data handling page</a> and in our <a href="/privacy" class="text-brand font-medium hover:underline">Privacy Policy &amp; sub-processor list</a>.</p>
+          <ul class="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-5 border-t border-slate-200 pt-6">
+            <li><p class="font-semibold text-navy">Draft-only by default</p><p class="mt-1 text-slate-600 text-sm">Nothing sends unless auto-send is enabled — your switch, per mailbox.</p></li>
+            <li><p class="font-semibold text-navy">OAuth sign-in, never passwords</p><p class="mt-1 text-slate-600 text-sm">Connect Outlook or Gmail with secure consent, revocable any time from your side.</p></li>
+            <li><p class="font-semibold text-navy">UK data residency</p><p class="mt-1 text-slate-600 text-sm">Your database is hosted in the UK; the app runs in the EU (Frankfurt). Built around UK GDPR.</p></li>
+            <li><p class="font-semibold text-navy">Isolated per company</p><p class="mt-1 text-slate-600 text-sm">Row-level security keeps every customer's mail, rules and data strictly separate.</p></li>
+            <li><p class="font-semibold text-navy">Your data, exportable</p><p class="mt-1 text-slate-600 text-sm">One download of everything, and it still works after you cancel. No lock-in.</p></li>
+          </ul>
+        </div>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="6">Pricing ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 6;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="7" data-title="Pricing" style="--n: 6; --edge: 30px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">07 · Pricing</p>
+        <p class="text-[11px] font-medium text-slate-400">7 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <h2 id="pricing" class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">Start with the loop. Grow when you're ready.</h2>
+        {# The cap is disclosed here, next to the pricing, rather than left for someone to
+           discover when the trial stops. It reads from settings so the number can't drift
+           from what the deployment enforces. #}
+        <p class="mt-2 text-slate-600 max-w-3xl">Free trial: the full product — every feature, the Concierge included — for 14 days or {{ trial_email_cap }} handled emails, whichever comes first. No card to start. Cancel anytime.</p>
+        <p class="mt-1 text-sm text-slate-500 max-w-3xl">On every plan: quotes, invoices and chasing, the customer portal, People, calendar sync and the installable app.</p>
+        <div class="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <!-- Starter -->
+          <div class="rounded-xl border-2 border-brand bg-white/80 p-5 md:p-6 flex flex-col relative">
+            <span class="absolute -top-3 left-5 rounded-full bg-brand px-3 py-0.5 text-xs font-bold text-white whitespace-nowrap">Most popular to start</span>
+            <h3 class="text-xl font-bold text-navy">Starter</h3>
+            <p class="mt-1 text-sm text-slate-500">Replies, booking, quotes &amp; invoices, for one-person businesses</p>
+            <div class="mt-3"><span class="text-3xl font-bold text-navy">&pound;39</span><span class="text-sm text-slate-500 ml-1">per month</span></div>
+            <p class="mt-1 text-xs text-slate-400">1 mailbox &middot; 300 emails/month</p>
+            <ul class="mt-3 space-y-1 text-sm text-slate-700 flex-1">
+              <li class="flex gap-2"><span class="text-brand">&check;</span>AI-drafted replies in your voice</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Knowledge base — your prices, policies, FAQs</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Booking details gathered &amp; pinned</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Scheduling &amp; capacity diary, calendar sync</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Quotes accepted online, invoices raised &amp; chased</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Customer portal for the customers you already have</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Draft-only by default</li>
+            </ul>
+            <a href="/login" class="mt-5 block w-full text-center rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Start free 14-day trial</a>
+            <p class="mt-2 text-center text-xs text-slate-400">No card to start</p>
+          </div>
+          <!-- Pro -->
+          <div class="rounded-xl border border-slate-200 bg-white/80 p-5 md:p-6 flex flex-col">
+            <h3 class="text-xl font-bold text-navy">Pro</h3>
+            <p class="mt-1 text-sm text-slate-500">The full loop — everything in Starter plus the self-filling CRM</p>
+            <div class="mt-3"><span class="text-3xl font-bold text-navy">&pound;99</span><span class="text-sm text-slate-500 ml-1">per month</span></div>
+            <p class="mt-1 text-xs text-slate-400">1 mailbox &middot; 750 emails/month</p>
+            <ul class="mt-3 space-y-1 text-sm text-slate-700 flex-1">
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Everything in Starter</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Self-filling CRM: contacts, companies, deals, promises, documents</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Dependants, packages &amp; progress on every customer record</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Follow-up sequences &amp; customer-mood flags</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Higher email volume — 750 emails/month</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Additional mailboxes &pound;39/mo each (+300 emails/month)</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Priority support</li>
+            </ul>
+            <a href="/login" class="mt-5 block w-full text-center rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition">Start free 14-day trial</a>
+            <p class="mt-2 text-center text-xs text-slate-400">No card to start</p>
+          </div>
+          <!-- Pro + Concierge -->
+          <div class="rounded-xl border border-slate-200 bg-white/80 p-5 md:p-6 flex flex-col" data-water-card>
+            <h3 class="text-xl font-bold text-navy">Pro + Concierge</h3>
+            <p class="mt-1 text-sm text-slate-500">Pro, plus the Concierge — ask, act and talk to your business</p>
+            <div class="mt-3"><span class="text-3xl font-bold text-navy">&pound;249</span><span class="text-sm text-slate-500 ml-1">per month</span></div>
+            <p class="mt-1 text-xs text-slate-400">1 mailbox &middot; 750 emails/month</p>
+            <ul class="mt-3 space-y-1 text-sm text-slate-700 flex-1">
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Everything in Pro</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>The Concierge: ask anything about your business</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Say it, she drafts the card — you confirm</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Hold to talk: speak to her hands-free</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>Cards that wait for you, checked again against today</li>
+              <li class="flex gap-2"><span class="text-brand">&check;</span>The morning brief opens straight into her</li>
+            </ul>
+            <a href="/login" class="mt-5 block w-full text-center rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition">Start free 14-day trial</a>
+            <p class="mt-2 text-center text-xs text-slate-400">No card to start</p>
+          </div>
+        </div>
+        <p class="mt-3 text-sm text-slate-500">The CRM pre-fills quietly on every account, so it opens already populated the day you upgrade. {% if invite_gate %}Works with Microsoft 365 / Outlook today; Gmail by invite while verification completes.{% else %}Works with Microsoft 365 / Outlook and Gmail.{% endif %} Need something bigger? <a href="mailto:hello@blam8.com?subject=BLAM8%20—%20something%20bigger" class="text-brand font-semibold hover:underline">Talk to us</a>.</p>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="7">Questions ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 7;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="8" data-title="Questions" style="--n: 7; --edge: 20px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">08 · Questions</p>
+        <p class="text-[11px] font-medium text-slate-400">8 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <h2 id="faq" class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+        <div class="mt-3 divide-y divide-slate-200 max-w-3xl">
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">What is BLAM8?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">The AI front desk for service businesses. It reads every inbound customer email, drafts the reply in your voice from your real prices and policies, holds the slot so your diary can't double-book, sends the quote, raises and chases the invoice, and writes the contact, deal, promises and documents into the CRM with no typing. Your customers, the ones your emails already reach, get a portal where they check, move and pay their bookings and ask questions, answered by the same AI.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Does it do quotes and invoices?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">Yes, on every plan. A quote is drafted from the thread with optional lines and a deposit; the customer accepts it online by typing their name, and the deposit invoice is raised on acceptance carrying their PO reference. Invoices are paid by card or bank transfer, chased at 7, 14 and 30 days overdue in a tone that firms up each time and stands down the moment the customer replies, and handed to your accountant as one export per month or per Making Tax Digital quarter. Existing Xero history imports from two CSV files.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Which kinds of business does it work for?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">Any service business that books work by email. {% for s in setups %}{{ s.trade }}{% if not loop.last %}, {% endif %}{% endfor %} have each been run through the live system end to end, and the <a href="/setups" class="text-brand font-medium hover:underline">worked setup for each</a> is published. For a trade not listed, the setup assistant proposes the diary shape, services, booking checklist and pipeline from a few questions.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Can my customers manage their bookings themselves?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">Your customers, the ones your emails already reach, can check, move and pay their bookings and ask questions by conversation at blam8.com/c/your-business. They get in with the reference code on every email, or a code sent to the address you hold. Strangers are turned away. No customer login, no separate booking tool.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Is there a mobile app?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">BLAM8 installs as an app on your phone, desktop or tablet straight from the browser (Chrome, Edge or Safari) — no app store. Once installed it opens in its own window and sends push notifications when a draft is ready for your approval, a customer books through your portal, or a mailbox stops syncing.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Does it send emails on its own?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">No. It's draft-only by default — you approve every reply before it sends. Auto-send is optional, per mailbox, and only when you choose.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Does it answer my phone?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">No. It answers email and runs the diary. The Concierge's voice is for you, not your callers.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Does it work with my email?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">Microsoft 365 / Outlook is open to everyone now. Gmail works the same way, and signing in is open to everyone — but connecting a Gmail inbox is invite-only while our Google verification completes. Connect a Microsoft mailbox in the meantime, or request an invite from the connect step.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Does it book into my calendar?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">Yes — Outlook and Google Calendar, with holds that can't double-book. It handles timed slots, arrival windows, whole days, multi-day stays and weekly series, and confirms the booking in the same email thread.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Will it use my real prices and policies?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">Yes — your knowledge base can be drafted from your website in one step, and every reply uses your prices, policies and FAQs. When the answer isn't there, it holds the draft and asks you the one question instead of inventing.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Where is my data?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">UK data residency — your database is hosted in the UK, the app runs in the EU (Frankfurt), and data handling is built around UK GDPR. Every company is isolated with row-level security, and the full sub-processor list is public before you sign up.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">How much is it?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">From £39/month — see <a href="#pricing" class="text-brand font-medium hover:underline">pricing</a>. Starter covers replies, booking, quotes, invoices and the portal; Pro adds the self-filling CRM with dependants, packages and progress; Pro + Concierge (£249) adds the Concierge, who knows your business and acts once you confirm. The free trial opens the full product, the Concierge included, for 14 days or {{ trial_email_cap }} handled emails, whichever comes first — no card to start.</p>
+          </details>
+          <details class="group py-3">
+            <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy list-none">Is there a contract?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+            <p class="mt-2 text-sm md:text-base text-slate-600 leading-relaxed">No contract — plans are monthly and you can cancel anytime, self-serve from inside the app. The price you join on is the price you keep, and if you leave you take everything with you: one download of your contacts, invoices, quotes, diary and knowledge, and it still works after you cancel.</p>
+          </details>
+        </div>
+        {% if scenario_box %}
+        <p class="mt-4 max-w-3xl text-sm md:text-base text-slate-600 leading-relaxed">Got a situation of your own? <button type="button" data-scenario-open class="text-brand font-medium hover:underline">Run it past BLAM8</button> and see how it would deal with it.</p>
+        {% endif %}
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+        <button type="button" class="deck-next text-xs font-medium text-slate-500 hover:text-navy transition" data-next="8">The price promise ↓</button>
+      </div>
+    </div>
+  </article>
+  <div class="deck-snap" style="--n: 8;" aria-hidden="true"></div>
+  <article class="deck-card glass-card" data-card="9" data-title="The price promise" style="--n: 8; --edge: 10px;">
+    <div class="deck-face flex flex-col h-full">
+      <div class="flex items-center justify-between px-5 md:px-8 pt-4 md:pt-5">
+        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">09 · The price promise</p>
+        <p class="text-[11px] font-medium text-slate-400">9 / 9</p>
+      </div>
+      <div class="deck-body flex-1 min-h-0 overflow-y-auto px-5 md:px-8 py-4 md:py-5">
+
+        <div class="h-full flex flex-col justify-center">
+          {# The price promise (research 09-01): the sector's loudest complaint is
+             pricing creep and punished loyalty — QuickBooks +80% in two years,
+             client caps that force upgrades, free tiers rug-pulled. Nobody competes
+             on price STABILITY, so stating it plainly is a moat that costs nothing
+             while we keep it. These four lines are commitments — change them only
+             deliberately. #}
+          <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight text-navy">The price promise</h2>
+          <div class="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 text-sm md:text-base text-slate-700 max-w-4xl">
+            <p class="flex gap-2"><span class="text-brand">&check;</span><span><strong class="text-navy">The price you join on is the price you keep.</strong> Ours may rise for new customers; yours doesn't while you stay subscribed.</span></p>
+            <p class="flex gap-2"><span class="text-brand">&check;</span><span><strong class="text-navy">No per-seat pricing.</strong> Growing your team never multiplies your bill.</span></p>
+            <p class="flex gap-2"><span class="text-brand">&check;</span><span><strong class="text-navy">Nothing you're already paying for moves up-tier on you.</strong> What your plan includes today, it includes tomorrow.</span></p>
+            <p class="flex gap-2"><span class="text-brand">&check;</span><span><strong class="text-navy">Leave with everything.</strong> One download — contacts, invoices, quotes, diary, knowledge — and it still works after you cancel.</span></p>
+          </div>
+          <div class="mt-8 md:mt-10 rounded-xl bg-navy px-6 py-8 md:px-10 md:py-10 text-center">
+            <h2 class="text-2xl md:text-3xl font-bold tracking-tight text-white">Stop retyping the same email into a diary, a quote and an invoice.</h2>
+            <p class="mt-3 text-slate-300 max-w-xl mx-auto leading-relaxed">Let BLAM8 answer, book, quote, invoice and log every customer email — while you get on with the job.</p>
+            <a href="/login" class="mt-6 inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition">Start free 14-day trial</a>
+            {% if invite_gate %}
+            <p class="mt-4 text-xs text-slate-400">Sign-in is open to everyone · Connecting a Gmail inbox is invite-only while our Google verification completes</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="deck-fade" aria-hidden="true"></div>
+      <div class="deck-fade-top" aria-hidden="true"></div>
+      <div class="deck-foot flex-none px-5 md:px-8 pb-3 md:pb-4 text-right">
+
+      </div>
+    </div>
+  </article>
+  </div>
+</div>
+
+<script>
+/* The deck: pin state → which card is current (rail), which are buried (frost);
+   the ↓ buttons and the rail scroll to a card's flow position (scroll-margin
+   lands it exactly under the masthead). Same capture-phase scroll listener +
+   fonts.ready re-run as the Today deck — geometry moves after the webfonts. */
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.deck-card'));
+  var snaps = Array.prototype.slice.call(document.querySelectorAll('.deck-snap'));
+  var dots = Array.prototype.slice.call(document.querySelectorAll('.deck-rail button'));
+  if (!cards.length) return;
+  var lastShowing = null;
+  var deck = document.querySelector('.deck');
+  var header = document.querySelector('header');
+  var edges = cards.map(function (c) { return parseFloat(getComputedStyle(c).getPropertyValue('--edge')) || 40; });
+  var STEP = 10, GAP = 16, FOOT = 40, MIN_REST = 96, WAIT_H = 150;
+  deck.classList.add('is-live');
+  var fades = cards.map(function (c) { return c.querySelector('.deck-fade'); });
+  var footH = cards.map(function () { return 0; });
+  var hero = document.querySelector('.deck-hero');
+  var bodies = cards.map(function (c) { return c.querySelector('.deck-body'); });
+  var last = cards.map(function () { return {}; });
+  var lastStates = [], lastProgress = [], lastCurrent = -1;
+  var laidOut = { vh: 0, left: -1, width: -1, deckTop: 0 };
+  function layoutBoxes(vh, deckTop) {
+    // Boxes: every card pinned at its own top, full height — set once per
+    // viewport size, so the per-frame work is transform + clip only.
+    var dr = deck.getBoundingClientRect();
+    var cs = getComputedStyle(deck);
+    var padL = parseFloat(cs.paddingLeft) || 0, padR = parseFloat(cs.paddingRight) || 0;
+    var left = dr.left + padL, width = dr.width - padL - padR;
+    if (vh === laidOut.vh && left === laidOut.left && width === laidOut.width && deckTop === laidOut.deckTop) return;
+    laidOut = { vh: vh, left: left, width: width, deckTop: deckTop };
+    var fullBottom = vh - FOOT;
+    cards.forEach(function (c, i) {
+      var pinnedTop = deckTop + GAP + STEP * Math.min(i, 3);
+      c.style.top = pinnedTop + 'px';
+      c.style.height = (fullBottom - pinnedTop) + 'px';
+      c.style.left = left + 'px';
+      c.style.width = width + 'px';
+    });
+    cards.forEach(function (c, i) {
+      var foot = c.querySelector('.deck-foot'), b = bodies[i], ft = c.querySelector('.deck-fade-top');
+      footH[i] = foot ? foot.offsetHeight : 0;
+      if (ft && b) ft.style.top = b.offsetTop + 'px';
+    });
+  }
+  function restack() {
+    var vh = window.innerHeight;
+    var deckTop = header ? header.getBoundingClientRect().bottom : 64;
+    layoutBoxes(vh, deckTop);
+    var peek = snaps[0].getBoundingClientRect().top + window.scrollY;   // the first card's resting top (page px)
+    var fullBottom = vh - FOOT;
+    var restH = Math.max(MIN_REST, fullBottom - peek);   // the short card at rest
+    var current = 0, states = [], progress = [];
+    lastStates = states; lastProgress = progress;
+    var slotH = snaps.length > 1 ? (snaps[1].getBoundingClientRect().top - snaps[0].getBoundingClientRect().top) : (vh - deckTop);
+    var dwell = Math.round(slotH * 0.25);
+    cards.forEach(function (c, i) {
+      var A = snaps[i].getBoundingClientRect().top;      // where the card's flow slot is now
+      var pinnedTop = deckTop + GAP + STEP * Math.min(i, 3);
+      var waitBottom = vh - edges[i];
+      // The first card rests at its peek; every other waiting card is a SHORT
+      // strip at the foot of the screen (the Today pile), so when it rises it
+      // comes up from the bottom over the card before it — never popping in
+      // at mid-screen over text you are still reading (Kris, phone POV).
+      var waitTop = waitBottom - (i === 0 ? restH : WAIT_H);
+      // A card starts rising the moment the one before it pins (its slot is a
+      // whole screen, the rise is shorter — without this it sat frozen in the
+      // pile for the first stretch of the scroll; Kris). The first card rests
+      // at its peek and moves at once.
+      // …after a DWELL: a quarter of a screen of scroll in which the pinned card
+      // stays put — the swipe that pinned it dies there, and the next swipe on
+      // the card scrolls its own text first (Kris: no pause = no chance to read).
+      var startA = i === 0 ? waitTop : (deckTop + GAP + STEP * Math.min(i - 1, 3)) + slotH - dwell;
+      var top, bottom, state, t = 0;
+      if (A <= pinnedTop + 0.5) { state = 'pinned'; top = pinnedTop; bottom = fullBottom; current = i; t = 1; }
+      else if (A < startA) {
+        state = 'travelling';
+        t = (startA - A) / Math.max(1, startA - pinnedTop);
+        top = waitTop + (pinnedTop - waitTop) * t;
+        bottom = waitBottom + (fullBottom - waitBottom) * t;
+      } else { state = 'waiting'; top = waitTop; bottom = waitBottom; }
+      states.push(state); progress[i] = t;
+      // The box sits at pinnedTop with height fullBottom - pinnedTop; shift
+      // it down by ty and clip its bottom so the visible bottom edge = bottom.
+      var ty = Math.round(top - pinnedTop);
+      var clip = Math.max(0, Math.round((ty + fullBottom) - bottom));
+      var L = last[i];
+      if (L.ty !== ty) { L.ty = ty; c.style.transform = ty ? 'translate3d(0,' + ty + 'px,0)' : 'none'; }
+      if (L.clip !== clip) {
+        L.clip = clip;
+        c.style.clipPath = 'inset(0 0 ' + clip + 'px 0 round 18px)';
+      }
+      // The fade sits on the body's VISIBLE edge: the clip on a collapsed card,
+      // the body's own bottom (above the foot row) on an expanded one — it was
+      // anchored to the card's edge and painted over the foot instead (Kris).
+      var fadeUp = Math.max(clip, footH[i]);
+      if (L.fadeUp !== fadeUp) { L.fadeUp = fadeUp; if (fades[i]) fades[i].style.transform = 'translateY(-' + fadeUp + 'px)'; }
+    });
+    var anyPinned = states.indexOf('pinned') >= 0;
+    cards.forEach(function (c, i) {
+      var st = states[i], L = last[i];
+      var z = st === 'pinned' ? 100 + i : st === 'travelling' ? 600 + i : 50 - i;
+      if (L.z !== z) { L.z = z; c.style.zIndex = String(z); }
+      // Buried = frosted: a pinned card under a later pinned one, and every
+      // waiting card behind the front (the first card at rest is the front).
+      // Frosted while waiting, and until 10% of the rise — it fades in as it lifts.
+      var buried = (st === 'pinned' && i < current) || (st === 'waiting' && (anyPinned || i > 0)) || (st === 'travelling' && i > 0 && progress[i] < 0.1);
+      if (L.buried !== buried) { L.buried = buried; c.classList.toggle('is-buried', buried); c.setAttribute('aria-hidden', buried ? 'true' : 'false'); }
+      var b = bodies[i];
+      var over = b ? b.scrollHeight - b.clientHeight : 0;
+      // A body scrolls only when its card is PINNED and really overflows: a
+      // collapsed or travelling card never scrolls inside (the first swipe
+      // expands it), and a pixel of overflow used to latch the wheel.
+      // 'clip', not 'hidden': a hidden box is still a scroll container.
+      if (b) { var want = (st === 'pinned' && over > 8) ? 'auto' : 'clip'; if (b.style.overflowY !== want) { b.style.overflowY = want; } }
+      if (L.state !== st) { L.state = st; }
+      var cut = st !== 'pinned' || (b && over > 8 && b.scrollTop + b.clientHeight < b.scrollHeight - 4);
+      if (L.cut !== cut) { L.cut = cut; c.classList.toggle('has-more', !!cut); }
+      var above = st === 'pinned' && b && b.scrollTop > 4;
+      if (L.above !== above) { L.above = above; c.classList.toggle('has-above', !!above); }
+    });
+    // The first card's content sits at the top while collapsed and drifts to
+    // the vertical centre as the card expands (Kris) — driven by its rise.
+    if (hero && bodies[0]) {
+      var free = bodies[0].clientHeight - hero.offsetHeight;
+      var off = Math.round(Math.max(0, free / 2) * progress[0]);
+      if (last[0].heroOff !== off) { last[0].heroOff = off; hero.style.transform = off ? 'translate3d(0,' + off + 'px,0)' : 'none'; }
+    }
+    // Whenever a card becomes the FRONT card — arriving, or coming back after
+    // its text was scrolled to the end — its text starts from the top (Kris).
+    // A card coming back never changes state (it stayed pinned underneath), so
+    // this keys on the front index, not the state.
+    if (current !== lastCurrent) {
+      lastCurrent = current;
+      var fb = bodies[current];
+      if (fb && fb.scrollTop) fb.scrollTop = 0;
+    }
+    dots.forEach(function (d, i) { d.classList.toggle('is-current', i === current); });
+    var showing = states[0] !== 'pinned';
+    if (showing !== lastShowing) {
+      lastShowing = showing;
+      document.dispatchEvent(new CustomEvent('deck:opener', { detail: { showing: showing } }));
+    }
+  }
+  var queued = false;
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () { queued = false; restack(); });
+  }
+  document.addEventListener('scroll', schedule, { capture: true, passive: true });
+  window.addEventListener('resize', schedule);
+  window.addEventListener('load', schedule);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  restack();
+  // ── Paging ────────────────────────────────────────────────────────────
+  // Targets: -1 = the opener (page top), i = card i pinned under the masthead.
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function targetFor(i) {
+    if (i < 0) return 0;
+    var deckTop = header ? header.getBoundingClientRect().bottom : 64;
+    var pinnedTop = deckTop + GAP + STEP * Math.min(i, 3);
+    return Math.round(snaps[i].getBoundingClientRect().top + window.scrollY - pinnedTop);
+  }
+  function currentIndex() {
+    var deckTop = header ? header.getBoundingClientRect().bottom : 64;
+    var cur = -1;
+    for (var i = 0; i < cards.length; i++) {
+      var pinnedTop = deckTop + GAP + STEP * Math.min(i, 3);
+      if (snaps[i].getBoundingClientRect().top <= pinnedTop + 0.5) cur = i;
+    }
+    return cur;
+  }
+  function go(i) {
+    i = Math.max(-1, Math.min(cards.length - 1, i));
+    window.scrollTo({ top: targetFor(i), behavior: reduced ? 'auto' : 'smooth' });
+  }
+  // Input is the browser's own — native scroll, native momentum, native
+  // chaining out of a card's body — exactly as the Today deck. The deck only
+  // restyles on scroll. (An earlier pass paged wheel/touch itself; Kris: it
+  // felt slow and jittery on a phone.)
+  // Let go mid-rise: once the rising card's frost has lifted (10% of the
+  // way) it carries on to full screen by itself; before that it settles
+  // back. Wheel/keys are handled by the browser's snap; this is for touch.
+  // Judged from where the swipe STARTED: pulling the next card up commits
+  // once it is 10% up; pushing the current card back down commits once it is
+  // 10% down (Kris: swiping back needed 80% before).
+  var touchFrom = -1;
+  function settle() {
+    restack();
+    var k = -1;
+    for (var i = 0; i < cards.length; i++) if (lastStates[i] === 'travelling') k = i;
+    if (k < 0) return;
+    var t = lastProgress[k];
+    if (k > touchFrom) go(t > 0.1 ? k : k - 1);        // pulling the next card up
+    else go(t < 0.9 ? k - 1 : k);                       // pushing this card back down
+  }
+  document.addEventListener('touchstart', function () { touchFrom = currentIndex(); }, { passive: true });
+  document.addEventListener('touchend', function () { setTimeout(settle, 0); }, { passive: true });
+  document.addEventListener('touchcancel', function () { setTimeout(settle, 0); }, { passive: true });
+  // ── Pull to refresh (Kris) ─────────────────────────────────────────────
+  // At the top of the page a downward drag pulls the VIDEO stage down with
+  // the finger (with resistance); the bar stays locked and the cards do not
+  // move. Release past the threshold → onPullRefresh(). The browser's own
+  // bounce is off (overscroll-behavior), so this is the only pull there is.
+  var stage = document.querySelector('.deck-video');
+  var pullLabel = stage ? stage.querySelector('.deck-pull') : null;
+  // The pull stops the moment the words change (Kris 2026-09-20, once the
+  // same pull was on every page: "it doesn't need to drag any further"),
+  // and that moment is 60px shown — 120px of finger (Kris, the same day:
+  // "a little less pull down").
+  var PULL_MAX = 60, PULL_FIRE = 60;
+  var pY0 = null, pull = 0, pulling = false;
+  function onPullRefresh() {
+    // The refresh action (Kris): reload the page — the pull only exists at the
+    // top, so the visitor lands back where they were. The label holds
+    // "Refreshing" while the reload is on its way.
+    if (pullLabel) { pullLabel.textContent = 'Refreshing'; pullLabel.style.opacity = '1'; }
+    window.location.reload();
+  }
+  function setPull(px) {
+    pull = px;
+    if (stage) stage.style.transform = px ? 'translate3d(0,' + px + 'px,0)' : 'none';
+    if (pullLabel) {
+      pullLabel.style.opacity = px > 24 ? '1' : '0';
+      pullLabel.textContent = px >= PULL_FIRE ? 'Release to refresh' : 'Pull to refresh';
+    }
+  }
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1 || window.scrollY > 0) { pY0 = null; return; }
+    pY0 = e.touches[0].clientY; pulling = false;
+    if (stage) stage.classList.remove('is-settling');
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (pY0 === null || e.touches.length !== 1) return;
+    if (window.scrollY > 0) { if (pulling) setPull(0); pY0 = null; return; }
+    var dy = e.touches[0].clientY - pY0;
+    if (dy <= 0) { if (pulling) setPull(0); return; }
+    pulling = true;
+    setPull(Math.min(PULL_MAX, Math.round(dy * 0.5)));   // resistance
+  }, { passive: true });
+  function endPull() {
+    if (pY0 === null) return;
+    pY0 = null;
+    if (!pulling) return;
+    var fire = pull >= PULL_FIRE;
+    if (stage) stage.classList.add('is-settling');
+    setPull(fire ? 48 : 0);          // hold a little of the gap for the label while reloading
+    if (fire) onPullRefresh();
+  }
+  document.addEventListener('touchend', endPull, { passive: true });
+  document.addEventListener('touchcancel', endPull, { passive: true });
+  document.querySelectorAll('.deck-next').forEach(function (b) {
+    b.addEventListener('click', function () { go(parseInt(b.getAttribute('data-next'), 10)); });
+  });
+  dots.forEach(function (d) {
+    d.addEventListener('click', function () { go(parseInt(d.getAttribute('data-go'), 10)); });
+  });
+  // In-page anchors (nav "Pricing" → /#pricing, FAQ "see pricing") land on the
+  // card that holds the id, not on the id itself buried in a card body.
+  function toCard(hash) {
+    var el = hash && document.querySelector(hash);
+    var c = el && el.closest('.deck-card');
+    if (c) { go(cards.indexOf(c)); return true; }
+    return false;
+  }
+  window.addEventListener('hashchange', function () { toCard(location.hash); });
+  if (location.hash) setTimeout(function () { toCard(location.hash); }, 50);
+})();
+
+/* Loop video: autoplays muted on the opener; pauses the moment the first card
+   pins over it (restack tells us) and resumes when the deck is pulled back
+   down. Reduced-motion and Save-Data visitors keep the poster + native
+   controls and press play themselves. No JS = native controls (the `controls`
+   attr in markup). */
+(function () {
+  var v = document.getElementById('loop-video');
+  if (!v) return;
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var saveData = !!(navigator.connection && navigator.connection.saveData);
+  if (reduced || saveData) { v.removeAttribute('autoplay'); v.preload = 'metadata'; return; }
+  v.removeAttribute('controls');
+  var covered = false;
+  document.addEventListener('deck:opener', function (e) {
+    covered = !e.detail.showing;
+    if (covered && !v.paused) v.pause();
+    else if (!covered && v.paused) v.play().catch(function (err) { if (err.name === 'NotAllowedError') v.controls = true; });
+  });
+  function tryPlay() { v.play().catch(function (err) { if (err.name === 'NotAllowedError') v.controls = true; }); }
+  tryPlay();
+  // A tab opened in the background (or the installed app resumed) starts
+  // hidden, and browsers hold autoplay until it is seen — play it then.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && !covered && v.paused) tryPlay();
+  });
+  v.addEventListener('click', function () { v.paused ? v.play() : v.pause(); });
+})();
+</script>
+
+{% endblock %}

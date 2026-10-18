@@ -1,0 +1,14 @@
+<div class="grid sm:grid-cols-2 gap-3">
+  <label>Sending mailbox<select name="mailbox_id" required class="block w-full rounded border p-2">
+    {% for box in identities %}<option value="{{ box.id }}" {% if box.id==box_id %}selected{% endif %}>{{ box.send_as_address or box.address }} · replies to {{ box.address }}</option>{% endfor %}
+  </select></label>
+  <label>Mode<select name="mode" class="block w-full rounded border p-2"><option value="draft" {% if cfg.mode=='draft' %}selected{% endif %}>Draft for approval</option><option value="auto" {% if cfg.mode=='auto' %}selected{% endif %}>Auto, only if the mailbox allows it</option></select></label>
+  <label>Timezone<input name="timezone" value="{{ cfg.timezone }}" required class="block w-full rounded border p-2"></label>
+  <label>Campaign cap per 24 hours<input name="daily_cap" type="number" min="1" max="1000" value="{{ cfg.daily_cap }}" required class="block w-full rounded border p-2"></label>
+  <label>Start time<input name="start_time" type="time" value="{{ cfg.start_time }}" required class="block w-full rounded border p-2"></label>
+  <label>End time<input name="end_time" type="time" value="{{ cfg.end_time }}" required class="block w-full rounded border p-2"></label>
+  <label>Minimum seconds between emails<input name="min_gap_seconds" type="number" min="60" max="86400" value="{{ cfg.min_gap_seconds }}" required class="block w-full rounded border p-2"></label>
+  <label>Days off (YYYY-MM-DD, separated by spaces)<input name="holidays" value="{{ cfg.holidays|join(' ') }}" class="block w-full rounded border p-2"></label>
+</div>
+<fieldset class="flex flex-wrap gap-3"><legend class="mb-2">Working days</legend>{% for day in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<label><input type="checkbox" name="working_days" value="{{ loop.index0 }}" {% if loop.index0 in cfg.working_days %}checked{% endif %}> {{ day }}</label>{% endfor %}</fieldset>
+<p class="text-xs text-slate-500">The connected mailbox supplies the sender and reply address. Every email includes a stop instruction and unsubscribe header. Sending always checks the shared cap, current recipient evidence and stop requests. Auto mode also requires the mailbox's existing auto-send setting.</p>

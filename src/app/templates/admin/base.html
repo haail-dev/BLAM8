@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Operator · BLAM8{% endblock %}</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  {% include "_theme_head.html" %}
+  <style>
+    /* iOS Safari auto-zooms any focused input under 16px — bump form controls to
+       16px on small screens only so tapping any field never zooms. */
+    @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
+    /* Clip horizontal overflow at the root so the page is always exactly one
+       screen wide on mobile (no pinch-out-and-it-sits-left); wide content
+       scrolls inside its own container instead. */
+    html, body { overflow-x: hidden; overflow-x: clip; }
+  </style>
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+  <header class="bg-navy text-white relative z-30" data-pull-bar>
+    <div class="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between relative">
+      <a href="/admin" class="flex items-center gap-2 font-bold tracking-tight text-white">BLAM8
+        <span class="rounded bg-amber-400/20 text-amber-300 text-[10px] font-semibold px-2 py-0.5 tracking-wide">OPERATOR</span></a>
+      {# The old link row became a burger menu (same pattern as the app shell) so
+         the console fits the PWA/mobile. The button carries a combined pending
+         badge — the per-page counts would otherwise be invisible until opened. #}
+      {% set nav_badge = (pending_os_requests or 0) + (unseen_requests or 0) %}
+      <button id="admin-menu-btn" type="button" aria-label="Menu" aria-expanded="false"
+              class="relative p-2 -mr-2 rounded-lg text-white hover:bg-white/10 transition">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/></svg>
+        {% if nav_badge %}<span class="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none min-w-[1.15rem] h-[1.15rem] px-1">{{ nav_badge }}</span>{% endif %}
+      </button>
+      {% set item = "flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50 transition" %}
+      <nav id="admin-menu" class="hidden absolute right-3 top-14 w-64 rounded-xl bg-white text-slate-700 shadow-xl border border-slate-200 py-2 overflow-hidden">
+        {# The way back out — the console is a dead end otherwise, especially in
+           the installed PWA where there's no address bar to escape with. #}
+        <a href="/app" class="{{ item }}">
+          <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+          <span class="flex-1">Back to BLAM8</span>
+        </a>
+        <div class="my-1 border-t border-slate-100"></div>
+        <a href="/admin" class="{{ item }}"><span class="flex-1">Overview</span></a>
+        <a href="/admin/invites" class="{{ item }}"><span class="flex-1">Invites</span></a>
+        <a href="/admin/os-access" class="{{ item }}"><span class="flex-1">OS access</span>
+          {% if pending_os_requests %}<span class="inline-flex items-center justify-center rounded-full bg-amber-400 text-navy text-[10px] font-bold leading-none min-w-[1.15rem] h-[1.15rem] px-1">{{ pending_os_requests }}</span>{% endif %}</a>
+        <a href="/admin/partners" class="{{ item }}"><span class="flex-1">Partners</span></a>
+        <a href="/admin/src" class="{{ item }}"><span class="flex-1">Sources</span></a>
+        <a href="/admin/voice-crm" class="{{ item }}"><span class="flex-1">Voice CRM</span></a>
+        <a href="/admin/outreach" class="{{ item }}"><span class="flex-1">Outreach</span></a>
+        <a href="/admin/llm" class="{{ item }}"><span class="flex-1">LLM calls</span></a>
+        <a href="/admin/live-allowance" class="{{ item }}"><span class="flex-1">Live voice allowance</span></a>
+        <a href="/admin/requests" class="{{ item }}"><span class="flex-1">Requests</span>
+          {% if unseen_requests %}<span class="inline-flex items-center justify-center rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none min-w-[1.15rem] h-[1.15rem] px-1">{{ unseen_requests }}</span>{% endif %}</a>
+        <div class="my-1 border-t border-slate-100"></div>
+        <a href="/admin/logout" class="{{ item }} text-slate-500"><span class="flex-1">Sign out</span></a>
+        {% if ctx and ctx.email %}<p class="px-4 pt-2 text-xs text-slate-400 truncate">{{ ctx.email }}</p>{% endif %}
+      </nav>
+    </div>
+  </header>
+  <main class="max-w-6xl mx-auto px-5 py-6">{% block content %}{% endblock %}</main>
+  <script>
+    (function () {
+      var btn = document.getElementById('admin-menu-btn'), menu = document.getElementById('admin-menu');
+      if (!btn || !menu) return;
+      function toggle(open) {
+        menu.classList.toggle('hidden', !open);
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      btn.addEventListener('click', function (e) { e.stopPropagation(); toggle(menu.classList.contains('hidden')); });
+      document.addEventListener('click', function () { toggle(false); });
+      menu.addEventListener('click', function (e) { e.stopPropagation(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggle(false); });
+    })();
+  </script>
+  <script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

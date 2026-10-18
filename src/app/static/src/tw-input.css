@@ -1,0 +1,7 @@
+/* Input for the deploy-time Tailwind build (scripts/build/build_css.sh →
+ * src/app/static/tw.css). Theme variables and the Counting House flat layer are
+ * emitted by the plugin in config/tailwind/tailwind.config.js, so directives are the whole
+ * file. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

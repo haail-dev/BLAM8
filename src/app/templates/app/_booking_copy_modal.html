@@ -1,0 +1,104 @@
+{# Gathered booking details copy-out modal — the thread view's pinned booking
+   card ("All details gathered" chip). The inbox row's Details pill used to share
+   it until 2026-09-21 (Kris: every tier books now, so the manual bridge into the
+   calendar came off the list). Opened by any element with class `details-btn`
+   carrying data-booking-details (JSON [{label, value}]) and data-booking-contact. Every line has a checkbox, all ticked by default: untick
+   what you don't want, one Copy button takes the rest — the manual bridge into the
+   calendar until Scheduling automates it. #}
+<div id="bd-modal" class="hidden fixed inset-0 z-30">
+  <div id="bd-backdrop" class="absolute inset-0 bg-navy/40"></div>
+  <div class="absolute inset-x-4 top-[12vh] sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md rounded-2xl bg-white shadow-2xl p-5">
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-sm font-semibold text-navy truncate"><span class="text-emerald-600">✓</span> <span id="bd-title"></span></p>
+      <button type="button" id="bd-close" aria-label="Close" class="text-slate-400 hover:text-slate-600 text-xl leading-none px-1">&times;</button>
+    </div>
+    <p class="mt-0.5 text-xs text-slate-400">Every required booking detail is gathered — untick anything you don't need, then copy the rest straight into your calendar.</p>
+    <div id="bd-list" class="mt-3 space-y-0.5 text-sm max-h-[50vh] overflow-y-auto"></div>
+    <button type="button" id="bd-copy-all"
+            class="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition disabled:bg-slate-300 disabled:cursor-not-allowed">Copy all</button>
+  </div>
+</div>
+
+<script>
+// Gathered-details modal (shared). Capture-phase so a row link never fires.
+(function () {
+  var modal = document.getElementById('bd-modal');
+  if (!modal) return;
+  var listEl = document.getElementById('bd-list');
+  var titleEl = document.getElementById('bd-title');
+  var copyBtn = document.getElementById('bd-copy-all');
+  var details = [];
+
+  function flashCopied(btn) {
+    btn.classList.add('text-emerald-600');
+    setTimeout(function () { btn.classList.remove('text-emerald-600'); }, 900);
+  }
+  function copy(text, btn) {
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(text).then(function () { flashCopied(btn); }).catch(function () {});
+  }
+  function selectedIdx() {
+    var out = [];
+    listEl.querySelectorAll('.bd-check').forEach(function (cb) {
+      if (cb.checked) out.push(parseInt(cb.getAttribute('data-idx'), 10));
+    });
+    return out;
+  }
+  function refreshCopyBtn() {
+    var n = selectedIdx().length;
+    copyBtn.disabled = n === 0;
+    copyBtn.textContent = n === 0 ? 'Nothing selected'
+      : (n === details.length ? 'Copy all' : 'Copy ' + n + ' selected');
+  }
+  function open(btn) {
+    try { details = JSON.parse(btn.getAttribute('data-booking-details')) || []; }
+    catch (err) { details = []; }
+    titleEl.textContent = btn.getAttribute('data-booking-contact') || 'Booking details';
+    listEl.innerHTML = '';
+    details.forEach(function (d, i) {
+      // The whole row is a <label>: tapping anywhere toggles its checkbox —
+      // checked by default, untick to leave that line out of the copy.
+      var row = document.createElement('label');
+      row.className = 'flex items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-slate-50 cursor-pointer select-none';
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = true;
+      cb.setAttribute('data-idx', i);
+      cb.className = 'bd-check h-4 w-4 flex-none rounded border-slate-300 text-emerald-600 focus:ring-emerald-500';
+      cb.addEventListener('change', refreshCopyBtn);
+      var dt = document.createElement('span');
+      dt.className = 'text-slate-500 font-medium whitespace-nowrap';
+      dt.textContent = d.label + ':';
+      var dd = document.createElement('span');
+      dd.className = 'text-slate-800 truncate flex-1';
+      dd.textContent = d.value;
+      row.appendChild(cb); row.appendChild(dt); row.appendChild(dd);
+      listEl.appendChild(row);
+    });
+    refreshCopyBtn();
+    modal.classList.remove('hidden');
+  }
+  function close() { modal.classList.add('hidden'); }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('.details-btn');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    open(btn);
+  }, true);
+  document.getElementById('bd-close').addEventListener('click', close);
+  document.getElementById('bd-backdrop').addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) close();
+  });
+  copyBtn.addEventListener('click', function () {
+    var lines = selectedIdx().map(function (i) { return details[i].label + ': ' + details[i].value; });
+    if (!lines.length) return;
+    copy((titleEl.textContent ? titleEl.textContent + '\n' : '') + lines.join('\n'), this);
+    this.textContent = 'Copied ✓';
+    setTimeout(refreshCopyBtn, 1200);
+    // Let the opening page react — e.g. the pinned card's gathered chip flips to ✓✓ Copied.
+    document.dispatchEvent(new CustomEvent('bd:copied'));
+  });
+})();
+</script>

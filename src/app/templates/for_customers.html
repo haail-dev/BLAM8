@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 for Customers — Check Bookings, Ask Questions, Self-Service{% endblock %}
+{% block meta_description %}Looking up a booking or need help from a business on BLAM8? Enter the reference code from any email they sent you, or search for the business by name — no account, no app.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "@id": "{{ base_url }}/for-customers#breadcrumbs",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "{{ base_url }}/" },
+        { "@type": "ListItem", "position": 2, "name": "For Customers", "item": "{{ base_url }}/for-customers" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/for-customers#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Where do I find my reference code?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It's at the bottom of any email the business sent you through BLAM8 — a short code like ACME-7K2P, next to the words 'Your reference'. Enter it on blam8.com/for-customers and you'll land straight on that business's page, where you can check, move or ask about your booking." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need an account or an app to manage my booking?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Businesses on BLAM8 give the customers they already have a self-service page — you check, move or pay a booking and ask questions by simple conversation, straight in the browser. Your reference code is on every email from them, and it's how you get in; no code to hand, and they send one to the email address they have for you. There is no customer login." }
+        },
+        {
+          "@type": "Question",
+          "name": "What if I can't find the business or my code?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Search for the business by name on blam8.com/for-customers — if they have a customer page, it will appear. No luck? Reply to any email the business sent you, or ask the assistant in the corner of this page and it will point you the right way." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-3xl px-5 pt-16 pb-10 md:pt-24 md:pb-14 text-center">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> BLAM8 for customers
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1]">
+      Which business are you looking for?
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed">
+      Businesses on BLAM8 give their customers a self-service page: check, move or pay a booking, ask a question — by simple conversation, no account, no app. Your reference code is on every email from them.
+    </p>
+  </div>
+</section>
+
+<section class="mx-auto max-w-3xl px-5 pb-16 md:pb-20 space-y-5">
+
+  <!-- Reference code lookup — the primary path: most customers arrive holding
+       a code from an email the business sent them. -->
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 md:p-7">
+    <h2 class="text-lg font-bold text-navy">Got a reference code?</h2>
+    <p class="mt-1 text-sm text-slate-500">It's at the bottom of any email the business sent you — it looks like <span class="font-mono font-semibold text-slate-600">ACME-7K2P</span>.</p>
+    <form id="ref-form" class="mt-4 flex flex-col sm:flex-row gap-2">
+      <label for="ref-input" class="sr-only">Reference code</label>
+      <input id="ref-input" name="ref" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"
+             placeholder="e.g. ACME-7K2P" maxlength="20"
+             class="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-base font-mono uppercase tracking-wide text-navy placeholder:font-sans placeholder:normal-case focus:border-brand focus:ring-1 focus:ring-brand outline-none" />
+      <button type="submit" id="ref-btn"
+              class="inline-flex items-center justify-center rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">
+        Find my booking
+      </button>
+    </form>
+    <p id="ref-error" class="hidden mt-3 text-sm text-rose-600"></p>
+  </div>
+
+  <!-- Business name search -->
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 md:p-7">
+    <h2 class="text-lg font-bold text-navy">No code? Search by business name</h2>
+    <p class="mt-1 text-sm text-slate-500">If the business has a customer page on BLAM8, it'll show up here. The page is for their customers: you'll be asked for your reference code, or the email address they have for you.</p>
+    <form id="search-form" class="mt-4 flex flex-col sm:flex-row gap-2">
+      <label for="search-input" class="sr-only">Business name</label>
+      <input id="search-input" name="q" type="search" autocomplete="off" value="{{ q }}"
+             placeholder="e.g. Acme Plumbing" maxlength="80"
+             class="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-base text-navy focus:border-brand focus:ring-1 focus:ring-brand outline-none" />
+      <button type="submit" id="search-btn"
+              class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-brand hover:text-navy transition">
+        Search
+      </button>
+    </form>
+    <ul id="search-results" class="mt-4 space-y-2"></ul>
+    <p id="search-empty" class="hidden mt-3 text-sm text-slate-500"></p>
+  </div>
+
+  <!-- Assistant hand-off: the site-wide assistant already sits on this page -->
+  <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 md:p-7 flex flex-col sm:flex-row sm:items-center gap-4">
+    <div class="flex-1">
+      <h2 class="text-lg font-bold text-navy">Not sure? Ask the assistant</h2>
+      <p class="mt-1 text-sm text-slate-500">Tell it what you're trying to do — find a business, check a booking, get a question answered — and it'll point you the right way.</p>
+    </div>
+    <button type="button" data-concierge-ask="I'm a customer of a business that uses BLAM8 — help me find their booking page."
+            class="inline-flex items-center justify-center rounded-lg bg-navy px-5 py-3 text-sm font-semibold text-white hover:bg-navy-700 transition shrink-0">
+      Open the assistant
+    </button>
+  </div>
+
+  <p class="text-center text-sm text-slate-400 pt-4">
+    Run a business? <a href="/for-businesses" class="font-semibold text-brand hover:underline">See what BLAM8 does for businesses →</a>
+  </p>
+</section>
+
+<script>
+  (function () {
+    // Reference code → the business's portal. The server reveals only which
+    // business minted the code (its prefix already says so); identity and
+    // booking data stay on the portal page itself.
+    var refForm = document.getElementById("ref-form");
+    var refInput = document.getElementById("ref-input");
+    var refBtn = document.getElementById("ref-btn");
+    var refError = document.getElementById("ref-error");
+    refForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var code = (refInput.value || "").trim().toUpperCase();
+      refError.classList.add("hidden");
+      if (!code) { refInput.focus(); return; }
+      refBtn.disabled = true; refBtn.textContent = "Looking…";
+      fetch("/api/portal/entry/ref", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref: code })
+      }).then(function (r) {
+        if (r.status === 429) throw new Error("rate");
+        return r.json();
+      }).then(function (data) {
+        if (data && data.found && data.url) { window.location.href = data.url; return; }
+        refError.textContent = "We couldn't find that code — check the spelling (letters and numbers only, with the dash), or search for the business by name below.";
+        refError.classList.remove("hidden");
+      }).catch(function (err) {
+        refError.textContent = err && err.message === "rate"
+          ? "Too many attempts — please wait a little while and try again."
+          : "Something went wrong — please try again.";
+        refError.classList.remove("hidden");
+      }).finally(function () {
+        refBtn.disabled = false; refBtn.textContent = "Find my booking";
+      });
+    });
+
+    // Business-name search → live portal links. Results are DOM-built (never
+    // innerHTML) so a business name can't inject markup.
+    var searchForm = document.getElementById("search-form");
+    var searchInput = document.getElementById("search-input");
+    var searchBtn = document.getElementById("search-btn");
+    var resultsEl = document.getElementById("search-results");
+    var emptyEl = document.getElementById("search-empty");
+    function runSearch() {
+      var q = (searchInput.value || "").trim();
+      resultsEl.textContent = "";
+      emptyEl.classList.add("hidden");
+      if (q.length < 2) {
+        emptyEl.textContent = "Type at least two letters of the business name.";
+        emptyEl.classList.remove("hidden");
+        return;
+      }
+      searchBtn.disabled = true;
+      fetch("/api/portal/entry/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: q })
+      }).then(function (r) {
+        if (r.status === 429) throw new Error("rate");
+        return r.json();
+      }).then(function (data) {
+        var results = (data && data.results) || [];
+        if (!results.length) {
+          emptyEl.textContent = "No business by that name has a customer page yet — try the reference code from their email, or ask the assistant.";
+          emptyEl.classList.remove("hidden");
+          return;
+        }
+        results.forEach(function (biz) {
+          var li = document.createElement("li");
+          var a = document.createElement("a");
+          a.href = biz.url;
+          a.className = "flex items-center justify-between rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-navy hover:border-brand hover:bg-brand-50 transition";
+          var name = document.createElement("span");
+          name.textContent = biz.name;
+          var arrow = document.createElement("span");
+          arrow.className = "text-brand";
+          arrow.textContent = "Visit page →";
+          a.appendChild(name); a.appendChild(arrow); li.appendChild(a);
+          resultsEl.appendChild(li);
+        });
+      }).catch(function (err) {
+        emptyEl.textContent = err && err.message === "rate"
+          ? "Too many searches — please wait a moment and try again."
+          : "Something went wrong — please try again.";
+        emptyEl.classList.remove("hidden");
+      }).finally(function () { searchBtn.disabled = false; });
+    }
+    searchForm.addEventListener("submit", function (e) { e.preventDefault(); runSearch(); });
+    // ?q= from the sitelinks searchbox (WebSite SearchAction): run it on load.
+    if ((searchInput.value || "").trim().length >= 2) runSearch();
+  })();
+</script>
+
+{% endblock %}

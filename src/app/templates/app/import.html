@@ -1,0 +1,62 @@
+{% extends "app/base.html" %}
+{% block title %}Bring your data · BLAM8{% endblock %}
+{% block heading %}Bring your data{% endblock %}
+{% block content %}
+{# The one-time Xero import (src/app/xero_import.py). Research doctrine: one
+   sitting, zero mapping questions — and the arrival/exit pair: you arrive
+   with two CSVs, you can always leave with one zip. #}
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-4">
+
+  {% if result %}
+  <div class="rounded-xl border {{ 'border-emerald-200 bg-emerald-50' if not result.errors else 'border-amber-200 bg-amber-50' }} px-4 py-3 text-sm {{ 'text-emerald-800' if not result.errors else 'text-amber-800' }} space-y-1">
+    {% for e in result.errors %}<p>⚠ {{ e }}</p>{% endfor %}
+    {% if result.contacts_new or result.contacts_known or result.contacts_skipped %}
+    <p><span class="font-semibold">Contacts:</span> {{ result.contacts_new }} imported{% if result.contacts_known %} · {{ result.contacts_known }} already here{% endif %}{% if result.contacts_skipped %} · {{ result.contacts_skipped }} skipped (no email or phone){% endif %}.</p>
+    {% endif %}
+    {% if result.inv_imported or result.inv_existing or result.inv_skipped %}
+    <p><span class="font-semibold">Invoices:</span> {{ result.inv_imported }} imported ({{ result.inv_paid }} paid){% if result.inv_existing %} · {{ result.inv_existing }} already here{% endif %}{% if result.inv_skipped %} · {{ result.inv_skipped }} skipped (drafts, voids or unreadable rows){% endif %}.</p>
+    {% endif %}
+    {% if result.inv_overdue %}
+    <p class="font-medium">{{ result.inv_overdue }} of them {{ 'is' if result.inv_overdue == 1 else 'are' }} overdue — they're on <a href="/app/money" class="underline font-semibold">Money</a> now, and BLAM8 will start drafting chases from the next morning run, oldest first. Nothing sends without your yes.</p>
+    {% elif result.inv_imported %}
+    <p>They're on <a href="/app/money" class="underline font-semibold">Money</a> now.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <p class="text-sm text-slate-500">Coming from Xero? Two exports bring your world across in one sitting — no field mapping, no setup. Anything that can't be read is counted and reported, never silently dropped.</p>
+
+  <form method="post" action="/app/import" enctype="multipart/form-data" class="space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Contacts</h2>
+      </div>
+      <div class="p-5 space-y-2">
+        <p class="text-xs text-slate-400">In Xero: <span class="text-slate-500 font-medium">Contacts → Export</span>. Your customers land in the CRM with their names and emails — the self-filling starts from a full address book instead of an empty one.</p>
+        <input type="file" name="contacts_csv" accept=".csv,.txt"
+               class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200">
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Invoices</h2>
+      </div>
+      <div class="p-5 space-y-2">
+        <p class="text-xs text-slate-400">In Xero: <span class="text-slate-500 font-medium">Business → Invoices → Export</span>. Your invoice numbers are kept exactly as they are (your accountant matches on them), totals come across as-is, and anything unpaid joins the chase list. Xero's drafts and voided invoices stay behind.</p>
+        <input type="file" name="invoices_csv" accept=".csv,.txt"
+               class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200">
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-xs text-slate-400">One-time and safe to re-run — anything already here is skipped, never duplicated.</p>
+      <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition whitespace-nowrap">Import</button>
+    </div>
+  </form>
+
+  <p class="text-xs text-slate-400">The other half of the promise: you can always <a href="/app/export.zip" class="text-brand font-medium">leave with everything</a> — one download, and it works even if you cancel.</p>
+</div>
+{% endblock %}

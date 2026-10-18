@@ -1,0 +1,98 @@
+{% extends "onboarding/base.html" %}
+{% block title %}Knowledge · Set up BLAM8{% endblock %}
+{% block heading %}Give it your facts{% endblock %}
+{% block subheading %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endblock %}
+{% block content %}
+{% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+{% if msg %}<div class="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">{{ msg }}</div>{% endif %}
+{% if err %}<div class="mb-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-800">{{ err }}</div>{% endif %}
+{% if not configured %}
+<div class="mb-3 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">The knowledge base is off until <code class="font-mono">VOYAGE_API_KEY</code> is set — skip this and add facts later.</div>
+{% endif %}
+
+{# Knowledge via chat (Kris 2026-09-04): what the agent can answer, read back
+   from the notes as the eight kinds every business needs — and the assistant
+   asks for exactly the ones that aren't there. #}
+{% if coverage_ask %}<p hidden data-onb-autoask="{{ coverage_ask }}"{% if auto_site %} data-onb-autoask-after="site"{% endif %}></p>{% endif %}
+{% if review_coverage %}{% include "_knowledge_coverage_review.html" %}{% endif %}
+<div id="knowledge-pending-reviews">{% for review in pending_reviews or [] %}{% include "_knowledge_review.html" %}{% endfor %}</div>
+{% if sources %}
+{# Each note opens to show its text (Kris 2026-09-13): the row is a
+   <details>; the text is the note's first chunk. Editing lives on the app's
+   Knowledge page after setup. #}
+<div class="mb-4 rounded-lg border border-slate-200 divide-y divide-slate-100">
+  {% for s in sources %}
+  <details class="group px-3 py-2 text-sm" data-kb-note>
+    <summary class="flex cursor-pointer items-center justify-between gap-3 list-none">
+      <span class="font-medium text-navy truncate" data-kb-source="{{ s.source }}">{{ s.source }}</span>
+      <span class="flex-none text-xs text-slate-400">{{ s.chunks }} chunk{{ '' if s.chunks == 1 else 's' }} · <span class="group-open:hidden">read</span><span class="hidden group-open:inline">close</span></span>
+    </summary>
+    <p class="mt-1.5 whitespace-pre-wrap text-xs text-slate-600">{{ (source_texts or {}).get(s.source) or '(nothing to show)' }}</p>
+  </details>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# Held for later (src/app/setup_held.py): rules and facts stated at earlier
+   steps — the panel renders them as a ready note card on arrival. #}
+{% if held_notes %}<div id="held-notes" hidden data-onb-held-notes='{{ held_notes | tojson }}'></div>{% endif %}
+{% if configured %}
+{# Website → draft KB: paste the address, a model reads the key pages and
+   proposes labelled notes; NOTHING saves until the review form below posts.
+   Cards are built with DOM APIs (never innerHTML) — the content is whatever
+   the website said, and a site must not be able to inject markup here. #}
+{# Read on arrival (Kris 2026-09-13): the website given at step 1 is read
+   as soon as this page loads — the owner sees "Reading littledogs.co.uk…"
+   then the cards, instead of a box they may never notice. Once per browser
+   session (a reload after a failed read doesn't spend the cap again; the
+   button still does). data-onb-site tells the panel's greeting the site is
+   being read. #}
+{# Done = collapsed (Kris 2026-09-13: "still showing even though it's been
+   done"): once "Website — …" notes exist the box becomes one line, and
+   Read again reveals it for a re-run. #}
+{% if site_done %}
+<div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm" id="site-done">
+  <p class="text-slate-600"><span class="font-semibold text-navy">Website read</span>{% if site_url %} — {{ site_url }}{% endif %} · {{ site_note_count }} note{{ '' if site_note_count == 1 else 's' }} saved.</p>
+  <button type="button" id="site-again" class="shrink-0 text-xs font-semibold text-brand hover:underline">Read again</button>
+</div>
+{% endif %}
+<div class="mb-4 rounded-xl border border-brand/30 bg-brand-50/50 p-4" id="site-box" data-onb-site="{{ site_url if auto_site else '' }}"{% if auto_site %} data-auto-site="1"{% endif %}{% if site_done %} hidden{% endif %} data-scope="{{ (request.state.tenant_id or '')[:12] }}">
+  <p class="text-sm font-semibold text-navy">{% if auto_site %}Reading your website{% else %}Start from your website{% endif %}</p>
+  <p class="mt-0.5 text-xs text-slate-500 leading-relaxed">{% if auto_site %}You gave us {{ site_url }} at step 1 — we're reading its key pages (services, prices, FAQs) and drafting your knowledge from them. You review every note before anything is saved.{% else %}Paste your address — we read your key pages (services, prices, FAQs) and draft your knowledge. You review every note before anything is saved.{% endif %}</p>
+  <div class="mt-2 flex gap-2">
+    <input id="site-url" inputmode="url" autocomplete="url" class="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" placeholder="www.yourcompany.co.uk" value="{{ site_url or '' }}">
+    <button id="site-go" type="button" class="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50">Read my site</button>
+  </div>
+  <p id="site-status" hidden class="mt-2 text-xs text-slate-500"></p>
+  <input type="hidden" id="knowledge-review-csrf" value="{{ csrf_token(request) }}">
+  <div id="site-review" hidden></div>
+</div>
+<script src="/static/knowledge_onboarding_review.js?v={{ asset_rev }}" defer></script>
+{% endif %}
+
+<div class="space-y-4">
+  <form id="kb-note" method="post" action="/onboarding/knowledge/text" class="space-y-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input name="label" required class="{{ field }}" placeholder="Label — e.g. ‘Opening hours &amp; pricing’" value="{{ prefill_label or '' }}">
+    <textarea name="content" rows="3" required class="{{ field }}" placeholder="e.g. We’re open Mon–Fri 8am–6pm. A standard visit is £45 and takes about an hour.">{{ prefill_content or '' }}</textarea>
+    <div class="flex justify-end"><button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Review note</button></div>
+  </form>
+
+  <form method="post" action="/onboarding/knowledge/upload" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="file" name="file" required accept=".pdf,.docx,.xlsx,.xlsm,.csv,.tsv,.txt,.md" class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200">
+    <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-slate-400 transition">Review file</button>
+  </form>
+</div>
+
+<div class="flex items-center justify-between pt-5">
+  <a href="/onboarding/voice" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
+  {# The wizard's last step: the button submits the note form (formnovalidate →
+     an empty box just moves on): as a bare link it silently discarded a
+     typed-but-not-Added note. It says "Next: Diary settings" — the first of
+     the five tuning steps inside the app — not "Finish setup" (Kris 2026-09-13:
+     "we've shown/done four steps… the user can just ignore the next 5"). #}
+  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue
+          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">{{ next_label or 'Finish setup' }}</button>
+</div>
+{% endblock %}

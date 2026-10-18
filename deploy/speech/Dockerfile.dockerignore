@@ -1,0 +1,13 @@
+# Build from the repository root with -f deploy/speech/Dockerfile.
+# Send only this worker's source and dependencies to the Docker daemon.
+**
+!deploy/
+!deploy/speech/
+!deploy/speech/requirements.txt
+!deploy/speech/Dockerfile
+!src/
+!src/speech_service/
+!src/speech_service/**
+**/__pycache__/
+**/*.pyc
+**/.env*

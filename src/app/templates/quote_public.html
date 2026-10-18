@@ -1,0 +1,186 @@
+{# The public quote page — /q/{id} (docs/modules/module-quotes.md). Customer-facing:
+   no app chrome, mobile-first, noindex. The page IS the quote: optional lines
+   tick server-side, acceptance is a typed name, questions land in the inbox. #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{{ q.quote_ref or "Quote" }} — {{ s.business_name or "Quote" }}</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:34rem;margin:2rem auto;padding:0 1rem;color:#1a202c;line-height:1.5;background:#fff}
+    h1{font-size:1.25rem;margin:0 0 .25rem}
+    h2{font-size:1rem;margin:1.5rem 0 .5rem}
+    table{width:100%;border-collapse:collapse;margin:.75rem 0}
+    th{font-size:.75rem;text-transform:uppercase;letter-spacing:.03em;color:#718096;text-align:left;border-bottom:1px solid #e2e8f0;padding:.4rem 0}
+    td{padding:.45rem 0;border-bottom:1px solid #edf2f7;vertical-align:top}
+    .num{text-align:right;white-space:nowrap}
+    .totals td{border-bottom:0;padding:.15rem 0}
+    .totals .label{text-align:right;color:#718096}
+    .grand{font-weight:700;font-size:1.05rem}
+    .muted{color:#718096}.small{font-size:.85rem}
+    .banner{border-radius:8px;padding:.8rem 1rem;margin:1rem 0;font-weight:600}
+    .ok{background:#f0fff4;color:#276749}
+    .bad{background:#fff5f5;color:#c53030}
+    .warn{background:#fffbeb;color:#975a16}
+    button{background:#2b6cb0;color:#fff;border:0;border-radius:8px;padding:.8rem 1.6rem;font-size:1rem;cursor:pointer}
+    button.secondary{background:#edf2f7;color:#2d3748}
+    input[type=text],textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e0;border-radius:8px;padding:.6rem;font-size:1rem;font-family:inherit}
+    details{margin:1rem 0}
+    summary{cursor:pointer;color:#2b6cb0}
+    .biz{margin-bottom:1.5rem}
+    .optional{color:#718096;font-size:.8rem;white-space:nowrap}
+    .accept-box{background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:1rem;margin:1.25rem 0}
+    footer{margin-top:2.5rem;font-size:.8rem;color:#a0aec0}
+  </style>
+</head>
+<body>
+
+{% if s.show_business_details and (s.business_name or s.business_address or s.business_contact) %}
+<div class="biz">
+  {% if s.business_name %}<h1>{{ s.business_name }}</h1>{% endif %}
+  {% if s.business_address %}<div class="muted small">{{ s.business_address }}</div>{% endif %}
+  {% if s.business_contact %}<div class="muted small">{{ s.business_contact }}</div>{% endif %}
+</div>
+{% endif %}
+
+<h1>Quote {{ q.quote_ref or "" }}</h1>
+{% if q.title %}<p><strong>{{ q.title }}</strong></p>{% endif %}
+<p class="muted small">
+  {% if q.issue_date %}Issued {{ q.issue_date | pretty_date }}{% endif %}
+  {% if q.valid_until and state == "sent" %} · valid until {{ q.valid_until | pretty_date }}{% endif %}
+  {% if (q.version or 1) > 1 and state == "sent" %} · revised{% endif %}
+  {% if q.customer_reference %} · your ref {{ q.customer_reference }}{% endif %}
+</p>
+{% if q.intro %}<p>{{ q.intro }}</p>{% endif %}
+
+{% if msg == "accepted" or state == "accepted" %}
+  <div class="banner ok">✓ Accepted{% if q.accepted_name %} by {{ q.accepted_name }}{% endif %}{% if q.accepted_at %} on {{ q.accepted_at | pretty_date }}{% endif %} — thank you.</div>
+  {# What happens next — an acceptance is a commitment, and the page should
+     say what it set in motion (Julius, live e2e 2026-09-01). #}
+  <div class="accept-box">
+    <h2 style="margin-top:0">What happens next</h2>
+    {% if deposit_inv and deposit_inv.status == 'paid' %}
+    <p class="small">✓ Your deposit ({{ deposit_inv.invoice_ref }},
+      £{{ '%.2f'|format(deposit_inv.total|float) }}) is paid — thank you.
+      {{ s.business_name or "We" }} will be in touch to arrange the work.</p>
+    {% elif deposit_inv and deposit_inv.status not in ('cancelled', 'void') %}
+    <p class="small">A deposit invoice ({{ deposit_inv.invoice_ref }},
+      £{{ '%.2f'|format(deposit_inv.total|float) }}) has been issued to secure
+      the booking.</p>
+    <p style="margin:.5rem 0"><a href="/pay/{{ deposit_inv.id }}"><button type="button">View &amp; pay the deposit</button></a></p>
+    <p class="small muted">Once it's settled, {{ s.business_name or "we" }} will be in touch to arrange the work.</p>
+    {% else %}
+    <p class="small">{{ s.business_name or "We" }} will be in touch to arrange
+      the work — nothing more is needed from you right now.</p>
+    {% endif %}
+    <p class="small muted">Everything below is the record of exactly what was
+      agreed{% if q.customer_reference %} (your ref {{ q.customer_reference }}){% endif %}
+      — <a href="/q/{{ q.id }}.pdf">download a copy (PDF)</a> for your files.
+      Questions? Use the message box at the bottom of this page.</p>
+  </div>
+{% elif state == "declined" %}
+  <div class="banner bad">This quote was declined{% if q.declined_at %} on {{ q.declined_at | pretty_date }}{% endif %}.</div>
+{% elif state == "expired" %}
+  <div class="banner warn">This quote has expired — send a message below and we'll get you an updated one.</div>
+{% endif %}
+{% if msg == "question_sent" %}<div class="banner ok">Your message has been passed on — you'll get a reply by email.</div>{% endif %}
+{% if msg == "name_required" %}<div class="banner bad">Please type your full name to accept.</div>{% endif %}
+{% if msg == "empty_question" %}<div class="banner bad">Please write a message first.</div>{% endif %}
+{% if msg == "declined" %}<div class="banner bad">Declined — thanks for letting us know.</div>{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>Item</th>
+      {% if q.show_item_prices %}<th class="num">Qty</th><th class="num">Amount</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+  {% for l in lines %}
+    <tr>
+      <td>
+        {% if state == "sent" and l.is_optional and l.id %}
+        <form method="post" action="/q/{{ q.id }}/select" style="display:inline">
+          <input type="hidden" name="line_id" value="{{ l.id }}">
+          <input type="hidden" name="selected" value="{{ '' if l.is_selected else '1' }}">
+          <label style="cursor:pointer">
+            <input type="checkbox" {% if l.is_selected %}checked{% endif %}
+                   onchange="this.form.submit()"> {{ l.description }}
+            <span class="optional">optional</span>
+          </label>
+        </form>
+        {% else %}
+          {{ l.description }}{% if l.is_optional %} <span class="optional">optional</span>{% endif %}
+        {% endif %}
+      </td>
+      {% if q.show_item_prices %}
+      <td class="num">{{ '%g'|format((l.quantity or 1)|float) }}</td>
+      <td class="num {% if state == "sent" and l.is_optional and not l.is_selected %}muted{% endif %}">
+        £{{ '%.2f'|format((l.amount or 0)|float) }}
+      </td>
+      {% endif %}
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<table class="totals">
+  {% if q.show_item_prices and q.prices_include_vat and s.show_vat %}<tr class="grand"><td></td><td class="label">Total</td><td class="num">£{{ '%.2f'|format((totals.total or 0)|float) }} <span class="muted small">(includes VAT £{{ '%.2f'|format((totals.vat or 0)|float) }})</span></td></tr>{% else %}{% if q.show_item_prices %}
+  <tr><td></td><td class="label">Subtotal</td><td class="num">£{{ '%.2f'|format((totals.subtotal or 0)|float) }}</td></tr>
+  {% if s.show_vat %}
+  <tr><td></td><td class="label">VAT ({{ '%g'|format((s.vat_rate or 0)|float) }}%)</td><td class="num">£{{ '%.2f'|format((totals.vat or 0)|float) }}</td></tr>
+  {% endif %}
+  {% endif %}
+  <tr class="grand"><td></td><td class="label">Total</td><td class="num">£{{ '%.2f'|format((totals.total or 0)|float) }}</td></tr>{% endif %}
+</table>
+
+{% if state == "sent" %}
+<div class="accept-box">
+  <form method="post" action="/q/{{ q.id }}/accept">
+    <label class="small" for="accepted_name">Type your full name to accept this quote</label>
+    <input type="text" id="accepted_name" name="accepted_name" autocomplete="name"
+           placeholder="Your full name" required maxlength="200" style="margin:.5rem 0 .75rem">
+    <button type="submit">Accept quote{% if deposit_net %} &amp; pay deposit{% endif %}</button>
+    {% if deposit_net %}
+    <p class="muted small">A deposit of {{ '%g'|format(q.deposit_percent|float) }}%{% if q.deposit_base is not none %} of £{{ '%.2f'|format(q.deposit_base|float) }}{% endif %} is payable
+      on acceptance — you'll be taken to the payment page next.</p>
+    {% else %}
+    <p class="muted small">Accepting records your name, the date, and exactly what was
+      quoted — so everyone has the same copy.</p>
+    {% endif %}
+  </form>
+  <details>
+    <summary class="small">Not going ahead?</summary>
+    <form method="post" action="/q/{{ q.id }}/decline" style="margin-top:.5rem">
+      <textarea name="reason" rows="2" maxlength="500"
+                placeholder="Optional — tell us why (price, timing, went elsewhere…)"></textarea>
+      <button type="submit" class="secondary" style="margin-top:.5rem">Decline quote</button>
+    </form>
+  </details>
+</div>
+{% endif %}
+
+<details {% if state == "expired" %}open{% endif %}>
+  <summary>Ask a question about this quote</summary>
+  <form method="post" action="/q/{{ q.id }}/question" style="margin-top:.5rem">
+    <textarea name="message" rows="3" maxlength="2000" required
+              placeholder="{% if state == 'expired' %}Please could you send an updated quote…{% else %}Your question…{% endif %}"></textarea>
+    {% if not q.customer_email %}
+    <input type="text" name="reply_to" placeholder="Your email for the reply"
+           style="margin-top:.5rem" maxlength="200">
+    {% endif %}
+    <button type="submit" class="secondary" style="margin-top:.5rem">Send</button>
+  </form>
+</details>
+
+{% if q.notes %}<p class="muted small">{{ q.notes }}</p>{% endif %}
+{% if s.footer_note %}<p class="muted small">{{ s.footer_note }}</p>{% endif %}
+
+<p class="small"><a href="/q/{{ q.id }}.pdf">Download as PDF</a></p>
+
+<footer>Powered by BLAM8</footer>
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

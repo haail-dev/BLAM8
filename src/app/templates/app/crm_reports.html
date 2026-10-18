@@ -1,0 +1,106 @@
+{% extends "app/base.html" %}
+{% block title %}Reports · CRM · BLAM8{% endblock %}
+{% block heading %}CRM{% endblock %}
+{% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
+{% block content %}
+{# Ledgers, not tiles: the last stat-tile holdout joins the ruled-row idiom —
+   each figure is a ROW that states its value, the way Money's headline sheet
+   does. The activity chart stays a chart; it was never the offender. #}
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-slate-500 max-w-2xl">Accurate from day one — BLAM8 fills every record from the inbox itself.</p>
+    <form method="get" class="flex items-center gap-2">
+      <label class="text-xs text-slate-500" for="period">Period:</label>
+      <select id="period" name="period" onchange="this.form.submit()" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600">
+        <option value="7" {{ 'selected' if period==7 }}>7 days</option>
+        <option value="30" {{ 'selected' if period==30 }}>30 days</option>
+        <option value="90" {{ 'selected' if period==90 }}>90 days</option>
+        <option value="180" {{ 'selected' if period==180 }}>6 months</option>
+        <option value="365" {{ 'selected' if period==365 }}>12 months</option>
+      </select>
+    </form>
+  </div>
+
+  <!-- Pipeline: one ruled row per stage, each a door to the pipeline board -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Pipeline</h2>
+    </div>
+    {% if pipeline %}
+    <div class="divide-y divide-slate-200">
+      {% for s in pipeline %}
+      <a href="/app/crm/pipeline" class="px-4 py-2.5 flex items-baseline gap-3 hover:bg-slate-50 transition">
+        <span class="inline-flex items-center gap-1.5 text-sm font-medium text-navy"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-emerald-600' if s.stage_type == 'won' else ('bg-rose-600' if s.stage_type == 'lost' else 'bg-slate-300') }} self-center"></span>{{ s.stage_name }}</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ s.deal_count }} deal{{ '' if s.deal_count == 1 else 's' }}{% if s.avg_days_in_stage and s.deal_count %} · avg {{ s.avg_days_in_stage|round|int }}d in stage{% endif %}</span>
+        <span class="text-xl font-bold font-display {{ 'text-navy' if s.total_value else 'text-slate-400' }}">£{{ '%.0f'|format(s.total_value or 0) }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">No pipeline stages yet — set them up in <a href="/app/crm/settings" class="text-brand font-medium">CRM settings</a>.</p>
+    {% endif %}
+  </div>
+
+  <!-- Won / lost: the same stat rows the Money sheet uses -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Won / lost — last {{ period }} days</h2>
+    </div>
+    <div class="divide-y divide-slate-200">
+      <div class="px-4 py-2.5 flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy">Won</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{% if won_lost.avg_won_value %}avg £{{ '%.0f'|format(won_lost.avg_won_value) }} per deal{% endif %}</span>
+        <span class="text-xl font-bold font-display {{ 'text-emerald-700' if won_lost.won_count else 'text-slate-400' }}">{{ won_lost.won_count }}</span>
+      </div>
+      <div class="px-4 py-2.5 flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy">Lost</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{% if won_lost.avg_lost_value %}avg £{{ '%.0f'|format(won_lost.avg_lost_value) }} per deal{% endif %}</span>
+        <span class="text-xl font-bold font-display {{ 'text-rose-700' if won_lost.lost_count else 'text-slate-400' }}">{{ won_lost.lost_count }}</span>
+      </div>
+      <div class="px-4 py-2.5 flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy">Win rate</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ won_lost.won_count + won_lost.lost_count }} deal{{ '' if won_lost.won_count + won_lost.lost_count == 1 else 's' }} decided</span>
+        <span class="text-xl font-bold font-display {{ 'text-navy' if won_lost.won_count + won_lost.lost_count else 'text-slate-400' }}">{{ '%.0f'|format(won_lost.win_rate * 100) }}%</span>
+      </div>
+      <div class="px-4 py-2.5 flex items-baseline gap-3">
+        <span class="text-sm font-medium text-navy">Time to a decision</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">open → won or lost, averaged</span>
+        <span class="text-xl font-bold font-display {{ 'text-navy' if won_lost.avg_days_to_close else 'text-slate-400' }}">{{ won_lost.avg_days_to_close|round|int }}d</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity: the one figure that earns a chart -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Activity — last {{ period }} days</h2>
+    </div>
+    {% if activity %}
+    <div class="p-4 overflow-x-auto">
+      <div class="flex items-end gap-px min-w-fit" style="height:120px">
+        {% set max_count = namespace(val=1) %}
+        {% for day in activity %}
+          {% if day.inbound + day.outbound > max_count.val %}{% set max_count.val = day.inbound + day.outbound %}{% endif %}
+        {% endfor %}
+        {% for day in activity %}
+        {% set total = day.inbound + day.outbound %}
+        {% set h = (total / max_count.val * 100)|int if max_count.val else 0 %}
+        <div class="flex flex-col items-center justify-end flex-1 min-w-[6px] group relative" style="height:100%">
+          <div class="w-full rounded-t bg-brand/70 transition-all" style="height:{{ h }}%"></div>
+          <div class="hidden group-hover:block absolute -top-8 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap z-10">
+            {{ day.day | pretty_date }}: {{ day.inbound }} in / {{ day.outbound }} out
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="flex justify-between text-[10px] text-slate-400 mt-1 px-0.5">
+        <span>{{ activity[0].day | pretty_date if activity else '' }}</span>
+        <span>{{ activity[-1].day | pretty_date if activity else '' }}</span>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">No activity in this period yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{# "Tick all" beside a What-they-do list (run log F10, Kris 2026-09-25: an owner
+   or a team member covering every task ticked eight boxes one by one). Sits inside the
+   list's label; toggles every `kind` box in the block it heads. #}
+<button type="button" data-tick-all class="ml-2 text-[11px] font-medium text-brand hover:underline">Tick all</button>
+<script>
+if (!window.__tickAll) {
+  window.__tickAll = 1;
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-tick-all]");
+    if (!b) return;
+    var box = b.parentElement && b.parentElement.parentElement;
+    if (!box) return;
+    var cs = Array.prototype.slice.call(box.querySelectorAll('input[type=checkbox][name="kind"]'));
+    var all = cs.length && cs.every(function (c) { return c.checked; });
+    cs.forEach(function (c) { c.checked = !all; c.dispatchEvent(new Event("change", { bubbles: true })); });
+    b.textContent = all ? "Tick all" : "Untick all";
+  });
+}
+</script>

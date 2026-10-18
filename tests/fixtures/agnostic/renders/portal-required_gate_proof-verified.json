@@ -1,0 +1,4 @@
+{
+  "sha256": "49c3396207f9a3b98b3bd6ed627c27e388eb16f479de9531b91b4bb1fa816486",
+  "excerpt": "{\"calls\":[{\"messages\":[{\"content\":\"Please list my bookings\",\"role\":\"user\"}],\"operation\":\"portal_chat\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties"
+}

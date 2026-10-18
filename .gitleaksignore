@@ -1,0 +1,15 @@
+# Reviewed false positives from the initial baseline scan.
+# Public IndexNow host-verification key; browser localStorage key names;
+# assertions of those names; and an intentionally invalid JWT in a unit test.
+# Exact fingerprints only: new findings require their own review.
+src/app/static/concierge_panel.js:generic-api-key:2204
+src/app/static/concierge_panel.js:generic-api-key:2469
+src/app/static/concierge_panel.js:generic-api-key:2693
+src/app/static/voice-live.js:generic-api-key:124
+src/app/static/voice-live.js:generic-api-key:981
+scripts/ops/seo_indexnow_ping.py:generic-api-key:33
+tests/test_memstat.py:generic-api-key:19
+tests/test_voice_live_client.py:generic-api-key:657
+tests/test_voice_live_client.py:generic-api-key:659
+tests/test_voice_live_client.py:generic-api-key:917
+src/app/main.py:generic-api-key:739

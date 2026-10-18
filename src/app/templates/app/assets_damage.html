@@ -1,0 +1,45 @@
+{% extends "app/base.html" %}
+{% block title %}Damage cases · Assets OS · BLAM8{% endblock %}
+{% block heading %}Damage cases{% endblock %}
+{% set back = ('/app/assets', 'Board') %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center gap-2 text-sm">
+    <a href="/app/assets/damage?status=open"
+       class="rounded-full px-3 py-1 font-medium {{ 'bg-navy text-white' if status == 'open' else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">Open</a>
+    <a href="/app/assets/damage?status=resolved"
+       class="rounded-full px-3 py-1 font-medium {{ 'bg-navy text-white' if status == 'resolved' else 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50' }}">Resolved</a>
+  </div>
+
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">{{ 'Open' if status == 'open' else 'Resolved' }} cases</h2>
+    </div>
+    {% if cases %}
+    <ul class="divide-y divide-slate-50">
+      {% for case in cases %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+          {{ 'bg-rose-100 text-rose-700' if case.severity == 'major' else
+             'bg-amber-100 text-amber-700' if case.severity == 'moderate' else
+             'bg-slate-100 text-slate-600' }}">{{ case.severity or 'review' }}</span>
+        <span class="font-medium text-navy truncate max-w-[16rem]">{{ case.description or 'Damage case' }}</span>
+        {% if case.diff_confidence is not none %}
+        <span class="text-xs text-slate-400">confidence {{ '%.2f'|format(case.diff_confidence) }}</span>
+        {% endif %}
+        {% if case.resolution %}
+        <span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs">{{ case.resolution }}{% if case.resolved_amount %} £{{ '%g'|format(case.resolved_amount) }}{% endif %}</span>
+        {% endif %}
+        <a href="/app/assets/damage/{{ case.id }}" class="ml-auto text-brand font-medium hover:underline">Evidence bundle →</a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No {{ status }} cases. A return with new damage opens a case here automatically.</p>
+    {% endif %}
+  </section>
+
+  <p class="text-xs text-slate-400">Cases are opened by the before/after photo-diff on return. Every deduction is your decision — BLAM8 gives you the evidence, never the verdict.</p>
+</div>
+{% endblock %}

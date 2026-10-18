@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>{% block title %}Set up BLAM8{% endblock %}</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  {% set water_page = true %}
+  {% include "_theme_head.html" %}
+  <style>
+    /* iOS Safari auto-zooms any focused input under 16px — bump form controls to
+       16px on small screens only so tapping the assistant (or any field) never zooms. */
+    @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
+    /* Clip horizontal overflow at the root so the page is always exactly one
+       screen wide on mobile (no pinch-out-and-it-sits-left); wide content
+       scrolls inside its own container instead. */
+    html, body { overflow-x: hidden; overflow-x: clip; }
+    /* Installed-app fix (same as the app shell): the wizard renders under the
+       phone's status bar in standalone — grow the navy header by the safe-area
+       inset so bar and strip read as one surface. Zero in a normal browser. */
+    header[data-bc-full-width] {
+      height: calc(3rem + env(safe-area-inset-top, 0px));
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    /* The onboarding shell scrolls the body, so _concierge.html reserves the
+       right dock column on <body>. Do not reserve the same column again on the
+       right of <main>: that double-count shrinks the form to a narrow strip
+       on half-width windows. The remaining body width is the page column and
+       the wizard card can size naturally within it. */
+    header[data-bc-full-width] { padding-left: 1rem; padding-right: 1rem; }
+  </style>
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<div class="min-h-full flex flex-col">
+  {# The shared assistant dock keeps this bar and its contents viewport-wide;
+     only the wizard below reserves space when the assistant opens. #}
+  <header class="relative bg-navy flex-none" data-pull-bar data-bc-full-width>
+    <div class="flex h-full w-full items-center justify-between gap-3">
+      <span class="font-bold text-white text-lg tracking-tight">BLAM8</span>
+      {# The login may differ from the connected inbox. Keep it at the far
+         right above the dock, while the wordmark aligns with the left gutter.
+         Safe-area padding belongs to the header. #}
+      <div class="flex min-w-0 items-center gap-3">
+        {% set who = request.state.user_email if request and request.state else '' %}
+        {% if who %}<span class="min-w-0 max-w-[45vw] truncate text-xs text-slate-300" title="Signed in as {{ who }}" data-signed-in-as>{{ who }}</span>{% endif %}
+        <a href="/logout" class="flex-none text-sm text-slate-300 hover:text-white transition">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 flex items-start justify-center px-4 pt-5 pb-10">
+    <div class="w-full max-w-2xl">
+      {% set labels = {'interview':'About you','mailbox':'Customer inbox','voice':'Voice','knowledge':'Knowledge','data':'Live data'} %}
+      {# One flow of nine (Kris 2026-09-13): the wizard's four, then the five
+         tuning steps inside the app greyed as upcoming — the same nine the app
+         shell's strip counts, so "done" never appears after step four. #}
+      {% set tuning = tuning or [] %}
+      {% set total = step_count + (tuning | length) %}
+      <!-- stepper -->
+      <div class="mb-6" data-stepper-total="{{ total }}">
+        <div class="flex items-center justify-between gap-1">
+          {% for s in steps %}
+          <div class="flex items-center gap-1.5 text-xs font-medium {% if s==stepper %}text-brand{% elif loop.index0 < step_index %}text-emerald-600{% else %}text-slate-400{% endif %}">
+            <span class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold {% if s==stepper %}bg-brand text-white{% elif loop.index0 < step_index %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">{% if loop.index0 < step_index %}&#10003;{% else %}{{ loop.index }}{% endif %}</span>
+          </div>
+          {% endfor %}
+          {% for t in tuning %}
+          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-400" data-tuning-step="{{ t.key }}" title="{{ t.label }} — inside the app, after these four">
+            <span class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-dashed border-slate-300 text-[11px] font-semibold text-slate-400">{{ step_count + loop.index }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="mt-3 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+          <div class="h-full rounded-full bg-brand transition-all" style="width: {{ (step_index + 1) * 100 // total }}%"></div>
+        </div>
+        {# Nine circles carry no labels at any width (nine labels never fit
+           beside the chat panel) — this line, always shown, says where they
+           are, what comes next, and that the app's steps follow. #}
+        {% set nxt = steps[step_index + 1] if step_index + 1 < step_count else none %}
+        <p class="mt-2 text-sm text-slate-500" data-step-line>Step {{ step_index + 1 }} of {{ total }} · <span class="font-semibold text-navy">{{ labels[stepper] }}</span>{% if nxt %} · then {{ labels[nxt] }}{% elif tuning %} · then {{ tuning[0].label }} (inside the app){% endif %}</p>
+      </div>
+
+      <!-- card -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-7">
+        <h1 class="text-xl font-bold text-navy">{% block heading %}{% endblock %}</h1>
+        <p class="mt-1 text-sm text-slate-500">{% block subheading %}{% endblock %}</p>
+        <div class="mt-6">{% block content %}{% endblock %}</div>
+      </div>
+
+      {# No wizard footer: the human-approval line lives on the Mailbox
+         subheading, and the "Skip setup for now" escape was redundant with
+         each optional step's own Skip (Julius, 2026-08-02). #}
+    </div>
+  </main>
+</div>
+
+<script>
+  // Auto-grow wizard textareas to fit their content. The assistant fills these
+  // fields with more text than their 2 visible rows (applyFill dispatches an
+  // "input" event), and a full field that still shows 2 lines reads as
+  // half-done — the review step only works if the text is actually visible.
+  (function () {
+    function grow(el) {
+      if (!el.scrollHeight) return;   // hidden (display:none) measures 0 — never stamp that
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+    document.querySelectorAll("main textarea").forEach(function (el) {
+      el.style.overflowY = "hidden";
+      el.addEventListener("input", function () { grow(el); });
+      if (el.value) grow(el);
+    });
+  })();
+</script>
+{% set concierge_authed = true %}
+{% set concierge_onboarding_step = step %}
+{% include "_concierge.html" %}
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

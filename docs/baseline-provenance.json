@@ -1,0 +1,65 @@
+{
+  "source_repository": "https://github.com/JusamaGB/BLAutoM8",
+  "source_commit": "9cc46f6b4ecc3b10f3f8067fa6a4ac36d13d1ea4",
+  "source_ci": "https://github.com/JusamaGB/BLAutoM8/actions/runs/39144534707",
+  "prepared_date": "2026-10-18",
+  "status": "Source layout reorganised and locally verified; revised baseline not yet published",
+  "history": "Fresh repository; old history and unfinished work remain in the source repository",
+  "exclusions": [
+    "historical reports/research and unrelated projects",
+    "creative production and promotional film queue",
+    "demo-world generator and its internal admin endpoints",
+    "development voice harness, browser automation, screenshots and live rigs",
+    "shared assistant bridge/tooling",
+    "local records, credentials, dependencies, caches and recordings",
+    "embedded secret-guarded rig APIs, static rig pages, and rig-only configuration"
+  ],
+  "scope": "BLAM8 platform source and offline regression tests; external QA/rig and creative tooling excluded",
+  "intended_repository": "haail-dev/BLAM8",
+  "local_verification": {
+    "full_suite_before_three_repairs": {
+      "passed": 9787,
+      "failed": 3
+    },
+    "affected_tests_and_full_agnostic_guard_after_repairs": {
+      "passed": 820,
+      "failed": 0
+    },
+    "css_build": "passed",
+    "staged_credential_scan": "passed"
+  },
+  "source_layout": {
+    "guide": "docs/source-layout.md",
+    "runtime": [
+      "src/app",
+      "src/speech_service"
+    ],
+    "commands": "scripts/{build,ci,db,db/migrations,knowledge,ops}",
+    "configuration": [
+      "config/tailwind",
+      "deploy/speech",
+      "render.yaml",
+      "pyproject.toml"
+    ],
+    "root_files_before": 156,
+    "root_files_after": 14,
+    "root_python_scripts_after": 0,
+    "original_workspace": "preserved; no source edits made there"
+  },
+  "source_layout_verification": {
+    "full_offline_suite": {
+      "passed": 9804,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "runtime_python_ast_unchanged_excluding_docstrings": 290,
+    "sql_files_with_only_comment_path_updates": 45,
+    "schema_marker_dependencies_preserved": 54,
+    "css_build": "all three passed; output unchanged after normalising line endings",
+    "wheel_smoke": "passed outside the checkout; 191 templates, health endpoint and static routes",
+    "render_schema": "passed",
+    "staged_credential_scan": "passed",
+    "docker_image": "not built locally; Docker unavailable"
+  }
+}

@@ -1,0 +1,13 @@
+{# Field Service sections, rendered INSIDE the masthead dropdown (menu_sections
+   block) — the cockpit's tab strip folded into the one menu (Counting House
+   masthead rule, 2026-08-29). Inherits {{ item }} / {{ on }} from
+   app/base.html's menu scope. #}
+<p class="px-4 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Field OS · Trades</p>
+<a href="/app/fsm" class="{{ item }} {% if active=='fsm' %}{{ on }}{% endif %}"><span class="flex-1">Engineer board</span></a>
+<a href="/app/fsm/engineers" class="{{ item }} {% if active=='fsm_engineers' %}{{ on }}{% endif %}"><span class="flex-1">Engineers</span></a>
+<a href="/app/fsm/job-types" class="{{ item }} {% if active=='fsm_job_types' %}{{ on }}{% endif %}"><span class="flex-1">Job types</span></a>
+<a href="/app/invoices" class="{{ item }} {% if active=='fsm_invoices' %}{{ on }}{% endif %}"><span class="flex-1">Invoices</span></a>
+<div class="my-1 border-t border-slate-100"></div>
+{# The section's own settings left this menu on 2026-09-02: they live behind
+   the cog in the masthead, which is beside you on every page of the section
+   rather than two taps down a dropdown. Navigation stayed. #}

@@ -1,0 +1,464 @@
+{% extends "app/base.html" %}
+{% set page_flip = true %}{# Today ↔ Inbox page-flip transition (base.html) #}
+{% block title %}Conversations · BLAM8{% endblock %}
+{% block heading %}Inbox{% endblock %}
+{# The filter chips ride the frosted dockbar rail — the same shelf the diary
+   strip uses on Today (Kris 2026-08-31: "the toolbar we have on other pages"). #}
+{% block dockbar %}{% with part = 'pills' %}{% include "app/_conversation_list.html" %}{% endwith %}{% endblock %}
+{% block content %}
+<style>
+  /* Swipe-to-ignore (Kris 2026-08-31, replaces press & hold): pan-y leaves
+     vertical scrolling native — only horizontal drags reach the script (a
+     browser-claimed scroll fires pointercancel and the card springs back).
+     No touch callout: rows are cards to drag, not links to preview. */
+  .convo-row { touch-action: pan-y; -webkit-touch-callout: none; }
+  .swipe-under {
+    position: absolute; inset: 0; border-radius: 12px;
+    background: #E11D48; color: #fff;
+    display: flex; align-items: center; gap: .5rem;
+    padding-left: 1.25rem; font-size: .8125rem; font-weight: 600;
+    opacity: 0;
+  }
+  .convo-swipe.swipe-armed .swipe-under { background: #BE123C; }
+  .swipe-bin { transition: transform .15s ease; }
+  .convo-swipe.swipe-armed .swipe-bin { transform: scale(1.2); }
+  /* Left swipe → the customer's contact card (Kris 2026-09-13): the same
+     underlay on the other edge — brand blue, revealed by a leftward drag,
+     armed past the threshold, released to open the CRM card. */
+  .swipe-under-right { background: #2563EB; justify-content: flex-end; padding-left: 0; padding-right: 1.25rem; }
+  .convo-swipe.swipe-armed-left .swipe-under-right { background: #1D4ED8; }
+  .swipe-card-icon { transition: transform .15s ease; }
+  .convo-swipe.swipe-armed-left .swipe-card-icon { transform: scale(1.2); }
+  .convo-row.swipe-return { transition: transform .22s cubic-bezier(.2,.8,.2,1); }
+  .convo-row.swipe-commit { transition: transform .18s ease-in, opacity .18s ease-in; opacity: .25; }
+  /* Layer-1 state = the card's glow (Kris 2026-08-31): words leave the rows,
+     the toolbar chips are the key. The glow rides the wrapper's ::before so
+     the pulse animates opacity (compositor-cheap), never box-shadow; colours
+     must track CATEGORY_META fill/dot. Automated = no glow: nothing to do,
+     nothing lit. */
+  .convo-swipe { --glow: transparent; }
+  .convo-swipe::before {
+    content: ""; position: absolute; inset: 0; border-radius: 12px;
+    box-shadow: 0 0 12px 1px var(--glow), 0 0 3px 0 var(--glow);
+    animation: glow-pulse 2.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .glow-needs_reply     { --glow: rgb(225 29 72 / 0.50); }   /* rose-600 */
+  .glow-draft_ready     { --glow: rgb(46 91 255 / 0.50); }   /* brand accent */
+  .glow-quote_sent      { --glow: rgb(5 150 105 / 0.45); }   /* emerald-600 */
+  .glow-booking_pending { --glow: rgb(245 158 11 / 0.50); }  /* amber-500 */
+  .glow-fyi             { --glow: rgb(90 106 128 / 0.25); }  /* quiet ink */
+  .glow-automated       { --glow: transparent; }
+  /* Held: drafting is off, so nothing on the page is waiting on the agent and
+     nothing should pulse like it is. Same quiet ink as FYI — present, not
+     shouting. Not a CATEGORY: adding a seventh would add a seventh filter chip,
+     and the rail only just fits four on a 375px screen. */
+  .glow-held            { --glow: rgb(90 106 128 / 0.25); }
+  @keyframes glow-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+  /* Mood flash (Kris 2026-08-31): temperature loses its words too — a warm
+     ("Concerned") card blinks a faint amber wash over the glass, a
+     frustrated/angry one red. Quicker than the state glow's breath so it
+     reads as urgency; barely-there alpha so it stays a wash, not a wall. */
+  .mood-warm > .convo-row::after, .mood-hot > .convo-row::after {
+    content: ""; position: absolute; inset: 0; border-radius: 12px;
+    pointer-events: none;
+    animation: mood-flash 1.5s ease-in-out infinite;
+  }
+  .mood-warm > .convo-row::after { background: rgb(245 158 11 / 0.14); }
+  .mood-hot  > .convo-row::after { background: rgb(220 38 38 / 0.15); }
+  @keyframes mood-flash { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .convo-swipe::before { animation: none; opacity: 0.8; }
+    .mood-warm > .convo-row::after, .mood-hot > .convo-row::after { animation: none; opacity: 0.7; }
+  }
+  /* Each open month is a deck (Kris 2026-09-24): home.html's sticky piles in
+     the month's own scroller, capped so the page still scrolls month to
+     month. 62vh is only the first paint: sizeDecks() then runs the deck down
+     to the bottom of the screen. No top or bottom padding: the piles' pins are measured from the
+     scroller's edge (padding shifted them and broke the restack). The side
+     padding (pulled back by the negative margin) keeps the
+     rows' glow from being cut by the scroller's edge. isolate: the pile's big
+     z numbers rank rows against each other, never over the app's chrome. */
+  .convo-deck { max-height: 62vh; overflow-y: auto; overflow-x: hidden; isolation: isolate;
+    scrollbar-width: none; margin: 6px -12px 0; padding-left: 12px; padding-right: 12px; }
+  .convo-deck::-webkit-scrollbar { display: none; }
+  .convo-deck > .convo-swipe { position: sticky; }
+  /* Buried rows keep their words frosted until 90% shows — the Today rule. */
+  .convo-row > * { transition: filter .3s ease; }
+  .convo-swipe.is-buried > .convo-row > * { filter: blur(3px); }
+  /* Month folds: no native marker, our chevron turns instead. */
+  .month-summary::-webkit-details-marker { display: none; }
+  details[open] > .month-summary .month-chev { transform: rotate(90deg); }
+  /* Thin row cards: the 18px glass radius reads chunky at row height, and a
+     token hover (bg-slate-50) would paint over the glass — brighten the glass
+     itself instead. Two classes outrank .glass-card's single-class rules. */
+  .convo-row.glass-card, .convo-draft-row.glass-card { border-radius: 12px; }
+  .convo-row.glass-card:hover, .convo-draft-row.glass-card:hover { background: rgb(255 255 255 / 0.85); }
+  html[data-theme="dark"] .convo-row.glass-card:hover,
+  html[data-theme="dark"] .convo-draft-row.glass-card:hover { background: rgb(38 46 58 / 0.8); }
+</style>
+<div class="max-w-5xl mx-auto w-full p-4 sm:p-6 pb-24 space-y-3">
+{% if notice %}
+<div class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">{{ notice }}</div>
+{% endif %}
+{# Scheduling active but its setup never finished — the AI can't book anything yet and
+   the owner has no other way to know. Persistent (not dismissible) until configured:
+   this is the one step their plan is blocked on. #}
+{% if sched_setup_needed %}
+<div class="rounded-xl bg-brand-50 border border-brand/20 px-4 py-3">
+  <p class="text-sm font-semibold text-navy">One step left before the AI can book for you</p>
+  <p class="text-sm text-slate-600 mt-0.5">Your plan includes scheduling, but the AI won't place bookings until you tell it what every booking needs — it's a short checklist, and we've pre-filled it for your type of business.</p>
+  <a href="/app/diary/intake" class="inline-flex items-center gap-1 mt-2 text-sm font-semibold text-brand hover:underline">Finish scheduling setup <span aria-hidden="true">→</span> <span class="font-normal text-slate-400">about 2 minutes</span></a>
+</div>
+{% endif %}
+{% if enterprise and boxes %}
+<div class="flex flex-wrap items-center gap-2">
+  <a href="/app/conversations"
+     class="rounded-full px-3 py-1 text-xs font-semibold transition {% if sel == 'all' %}bg-navy text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:border-slate-400{% endif %}">All mailboxes</a>
+  {% for b in boxes %}
+  <a href="/app/conversations?mailbox={{ b.id }}"
+     class="rounded-full px-3 py-1 text-xs font-semibold transition {% if b.id == sel %}bg-navy text-white{% else %}bg-white border border-slate-200 text-slate-600 hover:border-slate-400{% endif %}">
+    {{ b.label or b.address or 'Mailbox' }}
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{# The month deck lives in the shared partial: /app/conversations/fragment
+   returns the same include (pills AND list), and live.js swaps its
+   #convo-pills / #convo-list innerHTML in place — the pills into the dockbar,
+   the deck into this column — whenever the SSE stream reports inbox activity. #}
+{% with part = 'list' %}{% include "app/_conversation_list.html" %}{% endwith %}
+</div>
+
+{# Swipe-to-ignore submits here — one contact per swipe (the endpoint still
+   takes a list, so future bulk surfaces can reuse it). #}
+<form id="ignore-remove-form" method="post" action="/app/conversations/ignore-remove" class="hidden">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <input type="hidden" name="contacts" id="swipe-contact">
+</form>
+
+{% if ignored_count %}
+{# The second confirmation after a swipe (Kris 2026-08-31): the row vanishing
+   says it worked; this says WHERE it went and how to take it back. Count from
+   the redirect (clamped server-side), words all ours. Tap dismisses, 7s
+   auto-hides, and the query param is scrubbed so a refresh doesn't re-toast. #}
+<style>
+  #ignore-toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--strip-h, 60px) + 54px + var(--strip-inset, 0px)); z-index: 80;
+    max-width: min(92vw, 26rem);
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  @media (min-width: 768px) { #ignore-toast { bottom: 4rem; } }
+  #ignore-toast.toast-gone { opacity: 0; transform: translateX(-50%) translateY(8px); }
+</style>
+<div id="ignore-toast" class="rounded-xl bg-navy text-white px-4 py-3 flex items-start gap-3 cursor-pointer" role="status" style="box-shadow: 0 12px 32px -12px rgb(11 18 32 / .55);">
+  <svg class="h-4 w-4 flex-none mt-0.5 text-white/70" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L5.772 5.79m13.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+  <p class="text-sm leading-snug min-w-0">
+    {% if ignored_count == 1 %}Ignored — that conversation has moved to Ignored senders.{% else %}Ignored — {{ ignored_count }} conversations have moved to Ignored senders.{% endif %}
+    <a href="/app/ignored" class="font-semibold underline underline-offset-2 whitespace-nowrap">Undo there →</a>
+  </p>
+</div>
+<script>
+(function () {
+  var t = document.getElementById('ignore-toast');
+  if (!t) return;
+  try {
+    var u = new URL(location.href);
+    u.searchParams.delete('ignored');
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  } catch (err) {}
+  function hide() { t.classList.add('toast-gone'); setTimeout(function () { t.remove(); }, 320); }
+  setTimeout(hide, 7000);
+  t.addEventListener('click', function (e) { if (!e.target.closest('a')) hide(); });
+})();
+</script>
+{% endif %}
+
+<script>
+// Swipe-to-ignore (Kris 2026-08-31, replaces the press-&-hold multi-select):
+// drag a row card right to pull it off the bin underneath; past the threshold
+// the bin arms (deepens, grows), and releasing armed applies Ignore & Remove
+// for that one contact. Anything short springs back. Delegated on #convo-list
+// so rows swapped in by live.js keep the gesture.
+(function () {
+  var list = document.getElementById('convo-list');
+  var form = document.getElementById('ignore-remove-form');
+  var input = document.getElementById('swipe-contact');
+  if (!list || !form || !input) return;
+
+  var st = null;        // the active pointer gesture
+  var swiped = false;   // a drag happened — swallow the click that follows it
+
+  // 'pressing' marks a press that may still become a click — live.js holds SSE
+  // repaints while it's set, so the swap can't replace the anchor mid-press and
+  // eat the click (the click would then land on #convo-list, not the row).
+  function endPress() { list.classList.remove('pressing'); }
+
+  list.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0) return;                     // right-click keeps its native menu
+    var row = e.target.closest('.convo-row');
+    if (!row) return;
+    list.classList.add('pressing');
+    var wrap = row.closest('.convo-swipe');
+    st = { row: row, wrap: wrap, under: wrap && wrap.querySelector('.swipe-under'),
+           underR: wrap && wrap.querySelector('.swipe-under-right'),
+           x: e.clientX, y: e.clientY, id: e.pointerId, swiping: false, armed: false, armedLeft: false,
+           threshold: Math.min(160, Math.max(90, row.offsetWidth * 0.3)) };
+    swiped = false;
+  });
+
+  list.addEventListener('pointermove', function (e) {
+    if (!st || e.pointerId !== st.id) return;
+    var dx = e.clientX - st.x, dy = e.clientY - st.y;
+    if (!st.swiping) {
+      // Horizontal intent only — pan-y means a real scroll never gets here
+      // (the browser claims it and fires pointercancel instead).
+      if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      st.swiping = true; swiped = true;
+      try { st.row.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    // Rightward pulls the card off the bin; leftward off the contact panel
+    // (Kris 2026-09-13) — each edge reveals its own underlay.
+    st.row.style.transform = 'translateX(' + dx + 'px)';
+    if (st.under) st.under.style.opacity = Math.min(Math.max(dx, 0) / st.threshold, 1);
+    if (st.underR) st.underR.style.opacity = Math.min(Math.max(-dx, 0) / st.threshold, 1);
+    var armed = dx >= st.threshold;
+    if (armed !== st.armed) {
+      st.armed = armed;
+      if (st.wrap) st.wrap.classList.toggle('swipe-armed', armed);
+    }
+    var armedLeft = dx <= -st.threshold;
+    if (armedLeft !== st.armedLeft) {
+      st.armedLeft = armedLeft;
+      if (st.wrap) st.wrap.classList.toggle('swipe-armed-left', armedLeft);
+    }
+  });
+
+  list.addEventListener('pointerup', function (e) {
+    if (!st || e.pointerId !== st.id) return;
+    var s = st; st = null;
+    if (!s.swiping) { setTimeout(endPress, 800); return; }   // plain tap — the click ends the press
+    if (s.armedLeft) {
+      // Committed leftward: the card flies off over the contact panel, then
+      // the customer's CRM card opens, found by their address.
+      s.row.classList.add('swipe-commit');
+      s.row.style.transform = 'translateX(-110%)';
+      var who = s.row.dataset.contact || '';
+      // Mid-walk, the swipe stop is done (tour.js keeps the position) — the
+      // return chip on the CRM brings them back on the next stop.
+      try { if (sessionStorage.getItem('blam8_tour_pos:inbox') === '0') sessionStorage.setItem('blam8_tour_pos:inbox', '1'); } catch (err) {}
+      setTimeout(function () { window.location.href = '/app/crm/open?email=' + encodeURIComponent(who); }, 160);
+    } else if (s.armed) {
+      // Committed: the card flies out over the bin, then the form applies
+      // Ignore & Remove (page navigation repaints the list without the row).
+      // 'pressing' stays on so live.js can't repaint mid-flight.
+      s.row.classList.add('swipe-commit');
+      s.row.style.transform = 'translateX(110%)';
+      input.value = s.row.dataset.contact || '';
+      setTimeout(function () { form.submit(); }, 160);
+    } else {
+      s.row.classList.add('swipe-return');
+      s.row.style.transform = '';
+      if (s.under) s.under.style.opacity = 0;
+      if (s.underR) s.underR.style.opacity = 0;
+      if (s.wrap) s.wrap.classList.remove('swipe-armed', 'swipe-armed-left');
+      setTimeout(function () {
+        s.row.classList.remove('swipe-return');
+        endPress();
+      }, 250);
+    }
+  });
+
+  list.addEventListener('pointercancel', function () {
+    // The browser took the gesture (scroll started) — spring back, no click follows.
+    if (st && st.swiping) {
+      st.row.classList.add('swipe-return');
+      st.row.style.transform = '';
+      if (st.under) st.under.style.opacity = 0;
+      if (st.underR) st.underR.style.opacity = 0;
+      if (st.wrap) st.wrap.classList.remove('swipe-armed', 'swipe-armed-left');
+      var r = st.row;
+      setTimeout(function () { r.classList.remove('swipe-return'); }, 250);
+    }
+    st = null; swiped = false; endPress();
+  });
+
+  // Desktop: anchors are natively draggable — that ghost-image drag would
+  // shadow the swipe, so rows never start one.
+  list.addEventListener('dragstart', function (e) {
+    if (e.target.closest('.convo-row, .convo-draft-row')) e.preventDefault();
+  });
+
+  list.addEventListener('click', function (e) {
+    if (swiped) { swiped = false; e.preventDefault(); e.stopPropagation(); endPress(); return; }
+    endPress();
+    var row = e.target.closest('.convo-row');
+    if (!row) return;
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;   // a new tab: this page stays
+    // Every row says "Opening…" while its thread loads (Kris 2026-09-27: it
+    // showed only on New rows, and a drafted row kept "Draft ready"). The chip
+    // takes the state column's slot on the right and STANDS IN for what is
+    // there: the labels are hidden, not removed, so a return by Back (the
+    // browser's page cache restores this very DOM) can put them back — see
+    // the pageshow handler below. SSE repaints are held (list.opening) so the
+    // row cannot be swapped out from under the tap.
+    // A New row's draft no longer happens on the /open request (detached —
+    // dashboard.open_conversation); the thread carries "Agent writing reply".
+    row.setAttribute('data-busy', 'opening');   // nav.js's generic spinner stands down
+    list.classList.add('opening');
+    row.classList.add('opacity-60');
+    var line = row.querySelector('div');
+    var col = line && line.lastElementChild;
+    if (!col) return;
+    Array.prototype.forEach.call(col.children, function (el) {
+      if (el.hasAttribute('data-opening-chip')) return;
+      el.setAttribute('data-opening-hid', el.style.display || '');
+      el.style.display = 'none';
+    });
+    var chip = col.querySelector('[data-opening-chip]');
+    if (!chip) {
+      chip = document.createElement('span');
+      chip.className = 'new-chip inline-flex items-center text-brand whitespace-nowrap';
+      chip.setAttribute('data-opening-chip', '');
+      col.insertBefore(chip, col.firstChild);
+    }
+    chip.textContent = 'Opening…';
+  });
+
+  // Back to the list: the page cache hands back the DOM exactly as it was
+  // left, "Opening…" and all. Undo the tap's marks so every row reads as
+  // itself again.
+  window.addEventListener('pageshow', function (e) {
+    if (!e.persisted) return;
+    list.classList.remove('opening');
+    Array.prototype.forEach.call(list.querySelectorAll('[data-busy="opening"]'), function (row) {
+      row.removeAttribute('data-busy');
+      row.classList.remove('opacity-60');
+    });
+    Array.prototype.forEach.call(list.querySelectorAll('[data-opening-chip]'), function (c) { c.remove(); });
+    Array.prototype.forEach.call(list.querySelectorAll('[data-opening-hid]'), function (el) {
+      el.style.display = el.getAttribute('data-opening-hid');
+      el.removeAttribute('data-opening-hid');
+    });
+  });
+})();
+
+// The month decks (Kris 2026-09-24): home.html's restack, run per month on
+// that month's own scroller. Rows on the bottom pile descend so the next one
+// up shows its face, rows landed on the top pile ascend, a row travelling
+// between them rides over both; a row's words frost until 90% of it shows.
+(function () {
+  var list = document.getElementById('convo-list');
+  if (!list) return;
+  function restackDeck(stage) {
+    var cards = Array.prototype.filter.call(stage.children, function (c) {
+      return c.classList.contains('convo-swipe');
+    });
+    var n = cards.length;
+    if (!n || !stage.offsetParent) return;   // a folded month has no geometry
+    var sr = stage.getBoundingClientRect();
+    var rects = [], zs = [];
+    cards.forEach(function (c, i) {
+      var r = c.getBoundingClientRect();
+      var topPin = 6 + Math.min(i, 3) * 12;            // matches the inline sticky top
+      var botPin = Math.min(n - 1 - i, 3) * 10;        // matches the inline sticky bottom
+      var z;
+      if (r.bottom >= sr.bottom - botPin - 2) z = 300 - i;          // waiting: next-up on the face
+      else if (r.top - sr.top <= topPin + 2) z = i + 1;             // landed: on top of the pile
+      else z = 600 + i;                                             // travelling: over everything
+      c.style.zIndex = String(z);
+      rects.push(r); zs.push(z);
+    });
+    cards.forEach(function (c, i) {
+      var r = rects[i], h = Math.max(1, r.bottom - r.top), segs = [];
+      if (sr.top > r.top) segs.push([r.top, Math.min(sr.top, r.bottom)]);
+      if (sr.bottom < r.bottom) segs.push([Math.max(sr.bottom, r.top), r.bottom]);
+      for (var j = 0; j < n; j++) {
+        if (j === i || zs[j] <= zs[i]) continue;
+        var a = Math.max(r.top, rects[j].top), b = Math.min(r.bottom, rects[j].bottom);
+        if (b > a) segs.push([a, b]);
+      }
+      segs.sort(function (p, q) { return p[0] - q[0]; });
+      var hidden = 0, end = -1e9;
+      segs.forEach(function (s) {
+        if (s[1] <= end) return;
+        hidden += s[1] - Math.max(s[0], end);
+        end = s[1];
+      });
+      c.classList.toggle('is-buried', hidden / h > 0.1);
+    });
+  }
+  // The bottom pile sits on the bottom of the screen, as Today's does (Kris
+  // 2026-09-24: "the bottom of the stack isn't at the bottom of the page").
+  // <main> is the page's scroller, with the bottom bar below it, so a deck
+  // that starts on the first screen runs down to main's bottom edge; one
+  // further down (a later month) gets a full screen under its month header.
+  var main = list.closest('main');
+  function sizeDecks() {
+    if (!main) return;
+    var mh = main.clientHeight, mTop = main.getBoundingClientRect().top;
+    list.querySelectorAll('details[open] > .convo-deck').forEach(function (deck) {
+      var top = deck.getBoundingClientRect().top - mTop + main.scrollTop;
+      var head = deck.parentNode.querySelector('.month-summary');
+      var full = mh - (head ? head.offsetHeight : 0) - 24;
+      var h = top + 200 < mh ? mh - top - 10 : full;
+      deck.style.maxHeight = Math.max(200, Math.round(h)) + 'px';
+    });
+  }
+  function restackAll() { sizeDecks(); list.querySelectorAll('.convo-deck').forEach(restackDeck); }
+  var queued = false;
+  function schedule() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () { queued = false; restackAll(); });
+  }
+  // Where each month's deck was scrolled to: live.js swaps the list's
+  // innerHTML on inbox activity, which would snap every deck back to its top.
+  var scrolled = {};
+  document.addEventListener('scroll', function (e) {
+    var t = e.target;
+    if (t && t.classList && t.classList.contains('convo-deck')) {
+      var d = t.closest('details[data-month]');
+      if (d) scrolled[d.dataset.month] = t.scrollTop;
+    }
+    schedule();
+  }, { capture: true, passive: true });
+  window.addEventListener('resize', schedule);
+  window.addEventListener('load', schedule);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
+  list.addEventListener('toggle', schedule, true);   // an unfolded month gets its geometry
+  new MutationObserver(function () {
+    list.querySelectorAll('details[data-month]').forEach(function (d) {
+      var deck = d.querySelector('.convo-deck');
+      if (deck && scrolled[d.dataset.month]) deck.scrollTop = scrolled[d.dataset.month];
+    });
+    schedule();
+  }).observe(list, { childList: true });
+  restackAll();
+})();
+
+// Which months are unfolded is the reader's state, not the server's: live.js
+// replaces #convo-list innerHTML on SSE activity, which would slam every fold
+// back to the server default mid-read. Record toggles (details fires one per
+// open/close — and once per open card at parse, which seeds the set with the
+// server default) and reapply after every swap.
+(function () {
+  var list = document.getElementById('convo-list');
+  if (!list) return;
+  var open = null;
+  list.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d.dataset || d.dataset.month === undefined) return;
+    if (open === null) open = new Set();
+    if (d.open) open.add(d.dataset.month); else open.delete(d.dataset.month);
+  }, true); // toggle doesn't bubble — capture it
+  new MutationObserver(function () {
+    if (open === null) return;
+    list.querySelectorAll('details[data-month]').forEach(function (d) {
+      d.open = open.has(d.dataset.month);
+    });
+  }).observe(list, { childList: true });
+})();
+</script>
+{% endblock %}

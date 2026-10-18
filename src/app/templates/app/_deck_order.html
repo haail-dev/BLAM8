@@ -1,0 +1,56 @@
+{# Today's order as a list you move about (Kris 2026-09-13: "a nice drop-down
+   list that allows reordering of priority"). Rows in the order the tenant
+   meets them; ▲▼ move a row and the hidden `order` inputs follow, so the
+   form posts the whole order to /app/settings/deck. Shared by the cog on
+   Today's Who-needs-you-next box and the Settings fold — one control, one
+   setting (tenant_config.deck_priority.order). Expects `deck_topics`. #}
+<ol class="rounded-xl border border-slate-200 divide-y divide-slate-200 overflow-hidden" data-deck-order-list>
+  {% for topic, spec in deck_topics %}
+  <li class="flex items-center gap-3 px-3 py-2 bg-white" data-deck-topic="{{ topic }}">
+    <input type="hidden" name="order" value="{{ topic }}">
+    <span class="w-5 flex-none text-center text-xs font-semibold text-slate-400 tabular-nums" data-deck-pos>{{ loop.index }}</span>
+    <div class="flex-1 min-w-0">
+      <p class="text-sm font-medium text-navy leading-snug truncate">{{ spec.label }}</p>
+      {% if not compact %}<p class="text-[11px] text-slate-400 truncate">{{ spec.help }}</p>{% endif %}
+    </div>
+    <div class="flex-none flex items-center gap-1">
+      <button type="button" class="h-7 w-7 inline-flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-brand hover:border-brand disabled:opacity-30 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition" data-move="up" aria-label="Move {{ spec.label }} up" title="Move up">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5"/></svg>
+      </button>
+      <button type="button" class="h-7 w-7 inline-flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-brand hover:border-brand disabled:opacity-30 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition" data-move="down" aria-label="Move {{ spec.label }} down" title="Move down">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+      </button>
+    </div>
+  </li>
+  {% endfor %}
+</ol>
+<script>
+  // Move a row; renumber; the hidden inputs travel with their rows, so the
+  // form posts the order as shown. A change also tells the shell's dirty-save
+  // logic the form is worth saving (a `change` event on the list).
+  (function () {
+    document.querySelectorAll("[data-deck-order-list]").forEach(function (list) {
+      if (list.dataset.wired) return;
+      list.dataset.wired = "1";
+      function renumber() {
+        var rows = Array.prototype.slice.call(list.children);
+        rows.forEach(function (li, i) {
+          var pos = li.querySelector("[data-deck-pos]"); if (pos) pos.textContent = String(i + 1);
+          var up = li.querySelector('[data-move="up"]'), down = li.querySelector('[data-move="down"]');
+          if (up) up.disabled = i === 0;
+          if (down) down.disabled = i === rows.length - 1;
+        });
+      }
+      list.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-move]"); if (!btn) return;
+        var li = btn.closest("li"); if (!li) return;
+        if (btn.getAttribute("data-move") === "up" && li.previousElementSibling) list.insertBefore(li, li.previousElementSibling);
+        else if (btn.getAttribute("data-move") === "down" && li.nextElementSibling) list.insertBefore(li.nextElementSibling, li);
+        renumber();
+        btn.focus();
+        list.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      renumber();
+    });
+  })();
+</script>

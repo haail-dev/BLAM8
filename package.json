@@ -1,0 +1,12 @@
+{
+  "name": "blam8-build",
+  "private": true,
+  "type": "module",
+  "description": "Pinned local CSS compiler for the BLAM8 platform.",
+  "scripts": {
+    "build:css": "node scripts/build/build_css.mjs"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}

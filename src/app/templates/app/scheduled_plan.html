@@ -1,0 +1,114 @@
+{% extends 'app/base.html' %}
+{% block title %}Scheduled plan · BLAM8{% endblock %}
+{% block heading %}Scheduled plan{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6" id="scheduled-plan">
+  <p class="text-slate-600">Plan the next week or two. The Agent prepares each action at its scheduled time; you approve it here. Messages also appear in your inbox.</p>
+  {% if msg %}<p role="status" class="rounded border bg-emerald-50 p-3">{{ msg }}</p>{% endif %}
+  {% if err %}<p role="alert" class="rounded border bg-amber-50 p-3">{{ err }}</p>{% endif %}
+  <details class="rounded-xl border bg-white p-5" open>
+    <summary class="font-semibold">Plan {{ 'running' if setting.enabled else 'paused' }} · working hours and limits</summary>
+    <form action="/app/plan/settings" method="post" class="grid sm:grid-cols-3 gap-4 mt-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label><input type="checkbox" name="enabled" {% if setting.enabled %}checked{% endif %}> Run the scheduled plan</label>
+      <label>Timezone<input name="timezone" required value="{{ setting.config.timezone }}" class="block border rounded p-2 w-full"></label>
+      <div>Working days<div>{% for label in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<label class="inline-block mr-2"><input type="checkbox" name="working_days" value="{{ loop.index0 }}" {% if loop.index0 in setting.config.working_days %}checked{% endif %}> {{ label }}</label>{% endfor %}</div></div>
+      <label>Start<input type="time" name="start_time" value="{{ setting.config.start_time }}" required class="block border rounded p-2"></label>
+      <label>Finish<input type="time" name="end_time" value="{{ setting.config.end_time }}" required class="block border rounded p-2"></label>
+      <label>Days off (YYYY-MM-DD, separated by spaces)<input name="holidays" value="{{ setting.config.holidays|join(' ') }}" class="block border rounded p-2 w-full"></label>
+      <label>Actions per rolling 24 hours<input type="number" name="daily_cap" min="1" max="1000" value="{{ setting.config.daily_cap }}" required class="block border rounded p-2"></label>
+      <label>Seconds between actions<input type="number" name="min_gap_seconds" min="60" value="{{ setting.config.min_gap_seconds }}" required class="block border rounded p-2"></label>
+      <button data-save-row class="rounded bg-brand text-white px-4 py-2 self-end">Save settings</button>
+    </form>
+    <p class="text-xs text-slate-500 mt-3">Pausing holds preparation and approvals. An action already started may finish. Outreach has its own switch and caps; this plan never enables it. All actions, including manual approvals, respect these hours and limits.</p>
+  </details>
+  <section class="space-y-3">
+    <div class="flex flex-wrap gap-3 items-center"><h2 class="text-lg font-semibold">What the Agent will do</h2>
+      <form method="get" class="flex gap-2"><input type="date" name="start" value="{{ start }}" class="border rounded p-2"><select name="days" class="border rounded p-2"><option value="7" {% if span==7 %}selected{% endif %}>Week</option><option value="14" {% if span==14 %}selected{% endif %}>Two weeks</option></select><button class="border rounded px-3">Show</button></form>
+      <a href="/app/plan?start={{ today }}&days={{ span }}" class="underline text-brand">Today</a>
+    </div>
+    {% if overdue %}<div class="rounded border border-amber-200 bg-amber-50 p-3"><h3 class="font-semibold">Due work not yet prepared</h3>{% for i in overdue %}<p class="text-sm">{{ i.title }} · {{ 'run in the next working window' if i.catch_up=='run_late' else 'skip if its scheduled day has passed' }}</p>{% endfor %}</div>{% endif %}
+    <p class="text-xs text-slate-500">Times shown in {{ setting.config.timezone }}. Drag a future item's first occurrence to another day, or use its Move control below. Moving or changing an item invalidates its previously prepared drafts.</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-7 gap-2">
+    {% for day in days %}
+      <section data-plan-day="{{ day.date }}" class="rounded-lg border p-3 min-h-40 {% if day.date==today %}bg-blue-50{% else %}bg-white{% endif %}">
+        <h3 class="font-semibold text-sm">{{ day.date.strftime('%a %d %b') }}{% if day.date==today %} · Today{% endif %}</h3>
+        {% for entry in day.entries %}
+        <article class="mt-2 rounded border p-2 text-xs bg-slate-50" {% if entry.movable %}draggable="true" data-plan-item="{{ entry.item.id }}" data-plan-time="{{ entry.at.strftime('%H:%M') }}" data-plan-zone="{{ entry.item.timezone }}"{% endif %}>
+          <p class="font-semibold">{{ entry.at.strftime('%H:%M') }} · {{ entry.item.title }}</p>
+          <p>{{ kinds[entry.item.kind] }} · {{ entry.run.status if entry.run else entry.item.status }} · {{ entry.item.mode }}</p>
+          {% if entry.run and entry.run.result %}<p>{{ entry.run.result }}</p>{% endif %}
+        </article>{% else %}<p class="mt-3 text-xs text-slate-400">Nothing planned</p>{% endfor %}
+      </section>
+    {% endfor %}
+    </div>
+  </section>
+  <details class="rounded-xl border bg-white p-5">
+    <summary class="font-semibold">Add a planned action</summary>
+    <form action="/app/plan/items" method="post" class="grid sm:grid-cols-2 gap-4 mt-4" id="plan-create">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label>Title<input name="title" maxlength="150" required class="block border rounded p-2 w-full"></label>
+      <label>Action<select name="kind" class="block border rounded p-2 w-full">{% for value,label in kinds.items() %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></label>
+      <label>Run at<input type="datetime-local" name="run_at" required class="block border rounded p-2 w-full"></label>
+      <label>Item timezone<input name="timezone" value="{{ setting.config.timezone }}" required class="block border rounded p-2 w-full"></label>
+      <label>Mode<select name="mode" class="block border rounded p-2 w-full"><option value="draft">Draft for approval</option><option value="auto">Automatic message (only if mailbox settings allow)</option></select></label>
+      <label>When a day was missed<select name="catch_up" class="block border rounded p-2 w-full"><option value="run_late">Run late in the next working window</option><option value="skip">Skip the missed day</option></select></label>
+      <label>Repeat<select name="frequency" class="block border rounded p-2 w-full">{% for f in ['once','daily','weekly','monthly','custom'] %}<option>{{ f }}</option>{% endfor %}</select></label>
+      <label>Every N days / weeks / months<input name="interval" type="number" min="1" max="365" value="1" class="block border rounded p-2"></label>
+      <div>Custom repeat weekdays (every N weeks)<div>{% for d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] %}<label class="mr-2"><input name="repeat_days" type="checkbox" value="{{ loop.index0 }}"> {{ d }}</label>{% endfor %}</div></div>
+      <label>Repeat until (optional)<input type="date" name="until" class="block border rounded p-2"></label>
+      <label data-kinds="email sms task followup booking quote invoice outreach">Contact (also used by “no reply”)<select name="contact_id" class="block border rounded p-2 w-full"><option value="">Choose a contact</option>{% for c in contacts %}<option value="{{ c.id }}">{{ c.name or c.email }}</option>{% endfor %}</select></label>
+      <label data-kinds="email">Sending mailbox<select name="mailbox_id" class="block border rounded p-2 w-full"><option value="">Choose a mailbox</option>{% for b in identities %}<option value="{{ b.id }}">{{ b.send_as_address or b.address }}</option>{% endfor %}</select></label>
+      <label data-kinds="email">Subject<input name="subject" maxlength="200" class="block border rounded p-2 w-full"></label>
+      <label data-kinds="sms">Contact's stored phone number<input name="phone" placeholder="+44…" class="block border rounded p-2 w-full"></label>
+      <label data-kinds="email sms task followup">Brief<textarea name="brief" maxlength="8000" rows="4" class="block border rounded p-2 w-full"></textarea></label>
+      <label data-kinds="quote invoice">Document action<select name="document_action" class="block border rounded p-2 w-full"><option value="create">Create a draft document</option><option value="send">Send an existing document</option></select></label>
+      <label data-kinds="quote invoice" data-document-action="create">Line description<input name="description" maxlength="200" class="block border rounded p-2 w-full"></label>
+      <label data-kinds="quote invoice" data-document-action="create">Amount before VAT<input name="amount" type="number" min="0.01" step="0.01" class="block border rounded p-2 w-full"></label>
+      <label data-kinds="quote invoice" data-document-action="create">Due / valid-until date (optional)<input name="document_date" type="date" class="block border rounded p-2 w-full"><span class="text-xs">Leave blank to use your business's document terms.</span></label>
+      <label data-kinds="quote" data-document-action="send">Existing quote<select name="quote_id" class="block border rounded p-2 w-full"><option value="">Choose a quote</option>{% for q in quotes %}<option value="{{ q.id }}">{{ q.quote_ref }} · {{ q.customer_email }} · {{ q.status }}</option>{% endfor %}</select></label>
+      <label data-kinds="invoice" data-document-action="send">Existing invoice<select name="invoice_id" class="block border rounded p-2 w-full"><option value="">Choose an invoice</option>{% for i in invoices %}<option value="{{ i.id }}">{{ i.invoice_ref }} · {{ i.customer_email }} · {{ i.status }}</option>{% endfor %}</select></label>
+      <label data-kinds="booking">Booking date<input name="booking_date" type="date" class="block border rounded p-2"></label>
+      <label data-kinds="booking">Diary window<input name="window" placeholder="A window from your diary settings" class="block border rounded p-2 w-full"><span class="text-xs">Window-based holds use the diary's capacity checks. Resource bookings are made in the diary.</span></label>
+      <label data-kinds="outreach">Campaign<select name="campaign_id" class="block border rounded p-2 w-full"><option value="">Choose a campaign</option>{% for c in campaigns %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select><span class="text-xs">Adds eligible list contacts to its existing sequence. Does not enable outreach or send a batch immediately.</span></label>
+      <label>Dependency<select name="dependency" class="block border rounded p-2 w-full"><option value="">None</option><option value="after_payment">After an invoice is paid</option><option value="if_no_reply">Only if no reply since planning</option></select></label>
+      <label>Invoice to wait for<select name="payment_invoice_id" class="block border rounded p-2 w-full"><option value="">Choose if waiting for payment</option>{% for i in invoices %}<option value="{{ i.id }}">{{ i.invoice_ref }} · {{ i.status }}</option>{% endfor %}</select></label>
+      <button class="rounded bg-brand text-white px-4 py-2">Add planned action</button>
+    </form>
+  </details>
+  <section class="space-y-3"><h2 class="text-lg font-semibold">Needs your review</h2>
+    {% for r in review %}<details class="rounded-xl border bg-white p-4"><summary>{{ r.snapshot.title }} · {{ r.status }} · {{ r.scheduled_at[:16] }}</summary>
+      <p class="mt-2">{{ r.result or r.prepared.summary or 'Review this occurrence before it runs.' }}</p>
+      {% for d in r.prepared.details or [] %}<p class="text-sm">{{ d }}</p>{% endfor %}
+      {% if r.prepared.due_date %}<p>Due {{ r.prepared.due_date }} · {{ r.prepared.description }}</p>{% endif %}
+      {% if r.prepared.booking_date %}<p>Hold {{ r.prepared.booking_date }} · {{ r.prepared.window }} for {{ r.prepared.contact }}</p>{% endif %}
+      <form action="/app/plan/runs/{{ r.id }}" method="post" class="mt-3 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        {% if r.status=='ready' %}
+          {% if r.snapshot.kind in ['email','sms'] or r.prepared.body %}<label>Message<textarea name="body" rows="6" maxlength="20000" class="block border rounded p-2 w-full">{{ r.prepared.body or '' }}</textarea></label>{% endif %}
+          <button name="action" value="approve" class="rounded bg-brand text-white px-4 py-2">Approve this action</button>
+        {% endif %}
+        {% if r.status=='blocked' %}<button name="action" value="retry_prepare" class="border rounded px-4 py-2">Try preparing again</button>{% endif %}
+        {% if r.status in ['ready','blocked'] %}<button name="action" value="skip" class="border rounded px-4 py-2">Skip permanently</button>
+        {% else %}<label><input name="checked" type="checkbox"> I checked the destination and verified what happened</label><button name="action" value="confirm_done" class="border rounded px-4 py-2">Record verified completion</button><button name="action" value="close_unknown" class="border rounded px-4 py-2">Close without retry</button>{% endif %}
+      </form>
+    </details>{% else %}<p class="text-sm text-slate-500">No actions waiting for review.</p>{% endfor %}
+  </section>
+  <details class="rounded-xl border bg-white p-5"><summary class="font-semibold">Manage planned items</summary>
+    {% for item in items %}<form action="/app/plan/items/{{ item.id }}" method="post" class="border-b py-3 flex flex-wrap gap-2 items-center">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><label class="flex-1">Title · {{ item.status }}<input name="title" value="{{ item.title }}" maxlength="150" class="block border rounded p-2 w-full"></label>
+      <label>Mode<select name="mode" class="block border rounded p-2"><option value="draft" {% if item.mode=='draft' %}selected{% endif %}>Draft for approval</option>{% if item.kind in ['email','sms'] %}<option value="auto" {% if item.mode=='auto' %}selected{% endif %}>Automatic message</option>{% endif %}</select></label>
+      {% if item.kind in ['email','sms','task','followup'] %}<label>Brief<textarea name="brief" maxlength="8000" class="block border rounded p-2">{{ item.payload.brief }}</textarea></label>{% endif %}
+      {% if item.kind=='email' %}<label>Subject<input name="subject" maxlength="200" value="{{ item.payload.subject }}" class="block border rounded p-2"></label>{% endif %}
+      <button data-save-row name="action" value="edit" class="border rounded px-3 py-2">Save changes</button>
+      {% if item.next_at %}<input name="run_at" type="datetime-local" aria-label="New date and time in {{ item.timezone }}" class="border rounded p-2"><button name="action" value="move" class="border rounded px-3 py-2">Move</button><button name="action" value="skip" class="border rounded px-3 py-2">Skip next</button>{% endif %}
+      <button name="action" value="{{ 'resume' if item.status=='paused' else 'pause' }}" class="border rounded px-3 py-2">{{ 'Resume' if item.status=='paused' else 'Pause' }}</button><button name="action" value="cancel" class="border rounded px-3 py-2">Cancel future runs</button>
+    </form>{% endfor %}
+  </details>
+  <section><h2 class="text-lg font-semibold">End-of-day summaries</h2><p class="text-xs text-slate-500">Recorded after the working window closes. Blocked, unfinished and uncertain actions remain visible; they are not reported as completed.</p>
+    {% for s in summaries %}<p class="border-b py-2">{{ s.day }} — {% for status,count in s.counts.items() %}{{ count }} {{ status }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% else %}<p class="text-sm text-slate-500">No completed working days yet.</p>{% endfor %}
+  </section>
+  <form id="plan-move" method="post" hidden><input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><input name="action" value="move"><input name="run_at"></form>
+</div>
+<script src="/static/scheduled_plan.js?v={{ asset_rev }}" defer></script>
+{% endblock %}

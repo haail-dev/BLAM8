@@ -1,0 +1,102 @@
+{% extends "app/base.html" %}
+{% block title %}Settings · CRM · BLAM8{% endblock %}
+{% block heading %}CRM{% endblock %}
+{% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+  <div class="flex items-start justify-between gap-3">
+    <p class="text-sm text-slate-500 max-w-2xl">The settings behind the CRM. What you track per contact, company and deal lives under <a href="/app/crm/fields" class="text-brand font-medium">Fields</a> — everything else is here.</p>
+    {# Opens the assistant pre-asked to recommend stages + the gone-quiet threshold for
+       THIS business — it can apply them via a "Use recommended settings" card. #}
+    <span hidden data-concierge-ask="Can you help me set up my CRM settings — the pipeline stages and the gone-quiet threshold — for my business?"></span>
+{% include "app/_help_hint.html" %}
+  </div>
+
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>{% endif %}
+  {% if msg == 'deleted' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Stage removed — its deals moved to Unstaged on the pipeline.</div>{% endif %}
+  {% if err %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{{ err }}</div>{% endif %}
+
+  <!-- Pipeline stages -->
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pipeline stages</p>
+      <p class="text-xs text-slate-400 mt-0.5">The columns your deals move through. Won / Lost / Dormant types close a deal when it lands there; order is lowest-first.</p>
+    </div>
+    {% if not stages %}
+    <p class="text-sm text-slate-400">No stages yet — nothing is pre-decided for you. Ask the assistant (/help) for a pipeline that fits your business, or add your own below. Deals without a stage sit under Unstaged on the pipeline.</p>
+    {% else %}
+    {# Column headers (Julius 2026-09-03: three unlabelled boxes per row read
+       as a puzzle — especially the bare order numbers). #}
+    {# One quiet line per stage (Kris, re-run 2026-09-13: "doesn't look so
+       sleek… the Remove buttons could just be an X"): the name takes the
+       width, type and order sit small beside it, Save shows only once a row
+       is dirty, and the delete is the same × the diary's service rows use. #}
+    <div class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+      <span class="flex-1">Stage</span><span class="w-[5.5rem]">Type</span><span class="w-16 text-center">Order</span><span class="w-7"></span>
+    </div>
+    {% endif %}
+    <div class="divide-y divide-slate-100 -mt-2">
+    {% for s in stages %}
+    <div class="flex items-center gap-2 py-1.5" data-stage-row>
+      <form method="post" action="/app/crm/settings/stages/{{ s.id }}" class="flex items-center gap-2 flex-1 min-w-0">
+    <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input name="name" value="{{ s.name }}" aria-label="Stage name" class="flex-1 min-w-0 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-navy outline-none focus:border-brand">
+        <select name="stage_type" aria-label="Stage type" class="w-[5.5rem] rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-brand">
+          {% for t in ['active','won','lost','dormant'] %}<option value="{{ t }}" {{ 'selected' if s.stage_type == t }}>{{ t }}</option>{% endfor %}
+        </select>
+        <input name="display_order" type="number" value="{{ s.display_order }}" aria-label="Order" class="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-500 text-center outline-none focus:border-brand">
+        <button data-save-row class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Save</button>
+      </form>
+      <form method="post" action="/app/crm/settings/stages/{{ s.id }}/delete" class="flex-none" onsubmit="return confirm('Remove {{ s.name }}? Deals on it move to Unstaged — nothing is lost.');">
+    <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="w-7 text-slate-400 hover:text-rose-600 text-xl leading-none transition" aria-label="Remove {{ s.name }}" title="Remove">&times;</button>
+      </form>
+    </div>
+    {% endfor %}
+    </div>
+    <form method="post" action="/app/crm/settings/stages" class="flex items-center gap-2 border-t border-slate-100 pt-3">
+    <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input name="name" placeholder="Add a stage…" required aria-label="New stage name" class="flex-1 min-w-0 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+      <select name="stage_type" aria-label="New stage type" class="w-[5.5rem] rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-brand">
+        <option value="active">active</option><option value="won">won</option>
+        <option value="lost">lost</option><option value="dormant">dormant</option>
+      </select>
+      <input name="display_order" type="number" placeholder="Order" value="100" aria-label="New stage order" class="w-16 rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-xs text-slate-500 text-center outline-none focus:border-brand">
+      <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Add</button>
+      <span class="w-7"></span>
+    </form>
+  </div>
+
+  <!-- Gone-quiet threshold -->
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Gone-quiet nudges</p>
+      <p class="text-xs text-slate-400 mt-0.5">How long a contact can go without a word before BLAM8 flags them on Home and in the contact list, and offers to draft a check-in.</p>
+    </div>
+    <form method="post" action="/app/crm/settings" class="flex items-center gap-2">
+    <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <span class="text-sm text-slate-600">Flag after</span>
+      <input name="quiet_days" type="number" min="1" max="365" value="{{ quiet_days }}"
+             class="w-20 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-brand">
+      <span class="text-sm text-slate-600">days of silence</span>
+      <button data-save-row class="rounded-lg bg-brand px-4 py-1.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
+    </form>
+  </div>
+
+  <!-- Your data -->
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Your data</p>
+      <p class="text-xs text-slate-400 mt-0.5">The CRM is yours to take with you — always.</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="/app/crm/export.csv" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Export contacts CSV</a>
+      <a href="/app/crm/export.json" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Export everything JSON</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

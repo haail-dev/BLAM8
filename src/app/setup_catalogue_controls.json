@@ -1,0 +1,165 @@
+{
+  "service_urgent": {
+    "name": "text",
+    "enabled": "boolean",
+    "same_day_until": "time",
+    "notice_hours": "number"
+  },
+  "service_out_of_hours": {
+    "name": "text",
+    "enabled": "boolean",
+    "until": "time",
+    "days": "days",
+    "bank_holidays": "boolean",
+    "price": "money",
+    "price_after": "money",
+    "offer": [
+      "ask",
+      "auto",
+      "existing"
+    ],
+    "price_basis": [
+      "first_hour",
+      "booking"
+    ],
+    "terms": "prose"
+  },
+  "service_after_job": {
+    "name": "text",
+    "tasks": "list"
+  },
+  "ladder": {
+    "who": "text",
+    "label": "text",
+    "levels": "list",
+    "notify": [
+      "approve",
+      "auto",
+      "off"
+    ],
+    "gates": "list",
+    "staff_can_see": "boolean"
+  },
+  "note": {
+    "label": "text",
+    "content": "prose"
+  },
+  "contact_field": {
+    "label": "text",
+    "field_type": [
+      "text",
+      "number",
+      "date",
+      "bool",
+      "dropdown"
+    ],
+    "options": "list",
+    "required": "boolean",
+    "extraction_hint": "prose",
+    "probe_behaviour": [
+      "passive",
+      "probe_once",
+      "probe_persistent"
+    ],
+    "durability": [
+      "once",
+      "expires"
+    ],
+    "recall_days": "number",
+    "valid_months": "number",
+    "staff_can_see": "boolean"
+  },
+  "stage": {
+    "name": "text",
+    "stage_type": [
+      "active",
+      "won",
+      "lost",
+      "dormant"
+    ],
+    "display_order": "number"
+  },
+  "package": {
+    "name": "text",
+    "quantity": "money",
+    "unit": [
+      "session",
+      "hour"
+    ],
+    "price": "money",
+    "valid_days": "number",
+    "services": "services",
+    "required": "boolean"
+  },
+  "service": {
+    "name": "text",
+    "minutes": "number",
+    "price": "money",
+    "timing": [
+      "time",
+      "half",
+      "day"
+    ],
+    "resource": "resources",
+    "days": "days",
+    "at_once": "number"
+  },
+  "resource": {
+    "name": "text",
+    "count": "number",
+    "rate": "money",
+    "rate_unit": [
+      "",
+      "booking",
+      "hour",
+      "day",
+      "night",
+      "week"
+    ]
+  },
+  "intake": {
+    "label": "text",
+    "required": "boolean",
+    "kind": [
+      "answer",
+      "document"
+    ],
+    "hint": "text",
+    "services": "services",
+    "remember": [
+      "ask",
+      "once",
+      "confirm",
+      "expires"
+    ]
+  },
+  "group": {
+    "label": "text",
+    "plural": "text",
+    "cardinality": [
+      "one",
+      "many"
+    ]
+  },
+  "subject": {
+    "kind": "groups",
+    "label": "text",
+    "type": [
+      "text",
+      "number",
+      "date",
+      "bool",
+      "dropdown"
+    ],
+    "options": "list",
+    "required": "boolean",
+    "durability": [
+      "once",
+      "confirm",
+      "expires"
+    ],
+    "recall_days": "number",
+    "gate": "boolean",
+    "hint": "text"
+  }
+}

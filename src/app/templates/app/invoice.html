@@ -1,0 +1,119 @@
+{% extends "app/base.html" %}
+{% block title %}{{ inv.invoice_ref }} · Invoice · BLAM8{% endblock %}
+{% block heading %}Invoice {{ inv.invoice_ref }}{% endblock %}
+{% set back = ('/app/invoices', 'All invoices') %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set is_draft = inv.status == 'draft' %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+  {% if msg == 'sent' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Invoice emailed to the customer.</div>{% endif %}
+  {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Lines saved.</div>{% endif %}
+  {% if msg == 'noemail' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">This invoice has no customer email, so it can't be sent.</div>{% endif %}
+  {% if msg == 'sendfail' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">Couldn't send the invoice — check the mailbox connection and try again.</div>{% endif %}
+  {% if msg == 'refunded' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Refund issued on your Stripe account — it's on this invoice and the customer's timeline. They see it in 5–10 working days.</div>{% endif %}
+  {% if msg == 'refund_failed' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">Stripe refused the refund — nothing was changed. Check the payment in your Stripe dashboard.</div>{% endif %}
+  {% if msg == 'refund_badamount' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That amount didn't read as money — leave it blank for a full refund, or a figure like 25.00.</div>{% endif %}
+  {% if msg in ('refund_nopayment', 'refund_unavailable') %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">There is no card payment on Stripe to refund for this invoice.</div>{% endif %}
+  {% if msg == 'locked' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Only draft invoices can be edited.</div>{% endif %}
+  {% if payment_gap and inv.status not in ('paid', 'cancelled', 'void') %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+    ⚠ {{ payment_gap }}
+    <a href="/app/invoices/settings" class="font-semibold underline">Add bank details in Settings › Getting paid</a>.
+  </div>
+  {% endif %}
+
+  {% import "app/_invoice_sections.html" as sections %}
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-5">
+    {# The whole invoice card renders through the shared section macro — same
+       renderer as the settings-page preview, ordered by s.section_order. #}
+    {{ sections.invoice_card(inv, lines, s, editable=is_draft,
+                             csrf=csrf_token(request)) }}
+
+    {# Their PO / works-order number — editable in any state (a PO fixed after
+       payment still belongs on the record the accountant receives). #}
+    <form method="post" action="/app/invoices/{{ inv.id }}/reference" class="flex items-center gap-2 border-t border-slate-100 pt-4 text-xs">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <label for="cref" class="font-medium text-slate-500 whitespace-nowrap">Their ref / PO</label>
+      <input id="cref" name="customer_reference" value="{{ inv.customer_reference or '' }}" placeholder="e.g. PO 4471"
+             class="w-36 rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-brand">
+      <div data-save-row><button class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Save</button></div>
+    </form>
+
+    <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+      <form method="post" action="/app/invoices/{{ inv.id }}/send"
+            onsubmit="return confirm('{% if inv.status != 'draft' %}Invoice {{ inv.invoice_ref }} was already sent — email it to {{ inv.customer_email }} AGAIN?{% else %}Email invoice {{ inv.invoice_ref }} (PDF) to {{ inv.customer_email }}?{% endif %}');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button {{ 'disabled' if not inv.customer_email else '' }}
+          class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+          {{ 'Resend invoice' if inv.status != 'draft' else 'Send invoice to customer' }}</button>
+      </form>
+      {% if inv.status != 'paid' %}
+      <form method="post" action="/app/invoices/{{ inv.id }}/status" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="paid">
+        <select name="payment_method" class="rounded-lg border border-slate-300 px-2 py-2 text-sm outline-none focus:border-brand">
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="other">Other</option>
+        </select>
+        <button class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">Mark paid</button>
+      </form>
+      {% if inv.status != 'cancelled' %}
+      <form method="post" action="/app/invoices/{{ inv.id }}/status"
+            onsubmit="return confirm('Cancel invoice {{ inv.invoice_ref }}? Its number is never reused.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="status" value="cancelled">
+        <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+      </form>
+      {% endif %}
+      {% endif %}
+      {% if not inv.customer_email %}<span class="text-xs text-amber-600">No customer email on this invoice.</span>{% endif %}
+    </div>
+    <p class="text-xs text-slate-400">Sends a PDF of this invoice to the customer from your connected mailbox, then marks it sent.</p>
+  </div>
+
+  {# The card payment on the record (docs/plan-payments-panel.md §1): how it was
+     paid, the refund ledger, and Refund — full or partial — on the owner's own
+     Stripe account. A bank payment still clearing shows as in progress. #}
+  {% if inv.stripe_payment_intent_id %}
+  {% set refund_lines = [] %}
+  {% for line in (inv.notes or '').split('\n') if line.startswith('Refunded') %}{% set _ = refund_lines.append(line) %}{% endfor %}
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+    <div class="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 class="font-semibold text-navy">
+        {% if inv.status == 'refunded' %}Refunded in full
+        {% elif inv.status == 'paid' %}Paid by {{ method_label(inv.payment_method) }} via Stripe{% if inv.paid_at %} on {{ pretty_date(inv.paid_at[:10]) }}{% endif %}
+        {% else %}{{ method_label(inv.payment_method) }} payment in progress{% endif %}
+      </h2>
+      <a href="https://dashboard.stripe.com/payments/{{ inv.stripe_payment_intent_id }}" target="_blank" rel="noopener" class="text-xs text-slate-400 hover:text-navy">View in Stripe ↗</a>
+    </div>
+    {% if inv.status not in ('paid', 'refunded') %}
+    <p class="text-sm text-slate-600">The customer's bank payment has been submitted and usually clears within three working days. The invoice marks itself paid when it does.</p>
+    {% endif %}
+    {% if refund_lines %}
+    <ul class="text-sm text-slate-600 space-y-1">
+      {% for line in refund_lines %}<li>{{ line.rsplit(' [', 1)[0] }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if inv.status == 'paid' and stripe_connected %}
+    <details>
+      <summary class="cursor-pointer text-sm font-semibold text-slate-600 hover:text-navy">Refund this payment</summary>
+      <form method="post" action="/app/payments/refund" class="mt-2 flex flex-wrap items-end gap-2"
+            onsubmit="return confirm('Refund on your Stripe account? A blank amount refunds the full £{{ '%.2f'|format(inv.amount_paid or inv.total or 0) }}.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="invoice_id" value="{{ inv.id }}">
+        <input type="hidden" name="back" value="/app/invoices/{{ inv.id }}">
+        <label class="block"><span class="text-xs font-medium text-slate-500">Amount (blank = full £{{ '%.2f'|format(inv.amount_paid or inv.total or 0) }})</span>
+          <input name="amount" inputmode="decimal" class="mt-0.5 w-32 rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand"></label>
+        <label class="block flex-1 min-w-[12rem]"><span class="text-xs font-medium text-slate-500">Reason (on the invoice and the timeline)</span>
+          <input name="reason" maxlength="200" placeholder="e.g. part not needed" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-brand"></label>
+        <button class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition">Refund</button>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

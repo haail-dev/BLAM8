@@ -1,0 +1,725 @@
+{% extends "app/base.html" %}
+{% block title %}{{ c.name or c.email }} · CRM · BLAM8{% endblock %}
+{% block heading %}{{ c.name or c.email }}{% endblock %}
+{% set back = ('/app/crm', 'All contacts') %}
+{% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
+{% block content %}
+{# The Settings idiom, applied to a person: an identity card that stays open,
+   then ONE ruled sheet where every section folds to a line that STATES ITS
+   VALUE — the page reads as a ledger before anything is tapped. Status is
+   dot + quiet text (Counting House), never a filled pill. #}
+{% macro face(name, value, needs=false) %}
+  <summary class="flex items-baseline gap-3 px-5 py-3.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+    <span class="text-sm font-semibold text-navy flex-none">{{ name }}</span>
+    {% if needs %}
+    <span class="flex-1 min-w-0 truncate text-xs font-medium text-amber-700 group-open:invisible"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 mr-1.5 align-middle"></span>{{ value }}</span>
+    {% else %}
+    <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open:invisible">{{ value }}</span>
+    {% endif %}
+    <span class="flex-none text-slate-300 transition group-open:rotate-90">&rsaquo;</span>
+  </summary>
+{% endmacro %}
+{# No space-y here on purpose — each body picks its own rhythm. #}
+{% set foldbody = "border-t border-slate-100 px-5 py-4" %}
+{% set istone = {'draft':'text-slate-500','sent':'text-brand','paid':'text-emerald-700','overdue':'text-rose-700','partially_paid':'text-amber-700','cancelled':'text-slate-400','void':'text-slate-400'} %}
+{% set idot = {'draft':'bg-slate-200','sent':'bg-brand','paid':'bg-emerald-600','overdue':'bg-rose-600','partially_paid':'bg-amber-500','cancelled':'bg-slate-200','void':'bg-slate-200'} %}
+{% set qstone = {'draft':'text-slate-500','sent':'text-brand','accepted':'text-emerald-700','declined':'text-rose-700','expired':'text-amber-700','invoiced':'text-indigo-700','cancelled':'text-slate-400'} %}
+{% set qdot = {'draft':'bg-slate-200','sent':'bg-brand','accepted':'bg-emerald-600','declined':'bg-rose-600','expired':'bg-amber-500','invoiced':'bg-indigo-500','cancelled':'bg-slate-200'} %}
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-4">
+  <!-- Who they are — the one part that never folds -->
+  {# relative: the Conversation button pins to the box's top-right corner
+     (Kris 2026-09-20) instead of wrapping under the name on a phone. #}
+  <div class="bg-white rounded-xl border border-slate-200 p-5 relative">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0 pr-28">
+        {# The pencil (Kris 2026-09-06): name, email, phone by hand — the
+           same write the Concierge makes, one timeline line either way.
+           Kris 2026-09-21: it sits to the RIGHT of the name, on the same
+           line. A <details> lays out as a block whatever display it is
+           handed, so an "inline" pencil fell under the name; now the name
+           row is the summary itself — a flex row, name first, pencil last —
+           and the editor still unfolds beneath. #}
+        <details class="group/edit">
+          <summary class="flex items-center gap-2 list-none cursor-pointer [&::-webkit-details-marker]:hidden" title="Edit name, email or phone">
+            <span class="min-w-0 text-2xl font-bold font-display text-navy">{{ c.name or c.email }}</span>
+            <span class="flex-none text-sm text-slate-300 hover:text-slate-500 group-hover/edit:text-slate-500 group-open/edit:text-slate-500" aria-hidden="true">&#9998;</span>
+          </summary>
+          <form method="post" action="/app/crm/contacts/{{ c.id }}/edit" class="mt-2 grid sm:grid-cols-3 gap-2 text-sm font-normal font-sans">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input name="name" value="{{ c.name or '' }}" placeholder="Name" class="rounded-lg border border-slate-300 px-2 py-1">
+            <input name="email" value="{{ c.email or '' }}" placeholder="Email" class="rounded-lg border border-slate-300 px-2 py-1">
+            <div class="flex gap-2">
+              <input name="phone" value="{{ c.phone or '' }}" placeholder="Phone" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1">
+              <button data-save-row class="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">Save</button>
+            </div>
+          </form>
+        </details>
+        {% if msg == 'edited' %}<p data-flash class="text-emerald-700 text-xs mt-1">Saved.</p>
+        {% elif msg == 'editerr' %}<p class="text-rose-700 text-xs mt-1">{{ why or "That didn't save." }}</p>{% endif %}
+        <p class="text-sm text-slate-500 mt-1">
+          {{ c.email }}
+          {% if c.phone %} · {{ c.phone }}{% endif %}
+          {% if c.crm_companies and c.crm_companies.name %} · <span class="font-medium text-slate-700">{{ c.crm_companies.name }}</span>{% endif %}
+          {# The customer's portal reference (Julius 2026-09-03): the code THEY
+             quote on the phone and use to sign into /c/{slug} — the operator
+             needs to see the same identifier the customer holds. #}
+          {% if c.reference_code %} · <span class="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-slate-600" title="Their customer reference — quoted on outbound email and used to sign into the portal">{{ c.reference_code }}</span>{% endif %}
+        </p>
+        <p class="text-xs text-slate-400 mt-0.5">
+          First seen {{ c.first_seen_at | pretty_date or '—' }}
+          {% if c.days_since_last is not none %}
+          <span class="inline-flex items-center gap-1.5 ml-2 font-medium {{ 'text-amber-700' if c.stale else 'text-emerald-700' }}"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-amber-500' if c.stale else 'bg-emerald-600' }} self-center"></span>{% if c.days_since_last == 0 %}spoke today{% else %}last contact {{ c.days_since_last }}d ago{% endif %}</span>
+          {% endif %}
+        </p>
+        {# Customer temperature (sentiment): the mood + direction of travel, read
+           from their emails. Calm (positive/neutral/unknown) shows nothing. #}
+        {% if c.sentiment in ['concerned', 'frustrated', 'angry'] %}
+        <p class="text-xs mt-1.5">
+          <span class="inline-flex items-center gap-1.5 font-medium {{ 'text-rose-700' if c.sentiment in ['frustrated', 'angry'] else 'text-amber-700' }}"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-rose-600' if c.sentiment in ['frustrated', 'angry'] else 'bg-amber-500' }} self-center"></span>{{ c.sentiment | capitalize }}{% if c.sentiment_trend and c.sentiment_trend != 'steady' %} · {{ c.sentiment_trend }}{% endif %}</span>
+          {% if c.sentiment_reason %}<span class="text-slate-400 ml-1">“{{ c.sentiment_reason }}”</span>{% endif %}
+        </p>
+        {% endif %}
+      </div>
+      {# One word, one corner (Kris 2026-09-20: "Conversation", top right).
+         The stale nudge lives in the amber "last contact Nd ago" above. #}
+      <form method="get" action="/app/conversations/view" class="absolute top-4 right-4">
+        <input type="hidden" name="contact" value="{{ c.email }}">
+        <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Conversation</button>
+      </form>
+    </div>
+    {% if msg == 'said' %}<p class="mt-2 text-xs text-emerald-700" data-flash>Note left — it's on their Today.</p>{% endif %}
+    {% if msg == 'saynothing' %}<p class="mt-2 text-xs text-amber-700">Pick a person and write something.</p>{% endif %}
+    {# A note for a colleague about THIS customer, and what has already been said. #}
+    {% include "app/_say_to.html" %}
+  </div>
+
+  <!-- Everything known about them: one sheet, each row folded to its value -->
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-200 overflow-hidden">
+
+    <!-- Custom fields — filled in by BLAM8 from their emails (phase 2) -->
+    {% if suggestions %}
+      {% set about_face = (suggestions|length ~ ' to confirm') ~ (' · ' ~ fields|length ~ ' filled' if fields else '') %}
+    {% elif fields %}
+      {% set about_face = fields|length ~ ' filled from their emails' %}
+    {% elif not has_field_defs %}
+      {% set about_face = 'not set up yet' %}
+    {% else %}
+      {% set about_face = 'nothing read yet' %}
+    {% endif %}
+    <details class="group">
+      {{ face('About', about_face, needs=(suggestions|length > 0)) }}
+      <div class="{{ foldbody }} space-y-3">
+        {% if suggestions %}
+        <div class="space-y-2">
+          {% for s in suggestions %}
+          <div class="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm">
+            {# A chip can now be a CHANGE, not just a filling-in: say what it would
+               replace, or the operator is approving a swap they cannot see. #}
+            <span class="text-amber-800">BLAM8 read <span class="font-semibold">{{ s.label }} = {{ s.value }}</span> in an email —
+              {% if s.replaces %}the record says <span class="font-semibold">{{ s.replaces }}</span>. Replace it?{% else %}correct?{% endif %}</span>
+            <form method="post" action="/app/crm/suggestions/{{ s.id }}/accept" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+              <button class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition">{% if s.replaces %}✓ Replace{% else %}✓ Yes{% endif %}</button>
+            </form>
+            <form method="post" action="/app/crm/suggestions/{{ s.id }}/dismiss" class="inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+              <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Dismiss</button>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if fields %}
+        {% if msg == 'level_queued' %}<p data-flash class="text-emerald-700 text-xs">Moved — a message is waiting in your approval queue.</p>
+        {% elif msg == 'level_sent' %}<p data-flash class="text-emerald-700 text-xs">Moved — and the customer has been told.</p>
+        {% elif msg == 'level' %}<p data-flash class="text-emerald-700 text-xs">Moved.</p>
+        {% elif msg == 'badlevel' %}<p class="text-rose-700 text-xs">That isn't a level on this ladder.</p>{% endif %}
+        <div class="grid sm:grid-cols-2 gap-x-6 gap-y-1">
+          {% for f in fields %}
+          <div class="flex justify-between gap-3 text-sm py-1 border-b border-slate-50">
+            <span class="text-slate-500">{{ f.label }}{% if f.entity == 'company' %} <span class="text-xs text-slate-400">(company)</span>{% endif %}</span>
+            {% if f.ladder %}
+            {# A customer ladder (src/app/ladders.py): the owner moves the level here —
+               the adult side has no dependant, so the job page's select never
+               renders (run #8, 2026-09-05). The write fires the same trail and
+               message a dependant's move gets. #}
+            <form method="post" action="/app/crm/contacts/{{ c.id }}/level" class="flex items-center gap-1">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="key" value="{{ f.key }}">
+              <select name="level" class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs text-slate-700 bg-white">
+                {% if not f.raw %}<option value="">— none yet —</option>{% endif %}
+                {% for lv in f.ladder %}<option value="{{ lv }}" {{ 'selected' if f.raw == lv }}>{{ lv }}</option>{% endfor %}
+              </select>
+              <button class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">Move</button>
+            </form>
+            {% else %}
+            <span class="font-medium text-slate-700 text-right">{{ f.value }}{% if f.note %} <span class="text-xs {{ 'text-rose-600' if 'lapsed' in f.note else 'text-slate-400' }}">{{ f.note }}</span>{% endif %}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if msg == 'fields' %}<p data-flash class="text-emerald-700 text-xs">Saved — the timeline says what changed.</p>
+        {% elif msg == 'nochange' %}<p data-flash class="text-slate-500 text-xs">Nothing changed.</p>
+        {% elif msg == 'fielderr' %}<p class="text-rose-700 text-xs">{{ why or "That didn't save." }}</p>{% endif %}
+        {% if editable_fields %}
+        {# By hand (Kris 2026-09-06): the same fields, typed in — one input per
+           definition, only changed values are written, through the same
+           function the Concierge's card runs. Ladders keep their Move control. #}
+        <details class="group/fields">
+          <summary class="list-none cursor-pointer text-xs text-brand font-medium">Edit values</summary>
+          <form method="post" action="/app/crm/contacts/{{ c.id }}/fields" class="mt-2 grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            {% for d in editable_fields %}
+            {% set cur = (c.custom_data or {}).get(d.key) %}
+            <label class="block text-xs text-slate-500">{{ d.label }}
+              {% if d.field_type == 'dropdown' and d.options %}
+              <select name="f_{{ d.key }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700 bg-white">
+                <option value="" {{ 'selected' if not cur }}>—</option>
+                {% for o in d.options %}<option value="{{ o }}" {{ 'selected' if cur == o }}>{{ o }}</option>{% endfor %}
+              </select>
+              {% elif d.field_type == 'bool' %}
+              <select name="f_{{ d.key }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700 bg-white">
+                <option value="" {{ 'selected' if cur in (none, '') }}>—</option>
+                <option value="true" {{ 'selected' if cur in (true, 'true', 'True') }}>Yes</option>
+                <option value="false" {{ 'selected' if cur in (false, 'false', 'False') }}>No</option>
+              </select>
+              {% elif d.field_type == 'date' %}
+              <input type="date" name="f_{{ d.key }}" value="{{ (cur or '')|string|truncate(10, true, '') }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700">
+              {% elif d.field_type == 'number' %}
+              <input type="number" step="any" name="f_{{ d.key }}" value="{{ cur if cur is not none else '' }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700">
+              {% else %}
+              <input name="f_{{ d.key }}" value="{{ cur or '' }}" class="mt-0.5 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-700">
+              {% endif %}
+            </label>
+            {% endfor %}
+            <div class="sm:col-span-2"><button data-save-row class="rounded-lg bg-brand px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700">Save values</button></div>
+          </form>
+        </details>
+        {% endif %}
+        <p class="text-xs text-slate-400">Values fill themselves in from emails — sure ones directly, near-misses as a question above — or edit them here.</p>
+        {% elif not has_field_defs %}
+        <p class="text-sm text-slate-400">Tell BLAM8 what you'd like to track (fleet size, payment terms, whatever matters) and it'll fill the answers in from their emails. <a href="/app/crm/fields" class="text-brand font-medium">Set up your fields →</a></p>
+        {% elif not suggestions %}
+        <p class="text-sm text-slate-400">Nothing read from their emails yet.</p>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Packages & credits (src/app/wallet.py): what they have bought ahead of use -->
+    {% if wallet_packages or wallet_rows %}
+    <details class="group">
+      {{ face('Packages & credits', (wallet_lines|join(' · ') if wallet_lines else 'nothing on record')) }}
+      <div class="{{ foldbody }} space-y-3">
+        {% if msg == 'credits' %}<p data-flash class="text-emerald-700 text-xs">Wallet updated.</p>{% endif %}
+        {% if wallet_rows %}
+        <div class="space-y-1">
+          {% for r in wallet_rows|reverse %}
+          <div class="flex flex-wrap items-baseline gap-2 text-sm py-1 border-b border-slate-50">
+            <span class="font-medium text-slate-700">{{ r.package_name }}</span>
+            <span class="text-slate-500">{{ '%g'|format(r.quantity|float - r.used|float) }} of {{ '%g'|format(r.quantity|float) }} {{ r.unit }}{{ 's' if r.quantity|float != 1 }} left</span>
+            {% if r.expires_at %}<span class="text-xs text-slate-400">valid until {{ r.expires_at }}</span>{% endif %}
+            {% if not r.paid %}<span class="text-xs font-medium text-amber-700">unpaid</span>{% endif %}
+            {% if r.note %}<span class="text-xs text-slate-400">{{ r.note }}</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <form method="post" action="/app/crm/contacts/{{ c.id }}/credits" class="grid sm:grid-cols-12 gap-2 items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <label class="sm:col-span-4 block text-xs text-slate-500">Sell a package
+            <select name="package_key" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">— or adjust by hand —</option>{% for p in wallet_packages %}<option value="{{ p.key }}">{{ p.name }} · {{ '%g'|format(p.quantity) }} {{ p.unit }}{{ 's' if p.quantity != 1 }} · £{{ '%.2f'|format(p.price) }}</option>{% endfor %}</select></label>
+          <label class="sm:col-span-2 block text-xs text-slate-500">± units<input name="quantity" type="number" step="0.5" placeholder="1" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+          <label class="sm:col-span-2 block text-xs text-slate-500">Unit<select name="unit" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="session">sessions</option><option value="hour">hours</option></select></label>
+          {% if dep_instances %}
+          <label class="sm:col-span-2 block text-xs text-slate-500">For<select name="instance_id" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">anyone</option>{% for inst in dep_instances %}<option value="{{ inst.id }}">{{ inst.name }}</option>{% endfor %}</select></label>
+          {% endif %}
+          <label class="sm:col-span-{{ '10' if dep_instances else '12' }} block text-xs text-slate-500">Note<input name="note" placeholder="goodwill session · refund · sold at the desk" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+          <label class="sm:col-span-2 flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" name="paid" value="1" class="accent-blue-600">Paid</label>
+          <div data-save-row class="sm:col-span-12"><button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Update wallet</button></div>
+        </form>
+        <p class="text-xs text-slate-400">A package sold from an invoice lands here when the invoice is sent. Bookings spend credits per Diary settings → Cancellations &amp; credits; the register on a booking has the last word.</p>
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Waiting lists (src/app/courses.py): the classes they are waiting for -->
+    {% if wait_on %}
+    <details class="group">
+      {{ face('Waiting lists', (wait_rows|map(attribute='label')|join(' · ') if wait_rows else 'none')) }}
+      <div class="{{ foldbody }} space-y-3">
+        {% if msg == 'waitlist' %}<p data-flash class="text-emerald-700 text-xs">Waiting list updated.</p>{% elif msg == 'badwait' %}<p data-flash class="text-rose-700 text-xs">That needs a date.</p>{% endif %}
+        {% for w in wait_rows %}
+        <form method="post" action="/app/crm/contacts/{{ c.id }}/waitlist" class="flex flex-wrap items-baseline gap-2 text-sm py-1 border-b border-slate-50">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <span class="font-medium text-slate-700">{{ w.label }}</span>
+          {% if w.participant %}<span class="text-xs text-slate-500">for {{ w.participant }}</span>{% endif %}
+          {% if w.status == 'offered' %}<span class="text-xs font-medium text-amber-700">place offered · reply by {{ w.expires_at|pretty_date }}</span>{% else %}<span class="text-xs text-slate-400">number {{ w.position }}</span>{% endif %}
+          <span class="flex-1"></span>
+          <button name="remove" value="{{ w.id }}" class="text-xs text-slate-400 hover:text-rose-600">Remove</button>
+        </form>
+        {% endfor %}
+        <form method="post" action="/app/crm/contacts/{{ c.id }}/waitlist" class="grid sm:grid-cols-12 gap-2 items-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          {% if wait_services %}
+          <label class="sm:col-span-4 block text-xs text-slate-500">Class<select name="service" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white">{% for s in wait_services %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></label>
+          {% else %}
+          <label class="sm:col-span-4 block text-xs text-slate-500">Class<input name="service" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+          {% endif %}
+          <label class="sm:col-span-3 block text-xs text-slate-500">A date it runs<input name="date" type="date" required class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+          <label class="sm:col-span-2 block text-xs text-slate-500">Start<input name="window" type="time" required class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+          {% if dep_instances %}
+          <label class="sm:col-span-3 block text-xs text-slate-500">For<select name="instance_id" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">the customer</option>{% for inst in dep_instances %}<option value="{{ inst.id }}">{{ inst.name }}</option>{% endfor %}</select></label>
+          {% endif %}
+          <div data-save-row class="sm:col-span-12"><button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Add to the waiting list</button></div>
+        </form>
+        <p class="text-xs text-slate-400">A place that frees up is offered to the first waiting per Diary settings → Recurring → Courses.</p>
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Dependants (docs/modules/module-requirement-groups.md): what their bookings are about -->
+    {% if dep_groups %}
+    {# One word for the fold whatever the kinds are called (Kris 2026-09-04:
+       a label limited to two dependant kinds excludes so much — Dependants is the universal term);
+       each row still wears its own kind. #}
+    {% set dep_label = 'Dependants' %}
+    {% set dep_gaps = dep_instances|selectattr('gaps')|list|length %}
+    <details class="group">
+      {{ face(dep_label, ((dep_suggestions|length ~ ' to confirm · ') if dep_suggestions else '') ~ ((dep_instances|map(attribute='name')|join(', ') ~ (' · ' ~ dep_gaps ~ ' with gaps' if dep_gaps else '')) if dep_instances else 'none on record yet'), needs=(dep_gaps > 0 or dep_suggestions|length > 0)) }}
+      <div class="{{ foldbody }} space-y-3">
+        {% for s in dep_suggestions %}
+        <div class="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm">
+          <span class="text-amber-800">BLAM8 read
+            {% if s.kind == 'new' %}<span class="font-semibold">{{ s.label }}: {{ s.who }}</span> ({{ s.value_text }}) in an email — add {{ s.who }}?
+            {% else %}<span class="font-semibold">{{ s.who }} — {{ s.label }} = {{ s.value_text }}</span> in an email —{% if s.replaces %} the record says <span class="font-semibold">{{ s.replaces }}</span>. Replace it?{% else %} correct?{% endif %}{% endif %}</span>
+          <form method="post" action="/app/crm/suggestions/{{ s.id }}/accept" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+            <button class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition">✓ {{ 'Add' if s.kind == 'new' else ('Replace' if s.replaces else 'Yes') }}</button>
+          </form>
+          <form method="post" action="/app/crm/suggestions/{{ s.id }}/dismiss" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+            <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Dismiss</button>
+          </form>
+        </div>
+        {% endfor %}
+        {% for inst in dep_instances %}
+        {# A record, not a form (Kris 2026-09-21): what is known about each one,
+           written out; the pencil top-right opens the same fields to edit by
+           hand, and the written-out view steps aside while it is open. #}
+        <div class="relative rounded-lg border border-slate-200 [&:has(details[open])>.dep-read]:hidden" data-dependant="{{ inst.id }}">
+          <div class="dep-read px-3 py-2.5 pr-10">
+            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span class="font-semibold text-navy">{{ inst.name }}</span>
+              <span class="text-xs text-slate-400">{{ inst.group.label }}</span>
+              {% if inst.gaps %}<span class="text-xs font-medium text-amber-700">still needed: {{ inst.gaps|join(', ') }}</span>{% endif %}
+            </div>
+            {% set ns = namespace(filled=0) %}
+            {# Phone: label above value so the value gets the full width;
+               sm and up: the two-column label | value record. #}
+            <dl class="mt-1.5 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-x-3 sm:gap-y-1 text-sm">
+              {% for label, value, f in inst.rows %}
+              {% if value is not none and (value | string).strip() %}
+              {% set ns.filled = ns.filled + 1 %}
+              <dt class="text-xs text-slate-500 mt-2 first:mt-0 sm:mt-0 sm:pt-0.5 sm:whitespace-nowrap">{{ label }}</dt>
+              <dd class="text-slate-700 min-w-0 break-words">{{ value | pretty_date }}{% if f.durability == 'expires' %} <span class="text-xs text-slate-400">until</span>{% endif %}</dd>
+              {% endif %}
+              {% endfor %}
+            </dl>
+            {% if not ns.filled %}<p class="mt-1 text-xs text-slate-400">Nothing on record yet — the next email fills it in, or the pencil does.</p>{% endif %}
+          </div>
+          <details class="group/dep">
+            <summary class="list-none cursor-pointer absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:text-brand hover:bg-slate-50 transition" title="Edit {{ inst.name }}" aria-label="Edit {{ inst.name }}">&#9998;</summary>
+            <div class="px-3 pt-2.5 pb-1 flex items-baseline gap-2"><span class="font-semibold text-navy">{{ inst.name }}</span><span class="text-xs text-slate-400">{{ inst.group.label }}</span></div>
+          <form method="post" action="/app/crm/contacts/{{ c.id }}/dependants" class="px-3 pb-3 space-y-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="group_id" value="{{ inst.group.id }}">
+            <input type="hidden" name="name" value="{{ inst.name }}">
+            <div class="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+              {% for label, value, f in inst.rows %}
+              <label class="block text-sm">
+                <span class="block text-xs text-slate-500">{{ label }}{% if f.required %} <span class="text-brand">*</span>{% endif %}{% if f.durability == 'expires' %} <span class="text-slate-400">(expires)</span>{% endif %}</span>
+                {% if f.type == 'dropdown' and f.options %}
+                <select name="f_{{ f.key }}" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">—</option>{% for o in f.options %}<option value="{{ o }}" {{ 'selected' if value == o }}>{{ o }}</option>{% endfor %}</select>
+                {% else %}
+                <input name="f_{{ f.key }}" value="{{ value if value is not none else '' }}" type="{{ 'date' if f.type == 'date' else 'text' }}" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm">
+                {% endif %}
+              </label>
+              {% endfor %}
+            </div>
+            <div data-save-row class="flex items-center gap-3">
+              <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Save</button>
+              <button formaction="/app/crm/contacts/{{ c.id }}/dependants/{{ inst.id }}/archive" class="text-xs text-slate-400 hover:text-rose-600" onclick="return confirm('Archive {{ inst.name }}? Their history stays; they stop being offered on new bookings.')">Archive</button>
+            </div>
+          </form>
+          </details>
+        </div>
+        {% endfor %}
+        <details class="rounded-lg border border-dashed border-slate-300">
+          <summary class="cursor-pointer px-3 py-2 text-sm text-brand font-medium">+ Add {{ 'a' if dep_groups|length == 1 else 'one' }}{% if dep_groups|length == 1 %} {{ dep_groups[0].label|lower }}{% endif %} by hand</summary>
+          <form method="post" action="/app/crm/contacts/{{ c.id }}/dependants" class="px-3 pb-3 space-y-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <div class="grid sm:grid-cols-2 gap-3">
+              {% if dep_groups|length > 1 %}
+              <label class="block text-sm"><span class="block text-xs text-slate-500">Kind</span>
+                <select name="group_id" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white">{% for g in dep_groups %}<option value="{{ g.id }}">{{ g.label }}</option>{% endfor %}</select></label>
+              {% else %}<input type="hidden" name="group_id" value="{{ dep_groups[0].id }}">{% endif %}
+              <label class="block text-sm"><span class="block text-xs text-slate-500">Name</span><input name="name" required class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+            </div>
+            <p class="text-xs text-slate-400">Fill the rest in after saving — or let the next email do it.</p>
+            <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Add</button>
+          </form>
+        </details>
+        <p class="text-xs text-slate-400">Read from their emails and bookings; sure values fill themselves in. Edit anything here — your entry wins.</p>
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Documents (src/app/documents.py): the files kept from their emails and uploads -->
+    {% set doc_updates = documents|map(attribute='updates')|select|list|length %}
+    <details class="group" {% if msg == 'document' or doc_updates %}open{% endif %}>
+      {{ face('Documents', ((doc_updates ~ ' to confirm · ') if doc_updates else '') ~ ((documents|length ~ ' on file' ~ (' · ' ~ (documents|rejectattr('label')|list|length) ~ ' unlabelled' if documents|rejectattr('label')|list|length else '')) if documents else 'none on file yet'), needs=(doc_updates > 0)) }}
+      <div class="{{ foldbody }} space-y-3">
+        {% if msg == 'document' %}<p data-flash class="text-emerald-700 text-xs">Saved.</p>{% endif %}
+        {% if err == 'toobig' %}<p class="text-rose-700 text-xs">That file is over 10 MB.</p>{% elif err == 'nofile' %}<p class="text-rose-700 text-xs">Choose a file first.</p>{% elif err == 'storage' %}<p class="text-rose-700 text-xs">Document storage is unavailable right now — the file wasn't kept.</p>{% endif %}
+        {% for d in documents %}
+        <details class="rounded-lg border {{ 'border-amber-300' if d.updates else 'border-slate-200' }}" {% if d.updates %}open{% endif %}>
+          <summary class="cursor-pointer px-3 py-2 text-sm flex flex-wrap items-center gap-2">
+            {% if (d.content_type or '').startswith('image/') %}<a href="/app/crm/documents/{{ d.id }}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="block h-12 w-12 flex-none overflow-hidden rounded-lg border border-slate-200 bg-slate-100"><img src="/app/crm/documents/{{ d.id }}" alt="" loading="lazy" class="h-full w-full object-cover" onerror="this.parentNode.style.display='none'"></a>{% endif %}
+            <a href="/app/crm/documents/{{ d.id }}" target="_blank" rel="noopener" class="font-semibold text-brand hover:underline" onclick="event.stopPropagation()">{{ d.filename }}</a>
+            {% if d.label %}<span class="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs text-emerald-800">{{ d.label }}</span>{% else %}<span class="text-xs text-amber-700">unlabelled</span>{% endif %}
+            {% if d.replaces %}<span class="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs text-blue-800" title="Replaces {{ d.replaces.filename }} ({{ d.replaces.when }})">new version</span>{% endif %}
+            <span class="text-xs text-slate-400">{{ d.size_text }} · {{ 'from an email' if d.artifact_type == 'attachment' else 'uploaded' }} · {{ d.when }}</span>
+          </summary>
+          {# What this document asks to change (Kris 2026-09-22): read off the
+             file itself, and never used until the owner says so. #}
+          {% if d.updates %}
+          {# One decision per document, however many facts it read. #}
+          <div class="mx-3 mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm">
+            <p class="text-amber-900">Use it to update <span class="font-semibold">{{ d.updates[0].who }}</span>?{% if d.replaces %} <span class="text-xs text-amber-700">It replaces {{ d.replaces.filename }}.</span>{% endif %}</p>
+            <ul class="mt-1 space-y-0.5">
+              {% for u in d.updates %}
+              <li class="text-amber-900">{{ u.label }}{% if u.replaces %} <span class="line-through text-amber-700/70">{{ u.replaces | pretty_date }}</span> →{% else %}:{% endif %} <span class="font-semibold">{{ u.value_text | pretty_date }}</span></li>
+              {% endfor %}
+            </ul>
+            <form method="post" action="/app/crm/documents/{{ d.id }}/updates" class="mt-2 flex flex-wrap gap-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+              {% for u in d.updates %}<input type="hidden" name="ids" value="{{ u.id }}">{% endfor %}
+              <button name="use" value="1" class="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 transition">✓ Use it{% if d.updates|length > 1 %} ({{ d.updates|length }} updates){% endif %}</button>
+              <button name="use" value="0" class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Don't use it</button>
+            </form>
+          </div>
+          {% endif %}
+          <form method="post" action="/app/crm/documents/{{ d.id }}/update" class="px-3 pb-3 grid sm:grid-cols-3 gap-2 items-end text-sm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+            <label class="block"><span class="block text-xs text-slate-500">What it is</span>
+              <input name="label" list="doc-labels" value="{{ d.label or '' }}" placeholder="{{ doc_labels[0] if doc_labels else 'e.g. Passport' }}" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+            {% if dep_instances %}
+            <label class="block"><span class="block text-xs text-slate-500">About</span>
+              <select name="instance_id" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">—</option>{% for inst in dep_instances %}<option value="{{ inst.id }}" {{ 'selected' if d.instance_id == inst.id }}>{{ inst.name }}</option>{% endfor %}</select></label>
+            {% endif %}
+            {% if doc_bookings %}
+            <label class="block"><span class="block text-xs text-slate-500">For the booking</span>
+              <select name="booking_id" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">—</option>{% for bk in doc_bookings %}<option value="{{ bk.id }}" {{ 'selected' if d.booking_id == bk.id }}>{{ bk.text }}</option>{% endfor %}</select></label>
+            {% endif %}
+            <fieldset class="sm:col-span-3 text-xs text-slate-500">
+              <legend>Requirements this document provides evidence for</legend>
+              <p>Select only requirements you have checked in this document, for the record chosen above.</p>
+              {% for g in dep_groups %}{% for f in g.fields if f.proof %}
+              <label class="inline-flex items-center gap-1 mr-3 mt-1">
+                <input type="checkbox" name="requirement_keys" value="{{ f.key }}" {{ 'checked' if f.key in (d.requirement_keys or []) }}>
+                {{ g.label }} · {{ f.label }}
+              </label>
+              {% endfor %}{% endfor %}
+              {% if not d.requirement_keys %}<p class="mt-1">No requirement has been verified against this file yet.</p>{% endif %}
+            </fieldset>
+            <div data-save-row class="flex items-center gap-3 sm:col-span-3">
+              <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Save</button>
+              <button formaction="/app/crm/documents/{{ d.id }}/delete" class="text-xs text-slate-400 hover:text-rose-600" onclick="return confirm('Delete {{ d.filename }}? The file is removed for good.')">Delete</button>
+            </div>
+          </form>
+        </details>
+        {% endfor %}
+        <datalist id="doc-labels">{% for l in doc_labels %}<option value="{{ l }}">{% endfor %}</datalist>
+        <details class="rounded-lg border border-dashed border-slate-300">
+          <summary class="cursor-pointer px-3 py-2 text-sm text-brand font-medium">+ Add a document by hand</summary>
+          <form method="post" action="/app/crm/contacts/{{ c.id }}/documents" enctype="multipart/form-data" class="px-3 pb-3 grid sm:grid-cols-3 gap-2 items-end text-sm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <label class="block sm:col-span-2"><span class="block text-xs text-slate-500">File (up to 10 MB)</span><input type="file" name="file" required class="w-full text-sm"></label>
+            <label class="block"><span class="block text-xs text-slate-500">What it is</span><input name="label" list="doc-labels" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm"></label>
+            {% if dep_instances %}
+            <label class="block"><span class="block text-xs text-slate-500">About</span>
+              <select name="instance_id" class="w-full rounded-lg border-slate-300 border px-2 py-1 text-sm bg-white"><option value="">—</option>{% for inst in dep_instances %}<option value="{{ inst.id }}">{{ inst.name }}</option>{% endfor %}</select></label>
+            {% endif %}
+            <button class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Keep it</button>
+          </form>
+        </details>
+        <p class="text-xs text-slate-400">Files that come with their emails are kept here automatically. Label one as the checklist document it satisfies so the agent never asks for it again.</p>
+      </div>
+    </details>
+
+    <!-- Current deals -->
+    <details class="group">
+      {{ face('Current deals', (deals|length ~ ' open') if deals else 'none yet') }}
+      <div class="{{ foldbody }} space-y-2">
+        {% for d in deals %}
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span class="font-medium text-slate-700">{{ d.title or 'Untitled deal' }}</span>
+          {% if d.crm_stages %}<span class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500"><span class="h-1.5 w-1.5 rounded-full bg-slate-300 self-center"></span>{{ d.crm_stages.name }}</span>{% endif %}
+          {% if d.value_estimate %}<span class="text-slate-500">£{{ '%.0f'|format(d.value_estimate|float) }}</span>{% endif %}
+          {% if d.days_open is not none %}<span class="text-xs text-slate-400">{{ d.days_open }}d open</span>{% endif %}
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400">No deals yet — they'll start clustering here as BLAM8 learns your threads.</p>
+        {% endfor %}
+      </div>
+    </details>
+
+    {% if party_roles %}
+    <!-- Party to — jobs where this person holds a duty without being the booking's contact (docs/modules/module-job-parties.md) -->
+    <details class="group">
+      {{ face('Party to', party_roles|length ~ (' job' if party_roles|length == 1 else ' jobs')) }}
+      <div class="{{ foldbody }} space-y-2">
+        {% for r in party_roles %}
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <a href="/app/diary/{{ r.booking_id }}" class="font-medium text-slate-700 hover:text-brand">{{ r.booking_ref or 'Job' }}</a>
+          {% if r.label %}<span class="text-slate-500">{{ r.label }}</span>{% endif %}
+          {% if r.duties %}<span class="text-xs text-slate-400">{{ r.duties }}</span>{% endif %}
+          {% if r.booking_date %}<span class="text-xs text-slate-400">{{ r.booking_date | pretty_date }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Promises — read out of the mail flow (phase 3). Open rows first; under
+         them the recently cleared, green with a tick and a link to whatever
+         cleared them (Kris 2026-09-20: a cleared promise is SHOWN cleared, not
+         gone). An open row BLAM8 believes is done reads amber with a Confirm. -->
+    {% set n_cleared = (cleared | rejectattr('status', 'equalto', 'dropped') | list | length) if cleared else 0 %}
+    {% set promise_face = ((promises|length ~ ' open') if promises else 'none open') ~ ((' · ' ~ day_notes|length ~ ' on the day') if day_notes else '') ~ ((' · ' ~ n_cleared ~ ' cleared') if n_cleared else '') %}
+    <details class="group">
+      {{ face('Promises', promise_face, needs=(promises|length > 0)) }}
+      {# One promise per block, stacked (Kris 2026-09-20: "the promises aren't
+         displayed well"): the label and the buttons share the first line, the
+         words get the whole width beneath. The old one-line row squeezed the
+         description into a column a few words wide on a phone, and a cleared
+         row's "cleared by BK-1003 · 20th Sep 26" into a word per line. #}
+      <div class="{{ foldbody }} divide-y divide-slate-100">
+        {% for p in promises %}
+        {% set looks_done = p.resolution_type == 'suggested' %}
+        <div class="py-2.5 text-sm" data-promise="{{ p.id }}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium {{ 'text-amber-700' if looks_done else ('text-rose-700' if p.direction == 'we_owe' else 'text-brand') }}"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-amber-500' if looks_done else ('bg-rose-600' if p.direction == 'we_owe' else 'bg-brand') }} self-center"></span>{{ 'you owe' if p.direction == 'we_owe' else 'they owe' }}</span>
+            <form method="post" action="/app/crm/promises/{{ p.id }}/resolve" class="flex flex-none items-center gap-1.5">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+              <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+              {% if looks_done %}
+              <button name="status" value="confirm" class="rounded-lg border border-emerald-300 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Confirm</button>
+              <button name="status" value="keep" class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Still open</button>
+              {% else %}
+              <button name="status" value="done" class="rounded-lg border border-emerald-300 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Done</button>
+              <button name="status" value="dropped" class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Drop</button>
+              {% if p.action %}<a href="{{ p.action.href }}" data-promise-action="{{ p.action.kind }}" class="rounded-lg border border-brand/40 px-2 py-0.5 text-xs font-semibold text-brand hover:bg-blue-50 transition">{{ p.action.short }} &rarr;</a>{% endif %}
+              {% endif %}
+            </form>
+          </div>
+          <p class="mt-1 text-slate-700">{{ p.description }}{% if p.due_hint %} <span class="text-xs text-slate-400">· {{ p.due_hint }}</span>{% endif %}</p>
+          {% if looks_done %}<p class="mt-0.5 text-xs text-amber-700">looks cleared{% if p.by and p.by.href %} — <a href="{{ p.by.href }}" class="underline decoration-amber-300 hover:text-amber-900">{{ p.by.label }}</a>{% elif p.by %} — {{ p.by.label }}{% endif %}{% if p.resolution_evidence %} · {{ p.resolution_evidence }}{% endif %}</p>{% endif %}
+        </div>
+        {% else %}
+        {% if not cleared and not day_notes %}<p class="py-2 text-sm text-slate-400">Nothing open — commitments BLAM8 reads in the mail flow land here by themselves.</p>{% endif %}
+        {% endfor %}
+        {# On the day (Kris 2026-09-21): the customer's logistics for the visit —
+           bring the food, arrive at 1pm, the meds labelled — are notes for
+           whoever is on site, not debts. They keep Done / Drop. A booking the
+           diary holds and a deposit Money tracks don't show here at all. #}
+        {% if day_notes %}
+        <div class="pt-2.5" data-day-notes>
+          <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">On the day</p>
+          {% for p in day_notes %}
+          <div class="py-2 text-sm" data-promise="{{ p.id }}" data-kind="on_the_day">
+            <div class="flex items-center justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium text-slate-500"><span class="h-1.5 w-1.5 rounded-full bg-slate-400 self-center"></span>{{ 'we' if p.direction == 'we_owe' else 'they' }} · on the day</span>
+              <form method="post" action="/app/crm/promises/{{ p.id }}/resolve" class="flex flex-none items-center gap-1.5">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <input type="hidden" name="return_to" value="/app/crm/contacts/{{ c.id }}">
+                <button name="status" value="done" class="rounded-lg border border-emerald-300 px-2 py-0.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Done</button>
+                <button name="status" value="dropped" class="rounded-lg border border-slate-300 px-2 py-0.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 transition">Drop</button>
+              </form>
+            </div>
+            <p class="mt-1 text-slate-700">{{ p.description }}{% if p.due_hint %} <span class="text-xs text-slate-400">· {{ p.due_hint }}</span>{% endif %}</p>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% for p in cleared %}
+        {% set dropped = p.status == 'dropped' %}
+        <div class="py-2.5 text-sm{{ ' opacity-60' if dropped else '' }}" data-cleared-promise="{{ p.id }}">
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium {{ 'text-slate-400' if dropped else 'text-emerald-700' }}">{% if dropped %}<span class="h-1.5 w-1.5 rounded-full bg-slate-300 self-center"></span>{% else %}<span aria-hidden="true" class="font-semibold">&check;</span>{% endif %}{{ 'you owed' if p.direction == 'we_owe' else 'they owed' }}</span>
+            <span class="min-w-0 text-right text-xs {{ 'text-slate-400' if dropped else 'text-emerald-700' }}">{% if p.by and p.by.href %}<a href="{{ p.by.href }}" class="underline decoration-emerald-300 hover:text-emerald-900">{{ p.by.label }}</a>{% else %}{{ p.by.label if p.by else 'cleared' }}{% endif %}{% if p.resolved_at %} · {{ p.resolved_at | pretty_date }}{% endif %}</span>
+          </div>
+          <p class="mt-1 {{ 'text-slate-400 line-through' if dropped else 'text-slate-500' }}">{{ p.description }}</p>
+          {% if p.resolution_evidence and not dropped %}<p class="mt-0.5 text-xs text-slate-400">{{ p.resolution_evidence }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        {% if promises or cleared %}<p class="pt-2 text-xs text-slate-400">What you owe them, and what they owe you — read out of the mail flow. Cleared ones stay here for a month; the timeline keeps them for good.</p>{% endif %}
+      </div>
+    </details>
+
+    <!-- Invoicing history — every invoice is linked to its contact, so this is the
+         "how much have we done with them, and do they actually pay" view. -->
+    {% if contact_invoices and invoice_stats %}
+      {% set inv_face = ('£%.2f'|format(invoice_stats.outstanding|float) ~ ' outstanding · ') if invoice_stats.outstanding|float > 0 else '' %}
+      {% set inv_face = inv_face ~ '£%.2f'|format(invoice_stats.invoiced|float) ~ ' billed' %}
+    {% else %}
+      {% set inv_face = 'none yet' %}
+    {% endif %}
+    <details class="group">
+      {{ face('Invoicing', inv_face) }}
+      <div class="{{ foldbody }} space-y-2">
+        {% if contact_invoices %}
+        {% if invoice_stats %}
+        <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <span class="text-slate-500">Billed <span class="font-semibold text-navy">£{{ '%.2f'|format(invoice_stats.invoiced|float) }}</span></span>
+          <span class="text-slate-500">Paid <span class="font-semibold text-emerald-700">£{{ '%.2f'|format(invoice_stats.collected|float) }}</span></span>
+          <span class="text-slate-500">Outstanding <span class="font-semibold {{ 'text-rose-700' if invoice_stats.outstanding|float > 0 else 'text-navy' }}">£{{ '%.2f'|format(invoice_stats.outstanding|float) }}</span></span>
+          {% if invoice_stats.avg_days_to_pay is not none %}
+          <span class="text-slate-500">Pays in <span class="font-semibold text-navy">{{ invoice_stats.avg_days_to_pay|round|int }}d</span> avg</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="space-y-1 pt-1">
+          {% for inv in contact_invoices %}
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <a href="/app/invoices/{{ inv.id }}" class="font-medium text-brand">{{ inv.invoice_ref }}</a>
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium {{ istone.get(inv.status,'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ idot.get(inv.status,'bg-slate-200') }} self-center"></span>{{ inv.status.replace('_',' ') }}</span>
+            <span class="flex-1 min-w-0 truncate text-xs text-slate-400">{{ inv.issue_date | pretty_date }}{% if inv.paid_at %} · paid {{ inv.paid_at | pretty_date }}{% endif %}</span>
+            <span class="font-semibold text-navy">£{{ '%.2f'|format(inv.total|float) }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400">No invoices yet — anything you raise for them, by hand or generated from completed work, lands here automatically.</p>
+        {% endif %}
+      </div>
+    </details>
+
+    <!-- Quote history (docs/modules/module-quotes.md Phase 2) -->
+    {% if contact_quotes %}
+    <details class="group">
+      {{ face('Quotes', ('£%.2f'|format(quote_stats.won|float) ~ ' won of £' ~ '%.2f'|format(quote_stats.quoted|float) ~ ' quoted') if quote_stats else contact_quotes|length ~ ' quotes') }}
+      <div class="{{ foldbody }} space-y-2">
+        {% if quote_stats %}
+        <div class="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+          <span class="text-slate-500">Quoted <span class="font-semibold text-navy">£{{ '%.2f'|format(quote_stats.quoted|float) }}</span></span>
+          <span class="text-slate-500">Won <span class="font-semibold text-emerald-700">£{{ '%.2f'|format(quote_stats.won|float) }}</span></span>
+          {% if quote_stats.acceptance_rate is not none %}
+          <span class="text-slate-500">Accepts <span class="font-semibold text-navy">{{ quote_stats.acceptance_rate }}%</span></span>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="space-y-1 pt-1">
+          {% for q in contact_quotes %}
+          <div class="flex flex-wrap items-center gap-2 text-sm">
+            <a href="/app/quotes/{{ q.id }}" class="font-medium text-brand">{{ q.quote_ref }}</a>
+            <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium {{ qstone.get(q.status,'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ qdot.get(q.status,'bg-slate-200') }} self-center"></span>{{ q.status }}</span>
+            <span class="flex-1 min-w-0 truncate text-xs text-slate-400">{{ q.issue_date | pretty_date }}{% if q.accepted_at %} · accepted {{ q.accepted_at | pretty_date }}{% endif %}{% if q.title %} · {{ q.title }}{% endif %}</span>
+            <span class="font-semibold text-navy">£{{ '%.2f'|format(q.total|float) }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Active sequences (phase 4b) -->
+    {% if enrollments %}
+    <details class="group">
+      {{ face('Sequences', enrollments|length ~ ' running') }}
+      <div class="{{ foldbody }} space-y-2">
+        {% for e in enrollments %}
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium {{ 'text-emerald-700' if e.status == 'active' else 'text-slate-500' }}"><span class="h-1.5 w-1.5 rounded-full {{ 'bg-emerald-600' if e.status == 'active' else 'bg-slate-200' }} self-center"></span>{{ e.status }}</span>
+          <span class="flex-1 min-w-0 text-slate-700 truncate">{{ e.sequence_name or 'Sequence' }} <span class="text-xs text-slate-400">· step {{ e.current_step }}</span></span>
+          {% if e.next_action_at %}<span class="text-xs text-slate-400">next {{ e.next_action_at | pretty_date }}</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Recent activity -->
+    <details class="group" {{ 'open' if msg == 'noted' }}>
+      {{ face('Recent activity', ('last ' ~ (activities[0].occurred_at | pretty_date)) if activities else 'nothing yet') }}
+      <div class="{{ foldbody }} space-y-3">
+        {# A note by hand (Kris 2026-09-06) — dated, on the timeline, the same
+           row the Concierge's note card writes. #}
+        <form method="post" action="/app/crm/contacts/{{ c.id }}/note" class="flex gap-2 text-sm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input name="note" maxlength="600" placeholder="Add a note — e.g. knocks twice, keys back in the safe" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-1">
+          <button class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">Add</button>
+        </form>
+        {% if msg == 'noted' %}<p data-flash class="text-emerald-700 text-xs">Noted.</p>{% endif %}
+        {% for a in activities %}
+        <div class="flex gap-3 text-sm">
+          <span class="w-20 shrink-0 text-xs text-slate-400 pt-0.5">{{ a.occurred_at | pretty_date }}</span>
+          <div class="min-w-0">
+            <p class="text-slate-700">
+              {# Invoice events read as money, not mail (invoicing directive §7.3). #}
+              {% if a.activity_type == 'invoice' %}
+              <span class="font-medium">£ invoiced</span>
+              {% elif a.activity_type == 'invoice_paid' %}
+              <span class="font-medium text-emerald-700">£ paid</span>
+              {% elif a.activity_type == 'invoice_reminder' %}
+              <span class="font-medium text-amber-700">£ chased</span>
+              {# Quote events read as money too (live e2e 2026-09-01: they were
+                 falling through to the '→ replied' mail fallback). #}
+              {% elif a.activity_type == 'quote' %}
+              <span class="font-medium text-indigo-700">£ quoted</span>
+              {% elif a.activity_type == 'quote_accepted' %}
+              <span class="font-medium text-emerald-700">£ quote accepted</span>
+              {% elif a.activity_type == 'quote_reminder' %}
+              <span class="font-medium text-amber-700">£ quote chased</span>
+              {# Diary + portal events read as actions, not mail (2026-07-31). #}
+              {% elif a.activity_type == 'calendar_event' %}
+              <span class="font-medium text-indigo-700">booking</span>
+              {% elif a.activity_type == 'reschedule_request' %}
+              <span class="font-medium text-amber-700">reschedule requested</span>
+              {% elif a.activity_type == 'portal_chat' %}
+              <span class="font-medium text-slate-500">portal question</span>
+              {% elif a.activity_type == 'waitlist' %}
+              <span class="font-medium text-amber-700">waiting list</span>
+              {# A promise clearing is a record, not mail (2026-09-20). #}
+              {% elif a.activity_type == 'promise_cleared' %}
+              <span class="font-medium text-emerald-700">&check; promise cleared</span>
+              {% elif a.activity_type == 'promise_dropped' %}
+              <span class="font-medium text-slate-500">promise dropped</span>
+              {% elif a.activity_type == 'note' %}
+              <span class="font-medium text-slate-600">{{ 'record updated' if a.subject == 'Record updated' else 'note' }}</span>
+              {% else %}
+              <span class="font-medium">{{ '← received' if a.direction == 'inbound' else '→ replied' }}</span>
+              {% endif %}
+              {% if a.subject %} · {{ a.subject }}{% endif %}
+              {# The emotional arc: each inbound email's mood read, when not routine. #}
+              {% if a.sentiment and a.sentiment not in ['neutral'] %}
+              <span class="ml-1 inline-flex items-center gap-1 text-[11px] font-medium align-middle {{ 'text-rose-700' if a.sentiment in ['frustrated', 'angry'] else ('text-amber-700' if a.sentiment == 'concerned' else 'text-emerald-700') }}"><span class="h-1 w-1 rounded-full {{ 'bg-rose-600' if a.sentiment in ['frustrated', 'angry'] else ('bg-amber-500' if a.sentiment == 'concerned' else 'bg-emerald-600') }} self-center"></span>{{ a.sentiment }}</span>
+              {% endif %}
+            </p>
+            {% if a.summary %}<p class="text-xs text-slate-500 truncate">{{ a.summary }}</p>{% endif %}
+          </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400">No activity recorded yet.</p>
+        {% endfor %}
+      </div>
+    </details>
+  </div>
+</div>
+{% endblock %}

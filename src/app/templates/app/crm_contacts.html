@@ -1,0 +1,77 @@
+{% extends "app/base.html" %}
+{% block title %}Contacts · CRM · BLAM8{% endblock %}
+{% block heading %}CRM{% endblock %}
+{% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
+{% block dockbar %}
+{% if dock %}
+<span class="flex-none text-[10px] font-semibold uppercase tracking-wider text-slate-500 pr-1">Promises</span>
+{% for d in dock %}
+<a href="{{ d.href }}" class="flex-none inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium {% if d.tone == 'rose' %}border-rose-200 bg-rose-50 text-rose-700{% elif d.tone == 'emerald' %}border-emerald-200 bg-emerald-50 text-emerald-700{% else %}border-slate-200 bg-white text-slate-600{% endif %}">{{ d.label }}</a>
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if msg == 'nottheirs' %}
+  {# No data-flash: this is not "what happened", it is "this still needs you",
+     and a warning that fades away is a warning nobody read (tests/test_flash.py). #}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That customer isn't one of yours. Ask whoever runs BLAM8 if you need them.</div>
+  {% endif %}
+  {# No intro sentence (Kris 2026-09-21): the book speaks for itself. What stays
+     is what changes the reading — ignored senders kept out, an active search —
+     and the Recent | A–Z switch on the right. Links, so the choice sits in the
+     URL and the back button keeps it; a search filter rides along. #}
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm text-slate-400 min-w-0">{% if hidden %}{{ hidden }} <a href="/app/ignored" class="text-brand hover:underline">ignored sender{{ '' if hidden == 1 else 's' }}</a> {{ 'is' if hidden == 1 else 'are' }} kept out of this list.{% endif %}
+      {% if q %}<span data-crm-filter>Showing matches for <span class="font-medium text-navy">"{{ q }}"</span> · <a href="/app/crm" class="text-brand hover:underline">Show everyone</a></span>{% endif %}</p>
+    <div class="ml-auto flex-none inline-flex items-center rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-semibold" data-crm-order>
+      <a href="/app/crm{% if q %}?q={{ q | urlencode }}{% endif %}" class="rounded-md px-2.5 py-1 transition {% if order == 'name' %}bg-navy text-white{% else %}text-slate-500 hover:text-navy{% endif %}">A–Z</a>
+      <a href="/app/crm?sort=recent{% if q %}&amp;q={{ q | urlencode }}{% endif %}" class="rounded-md px-2.5 py-1 transition {% if order != 'name' %}bg-navy text-white{% else %}text-slate-500 hover:text-navy{% endif %}">Recent</a>
+    </div>
+  </div>
+
+  {# The logbook (Kris 2026-09-21): grouped by when you last spoke, each entry
+     a person with their dependants, their last log line and the facts that
+     need an eye. The address lives under the pointer, not on the page. #}
+  {% if logbook %}
+  {% for g in logbook %}
+  <section class="space-y-1.5" data-logbook-group="{{ g.label }}">
+    <h2 class="px-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{{ g.label }}</h2>
+    <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+      {% for e in g.entries %}
+      <a href="/app/crm/contacts/{{ e.id }}" title="{{ e.email }}" class="block px-3.5 py-3 hover:bg-slate-50 transition">
+        <div class="flex items-start gap-3">
+          <span class="mt-0.5 h-9 w-9 flex-none rounded-full inline-flex items-center justify-center text-xs font-bold {% if e.tone == 'emerald' %}bg-emerald-100 text-emerald-800{% elif e.tone == 'amber' %}bg-amber-100 text-amber-800{% elif e.tone == 'rose' %}bg-rose-100 text-rose-800{% else %}bg-slate-100 text-slate-600{% endif %}">{{ e.initials }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline gap-2 min-w-0">
+              <span class="font-semibold text-navy truncate">{{ e.title }}</span>
+              {% if e.company %}<span class="text-xs text-slate-400 truncate">· {{ e.company }}</span>{% endif %}
+              {% if e.stale %}<span class="inline-flex items-center gap-1 text-xs font-medium text-amber-700 whitespace-nowrap flex-none"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>quiet {{ e.days_since_last }}d</span>{% endif %}
+              <span class="ml-auto text-xs text-slate-400 whitespace-nowrap flex-none">{{ e.when }}</span>
+            </div>
+            {% if e.pets %}<div class="mt-1 flex flex-wrap gap-1.5">{% for p in e.pets %}<span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{{ p }}</span>{% endfor %}</div>{% endif %}
+            {% if e.last %}<p class="mt-1 text-[13px] text-slate-500 truncate"><span class="text-slate-400">{{ e.last.arrow }}</span> {{ e.last.text }}</p>{% endif %}
+            {% if e.facts %}<div class="mt-1.5 flex flex-wrap gap-1.5">{% for f in e.facts %}<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold {% if f.tone == 'emerald' %}border-emerald-200 bg-emerald-50 text-emerald-700{% elif f.tone == 'rose' %}border-rose-200 bg-rose-50 text-rose-700{% elif f.tone == 'amber' %}border-amber-200 bg-amber-50 text-amber-700{% else %}border-slate-200 bg-white text-slate-600{% endif %}">{{ f.text }}</span>{% endfor %}</div>{% endif %}
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+  {% else %}
+  <div class="bg-white rounded-xl border border-slate-200">
+    <div class="py-14 text-center space-y-1">
+      <p class="text-sm text-slate-500 font-medium">{% if q %}No contacts match "{{ q }}".{% else %}No contacts yet.{% endif %}</p>
+      {% if not q %}<p class="text-xs text-slate-400">They'll appear here by themselves as emails arrive — the CRM fills itself in.</p>{% endif %}
+      {# Arrived here by the inbox's left swipe (Kris 2026-09-13): say why there
+         is no card and what makes one, so the landing reads as expected. #}
+      {% if q and request.query_params.get('from') == 'inbox' %}
+      <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed" data-no-card-why>No card for them yet. The agent makes one the first time it answers someone — their name, what they asked for, the details you track. Mail brought in from before BLAM8, or held while drafting was off, hasn't been through that. Their next email, or a reply you draft to them, makes the card.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

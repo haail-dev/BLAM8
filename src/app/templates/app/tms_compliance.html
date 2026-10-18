@@ -1,0 +1,62 @@
+{% extends "app/base.html" %}
+{% block title %}Compliance · Field OS · Transport · BLAM8{% endblock %}
+{% block heading %}Compliance{% endblock %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+{% set rag = {'expired':'bg-rose-100 text-rose-700','soon':'bg-amber-100 text-amber-700','ok':'bg-emerald-100 text-emerald-700','unknown':'bg-slate-100 text-slate-500'} %}
+{% macro pill(status, text) %}<span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ rag.get(status,'bg-slate-100 text-slate-500') }}">{{ text }}</span>{% endmacro %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+  <p class="text-sm text-slate-500 max-w-2xl">Licence, CPC, MOT, tax, service and insurance dates against today — red is expired, amber is due within 30 days. Driver hours are this week against the {{ driving_limit }}h weekly limit. (Tachograph/DVLA integration is the production step.)</p>
+
+  <!-- Drivers -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Drivers</h2>
+    {% if drivers %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Driver</th><th class="py-2 pr-3">Licence</th><th class="py-2 pr-3">CPC</th>
+          <th class="py-2 pr-3">Hours (wk)</th><th class="py-2 pr-3">Status</th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for d in drivers %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 font-medium text-navy">{{ d.name }}</td>
+            <td class="py-2 pr-3">{{ pill(d.licence_status, d.licence_expiry) }}</td>
+            <td class="py-2 pr-3">{{ pill(d.cpc_status, d.cpc_expiry) }}</td>
+            <td class="py-2 pr-3">{{ pill(d.hours_status, '%g / %g'|format(d.hours, d.hours_limit)) }}</td>
+            <td class="py-2 pr-3">{{ pill(d.overall, d.overall|capitalize) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="text-sm text-slate-400 py-4 text-center">No drivers added yet.</p>{% endif %}
+  </div>
+
+  <!-- Vehicles -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Vehicles</h2>
+    {% if vehicles %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Vehicle</th><th class="py-2 pr-3">MOT</th><th class="py-2 pr-3">Tax</th>
+          <th class="py-2 pr-3">Service</th><th class="py-2 pr-3">Insurance</th><th class="py-2 pr-3">Status</th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for v in vehicles %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 font-medium text-navy">{{ v.name }}{% if v.registration %} <span class="text-slate-400 font-normal">{{ v.registration }}</span>{% endif %}</td>
+            <td class="py-2 pr-3">{{ pill(v.docs.mot_expiry.status, v.docs.mot_expiry.date) }}</td>
+            <td class="py-2 pr-3">{{ pill(v.docs.tax_expiry.status, v.docs.tax_expiry.date) }}</td>
+            <td class="py-2 pr-3">{{ pill(v.docs.service_due.status, v.docs.service_due.date) }}</td>
+            <td class="py-2 pr-3">{{ pill(v.docs.insurance_expiry.status, v.docs.insurance_expiry.date) }}</td>
+            <td class="py-2 pr-3">{{ pill(v.overall, v.overall|capitalize) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<p class="text-sm text-slate-400 py-4 text-center">No vehicles yet.</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

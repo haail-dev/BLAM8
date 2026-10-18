@@ -1,0 +1,43 @@
+{% extends "app/base.html" %}
+{% block title %}Welcome to BLAM8{% endblock %}
+{% block heading %}Welcome{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-2xl px-5 py-16 md:py-24 text-center">
+  <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 text-2xl">✓</div>
+  <h1 class="mt-5 text-3xl md:text-4xl font-extrabold tracking-tight text-navy">You're in.</h1>
+  <p class="mt-3 text-slate-600 text-lg">Your trial is active. We've already linked your Stripe customer record — manage it any time from the Customer Portal.</p>
+  {% if needs_sched_setup %}
+  {# A scheduling plan isn't live at checkout — the AI can't book until the tenant fills
+     in what a booking needs. Say so HERE, before they wander off to the inbox and wonder
+     why nothing gets booked; the setup page itself explains the checklist. #}
+  <div class="mt-8 rounded-xl bg-brand-50 border border-brand/20 p-5 text-left">
+    <p class="font-semibold text-navy">One more step: set up scheduling</p>
+    <p class="text-sm text-slate-600 mt-1">Your plan includes scheduling, but the AI can't book anything until you tell it what every booking needs — a short checklist we've already pre-filled for your type of business. It takes about 2 minutes.</p>
+    <a href="/app/diary/intake" class="mt-3 inline-flex items-center rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Set up scheduling →</a>
+  </div>
+  <div class="mt-5 flex flex-wrap items-center justify-center gap-3">
+    <a href="/app" class="inline-flex items-center rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Go to the dashboard</a>
+    <form method="post" action="/billing/portal">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="inline-flex items-center rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+        Open Customer Portal
+      </button>
+    </form>
+  </div>
+  {% else %}
+  <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+    <a href="/app" class="inline-flex items-center rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Go to the dashboard</a>
+    <form method="post" action="/billing/portal">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="inline-flex items-center rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+        Open Customer Portal
+      </button>
+    </form>
+  </div>
+  {% endif %}
+  <p class="mt-10 text-xs text-slate-400">
+    Status:
+    <span hx-get="/billing/status" hx-trigger="load delay:1s, every 3s" hx-swap="outerHTML">…</span>
+  </p>
+</section>
+{% endblock %}

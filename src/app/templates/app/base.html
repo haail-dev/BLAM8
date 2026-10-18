@@ -1,0 +1,1184 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>{% block title %}BLAM8{% endblock %}</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  {# PWA: installability (manifest + icons) and the Web Push public key the
+     subscribe call needs (src/app/static/push.js). Key absent = push off, no banner. #}
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0B1220">
+  {# black-translucent: the app draws under the phone's reserved bar, and the
+     header pads itself with the safe-area inset painted the SAME navy — no
+     seam, and no white bar in light mode (Kris 2026-08-31). #}
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v={{ asset_rev }}">
+  <meta name="apple-mobile-web-app-title" content="BLAM8">
+  <meta name="mobile-web-app-capable" content="yes">
+  {% if vapid_public_key %}<meta name="blam8-vapid-key" content="{{ vapid_public_key }}">{% endif %}
+  {# First paint must not wait on a third-party stylesheet (it blocked every page, and every
+     cold launch, on DNS+TCP+TLS to googleapis plus the CSS). The preconnects come FIRST so the
+     handshakes overlap with our own CSS; the fonts then load as media="print" (non-blocking)
+     and switch to "all" the moment they arrive. font-display=swap in the URL means text paints
+     in the fallback face at once and swaps when the font lands. #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link id="blam8-fonts" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" media="print">
+  <script>(function () { var l = document.getElementById("blam8-fonts"); if (!l) return; function go() { l.media = "all"; } if (l.sheet) go(); else l.addEventListener("load", go); }());</script>
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
+  {% set water_page = true %}
+  {% include "_theme_head.html" %}
+  {# Straight into voice (Kris 2026-09-23: "load straight into VC without
+     seeing a second of Concierge text"): a pull-to-refresh on the voice
+     screen lands on #voice, and this runs before first paint — the page is
+     veiled dark until the voice screen is up. The press-and-hold sets the
+     same veil the moment it fires (concierge_panel.js). #}
+  <script>if (location.hash === '#voice' || location.hash === '#talk') document.documentElement.classList.add('voice-landing');</script>
+  {# "Open on the voice screen" (per-device, default Off): the installed app, on its plain start page, on the
+     FIRST load of a launch only. sessionStorage remembers the launch, so in-app navigation, back, reload and
+     pull-to-refresh never bounce. concierge_panel.js does the opening and drops the veil if a tapped
+     notification turns out to own this landing. #}
+  <script>(function () {
+    try {
+      var first = !sessionStorage.getItem('blam8.launchSeen');
+      sessionStorage.setItem('blam8.launchSeen', '1');
+      var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+      var standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+      var plain = location.pathname.replace(/\/$/, '') === '/app' && !location.search && !location.hash;
+      if (first && standalone && plain && (!nav || nav.type === 'navigate') && localStorage.getItem('blam8.openOnVoice') === 'on') {
+        window.__blam8OpenVoice = true;
+        document.documentElement.classList.add('voice-landing');
+      }
+    } catch (e) {}
+  })();</script>
+  <style>
+    html.voice-landing body { background: #0b1220; }
+    html.voice-landing body > *:not(#voice-live-root) { visibility: hidden; }
+  </style>
+  {% if concierge_on %}<link rel="modulepreload" href="/static/voice-live.js?v={{ asset_rev }}">{% endif %}
+  <style>
+    /* iOS Safari auto-zooms any focused input under 16px — bump form controls to
+       16px on small screens only so tapping the assistant (or any field) never zooms. */
+    @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
+    /* Spare line rows (spare_rows.js) render [hidden] but also carry .flex, which
+       beat Tailwind's [hidden] rule: all six blank rows showed on every quote and
+       invoice (film capture, 6 Oct 2026). Hidden stays hidden until "+ Add a line". */
+    [data-spare-row][hidden] { display: none !important; }
+    /* Anything wider than the screen used to widen the whole page on mobile —
+       you could pinch out and the content sat off to the left. Clip horizontal
+       overflow at the root so the page is always exactly one screen wide; wide
+       content scrolls inside its own container instead (`clip` beats `hidden`
+       where supported: no accidental scroll container). */
+    html, body { overflow-x: hidden; overflow-x: clip; }
+    /* The "AI is writing…" typing indicator (live inbox — _conversation_list / _thread). */
+    @keyframes blam8-blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+    .typing-dots > span { animation: blam8-blink 1.2s infinite; }
+    .typing-dots > span:nth-child(2) { animation-delay: .2s; }
+    .typing-dots > span:nth-child(3) { animation-delay: .4s; }
+
+    /* The sky: the navy bar dissolves into the page. Layered over the ground
+       token so light/dark both work — the overlay fades to nothing. */
+    main.app-sky {
+      /* The same sky at both ends (Kris 2026-08-31): it falls out of the bar
+         and rises from the strip — the page floats between two horizons. */
+      background-image:
+        linear-gradient(180deg,
+          rgb(11 18 32 / 0.55) 0,
+          rgb(23 38 74 / 0.28) 3rem,
+          rgb(46 91 255 / 0.13) 7rem,
+          rgb(46 91 255 / 0.06) 14rem,
+          rgb(46 91 255 / 0) 24rem),
+        linear-gradient(0deg,
+          rgb(11 18 32 / 0.55) 0,
+          rgb(23 38 74 / 0.28) 3rem,
+          rgb(46 91 255 / 0.13) 7rem,
+          rgb(46 91 255 / 0.06) 14rem,
+          rgb(46 91 255 / 0) 24rem);
+      background-repeat: no-repeat, no-repeat;
+      background-size: 100% 24rem, 100% 24rem;
+      background-position: top, bottom;
+    }
+
+    /* The bar owns the phone's reserved strip too: it grows by the safe-area
+       inset and paints it the same navy, so status bar and app bar are one
+       surface in both themes. Its own row is 2.25rem — the title's line with
+       6px either side, the menu button's 32px inside it (Kris 2026-09-20:
+       "make it thinner, by removing the padding above the text"; the 44px
+       row it had spent 10px above and below a 24px line). The inset above
+       it is the phone's own and stays. */
+    #app-bar {
+      height: calc(2.25rem + env(safe-area-inset-top, 0px));
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: env(safe-area-inset-top, 0px);
+      background: rgb(var(--c-bg-navy, 11 18 32));
+      z-index: 60;
+      pointer-events: none;
+    }
+    /* iOS standalone: percentage heights can come up short of the real screen
+       and leave a pale letterbox under the strip. dvh measures the true
+       viewport (falls back to the .h-full 100% where unsupported), and the
+       navy canvas + bottom cap make any residual sliver — letterbox, keyboard
+       settle, overscroll — read as the strip, never a white bar. */
+    html.h-full { height: 100dvh; background: rgb(var(--c-bg-navy, 11 18 32)); }
+    /* iOS 26.0 standalone miscounts dvh: it still reserves Safari's (hidden)
+       bottom bar, so 100dvh stops ~50pt short and the OS paints the manifest
+       background under the strip (Kris's screenshot 2026-08-31; WebKit fix
+       lands in 26.1). Installed apps have no collapsing chrome, so 100vh IS
+       the screen there — scoped to standalone; the browser keeps dvh. */
+    @media (display-mode: standalone) {
+      html.h-full { height: 100vh; }
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: env(safe-area-inset-bottom, 0px);
+      background: rgb(var(--c-bg-navy, 11 18 32));
+      z-index: 60;
+      pointer-events: none;
+    }
+
+    /* The dock rail: one thin frosted shelf pinned above the strip — each page
+       fills it with its own slice of the diary (Kris 2026-08-31). */
+    .dockbar {
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
+      backdrop-filter: blur(12px) saturate(1.3);
+    }
+    .dockbar::-webkit-scrollbar { display: none; }
+
+    /* Frosted glass card — the Flight Deck's material, promoted app-wide
+       (Kris 2026-08-31: "whole app unified in style"). This is material only;
+       layout (the deck's sticky piling, the inbox's month folds) stays with
+       each page. Tokens can't carry the translucency, so dark gets its own
+       block, same as the deck's original. */
+    .glass-card {
+      border-radius: 18px;
+      border: 1px solid rgb(255 255 255 / 0.65);
+      background: rgb(255 255 255 / 0.66);
+      -webkit-backdrop-filter: blur(14px) saturate(1.35);
+      backdrop-filter: blur(14px) saturate(1.35);
+      box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset, 0 16px 40px -18px rgb(11 18 32 / 0.28);
+    }
+    html[data-theme="dark"] .glass-card {
+      border-color: rgb(255 255 255 / 0.09);
+      background: rgb(26 32 42 / 0.62);
+      box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 16px 40px -18px rgb(0 0 0 / 0.6);
+    }
+    /* The thread's draft card sitting on the bottom bar (_thread.html
+       dock_flush, Kris 2026-09-27): square foot, no bottom edge, so the card
+       and the bar read as one surface. */
+    .glass-card.draft-flush { border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+                              border-bottom-width: 0; padding-bottom: .25rem; }
+    /* "There's more below": the draft's last lines fade out while it can
+       still scroll down (conversation.html toggles .draft-more). */
+    textarea.draft-more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.75rem), transparent);
+                          mask-image: linear-gradient(to bottom, #000 calc(100% - 2.75rem), transparent); }
+  </style>
+  {% if page_flip %}
+  {# Today ↔ Inbox page-flip (cross-document View Transitions). Only these two
+     templates set page_flip, and BOTH ends of a navigation must opt in, so no
+     other route animates. The script types the transition by the from/to pair —
+     anything else between the pair's own pages (inbox filter pills, reload
+     leftovers) is skipped rather than cross-faded. Browsers without the API
+     just navigate normally. #}
+  <style>
+    @view-transition { navigation: auto; }
+    @media (prefers-reduced-motion: no-preference) {
+      html:active-view-transition-type(flip-fwd)::view-transition-new(root),
+      html:active-view-transition-type(flip-back)::view-transition-old(root),
+      html:active-view-transition-type(flip-fwd)::view-transition-old(root),
+      html:active-view-transition-type(flip-back)::view-transition-new(root) {
+        animation-duration: 320ms;
+        animation-timing-function: cubic-bezier(.2, .8, .2, 1);
+      }
+      /* Forward: the Inbox rides in over Today, which drifts left under it. */
+      html:active-view-transition-type(flip-fwd)::view-transition-new(root) {
+        animation-name: vt-cover;
+        filter: drop-shadow(-8px 0 24px rgb(11 18 32 / .35));
+      }
+      html:active-view-transition-type(flip-fwd)::view-transition-old(root) {
+        animation-name: vt-recede;
+      }
+      /* Back: the Inbox peels away right; Today is already waiting beneath. */
+      html:active-view-transition-type(flip-back)::view-transition-old(root) {
+        animation-name: vt-peel;
+        filter: drop-shadow(-8px 0 24px rgb(11 18 32 / .35));
+        z-index: 1;
+      }
+      html:active-view-transition-type(flip-back)::view-transition-new(root) {
+        animation-name: vt-emerge;
+      }
+      @keyframes vt-cover  { from { transform: translateX(100%); } }
+      @keyframes vt-recede { to   { transform: translateX(-24%); filter: brightness(.82); } }
+      @keyframes vt-peel   { to   { transform: translateX(100%); } }
+      @keyframes vt-emerge { from { transform: translateX(-24%); filter: brightness(.82); } }
+    }
+  </style>
+  <script>
+    (() => {
+      const page = (u) => {
+        if (!u) return null;
+        try { u = new URL(u, location.href); } catch { return null; }
+        if (u.origin !== location.origin) return null;
+        const p = u.pathname.replace(/\/+$/, '');
+        return p === '/app' ? 'home' : p === '/app/conversations' ? 'inbox' : null;
+      };
+      const type = (from, to) =>
+        from === 'home' && to === 'inbox' ? 'flip-fwd' :
+        from === 'inbox' && to === 'home' ? 'flip-back' : null;
+      // Types don't carry across documents, so both ends tag their own half:
+      // the outgoing page in pageswap, the incoming one in pagereveal.
+      addEventListener('pageswap', (e) => {
+        if (!e.viewTransition) return;
+        const t = type(page(location.href), page(e.activation?.entry?.url));
+        t ? e.viewTransition.types.add(t) : e.viewTransition.skipTransition();
+      });
+      addEventListener('pagereveal', (e) => {
+        if (!e.viewTransition) return;
+        const from = page(window.navigation?.activation?.from?.url || document.referrer);
+        const t = type(from, page(location.href));
+        t ? e.viewTransition.types.add(t) : e.viewTransition.skipTransition();
+      });
+    })();
+  </script>
+  {% endif %}
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<div class="h-full flex flex-col" data-pull-root>
+
+  {# OS preview banner — the founding-partner look-inside. preview_names comes
+     from _ctx (subscriptions rows with status='preview'): surfaces are open,
+     the agent is off until they're approved + subscribed. #}
+  {% if preview_names %}
+  <div class="flex-none bg-navy text-white text-sm px-4 md:px-6 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span class="font-semibold">You're previewing {{ preview_names | join(' + ') }}.</span>
+    <span class="text-slate-300">Look around, fill things in — the agent only runs it once you're a founding partner.</span>
+    <a href="/billing/plans" class="ml-auto flex-none rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Request founding access &rarr;</a>
+  </div>
+  {% endif %}
+
+
+  {% set _va = request.state.viewing_as if request and request.state and request.state.viewing_as is defined else None %}
+  <!-- Top bar with burger menu -->
+  <header id="app-bar" class="h-9 bg-navy flex items-center gap-3 px-4 md:px-6 flex-none relative z-30" data-pull-bar>
+    {# No wordmark in-app (Kris 2026-08-31) — the page title owns the line.
+       The brand keeps its name on marketing, login, onboarding and admin. #}
+    {# The way back (Kris 2026-09-05): a detail page names its parent HERE,
+       beside the title, rather than as a stray link at the top of the sheet.
+       A page opts in with a top-level {% set back = (href, label) %} — top-
+       level `set` in a child template is visible to this layout — so the
+       masthead owns the idiom and no page draws its own arrow. #}
+    {% if back %}
+    {# "Up" by default; "back" when there is somewhere in the app to go back
+       to — the script below decides (Kris 2026-09-20: "the Back button
+       doesn't actually take me back to where I came from"). #}
+    <a href="{{ back[0] }}" data-back-up="{{ back[0] }}" data-back-label="{{ back[1] }}"
+       class="flex-none text-sm text-white/60 hover:text-white transition">&larr; {{ back[1] }}</a>
+    {% endif %}
+    <h1 id="app-heading" class="font-semibold text-white text-base truncate min-w-0">{% block heading %}{% endblock %}</h1>
+    {# The cog (Kris 2026-09-02). A module's own settings page was a row buried
+       in the dropdown, which made "configure this" a two-step hunt on the very
+       page you were configuring. One map, here, rather than a {% set %} in
+       thirty templates — `active` already names the page.
+
+       Only modules with a settings page of their own appear; everywhere else
+       the cog is simply absent rather than pointing at the general Settings
+       page, which would make it a decoration that lies about where it goes. #}
+    {% set SETTINGS_FOR = {
+         'crm': '/app/crm/settings', 'crm_companies': '/app/crm/settings',
+         'crm_pipeline': '/app/crm/settings', 'crm_tasks': '/app/crm/settings',
+         'crm_sequences': '/app/crm/settings', 'crm_reports': '/app/crm/settings',
+         'crm_fields': '/app/crm/settings', 'crm_settings': '/app/crm/settings',
+         'diary': '/app/diary/settings',
+         'invoices': '/app/invoices/settings', 'quotes': '/app/invoices/settings',
+         'money': '/app/invoices/settings', 'invoice_settings': '/app/invoices/settings',
+         'payments': '/app/invoices/settings',
+         'fsm': '/app/fsm/pricing', 'fsm_engineers': '/app/fsm/pricing',
+         'fsm_job_types': '/app/fsm/pricing', 'fsm_pricing': '/app/fsm/pricing',
+         'board': '/app/tms/pricing', 'fleet': '/app/tms/pricing',
+         'pod': '/app/tms/pricing', 'pricing': '/app/tms/pricing',
+         'compliance': '/app/tms/pricing', 'import': '/app/tms/pricing',
+       } %}
+    {% set settings_href = SETTINGS_FOR.get(active) %}
+    <div class="ml-auto flex items-center gap-2 flex-none">
+      <div class="flex items-center gap-3 text-sm text-white/60">{% block toolbar %}{% endblock %}</div>
+      {# Search (Kris 2026-09-21): a magnifying glass beside the cog, on every
+         page — a booking, quote or invoice by its reference, a customer by
+         name or email, suggested as you type (src/app/search.py, /app/search,
+         src/app/static/search.js). It replaced the CRM page's own search box. #}
+      {# The Concierge (Kris 2026-09-23): the person opens it as a modal on
+         every page (#cz-modal below, static/concierge_panel.js). It sits LEFT of
+         the search, the same gap apart as search → Menu (Kris 2026-09-25;
+         its margin, CSS below). #}
+      {# Pro + Concierge only (2026-09-25): no person below it. #}
+      {% if concierge_on %}
+      <button id="concierge-btn" type="button" aria-label="Concierge" title="Concierge" aria-expanded="false" aria-controls="cz-modal"
+              class="relative inline-flex items-center p-1 text-white/70 hover:text-white transition{% if active == 'concierge' %} text-white{% endif %}">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+      </button>
+      {% endif %}
+      <button id="search-btn" data-tour="search" type="button" aria-label="Search" title="Search (/)" aria-expanded="false" aria-controls="search-box"
+              class="inline-flex items-center p-1 text-white/70 hover:text-white transition">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+      </button>
+      {% if settings_href %}
+      <a href="{{ settings_href }}" aria-label="Settings for this section" title="Settings for this section" data-tour="section-settings"
+         class="inline-flex items-center p-1 -mr-0.5 text-white/70 hover:text-white transition{% if request.url.path == settings_href %} text-white{% endif %}">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.379.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+      </a>
+      {% endif %}
+      <button id="menu-btn" data-tour="menu" type="button" aria-label="Menu" aria-expanded="false"
+              class="inline-flex items-center gap-1 py-1 text-sm font-medium text-white/80 hover:text-white transition">
+        Menu
+        <svg class="h-3.5 w-3.5 text-white/50" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    {# The search sheet: under the bar like the menu, the full width on a
+       phone, a column on the right on a desktop. The same card idiom as the
+       menu (bg-white / border-slate-200 / text-slate-700) so the theme layer
+       flips it with the rest of the page. Results are drawn by search.js. #}
+    <div id="search-box" class="hidden absolute left-3 right-3 md:left-auto md:right-5 md:w-[28rem] top-full rounded-xl bg-white text-slate-700 shadow-xl border border-slate-200 overflow-hidden" data-pull-refresh="off" role="dialog" aria-label="Search">
+      <label class="flex items-center gap-2 px-3 py-2 border-b border-slate-200">
+        <svg class="h-4 w-4 flex-none text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+        <input id="search-input" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"
+               placeholder="BK-1003, INV-1002, or a customer's name" aria-label="Search bookings, quotes, invoices and customers"
+               class="flex-1 min-w-0 bg-transparent text-sm text-navy placeholder:text-slate-400 outline-none py-1">
+        <kbd class="hidden md:inline text-[10px] text-slate-400 border border-slate-200 rounded px-1">Esc</kbd>
+      </label>
+      <p id="search-hint" class="px-3 pt-2.5 pb-1 text-xs text-slate-400">A booking, quote or invoice by its reference — or a customer by name or email.</p>
+      {# /help (Kris 2026-09-23): the App help assistant's door now it has no
+         floating tab. The link opens it; "/help how do I…" typed here opens
+         it AND asks (search.js → blam8ConciergeAsk). #}
+      <p id="search-help-line" class="px-3 pt-1 pb-2.5 text-xs text-slate-400">
+        <a id="search-help" href="/help" class="font-semibold text-brand hover:underline">/help</a>
+        — ask App help how to do anything, e.g. <span class="text-slate-500">/help how do I add a service?</span>
+      </p>
+      <div id="search-results" class="max-h-[60vh] overflow-y-auto" role="listbox"></div>
+    </div>
+
+    <!-- Slide-down menu -->
+    {% set item = "flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50 transition" %}
+    {% set strip_item = "hidden md:flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-slate-50 transition" %}
+    {% set on = "text-brand font-semibold bg-brand-50" %}
+    <nav id="menu" class="hidden absolute right-3 md:right-5 top-full w-64 rounded-xl bg-white text-slate-700 shadow-xl border border-slate-200 py-2 max-h-[80vh] overflow-y-auto" data-pull-refresh="off">
+      {# The page's own sections + rare actions, folded into the ONE dropdown
+         (masthead rule) — pages fill this via {% block menu_sections %} with
+         their _*_nav partial; empty on pages that have no sections. #}
+      {% block menu_sections %}{% endblock %}
+      {% if people_admin %}<a href="/app/plan" class="{{ item }} {% if active=='scheduled_plan' %}{{ on }}{% endif %}"><span class="flex-1">Scheduled plan</span></a>{% endif %}
+      {# Phone (Kris 2026-10-16): the owner-only telephone page, linked here until it has a proper home. #}
+      {% if people_admin %}<a href="/app/phone" class="{{ item }}"><span class="flex-1">Phone</span></a>{% endif %}
+      <a href="/app/" class="{{ strip_item }} {% if active=='home' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+        <span class="flex-1">Home</span>
+      </a>
+      {% if 'inbox' in (my_doors or ['inbox']) %}
+      <a href="/app/conversations" class="{{ strip_item }} {% if active in ['conversations','inbox','drafts','sent'] %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
+        <span class="flex-1">Inbox</span>
+        {# Stable wrapper: live.js swaps the inner chip from /app/nav/badge. #}
+        <span id="nav-draft-badge">{% if draft_count %}<span class="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs font-semibold">{{ draft_count }}</span>{% endif %}</span>
+      </a>
+      {% endif %}
+      {# Concierge — Q&A + actions over the tenant's own data. The menu entry is the
+         full page (/app/concierge), for computers: the person icon is the pop-up, and
+         the page carries the right-hand column. Phones don't show this entry (the
+         .cz-menu-pc rule below); they reach the Concierge from the person icon. #}
+      {% if concierge_on %}
+      <a href="/app/concierge" class="cz-menu-pc {{ item }} {% if active=='concierge' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9.374 17.34a.75.75 0 01-1.43 0l-.439-1.436a4.5 4.5 0 00-2.98-2.98l-1.437-.44a.75.75 0 010-1.43l1.436-.439a4.5 4.5 0 002.98-2.98l.44-1.437a.75.75 0 011.43 0l.439 1.436a4.5 4.5 0 002.98 2.98l1.437.44a.75.75 0 010 1.43l-1.436.439a4.5 4.5 0 00-2.98 2.98zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+        <span class="flex-1">Concierge</span>
+      </a>
+      {% endif %}
+      {# Money — cashflow, core for every tenant like invoicing itself. NOT
+         "Accounting": that word promises VAT filing and HMRC-recognised software
+         (see src/app/money.py). Hidden 07-31; RESTORED 2026-08-02 (Julius): it's
+         the only nav door to quotes + invoices, and viewing/working money-in
+         doesn't tread on the bookkeeper channel (the boundary stays
+         quote-to-cash, never ledger/MTD). #}
+      {% if 'money' in (my_doors or ['money']) %}
+      <a href="/app/money" class="{{ strip_item }} {% if active=='money' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span class="flex-1">Money</span>
+      </a>
+      {% endif %}
+      {# CRM unlocks at Core (docs/crm-vs-os-architecture.md §1) — crm_on comes
+         from the module switchboard like every other module since 2026-07-24. #}
+      {# The door stays when the plan lacks the CRM — locked, not gone (Kris
+         2026-09-13): /app/crm shows what is behind it and the way to Pro. #}
+      {% if 'crm' in (my_doors or ['crm']) %}
+      <a href="/app/crm" class="{{ strip_item }} {% if active in ['crm','crm_locked','crm_companies','crm_pipeline','crm_sequences','crm_fields','crm_settings'] %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+        <span class="flex-1">CRM</span>{% if not crm_on %}<span class="text-[10px] font-semibold uppercase tracking-wide text-slate-400" data-crm-locked>Locked</span>{% endif %}
+      </a>
+      {% endif %}
+      {# The diary split (transport-planner D3): the office (windows) diary stays
+         Scheduling; every transport surface belongs to the TMS add-on (the
+         fleet+routing merge). The TMS cockpit's tab strip reaches the rest. #}
+      {# Office (windows/slots) diary — hidden when fsm is on: field service SUPERSEDES the
+         office diary (pipeline._scheduling_setup), so nothing books there and showing an
+         always-empty second diary just confuses. A trades tenant sees only the Field Service
+         board below. TMS keeps the office diary (a logistics tenant runs both). #}
+      {% if scheduling_on and not fsm_on %}
+      <a href="/app/diary" class="{{ strip_item }} {% if active=='diary' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+        <span class="flex-1">{{ 'Office diary' if tms_on else 'Diary' }}</span>
+      </a>
+      {% endif %}
+      {# Field Service: the team member board is where trades bookings (engineer_id, by the
+         day) live. It's the trades tenant's ONE diary — the office diary above is hidden
+         for them. Without this entry the board was only reachable from the Modules hub. #}
+      {% if fsm_on %}
+      <a href="/app/fsm" class="{{ item }} {% if active in ['fsm','fsm_engineers','fsm_job_types','fsm_pricing','fsm_invoices'] %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 0 0 4.486-6.336l-3.276 3.277a3.004 3.004 0 0 1-2.25-2.25l3.276-3.276a4.5 4.5 0 0 0-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437 1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008Z"/></svg>
+        <span class="flex-1">Field OS · Trades</span>
+      </a>
+      {% endif %}
+      {# Practice OS (docs/os/practice.md §8): the recall queue is the practice tenant's
+         home surface. Kept small for P0+P1 — one entry; the Today board arrives in P4. #}
+      {% if practice_on %}
+      <a href="/app/practice" class="{{ item }} {% if active=='practice' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+        <span class="flex-1">Practice OS</span>
+      </a>
+      {% endif %}
+      {# Storefront OS (docs/os/storefront.md §8): /app/shop is the storefront tenant's
+         home surface — stock, collections and (later) best-before specials. #}
+      {% if storefront_on %}
+      <a href="/app/shop" class="{{ item }} {% if active in ['shop','shop_products','shop_transactions'] %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+        <span class="flex-1">Storefront OS</span>
+      </a>
+      {% endif %}
+      {# Assets OS (docs/os/assets.md §8): /app/assets is the hire tenant's home surface —
+         the handover/upcoming board + the unit registry. #}
+      {% if assets_on %}
+      <a href="/app/assets" class="{{ item }} {% if active in ['assets','assets_units'] %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z"/></svg>
+        <span class="flex-1">Assets OS</span>
+      </a>
+      {% endif %}
+      {# Events OS (docs/os/events.md §8): /app/events is the events tenant's home surface —
+         the this-week board + event detail. #}
+      {% if events_on %}
+      <a href="/app/events" class="{{ item }} {% if active == 'events' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+        <span class="flex-1">Events OS</span>
+      </a>
+      {% endif %}
+      {% if tms_on %}
+      <a href="/app/tms" class="{{ item }} {% if active in ['tms','pricing','pod','invoices','tracking','compliance'] %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+        <span class="flex-1">Field OS</span>
+      </a>
+      {% endif %}
+      <div class="my-1 border-t border-slate-100"></div>
+      {# Menu diet (Kris 2026-08-30): the menu is daily surfaces + the two
+         system doors. Everything else — Knowledge, Mailboxes, Usage, Agent
+         log, Requests, Ignored, Refer a business — lives on the Settings
+         hub, one tap behind the Settings row below. #}
+      <a href="/app/modules" class="{{ item }} {% if active=='modules' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+        <span class="flex-1">Modules</span>
+      </a>
+      <a href="/app/settings" class="{{ item }} {% if active=='settings' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a6.759 6.759 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="flex-1">Settings</span>
+      </a>
+      {# View as (src/app/viewas.py; Kris 2026-09-24): the owner's way to see what
+         one of their people sees. Here until People is rebuilt. #}
+      {% if _va %}
+      {# While viewing, the menu is the person's — but the way out is always
+         here too (the banner is the other). #}
+      <form method="post" action="/app/view-as/exit" data-menu-leave-view-as>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="{{ item }} w-full text-left font-semibold text-amber-700">
+          <svg class="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+          <span class="flex-1">Leave View as ({{ _va.name }})</span>
+        </button>
+      </form>
+      {% endif %}
+      {% if view_as_ok %}
+      <a href="/app/view-as" class="{{ item }} {% if active=='view_as' %}{{ on }}{% endif %}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="flex-1">View as…</span>
+      </a>
+      {% endif %}
+      {# Operator console — platform_admins membership only (dashboard._ctx).
+         The /admin routes keep their own wall (admin_auth.require_admin); this
+         is just the door for the operator's signed-in account. #}
+      {% if platform_admin %}
+      <div class="my-1 border-t border-slate-100"></div>
+      <a href="/admin" class="{{ item }}">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+        <span class="flex-1">Admin console</span>
+      </a>
+      {% endif %}
+      <div class="my-1 border-t border-slate-100"></div>
+      <a href="/logout" class="{{ item }} text-slate-500">
+        <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+        <span class="flex-1">Sign out</span>
+      </a>
+      <p class="px-4 pt-2 text-xs text-slate-400">Replies wait for your approval unless full-auto is on</p>
+    </nav>
+  </header>
+  {# View as (src/app/viewas.py): the owner is looking at BLAM8 as one of their
+     people — say so on every page, with the way out. Under the top bar, not
+     above it: above, the installed iPhone app put it under the clock and the
+     notch, and there was no way out (Kris 2026-09-24). #}
+  {% if _va %}
+  <div class="flex-none bg-amber-400 text-navy text-sm px-4 md:px-6 py-2 flex flex-wrap items-center gap-x-3 gap-y-1" data-viewing-as>
+    <span class="font-semibold">Viewing as {{ _va.name }}</span>
+    <span class="text-navy/70">— what they'd see. Nothing can be changed.</span>
+    <form method="post" action="/app/view-as/exit" class="ml-auto flex-none">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg bg-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800">Leave View as</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {# One flow of nine (Kris 2026-09-13): the wizard's four steps and the five
+     tuning steps are one setup. This strip rides every app page until every
+     step is done — where they are, what is next, no dismiss for a fresh
+     sign-up (app/setup_handoff.strip). #}
+  {% set setup_strip = setup_strip_fn(setup_strip_raw.steps, request.url.path, setup_strip_raw.onboarded_at, setup_strip_raw.dismissed_at) if setup_strip_raw and setup_strip_fn else none %}
+  {% if setup_strip %}
+  <div class="flex-none border-b border-brand/20 bg-brand-50 px-4 py-2 text-sm" data-setup-strip>
+    <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-1">
+      <span class="font-semibold text-navy">Setup · {{ setup_strip.done }} of {{ setup_strip.total }} done</span>
+      {% if setup_strip.here %}
+      <span class="text-slate-600">Step {{ setup_strip.pos }} of {{ setup_strip.total }} · <span class="font-medium text-navy">{{ setup_strip.here.label }}</span>{% if setup_strip.after %} · then {{ setup_strip.after.label }}{% endif %}</span>
+      {% if setup_strip.here_done and setup_strip.next %}
+      <a href="{{ setup_strip.next.href }}" class="font-semibold text-brand hover:underline" data-setup-next>Next: {{ setup_strip.next.label }} →</a>
+      {% elif not setup_strip.here_done %}
+      {# A step whose page has no Save says what DOES move it on (run #10 (iii)). #}
+      <span class="text-xs text-slate-500">{{ setup_strip.here.move_on or 'Save this page to move on' }}</span>
+      {% endif %}
+      {% else %}
+      <a href="{{ setup_strip.next.href }}" class="font-semibold text-brand hover:underline" data-setup-next>Next: {{ setup_strip.next.label }} →</a>
+      {% endif %}
+      {% if setup_strip.can_hide %}
+      <form method="post" action="/app/setup/hide" class="ml-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="{{ request.url.path }}">
+        <button class="text-xs text-slate-400 hover:text-slate-600" title="Hide the setup strip">Hide</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Main -->
+  <main class="app-sky flex-1 min-h-0 overflow-auto">{% block content %}{% endblock %}</main>
+  {# Held for later (src/app/setup_held.py): what the owner told the assistant for
+     THIS page before reaching it — concierge.js fills the form from it on
+     arrival, empty fields only unless the page has never been saved. #}
+  {% if setup_prefill %}<script type="application/json" id="setup-prefill">{{ setup_prefill | tojson }}</script>{% endif %}
+  {# First walk of this page (src/app/static/tour.js): mounted only while it is
+     owed — every setup step done and the page never toured (or ?tour=1). #}
+  {% if tour_page %}<div id="tour-root" data-tour-page="{{ tour_page }}" data-csrf="{{ csrf_token(request) }}" data-kind-plural="{{ tour_kind_plural or '' }}" hidden></div>
+  <script src="/static/tour.js?v={{ asset_rev }}" defer></script>{% endif %}
+  {# A walk left mid-way — a left swipe opened the CRM, say (Kris 2026-09-13:
+     "an obvious but subtle way back to continue the tour"). tour.js keeps each
+     walk's position in session storage; any page without a walk of its own
+     offers the way back while one is waiting. Dismiss forgets it. #}
+  <script>
+  (function () {
+    if (document.getElementById("tour-root")) return;
+    var pages = { today: { label: "Today", href: "/app/" }, inbox: { label: "Inbox", href: "/app/conversations" },
+                  diary: { label: "Diary", href: "/app/diary" }, money: { label: "Money", href: "/app/money" } };
+    var found = null;
+    try {
+      for (var i = 0; i < sessionStorage.length; i++) {
+        var k = sessionStorage.key(i);
+        if (k && k.indexOf("blam8_tour_pos:") === 0 && pages[k.slice(15)]) { found = { key: k, page: k.slice(15) }; break; }
+      }
+    } catch (e) {}
+    if (!found) return;
+    var p = pages[found.page];
+    var chip = document.createElement("div");
+    chip.className = "tour-return bg-white border border-slate-200 shadow-lg";
+    chip.setAttribute("data-tour-return", found.page);
+    var back = document.createElement("a");
+    back.href = p.href + "?tour=1";   /* forced: the walk resumes from its saved stop whether or not this account has walked it once already */
+    back.className = "text-xs font-semibold text-brand hover:underline";
+    back.textContent = "Back to the walk-through · " + p.label + " →";
+    var x = document.createElement("button");
+    x.type = "button";
+    x.className = "ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:text-slate-600";
+    x.setAttribute("aria-label", "Dismiss");
+    x.textContent = "×";
+    x.addEventListener("click", function () { try { sessionStorage.removeItem(found.key); } catch (e) {} chip.remove(); });
+    chip.appendChild(back); chip.appendChild(x);
+    document.body.appendChild(chip);
+  })();
+  </script>
+
+  {# People (docs/plan-people.md): my_doors is what THIS person may open. An
+     account that predates People carries every door, so nothing changes for
+     the businesses already running. #}
+  {# People (docs/plan-people.md): my_doors is what THIS person may open. An
+     account that predates People carries every door, so nothing changes for
+     the businesses already running. #}
+  {# People (docs/plan-people.md): my_doors is what THIS person may open. An
+     account that predates People carries every door, so nothing changes for
+     the businesses already running. #}
+  {% set dock_items %}{% block dockbar %}{% endblock %}{% endset %}
+  {% if dock_items | trim %}
+  <div class="dockbar flex-none flex items-center gap-1.5 overflow-x-auto px-3 py-1.5 bg-white/70 border-t border-slate-200"
+       style="scrollbar-width: none;" aria-label="Diary rail" data-tour="diary" data-pull-refresh="off">
+    {{ dock_items }}
+  </div>
+  {% endif %}
+
+  {# Bottom strip (mobile): the five daily doors, thumb height. The diary
+     slot follows the tenant's own day surface; CRM's slot falls back to
+     Modules until the CRM unlocks. Desktop keeps the full Menu instead. #}
+  <style>
+    /* The strip is exactly the height of its five buttons (Kris 2026-08-31:
+       "same size as the buttons it holds") — no clearance of the bottom inset
+       at all; the buttons sit inside the home-indicator zone over their own
+       navy. The var stays as the one knob everything anchored to the strip
+       rides, should the clearance ever come back. */
+    :root {
+      --strip-inset: 0px;
+      /* The strip's height, and THE knob for it (Kris 2026-09-01: "a little
+         bigger"). It was a bare 50px repeated in every rule that sits above
+         the strip, so growing the buttons meant finding all of them or having
+         the concierge bubble, the chat sheet and the push card quietly land on
+         top of the five doors. Everything below is now expressed as this plus
+         the clearance that rule wants, so the strip can be resized here alone.
+         60px = py-2 (16) + 24px icon + gap-1 (4) + 15px label + 1px border. */
+      --strip-h: 60px;
+    }
+    /* The strip owns the bottom edge on phones — the concierge bubble rides
+       just above it (marketing pages keep it in the classic corner). */
+    @media (max-width: 767px) {
+      #blam8-concierge { bottom: calc(var(--strip-h) + 10px + var(--strip-inset, 0px)); }
+      /* Pages with a diary rail: the bookmark tab rides above it (Kris
+         2026-08-31), so the rail's chips stay readable and tappable. */
+      body:has(.dockbar) #blam8-concierge { bottom: calc(var(--strip-h) + 52.4px + var(--strip-inset, 0px)); }
+      /* The chat sheet docks onto the strip's top edge — the five doors stay
+         tappable while the conversation is open (Kris 2026-08-31). */
+      #bc-panel { bottom: calc(var(--strip-h) + var(--strip-inset, 0px)) !important; }
+      /* The enable-notifications card (push.js) sits just above the diary
+         rail — never over the strip's five doors (Kris 2026-08-31). Same
+         anchors as the concierge: strip top edge, +2.65rem when a rail rides
+         above it. */
+      #blam8-push-banner { bottom: calc(var(--strip-h) + 8px + var(--strip-inset, 0px)); }
+      body:has(.dockbar) #blam8-push-banner { bottom: calc(var(--strip-h) + 50.4px + var(--strip-inset, 0px)); }
+    }
+    /* No floating launcher in the app (Kris 2026-09-23): the assistant opens
+       from the search box's /help instead. The widget stays mounted — its
+       panel, auto-opens (setup hand-off, draft fix, "Help me set this up")
+       and restored-open state all still work; only the left-edge tab goes. */
+    #bc-bubble { display: none !important; }
+    /* Desktop has no strip, but the rail still owns the bottom edge. */
+    @media (min-width: 768px) {
+      body:has(.dockbar) #blam8-concierge { bottom: 3.4rem; }
+      body:has(.dockbar) #blam8-push-banner { bottom: 3.4rem; }
+    }
+    /* The Menu dropdown lives inside the bar (z-30), so the docked chat
+       (z-50) covered it (Kris 2026-09-05). The bar rises above the widget
+       only while the menu is open — the rest of the time z-30 stays, so
+       modals (z-50) still cover the bar. */
+    body:has(#menu:not(.hidden)) #app-bar { z-index: 60; }
+    /* The draft card's blue pinstripe (conversation.html .draft-glass) also splits
+       the bottom strip from the page (Kris 2026-09-28). */
+    .strip-pinstripe { border-top-color: rgb(46 91 255 / 0.3); }
+    html[data-theme="dark"] .strip-pinstripe { border-top-color: rgb(46 91 255 / 0.35); }
+  </style>
+  {% set strip_link = "flex-1 flex flex-col items-center gap-1 py-2 text-[11px] leading-[15px] font-medium" %}
+  {# z-index 70: the buttons now live inside the inset zone the body::after
+     cap (z 60) paints over — the strip must sit above it or labels vanish. #}
+  <nav class="md:hidden flex-none flex items-stretch bg-navy text-white/70 border-t strip-pinstripe px-1"
+       style="padding-bottom: var(--strip-inset, 0px); position: relative; z-index: 70;" aria-label="Primary" data-pull-refresh="off">
+    <a href="/app/" class="{{ strip_link }} {% if active=='home' %}text-white{% endif %}">
+      <span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6 {% if active=='home' %}text-brand{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg></span>
+      Today
+    </a>
+    {% if 'inbox' in (my_doors or ['inbox']) %}
+    <a href="/app/conversations" class="{{ strip_link }} relative {% if active in ['conversations','inbox','drafts','sent'] %}text-white{% endif %}">
+      <span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6 {% if active in ['conversations','inbox','drafts','sent'] %}text-brand{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg></span>
+      Inbox
+      {% if draft_count %}<span class="absolute top-1.5 right-1/2 -mr-4 h-1.5 w-1.5 rounded-full bg-brand"></span>{% endif %}
+    </a>
+    {% endif %}
+    {% if 'money' in (my_doors or ['money']) %}
+    <a href="/app/money" class="{{ strip_link }} {% if active in ['money','quotes','invoices'] %}text-white{% endif %}">
+      <span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6 {% if active in ['money','quotes','invoices'] %}text-brand{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+      Money
+    </a>
+    {% endif %}
+    {# The CRM door stays on every plan — locked when the plan lacks it (Kris
+       2026-09-13); Modules keeps its place in the menu. #}
+    {% if 'crm' in (my_doors or ['crm']) %}
+    <a href="/app/crm" class="{{ strip_link }} relative {% if active in ['crm','crm_locked','crm_companies','crm_pipeline','crm_sequences','crm_fields','crm_settings'] %}text-white{% endif %}"{% if not crm_on %} data-crm-locked{% endif %}>
+      <span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6 {% if active in ['crm','crm_locked','crm_companies','crm_pipeline','crm_sequences','crm_fields','crm_settings'] %}text-brand{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg></span>
+      {% if not crm_on %}<svg class="absolute top-1.5 right-1/4 h-3 w-3 text-slate-300" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>{% endif %}
+      CRM
+    </a>
+    {% if false %}
+    <a href="/app/modules" class="{{ strip_link }} {% if active=='modules' %}text-white{% endif %}">
+      <span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6 {% if active=='modules' %}text-brand{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg></span>
+      Modules
+    </a>
+    {% endif %}
+    {% endif %}
+    {% set day_href = '/app/fsm' if fsm_on else ('/app/tms' if tms_on and not scheduling_on else '/app/diary') %}
+    {% set day_on = active in (['fsm','fsm_engineers','fsm_job_types','fsm_pricing','fsm_invoices'] if fsm_on else (['tms','pricing','pod','tracking','compliance'] if tms_on and not scheduling_on else ['diary'])) %}
+    {% if 'diary' in (my_doors or ['diary']) %}
+    <a href="{{ day_href }}" class="{{ strip_link }} {% if day_on %}text-white{% endif %}" data-tour="day-door">
+      <span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6 {% if day_on %}text-brand{% endif %}" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg></span>
+      Diary
+    </a>
+    {% endif %}
+  </nav>
+
+</div>
+<script>
+  // Back means back (Kris 2026-09-20). The top-left link is "up" by default —
+  // a job page says ← Diary — but when you came from another page in the
+  // app, a tap goes back THERE and the label says so (← Hannah). Where you
+  // came from is the referrer (same origin, under /app); what it was called
+  // is the heading that page stored as it loaded. No in-app history — a push,
+  // a fresh tab, the installed app starting cold, a redirect back to this
+  // same page — and it stays "up", as before.
+  (function () {
+    var heading = document.getElementById('app-heading');
+    var here = location.pathname + location.search;
+    try { if (heading) sessionStorage.setItem('blam8:crumb:' + here, heading.textContent.trim().slice(0, 40)); } catch (e) {}
+    var link = document.querySelector('[data-back-up]');
+    if (!link) return;
+    var ref = null;
+    try { ref = document.referrer ? new URL(document.referrer) : null; } catch (e) { ref = null; }
+    if (!ref || ref.origin !== location.origin) return;
+    if (!/^\/app(\/|$)/.test(ref.pathname)) return;
+    var from = ref.pathname + ref.search;
+    var BACKTO = 'blam8:backto:' + location.pathname;
+    // The same page again (a save that redirects back to itself, ?msg=saved)
+    // is not somewhere to go back to — its stored heading is its own OLD
+    // name, and history.back() lands on the pre-save copy, so it took two
+    // taps (Kris 2026-09-24). Where THIS page was opened from is remembered,
+    // and the link goes straight there — a plain link, not history.
+    if (ref.pathname === location.pathname) {
+      var kept = null;
+      try { kept = sessionStorage.getItem(BACKTO); } catch (e) {}
+      if (!kept) return;
+      var keptLabel = '';
+      try { keptLabel = sessionStorage.getItem('blam8:crumb:' + kept) || ''; } catch (e) {}
+      if (keptLabel.length > 22) keptLabel = keptLabel.slice(0, 21) + '…';
+      if (keptLabel) link.textContent = '← ' + keptLabel;
+      link.setAttribute('href', kept);
+      return;
+    }
+    if (history.length < 2) return;
+    try { sessionStorage.setItem(BACKTO, from); } catch (e) {}
+    var SECTIONS = {
+      '/app': 'Today', '/app/conversations': 'Inbox', '/app/crm': 'CRM', '/app/diary': 'Diary',
+      '/app/board': 'Board', '/app/tms': 'Board', '/app/fsm': 'Field', '/app/money': 'Money',
+      '/app/quotes': 'Quotes', '/app/invoices': 'Invoices', '/app/people': 'People',
+      '/app/settings': 'Settings', '/app/wholesale': 'Wholesale', '/app/mailboxes': 'Mailboxes',
+      '/app/knowledge': 'Knowledge', '/app/usage': 'Usage', '/app/practice': 'Today'
+    };
+    function section(path) {
+      var p = path.replace(/\/+$/, '') || '/app';
+      var best = '';
+      for (var k in SECTIONS) if ((p === k || p.indexOf(k + '/') === 0) && k.length > best.length) best = k;
+      return best ? SECTIONS[best] : '';
+    }
+    var label = '';
+    try { label = sessionStorage.getItem('blam8:crumb:' + from) || ''; } catch (e) {}
+    label = label || section(ref.pathname) || 'Back';
+    if (label.length > 22) label = label.slice(0, 21) + '\u2026';
+    link.textContent = '\u2190 ' + label;
+    link.setAttribute('href', from);              // a long-press or open-in-new-tab still lands right
+    link.setAttribute('data-back-to', from);
+    link.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      if (window.blam8Wait) window.blam8Wait(link);   // the tap wears the wait, as any link does
+      history.back();
+    });
+  })();
+</script>
+<script>
+  (function () {
+    var btn = document.getElementById('menu-btn'), menu = document.getElementById('menu');
+    if (!btn || !menu) return;
+    function toggle(open) {
+      menu.classList.toggle('hidden', !open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+    btn.addEventListener('click', function (e) { e.stopPropagation(); toggle(menu.classList.contains('hidden')); });
+    document.addEventListener('click', function () { toggle(false); });
+    menu.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') toggle(false); });
+  })();
+</script>
+
+{# The tapped control wears the wait (src/app/static/nav.js). Its own element, not
+   a ::before/::after: .convo-row already spends its ::after on the mood wash,
+   and a spinner that silently loses a specificity fight is worse than none. #}
+<style>
+  .nav-busy { pointer-events: none; }        /* one tap is the whole request */
+  /* The thumbs-up on a draft (Kris 2026-09-22: "it doesn't obviously change
+     when clicked"). The generic wait is a white ring over the button's own
+     colour — legible on a wide navy button, near-invisible on a 36px emerald
+     square. So this one control answers in two beats instead: it drops to
+     grey the instant it is pressed (the live green button is GONE — the tap
+     landed), then breathes green until the send comes back and the page is
+     replaced. data-busy on the button keeps nav.js's spinner off it: this IS
+     the wait. The grey lands on POINTERDOWN, not on submit, and it SNAPS:
+     a class set in the submit handler shares its task with the navigation
+     that handler starts, so it is real in the DOM and never painted (the
+     trap nav.js documents), and a fade costs the other half of the tell on
+     a send that comes back quickly. No !important anywhere — the
+     attribute-plus-class selector already
+     outweighs .bg-emerald-600, and an important background would outrank the
+     keyframes and kill the pulse. */
+  [data-send-ack].send-ack {
+    background-color: #64748b;               /* slate-500 */
+    /* The button carries Tailwind's own `transition` (150ms on, among other
+       things, background-color), so the grey arrived as a FADE — half the
+       tell, and most of it lost when the send comes back quickly. The press
+       snaps; the pulse below does the moving. */
+    transition-property: none;
+  }
+  /* The lock waits for the submit: the grey lands as the finger does, and a
+     button locked against pointer events under that finger would never get
+     its click at all. */
+  [data-send-ack].send-ack-lock { pointer-events: none; }
+  @keyframes send-ack-pulse {
+    0%, 100% { background-color: #64748b; box-shadow: 0 0 0 0 rgb(5 150 105 / 0); }
+    50%      { background-color: #059669; box-shadow: 0 0 0 5px rgb(5 150 105 / .22); }
+  }
+  [data-send-ack].send-ack.send-ack-go { animation: send-ack-pulse 1.15s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) {
+    /* Still says "working", just without the breath. */
+    [data-send-ack].send-ack.send-ack-go { animation: none; background-color: #059669; }
+  }
+  .nav-spin {
+    position: absolute; inset: 0; border-radius: inherit;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5;
+  }
+  /* Tint and ring are both currentColor, so this reads correctly on anything
+     it lands on without knowing what that is: dark on a white card, white on
+     a navy button, and it follows dark mode for free. */
+  .nav-spin::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    background: currentColor; opacity: .10;
+  }
+  .nav-spin::after {
+    content: ""; width: 1.1rem; height: 1.1rem; border-radius: 9999px;
+    border: 2px solid currentColor; border-right-color: transparent;
+    opacity: .85; animation: nav-spin .6s linear infinite;
+  }
+  /* The bottom strip (Kris 2026-09-20): the tapped door's ICON becomes the
+     spinner — no tint across the whole door, the label stays put, and the
+     other doors are untouched. nav.js puts the spinner inside the icon's
+     holder ([data-nav-icon]) rather than over the door. */
+  [data-nav-icon].nav-icon-busy > svg { visibility: hidden; }
+  [data-nav-icon] > .nav-spin::before { display: none; }
+  [data-nav-icon] > .nav-spin::after {
+    width: 1.375rem; height: 1.375rem; border-width: 2.5px; opacity: 1;
+  }
+  /* A hidden save bar is hidden.
+   *
+   * Tailwind's preflight ships [hidden]:where(:not([hidden=until-found])) —
+   * :where() contributes nothing, so the rule weighs exactly as much as a
+   * single class and is emitted BEFORE the utilities. Any save row carrying
+   * .flex (most of them, since a save row is a button plus a line of text)
+   * therefore stayed on screen with hidden=true set on it: the attribute was
+   * there, the display was not none, and the button looked permanent. This
+   * outranks the utility instead of racing it. */
+  [data-save-row][hidden] { display: none !important; }
+  /* Same trap on the Dependants editor: the recall lead ("recall 30 days
+   * before") is an inline-flex label hidden by attribute on every row that
+   * does not expire — and showed on all of them (re-run 2026-09-13). */
+  .f-recall-wrap[hidden] { display: none !important; }
+  /* The way back to a walk left mid-way (tour.js position in session storage):
+   * a small pill above the bottom rail, out of the way of everything. */
+  .tour-return { position: fixed; left: 50%; transform: translateX(-50%);
+                 bottom: calc(var(--strip-h, 0px) + 3.75rem + env(safe-area-inset-bottom, 0px)); z-index: 45;
+                 display: inline-flex; align-items: center; gap: .25rem; border-radius: 9999px;
+                 padding: .4rem .5rem .4rem .9rem; white-space: nowrap; }
+  /* A thread is one fixed viewport with the reply pen at its foot, so a pill
+   * anchored to the bottom lands on the draft's own words (first-sign-up film
+   * 2026-09-30: it covered "…payment is due on completion by card"). On a
+   * page with a staged draft the pill rides under the header instead. */
+  body:has([data-stage-draft]) .tour-return {
+    bottom: auto; top: calc(2.25rem + env(safe-area-inset-top, 0px) + .5rem); }
+  /* First walk of a page (src/app/static/tour.js, Kris 2026-09-13): the box in
+   * question breathes a brand outline — the inbox's "needs you" breath, in
+   * blue — and a bubble tied to it says what the box does. */
+  /* Kris: "the glowing border should just reuse the border from 'All
+   * clear…', same with the next two" — the box's own border turns brand and
+   * the box breathes a tint inside it (the inbox's breath, in blue); no ring
+   * drawn around anything. A row without a border simply breathes. */
+  @keyframes tour-breathe {
+    0%, 100% { box-shadow: inset 0 0 0 100vmax rgb(37 99 235 / 0); }
+    50%      { box-shadow: inset 0 0 0 100vmax rgb(37 99 235 / .16); }
+  }
+  .tour-glow { border-color: rgb(37 99 235 / .85) !important;
+               animation: tour-breathe 2.4s ease-in-out infinite; }   /* never repositions the box: the deck's top card is absolutely placed */
+  /* The masthead cog has no border of its own: give it a ring to breathe in. */
+  a[data-tour="section-settings"].tour-glow { border: 1px solid; border-radius: 9999px; }
+  /* The search sheet (search.js): the full width on a phone, a column on the
+     right on a desktop — a plain rule, because an arbitrary-width utility is
+     not in the built stylesheet until the next Tailwind build. */
+  @media (min-width: 768px) { #search-box { left: auto; width: 28rem; } }
+  /* The bubble is a card in the app's own idiom (bg-white / border-slate-200
+   * / text-navy classes, set in tour.js) so the theme layer flips it with the
+   * rest of the page (Kris: "make it match the theme, and more readable");
+   * only its placement lives here. The arrow inherits the card's colours. */
+  .tour-bubble { position: fixed; z-index: 42; width: min(23rem, 92vw); padding: .875rem 1rem; }
+  .tour-bubble::before { content: ""; position: absolute; width: 12px; height: 12px;
+                         background: inherit; border-left: 1px solid; border-top: 1px solid; border-color: inherit;
+                         left: var(--tour-arrow-x, 24px); top: -7px; transform: rotate(45deg); }
+  .tour-bubble.tour-bubble-above::before { top: auto; bottom: -7px; transform: rotate(225deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .tour-glow { animation: none; box-shadow: inset 0 0 0 100vmax rgb(37 99 235 / .1); }
+  }
+
+  @keyframes nav-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-spin::after { animation-duration: 1.6s; }
+  }
+</style>
+<script src="/static/nav.js?v={{ asset_rev }}" defer></script>
+
+{# Live inbox: one SSE connection per tab (/app/stream) + fragment swaps. #}
+<script src="/static/ghost.js?v={{ asset_rev }}" defer></script>
+<script src="/static/live.js?v={{ asset_rev }}" defer></script>
+
+{# PWA: service-worker registration, push subscription, install entry, offline banner. #}
+<script src="/static/push.js?v={{ asset_rev }}" defer></script>
+<script src="/static/spare_rows.js?v={{ asset_rev }}" defer></script>
+<script>
+  // "Not sent — why" (Kris 2026-09-26): a send that couldn't go comes back
+  // with ?send_err=… — said once in rose, then scrubbed like ?sent=1.
+  (function () {
+    try {
+      var u = new URL(location.href), why = u.searchParams.get('send_err');
+      if (!why) return;
+      u.searchParams.delete('send_err');
+      history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+      var t = document.createElement('div');
+      t.setAttribute('role', 'alert');
+      t.setAttribute('data-send-err-toast', '');
+      t.textContent = 'Not sent \u2014 ' + why;
+      t.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.25rem);' +
+        'transform:translateX(-50%);z-index:60;background:#be123c;color:#fff;font:600 14px/1.35 system-ui,sans-serif;' +
+        'padding:10px 16px;border-radius:14px;box-shadow:0 6px 20px rgb(0 0 0 / .25);max-width:calc(100vw - 32px);transition:opacity .4s';
+      document.body.appendChild(t);
+      setTimeout(function () { t.style.opacity = '0'; }, 6000);
+      setTimeout(function () { t.remove(); }, 6500);
+    } catch (e) {}
+  })();
+</script>
+<script>
+  // "Sent ✓" (Kris 2026-09-24): the send route adds ?sent=1 only when the
+  // email really went. Shown once, then the flag leaves the address so a
+  // refresh or a back never says it again.
+  (function () {
+    try {
+      var u = new URL(location.href);
+      if (u.searchParams.get('sent') !== '1') return;
+      u.searchParams.delete('sent');
+      history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+      var t = document.createElement('div');
+      t.setAttribute('role', 'status');
+      t.setAttribute('data-sent-toast', '');
+      t.textContent = 'Sent \u2713';
+      t.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.25rem);' +
+        'transform:translateX(-50%);z-index:60;background:#059669;color:#fff;font:600 14px/1 system-ui,sans-serif;' +
+        'padding:10px 16px;border-radius:9999px;box-shadow:0 6px 20px rgb(0 0 0 / .25);transition:opacity .4s';
+      document.body.appendChild(t);
+      setTimeout(function () { t.style.opacity = '0'; }, 2200);
+      setTimeout(function () { t.remove(); }, 2700);
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  // Edit review (Kris 2026-09-29): the send route adds ?learn=<log id> when the
+  // owner changed the agent's draft in a way that could teach it something. The
+  // email is already gone; this asks — never blocking — whether the change was a
+  // missing fact (knowledge), a standing rule, or just this once. The
+  // suggestion comes from one small model call; "none" shows nothing at all.
+  (function () {
+    try {
+      var u = new URL(location.href), id = u.searchParams.get('learn');
+      if (!id) return;
+      u.searchParams.delete('learn');
+      history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash);
+      var m = document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/), csrf = m ? decodeURIComponent(m[1]) : '';
+      var base = '/app/drafts/' + encodeURIComponent(id) + '/edit-review';
+      var post = function (path, body) {
+        return fetch(base + path, { method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body: JSON.stringify(body || {}) }).then(function (r) { return r.ok ? r.json() : null; });
+      };
+      post('').then(function (s) {
+        if (!s || s.kind === 'none' || !s.text) return;
+        var card = document.createElement('div');
+        card.setAttribute('data-edit-review', '');
+        card.className = 'bg-white border border-slate-200 text-navy';
+        card.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);z-index:60;' +
+          'bottom:calc(env(safe-area-inset-bottom,0px) + 1rem);width:min(26rem,calc(100vw - 32px));' +
+          'padding:14px 16px;border-radius:16px;box-shadow:0 10px 30px rgb(0 0 0 / .25);font:14px/1.4 system-ui,sans-serif';
+        var why = document.createElement('p');
+        why.style.cssText = 'font-weight:600;margin:0 0 8px';
+        why.textContent = (s.why || 'You changed this draft.') + ' Teach the agent?';
+        var kind = document.createElement('select');
+        kind.className = 'border border-slate-300 bg-white text-navy';
+        kind.style.cssText = 'width:100%;border-radius:8px;padding:6px 8px;margin-bottom:6px';
+        [['knowledge', 'Add to knowledge'], ['always', 'Always do this'], ['never', 'Never do this']].forEach(function (o) {
+          var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1];
+          if (o[0] === s.kind) op.selected = true; kind.appendChild(op);
+        });
+        var txt = document.createElement('textarea');
+        txt.rows = 3; txt.value = s.text;
+        txt.className = 'border border-slate-300 bg-white text-navy';
+        txt.style.cssText = 'width:100%;border-radius:8px;padding:6px 8px;box-sizing:border-box';
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:8px;margin-top:8px;justify-content:flex-end;align-items:center';
+        var note = document.createElement('span');
+        note.style.cssText = 'margin-right:auto;font-size:12px;opacity:.7';
+        var close = function () { card.remove(); };
+        var no = document.createElement('button'); no.type = 'button'; no.textContent = 'Just this once';
+        no.className = 'border border-slate-300 bg-white text-navy';
+        no.style.cssText = 'border-radius:9999px;padding:6px 14px;font-weight:600';
+        no.onclick = close;
+        var yes = document.createElement('button'); yes.type = 'button'; yes.textContent = 'Save';
+        yes.style.cssText = 'border-radius:9999px;padding:6px 16px;font-weight:600;background:#2563eb;color:#fff;border:0';
+        yes.onclick = function () {
+          yes.disabled = true; note.textContent = 'Saving…';
+          post('/save', { kind: kind.value, title: s.title, text: txt.value }).then(function (r) {
+            if (!r) { yes.disabled = false; note.textContent = 'Could not save — try again.'; return; }
+            note.textContent = 'Saved ✓'; setTimeout(close, 1200);
+          }).catch(function () { yes.disabled = false; note.textContent = 'Could not save — try again.'; });
+        };
+        row.appendChild(note); row.appendChild(no); row.appendChild(yes);
+        [why, kind, txt, row].forEach(function (e) { card.appendChild(e); });
+        document.body.appendChild(card);
+      }).catch(function () {});
+    } catch (e) {}
+  })();
+</script>
+
+{# Confirmations retire themselves, and the notice parameter is scrubbed from
+   the URL so a refresh can't re-announce a save from last week. #}
+<script src="/static/flash.js?v={{ asset_rev }}" defer></script>
+
+{# Save bars stay hidden until their form is actually dirty. App-wide, because
+   the alternative is the same twenty lines copied into every settings page and
+   drifting apart. Mark the controls with [data-save-row]; see the file. #}
+<script src="/static/dirty_save.js?v={{ asset_rev }}" defer></script>
+
+{# Pull down to refresh (Kris 2026-09-20): the landing's pull, app-wide. The
+   shell (data-pull-root) comes down with the finger once every scroller under
+   it is at its top; the bar (data-pull-bar) pulls from anywhere. #}
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+{# The masthead search (Kris 2026-09-21): suggestions as you type, keyboard-driven. #}
+<script src="/static/search.js?v={{ asset_rev }}" defer></script>
+
+{# The Concierge modal (Kris 2026-09-23): the person icon's pop-up, on every
+   page but /app/concierge (which shows the same panel inline). The panel is
+   fetched on first open and kept. Full screen on a phone, a tall card on a
+   desktop; the backdrop or the × closes it. #}
+{% if concierge_on and active != 'concierge' %}
+<div id="cz-modal" class="hidden fixed inset-0 items-stretch md:items-center justify-center bg-slate-900/40 md:p-6" data-pull-refresh="off" role="dialog" aria-modal="true" aria-label="Concierge">
+  <div id="cz-card" class="relative flex flex-col w-full md:max-w-3xl h-full bg-slate-50 md:rounded-2xl shadow-2xl overflow-hidden">
+    {# Pull the bar down to refresh (Kris 2026-09-23), as the app bar does:
+       the card comes down with the finger, and the reload lands back in the
+       Concierge (#concierge reopens it) — fresh deploy, fresh conversation. #}
+    <header id="cz-head" class="flex-none flex items-center gap-2 bg-navy px-4 py-2.5 text-white"
+            data-pull-bar data-pull-moves="#cz-card" data-pull-reopen="concierge">
+      <svg class="h-5 w-5 text-white/80" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+      <p class="text-sm font-semibold">Concierge</p>
+      {# Settings (Kris 2026-09-23): the voice line + the voice tour. #}
+      <button type="button" data-cz-settings aria-label="Concierge settings" title="Settings" class="ml-auto rounded-lg p-1.5 text-white/80 hover:bg-white/10 transition">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+      </button>
+      <button type="button" data-cz-close aria-label="Close Concierge" class="-mr-1 rounded-lg p-1.5 text-white/80 hover:bg-white/10 transition">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </header>
+    <div id="cz-modal-body" class="flex-1 min-h-0">
+      <p class="p-6 text-sm text-slate-400">Opening…</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+<style>
+  /* Above everything the shell floats: the bar (z-30), the App help chat
+     (z-50) and the phone strip (z-70). Plain CSS, not z-[..] utilities, so it
+     never depends on the Tailwind build having seen the class. */
+  #cz-modal { z-index: 80; overscroll-behavior: contain; }
+  /* iOS (Kris 2026-09-23, "buffer gap at the bottom"): pinned by inset-0, the
+     modal ends where iOS thinks the viewport ends. iOS 26.0 standalone stops
+     that ~50pt short of the screen (the html.h-full note above), so the page
+     showed through under the composer. Sized the way the shell is instead:
+     dvh in the browser, vh when installed. While the keyboard is up,
+     concierge_panel.js fits it to the visible area (.cz-kb). */
+  #cz-modal { bottom: auto; height: 100dvh; }
+  @media (display-mode: standalone) { #cz-modal { height: 100vh; } }
+  @media (min-width: 768px) { #cz-card { height: min(52rem, calc(100vh - 3rem)); } }
+  /* Phone, full screen (Kris 2026-09-23): the status-bar inset belongs to the
+     NAVY header, the same one surface as the app bar under it. Padding the
+     whole card painted it the card's pale grey. At the foot, the composer
+     gets ONE clearance: the home-indicator inset or a small floor, not the
+     inset stacked on the panel's own 1rem. */
+  @media (max-width: 767px) {
+    #cz-head { padding-top: calc(0.625rem + env(safe-area-inset-top, 0px)); }
+    #cz-modal #cz-root { padding-bottom: max(0.25rem, calc(env(safe-area-inset-bottom, 0px) - 1rem)); }
+    /* The /app/concierge page: the fixed navy strip (body::after) already owns the home-indicator inset
+       under the page, so the panel's own py-4 foot (1rem) was pure extra space under the links. */
+    #cz-root { padding-bottom: 0; }
+    /* Keyboard up: the home-indicator inset is under the keyboard, not the
+       composer — no clearance owed. */
+    #cz-modal.cz-kb #cz-root { padding-bottom: 0; }
+  }
+  @media (max-width: 767px) { .cz-menu-pc { display: none !important; } }
+  /* The two-page strip (concierge_sidebar.js) around the Concierge and its column: no part of the layout until it is switched on. */
+  .cz-pager { display: contents; }
+  /* The page behind the Concierge stays put while it is open. */
+  html.cz-modal-open main.app-sky { overflow: hidden; }
+  /* Hold the person for a second = live voice (concierge_panel.js). No iOS
+     callout or text selection under a long press; while held, the icon swells
+     towards the one-second mark so the hold reads as doing something. */
+  #concierge-btn { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation;
+                   margin-right: -0.25rem; /* Kris 2026-09-25: the same visual gap as search → Menu
+                      (12px): Menu has no side padding, so this takes back the search's 4px */ }
+  #concierge-btn svg { transition: transform 150ms ease-out; }
+  #concierge-btn.cz-holding { color: #fff; }
+  #concierge-btn.cz-holding svg { transform: scale(1.25); transition: transform 1000ms ease-in; }
+</style>
+{% if concierge_on %}
+<meta name="blam8-discovery-scope" content="{{ concierge_scope }}">
+<link rel="stylesheet" href="/static/concierge_discovery.css?v={{ asset_rev }}">
+<link rel="stylesheet" href="/static/concierge_frost.css?v={{ asset_rev }}">
+<script src="/static/concierge_discovery.js?v={{ asset_rev }}" defer></script>
+<script src="/static/concierge_panel.js?v={{ asset_rev }}" defer></script>
+{% endif %}
+
+{# The Assistant widget = App help only since 2026-09-23 ("Your business"
+   moved into the Concierge). Opened from the search box's /help; no floating
+   tab in the app. #}
+{% set concierge_authed = true %}
+{% set concierge_in_app = true %}
+{% include "_concierge.html" %}
+</body>
+</html>

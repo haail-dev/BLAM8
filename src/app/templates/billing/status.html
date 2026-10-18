@@ -1,0 +1,16 @@
+{# HTMX fragment: tiny status pill the success page polls until the webhook lands.
+   Returned standalone (no base layout) so an hx-swap="outerHTML" updates this
+   element in place. #}
+<span class="inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium
+  {% if status == 'active' %}bg-emerald-100 text-emerald-800
+  {% elif status == 'trialing' %}bg-sky-100 text-sky-800
+  {% elif status == 'past_due' %}bg-amber-100 text-amber-800
+  {% elif status == 'canceled' %}bg-slate-100 text-slate-700
+  {% else %}bg-slate-100 text-slate-500{% endif %}">
+  {{ status }}
+  {% if status == 'trialing' and trial_ends_at %}
+  · trial ends {{ trial_ends_at[:10] }}
+  {% elif status == 'active' and current_period_end %}
+  · renews {{ current_period_end[:10] }}
+  {% endif %}
+</span>

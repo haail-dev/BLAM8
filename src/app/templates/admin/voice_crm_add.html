@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% block title %}Add · Voice CRM · Operator{% endblock %}
+{% block content %}
+<a href="/admin/voice-crm" class="text-sm text-slate-500 hover:text-navy">← Voice CRM</a>
+<h1 class="mt-2 mb-4 text-xl font-bold text-navy">Add {{ 'a partner' if kind == 'partner' else 'a customer prospect' }}</h1>
+{% if request.query_params.get('err') == 'name' %}
+<div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">A name is required.</div>
+{% endif %}
+<form method="post" action="/admin/voice-crm/add" class="rounded-xl bg-white border border-slate-200 p-4 space-y-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  {% set inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-navy" %}
+  {% set lbl = "block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1" %}
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Business / practice name</label>
+      <input class="{{ inp }}" name="business_name" required></div>
+    <div><label class="{{ lbl }}">Type</label>
+      <select class="{{ inp }}" name="kind">
+        <option value="partner" {{ 'selected' if kind == 'partner' }}>Partner</option>
+        <option value="customer" {{ 'selected' if kind != 'partner' }}>Customer</option>
+      </select></div>
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    <div><label class="{{ lbl }}">Contact name</label><input class="{{ inp }}" name="contact_name"></div>
+    <div><label class="{{ lbl }}">Role</label><input class="{{ inp }}" name="role" placeholder="bookkeeper"></div>
+    <div><label class="{{ lbl }}">Email</label><input class="{{ inp }}" type="email" name="email"></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Channel</label>
+      <select class="{{ inp }}" name="channel"><option value=""></option>
+        {% for c in channels %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select></div>
+    <div><label class="{{ lbl }}">Found via</label><input class="{{ inp }}" name="source" placeholder="ICB directory, Taunton network..."></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Location</label><input class="{{ inp }}" name="location"></div>
+    <div><label class="{{ lbl }}">Website</label><input class="{{ inp }}" name="website"></div>
+  </div>
+  <div><label class="{{ lbl }}">What they do / why they fit</label><input class="{{ inp }}" name="description"></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Status</label>
+      <select class="{{ inp }}" name="status">
+        {% for s in (partner_statuses if kind == 'partner' else call_statuses) %}<option value="{{ s }}">{{ s.replace('_', ' ') }}</option>{% endfor %}
+      </select></div>
+    <div><label class="{{ lbl }}">Next action</label><input class="{{ inp }}" name="next_action"></div>
+  </div>
+  <div><label class="{{ lbl }}">Notes</label><textarea class="{{ inp }}" name="notes" rows="2"></textarea></div>
+  <button type="submit" class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition">Save</button>
+</form>
+{% endblock %}

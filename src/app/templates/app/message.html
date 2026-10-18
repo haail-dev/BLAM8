@@ -1,0 +1,31 @@
+{% extends "app/base.html" %}
+{% block title %}{{ msg.subject if msg else 'Message' }} · BLAM8{% endblock %}
+{% set back = ('/app/conversations', 'Inbox') %}
+{% block heading %}{{ msg.subject if msg else 'Message' }}{% endblock %}
+{% block content %}
+{% if not msg %}
+<div class="p-10 text-center text-slate-400">Message not found.</div>
+{% else %}
+<div class="max-w-3xl mx-auto p-6">
+  <div class="bg-white rounded-xl border border-slate-200 p-6">
+    <h2 class="text-xl font-bold text-navy">{{ msg.subject }}</h2>
+    <div class="mt-2 flex items-center justify-between gap-3 text-sm">
+      <p class="text-slate-600 truncate"><span class="font-medium text-slate-800">{{ msg.from.name or msg.from.address }}</span>{% if msg.from.name %} <span class="text-slate-400">&lt;{{ msg.from.address }}&gt;</span>{% endif %}</p>
+      <p class="text-slate-400 flex-none">{{ msg.received[:16].replace('T',' ') if msg.received }}</p>
+    </div>
+    <div class="mt-5 pt-5 border-t border-slate-100 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ msg.body }}</div>
+  </div>
+  <div class="mt-4">
+    <form method="post" action="/app/inbox/{{ msg.id }}/draft">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {% if sel %}<input type="hidden" name="mailbox_id" value="{{ sel }}">{% endif %}
+      <input type="hidden" name="return_to" value="/app/conversations/view?contact={{ msg.from.address | urlencode }}">
+      <button class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition inline-flex items-center gap-2">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
+        Draft a reply
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,28 @@
+# Push the public pages to IndexNow (Bing/Edge, Yandex, Seznam, Naver) from a
+# runner that can reach blam8.com. Manual: Actions → "IndexNow ping" → Run
+# workflow. Leave `urls` empty to resubmit everything in the live sitemap.xml
+# (the "remind the engines about the whole site" case), or give a
+# space-separated list of paths (e.g. "/setups /setups/farriers") to submit
+# only those. Wraps scripts/ops/seo_indexnow_ping.py — see its docstring.
+name: IndexNow ping
+
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Space-separated paths to submit (empty = whole live sitemap)"
+        required: false
+        default: ""
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install httpx==0.28.1
+      - name: Submit to IndexNow
+        run: python scripts/ops/seo_indexnow_ping.py ${{ inputs.urls || '' }}

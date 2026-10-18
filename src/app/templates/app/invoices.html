@@ -1,0 +1,138 @@
+{% extends "app/base.html" %}
+{% block title %}Invoices · BLAM8{% endblock %}
+{% block heading %}Invoices{% endblock %}
+{% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{# status = dot + quiet text (Counting House), never a filled pill #}
+{% set stone = {'draft':'text-slate-500','sent':'text-brand','paid':'text-emerald-700','overdue':'text-rose-700','partially_paid':'text-amber-700','cancelled':'text-slate-400','void':'text-slate-400'} %}
+{% set sdot = {'draft':'bg-slate-200','sent':'bg-brand','paid':'bg-emerald-600','overdue':'bg-rose-600','partially_paid':'bg-amber-500','cancelled':'bg-slate-200','void':'bg-slate-200'} %}
+<div class="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
+  {% if msg == 'generated' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Generated {{ request.query_params.get('n') }} invoice(s).</div>{% endif %}
+  {% if msg == 'none' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">No completed work in that period to invoice.</div>{% endif %}
+
+  <!-- Generate -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+    <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Generate invoices</h2>
+    <details class="text-sm">
+      <summary class="cursor-pointer select-none text-slate-400 hover:text-navy transition text-xs font-medium">How it works</summary>
+      <p class="mt-1.5 text-slate-500">Groups every completed job in the period by customer — one invoice each, priced from the job's quote (or the rate card). What appears on the invoice (VAT, your business details, terms) is set in <a href="/app/invoices/settings" class="text-brand">Getting paid</a>. Work that's already been invoiced never appears, so generating twice can't double-bill anyone.</p>
+    </details>
+    {# The window is chosen with a GET so the preview below ALWAYS matches what
+       Generate will do. Previously the dates lived in the POST form, so editing them
+       without reloading left the preview describing a different period from the one
+       being billed — harmless when Generate meant "everything", dangerous now that
+       you tick individual customers. #}
+    <form method="get" action="/app/invoices" class="flex flex-wrap items-end gap-3">
+      <label class="block"><span class="text-xs font-medium text-slate-500">From</span>
+        <input type="date" name="from" value="{{ period_from }}" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+      <label class="block"><span class="text-xs font-medium text-slate-500">To</span>
+        <input type="date" name="to" value="{{ period_to }}" class="mt-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand"></label>
+      <button class="whitespace-nowrap rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Preview</button>
+    </form>
+    {% if drafts %}
+    <form method="post" action="/app/invoices/generate" class="border-t border-slate-100 pt-3 space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {# The period the preview was BUILT from, not whatever the date inputs now say. #}
+      <input type="hidden" name="period_from" value="{{ period_from }}">
+      <input type="hidden" name="period_to" value="{{ period_to }}">
+      <p class="text-xs text-slate-400">{{ drafts|length }} customer(s) ready to invoice — untick anyone you're not billing yet:</p>
+      <ul class="space-y-1.5 text-sm">
+        {% for d in drafts %}
+        <li class="flex items-center gap-2.5">
+          <input type="checkbox" id="cust-{{ loop.index }}" name="customers" value="{{ d.customer_email or d.customer_name }}" checked
+                 class="h-4 w-4 shrink-0 rounded border-slate-300 text-brand focus:ring-brand">
+          <label for="cust-{{ loop.index }}" class="flex-1 min-w-0 truncate text-slate-600">{{ d.customer_name }} <span class="text-slate-400">· {{ d.count }} job(s)</span></label>
+          <span class="shrink-0 font-semibold text-navy">£{{ '%.2f'|format(d.total) }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <button class="whitespace-nowrap rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Generate</button>
+    </form>
+    {% else %}
+    <p class="text-xs text-slate-400 border-t border-slate-100 pt-3">No completed work in this period yet — finish jobs first (mark them done / delivered).</p>
+    {% endif %}
+    {% if not crm_on %}
+    {# Locked teaser, same pattern as the landing page's locked-module card. The pitch
+       is the thing that actually becomes true on Pro — invoices linked to contacts —
+       not a feature list. #}
+    <div class="border-t border-slate-100 pt-3">
+      <div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
+        <p class="text-xs font-semibold text-slate-500">Pick customers from your CRM <span class="ml-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">Pro</span></p>
+        <p class="mt-1 text-xs text-slate-500 leading-relaxed">
+          On Pro, every invoice is filed against its customer's CRM record — so you can see what they've been billed, what they've actually paid and how fast they pay, and your assistant can answer &ldquo;what have we done for them, and what&rsquo;s outstanding?&rdquo; from the same history.
+          <a href="/app/billing" class="font-semibold text-brand">See Pro →</a>
+        </p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Existing invoices -->
+  <div class="bg-white rounded-xl border border-slate-200 p-5">
+    {# Stacks on mobile: a <select>'s min-content width is driven by its longest option,
+       so on one row the control could not shrink and got clipped by the card edge.
+       From sm up it returns to a single right-aligned row. #}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Invoices</h2>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center w-full sm:w-auto min-w-0 gap-2">
+        {% if invoices %}
+        {# Export for the books. GET so it's a plain download — no CSRF token needed,
+           and the query string is the whole state (format + optional date window).
+
+           The submit button lives OUTSIDE this form, tied to it by form="invoice-export",
+           so that on mobile the dropdown gets a full-width row of its own and both
+           buttons sit together on the row beneath it. Keeping the button in the form
+           would force a third row, and moving the New-invoice link inside the form
+           would hide it whenever a tenant has no invoices yet. #}
+        <form id="invoice-export" method="get" action="/app/invoices/export.csv" class="w-full sm:w-auto min-w-0">
+          <label class="sr-only" for="export-format">Export format</label>
+          <select id="export-format" name="format" class="w-full sm:w-auto min-w-0 rounded-lg border border-slate-300 px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-brand">
+            {% for key, label in export_formats.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% endif %}
+        <div class="flex items-center gap-2">
+          {% if invoices %}
+          <button type="submit" form="invoice-export" class="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">Export CSV</button>
+          {% endif %}
+          <a href="/app/invoices/new" class="whitespace-nowrap rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">+ New invoice</a>
+        </div>
+      </div>
+    </div>
+    {% if invoices %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+          <th class="py-2 pr-3">Ref</th><th class="py-2 pr-3">Customer</th><th class="py-2 pr-3">Due</th>
+          <th class="py-2 pr-3 text-right">Total</th><th class="py-2 pr-3">Status</th><th></th></tr></thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for inv in invoices %}
+          <tr class="hover:bg-slate-50/60">
+            <td class="py-2 pr-3 font-medium text-navy">{{ inv.invoice_ref }}</td>
+            <td class="py-2 pr-3 text-slate-600">{{ inv.customer_name or inv.customer_email or '—' }}</td>
+            <td class="py-2 pr-3 text-slate-500">{{ inv.due_date or (inv.period_from ~ ' → ' ~ inv.period_to if inv.period_from else '—') }}</td>
+            <td class="py-2 pr-3 text-right font-semibold text-navy">£{{ '%.2f'|format(inv.total|float) }}</td>
+            <td class="py-2 pr-3"><span class="inline-flex items-center gap-1.5 text-[13px] font-medium whitespace-nowrap {{ stone.get(inv.status,'text-slate-500') }}"><span class="h-1.5 w-1.5 rounded-full {{ sdot.get(inv.status,'bg-slate-200') }} self-center"></span>{{ inv.status.replace('_',' ') }}</span></td>
+            <td class="py-2 text-right"><a href="/app/invoices/{{ inv.id }}" class="text-brand text-xs font-semibold">View →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <details class="mt-3 text-xs">
+      <summary class="cursor-pointer select-none text-slate-400 hover:text-navy transition font-medium">About the export formats</summary>
+      <p class="mt-1.5 text-slate-400 leading-relaxed">
+        The accountant format is the safe default — it opens in any spreadsheet and carries every field, including who&rsquo;s paid.
+        The Xero and QuickBooks formats match their invoice import. Both need an account code and a tax rate that exist in <em>your</em> chart of accounts,
+        so check those in the file before importing — we default to Xero&rsquo;s standard Sales code (200) and can&rsquo;t see your setup.
+      </p>
+    </details>
+    {% else %}
+    <p class="text-sm text-slate-400 py-6 text-center">No invoices yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1507 @@
+{% extends "app/base.html" %}
+{% block title %}Settings · BLAM8{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block content %}
+
+{# ── The settled-setting fold (slice 6, Kris 2026-09-01) ──────────────────────
+   Settings was 7,354px on a 375px screen — nine phone screens for thirteen
+   sections, every one of them explaining itself at full length whether or not
+   you had already decided it. Two consecutive screens carried one unticked
+   checkbox between them.
+
+   So each section is a <details> now, and its closed face is one line: the
+   name, and what it is currently set to. The value IS the receipt — a page of
+   ten rows all wearing a green "Set ✓" chip says nothing that the values
+   themselves don't say better, and the professionalise pass took the app the
+   other way (dots and words, never filled pills). Only a section that is
+   genuinely still blank speaks up, with the amber dot the rest of the app uses
+   for "this wants you", and only those open themselves.
+
+   Collapsed inputs still post — <details> hides, it doesn't disable — so the
+   three forms on this page submit exactly as before whatever is folded. #}
+{% macro face(name, value, needs=false) %}
+  <summary data-fold="{{ name }}"{% if needs %} data-needs{% endif %} class="flex items-baseline gap-3 px-5 py-3.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+    <span class="text-sm font-semibold text-navy flex-none">{{ name }}</span>
+    {% if needs %}
+    <span class="flex-1 min-w-0 truncate text-xs font-medium text-amber-700 group-open/row:invisible"><span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 mr-1.5 align-middle"></span>{{ value }}</span>
+    {% else %}
+    <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open/row:invisible">{{ value }}</span>
+    {% endif %}
+    <span class="flex-none text-slate-300 transition group-open/row:rotate-90">&rsaquo;</span>
+  </summary>
+{% endmacro %}
+{# NAMED groups (group/row). `group-open:` compiles to `.group[open] &`, which
+   matches ANY open .group ancestor — and the sub-rows below sit inside the
+   agent sheet's own .group. Unnamed, "Identity & voice", "Rules & escalation"
+   and "Voice auto-learning" all had their values hidden the moment the sheet
+   was opened, which is the only time you can see them at all. #}
+{% set fold = "group/row bg-white rounded-xl border border-slate-200 overflow-hidden" %}
+{% set foldbody = "border-t border-slate-200 p-5" %}
+{# Same fold, as a ROW inside a grouped sheet — the sheet owns the card, so the
+   row brings no chrome of its own beyond the `group` that drives its chevron. #}
+{% set subfold = "group/row" %}
+
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-5">
+
+  {% if mailbox_msg == 'resubscribed' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Auto-draft re-enabled — new mail will now be drafted automatically.</div>
+  {% elif mailbox_msg == 'disconnected' %}
+  <div class="rounded-lg bg-slate-100 border border-slate-200 px-4 py-3 text-sm text-slate-700">Mailbox disconnected.</div>
+  {% elif mailbox_msg == 'suberror' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Couldn't re-enable auto-draft from the saved sign-in. Try Disconnect, then Connect again.</div>
+  {% endif %}
+
+  {# Confirmations live at the TOP (Kris 2026-09-01). Saving redirects to
+     /app/settings?saved=1 and the browser lands you at the top of the page —
+     but "Saved." was rendered down inside the agent sheet and "Portal settings
+     saved." further down still, so the one moment the message existed for was
+     the one moment you couldn't see it. Now they retire after seven seconds
+     (src/app/static/flash.js), which only works if you saw them.
+
+     The portal's ERROR messages stay down beside the portal form: those are
+     not "what happened", they're "fix this field". #}
+  {% if saved %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+    Saved. New drafts will use these instructions.
+  </div>
+  {% endif %}
+
+  {% if portal_saved %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Portal settings saved.</div>
+  {% endif %}
+
+  {% if voice_msg == 'discarded' %}
+  <div data-flash class="rounded-lg bg-slate-100 border border-slate-200 px-4 py-3 text-sm text-slate-700">
+    Learned profile discarded. Your voice settings are unchanged.
+  </div>
+  {% endif %}
+
+  <!-- Free-trial status (hidden once on a paid/grandfathered plan, and for a comp:
+       free access granted by the operator is not a trial, and it used to fall to
+       the "Your free trial has ended" branch while the agent kept running). -->
+  {% if trial and trial.status not in ('converted', 'comped') %}
+  <section class="rounded-xl border p-4 flex items-center justify-between gap-3 flex-wrap
+    {% if trial.active %}bg-slate-50 border-slate-200{% else %}bg-amber-50 border-amber-200{% endif %}">
+    <div class="text-sm">
+      {% if trial.status == 'active' %}
+      <p class="font-semibold text-navy">Free trial — {{ trial.days_remaining }} day{{ '' if trial.days_remaining == 1 else 's' }} left</p>
+      <p class="text-slate-500">Every feature is open during your trial, the Concierge included. {{ "{:,}".format(trial.emails_used) }} of {{ "{:,}".format(trial.cap) }} emails used.</p>
+      {% elif trial.status == 'grace_active' %}
+      <p class="font-semibold text-navy">Trial grace period — {{ trial.days_remaining }} day{{ '' if trial.days_remaining == 1 else 's' }} left</p>
+      <p class="text-slate-500">Choose a plan to keep your agent running without interruption.</p>
+      {% else %}
+      <p class="font-semibold text-amber-900">Your free trial has ended{% if trial.status == 'expired_cap' %} — {{ "{:,}".format(trial.cap) }}-email limit reached{% endif %}.</p>
+      <p class="text-amber-800">{% if gate_on %}Choose a plan to switch the agent back on.{% else %}Choose a plan when you're ready — your agent is still running.{% endif %}</p>
+      {% endif %}
+    </div>
+    <a href="/billing/plans" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition whitespace-nowrap">View plans</a>
+  </section>
+  {% endif %}
+
+  <!-- Workspace hub (menu diet, Kris 2026-08-30): the doors that left the
+       masthead menu live here as one ruled sheet — the menu keeps the daily
+       surfaces, Settings keeps the configuration. -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Workspace</p>
+    </div>
+    <div class="divide-y divide-slate-200">
+      <a href="/app/knowledge" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Knowledge</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">The prices, policies and FAQs every reply is grounded in</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      {# People (docs/plan-people.md, Kris 2026-09-13): a row that opens the
+         list, the Mailboxes idiom — a fold cannot hold a person's role, their
+         doors and their status once there are three of them. #}
+      {% if people_admin %}
+      <a href="/app/people" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition" data-people-row>
+        <span class="text-sm font-medium text-navy flex-none">People</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">{{ people_face }}</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      {% endif %}
+      {% if multimailbox %}
+      <a href="/app/mailboxes" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Mailboxes</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Every connected inbox and its own agent settings</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      {% endif %}
+      <a href="/app/usage" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Usage</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Emails handled this billing month</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      <a href="/app/agent-log" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Agent log</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Everything the agents did, action by action</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      <a href="/app/requests" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Requests &amp; reports</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Ask for a feature or report an issue</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      <a href="/app/ignored" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Ignored contacts</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Senders the agent skips</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      {# Refer a business — the in-app door to /partner (the funnel gap closed
+         2026-07-26 stays closed; it just lives here now, not in the menu). #}
+      <a href="/partner" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Refer a business</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Earn <span class="font-medium text-emerald-700">{{ partner_rate_pct }}%</span> of every subscription you refer, for life</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      {# Arrival and exit as a matched pair (research 09-01): you arrive with
+         two CSVs, you can always leave with one zip. #}
+      <a href="/app/import" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Bring your data</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Coming from Xero? Contacts and open invoices in one upload — unpaid ones join the chase list</span>
+        <span class="text-slate-400">→</span>
+      </a>
+      {# The exit door (research 09-01: no vendor is praised for a dignified
+         exit). A plain GET download, on a route that works even when the
+         subscription doesn't — that last part IS the feature. #}
+      <a href="/app/export.zip" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Leave with everything</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Contacts, invoices, quotes, diary and knowledge in one download — works even if you cancel</span>
+        <span class="text-slate-400">&darr;</span>
+      </a>
+    </div>
+  </section>
+
+  {# Configuration (Kris 2026-09-01: "we should also house the Config options
+     here"). Every module keeps its own settings page — the CRM's stages and
+     custom fields, the diary's Requirements, the pricing tables — and each was
+     reachable only from inside that module. Somebody looking for "where do I
+     configure this" had no reason to think Settings was not the place, because
+     it is.
+
+     Links out rather than absorbing them: these pages are big and module-owned,
+     and the Workspace sheet above already establishes that a row here can be a
+     door. Each row appears only when its module is on, so a tenant sees the
+     configuration they actually have. #}
+  {% if scheduling_cfg or crm_on or tms_on or fsm_on %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-1.5 bg-slate-50 border-b border-slate-200">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Configuration</p>
+    </div>
+    <div class="divide-y divide-slate-200">
+      {% if scheduling_cfg %}
+      <a href="/app/diary/intake" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Booking requirements</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">What the agent asks every customer before it books</span>
+        <span class="text-slate-400">&rarr;</span>
+      </a>
+      {% endif %}
+      {% if crm_on %}
+      <a href="/app/crm/settings" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">CRM</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Deal stages, quiet-contact window and exports</span>
+        <span class="text-slate-400">&rarr;</span>
+      </a>
+      <a href="/app/crm/fields" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">CRM fields</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">The details the agent pulls out of every email</span>
+        <span class="text-slate-400">&rarr;</span>
+      </a>
+      {% endif %}
+      <a href="/app/invoices/settings" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Getting paid</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Deposits, balances, invoices and how customers pay you</span>
+        <span class="text-slate-400">&rarr;</span>
+      </a>
+      {% if tms_on %}
+      <a href="/app/tms/pricing" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Transport pricing</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Rates the agent quotes from</span>
+        <span class="text-slate-400">&rarr;</span>
+      </a>
+      {% endif %}
+      {% if fsm_on %}
+      <a href="/app/fsm/pricing" class="flex items-baseline gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+        <span class="text-sm font-medium text-navy flex-none">Job pricing</span>
+        <span class="text-xs text-slate-400 flex-1 min-w-0 truncate">Job types, rates and call-out charges</span>
+        <span class="text-slate-400">&rarr;</span>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Appearance: light/dark/system, saved per device (localStorage — no server
+       round-trip). _theme_head.html reads the same key pre-paint on every page. -->
+  <!-- ── Your agent (Kris 2026-09-01) ────────────────────────────────────────
+       Voice auto-learning, the paragraph explaining what the rest of it is for,
+       and every setting that paragraph was introducing, in ONE ruled sheet on
+       the Workspace pattern. They were three loose things in a row before —
+       a card, an orphaned paragraph, then five more cards — and nothing said
+       they belonged together or that the paragraph governed them.
+
+       Voice auto-learning carries its own forms and so stays a sibling of the
+       big settings form rather than a child of it: forms cannot nest. -->
+  {# The sheet folds too (Kris 2026-09-01). It is the tallest thing on the page
+     by a distance — six rows and a save footer — and once its settings are
+     settled it is a wall you scroll past to reach everything below it.
+
+     Closed by default (Kris 2026-09-01), EXCEPT while something inside is
+     unfinished setup — a collapsed group that hides its own amber row would
+     undo the point of flagging it. data-needs then stops the fold memory
+     closing it again. #}
+  {% set agent_needs = cfg.draft_hold or (not cfg.voice_profile_source in ('auto_learned', 'hybrid')
+                       and not cfg.voice_learning_ignored
+                       and cfg.voice_learning_status not in ('running', 'ready')) %}
+  <details class="group bg-white rounded-xl border border-slate-200 overflow-hidden"{% if agent_needs %} open{% endif %}>
+    <summary data-fold="Your agent" data-group{% if agent_needs %} data-needs{% endif %} class="px-4 py-2 bg-slate-50 border-b border-slate-200 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-100 transition">
+      <p class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+        <span class="flex-1">Your agent</span>
+        <span class="flex-none text-slate-300 transition group-open/row:rotate-90">&rsaquo;</span>
+      </p>
+      <p class="mt-0.5 text-xs text-slate-400 leading-relaxed">
+        How it sounds, what it may say, and whether it sends by itself. BLAM8's core rules —
+        never invent prices or commitments, always escalate flagged topics — take precedence
+        over everything here.{% if enterprise %} These are your <span class="font-medium">company-wide
+        defaults</span>; each mailbox can override them under
+        <a href="/app/mailboxes" class="text-brand hover:underline">Mailboxes</a>.{% endif %}
+      </p>
+    </summary>
+    <div class="divide-y divide-slate-200">
+  {% if connected %}
+  {# A run that finished and is waiting to be applied is the only state here
+     that wants the operator, so it is the only one that opens itself — and the
+     'running' state has to be open for its poller's spinner to mean anything. #}
+  {# Voice is one of onboarding.STEPS, and it is the step most likely to be left
+     undone — a new tenant often has too little sent mail for the learner to
+     work with, so it quietly fails and nothing mentions it again. It is a
+     PENDING ONBOARDING STEP here until it is either finished or dismissed
+     (Kris 2026-09-01), and a pending step opens itself and wears the amber dot
+     like everything else on this page that wants you.
+
+     Dismissing gets its own column rather than a fake status:
+     voice_learning_ignored records what the PERSON decided,
+     voice_learning_status what the LEARNER did. Writing 'accepted' to fake a
+     finish would have lied to the onboarding progress and to the drafter's
+     provenance label at the same time. #}
+  {% set voice_done = cfg.voice_profile_source in ('auto_learned', 'hybrid') %}
+  {% set voice_pending = not voice_done and not cfg.voice_learning_ignored
+                         and cfg.voice_learning_status not in ('running', 'ready') %}
+  <details class="{{ subfold }}" {% if cfg.voice_learning_status in ('running', 'ready') or voice_pending %}open{% endif %}>
+    {% if cfg.voice_learning_status == 'running' %}
+      {{ face("Voice auto-learning", "Analysing your sent emails…") }}
+    {% elif cfg.voice_learning_status == 'ready' %}
+      {{ face("Voice auto-learning", "Analysed %d sent emails — waiting for you to apply them" % (cfg.voice_emails_analysed or 0), needs=true) }}
+    {% elif cfg.voice_profile_source == 'auto_learned' %}
+      {{ face("Voice auto-learning", "Learned from your sent emails") }}
+    {% elif cfg.voice_profile_source == 'hybrid' %}
+      {{ face("Voice auto-learning", "Learned from your sent emails, then adjusted by hand") }}
+    {% elif voice_pending %}
+      {{ face("Voice auto-learning", "Setup step not finished — the agent is writing in the voice you typed", needs=true) }}
+    {% else %}
+      {{ face("Voice auto-learning", "Skipped — the agent uses the voice you type below") }}
+    {% endif %}
+    <div class="{{ foldbody }} space-y-3">
+    {# The face carries the state and goes quiet on open, so the body has to say
+       it — otherwise the 'learned' states open onto a description and a discard
+       link with nothing telling you what was learned. #}
+    {% if cfg.voice_profile_source in ('auto_learned', 'hybrid') and cfg.voice_learning_status not in ('running', 'ready') %}
+    <p class="flex items-start gap-2 text-sm">
+      <span class="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-emerald-500"></span>
+      <span class="text-navy font-medium">Learned from your sent emails{% if cfg.voice_profile_source == 'hybrid' %}, then adjusted by hand{% endif %}</span>
+    </p>
+    {% endif %}
+    <p class="text-sm text-slate-400">BLAM8 reads your recent sent emails and learns how you write — emails are analysed, never stored.</p>
+    {% if cfg.voice_learning_status == 'running' %}
+    <div class="flex items-center gap-3 text-sm text-slate-600">
+      <span class="h-4 w-4 rounded-full border-2 border-brand border-t-transparent animate-spin"></span>
+      Analysing your sent emails — this page will update when it's done.
+    </div>
+    <script>
+      (function poll() {
+        setTimeout(function () {
+          fetch("/app/settings/voice-status").then(function (r) { return r.json(); })
+            .then(function (d) { d.status === "running" ? poll() : window.location.replace("/app/settings"); })
+            .catch(poll);
+        }, 2500);
+      })();
+    </script>
+    {% elif cfg.voice_learning_status == 'ready' %}
+    <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800 space-y-2">
+      <p>Analysed {{ cfg.voice_emails_analysed or 0 }} of your sent emails. Applying will fill the tone, sign-off and “how you write” fields below from what was learned.</p>
+      {% if cfg.voice_sample_draft %}<div class="rounded bg-white border border-emerald-200 p-3 text-slate-700 whitespace-pre-wrap text-xs">{{ cfg.voice_sample_draft }}</div>{% endif %}
+      <form method="post" action="/app/settings/voice-apply">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Apply learned voice</button>
+      </form>
+    </div>
+    {% else %}
+    <form method="post" action="/app/settings/voice-learn" class="text-center">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-navy hover:border-slate-400 transition">Learn my voice from sent emails</button>
+      {% if cfg.voice_learning_status == 'insufficient' %}
+      <p class="mt-2 text-xs text-slate-500">Last run: not enough sent emails yet — try again once you've sent a few more.</p>
+      {% elif cfg.voice_learning_status == 'failed' %}
+      <p class="mt-2 text-xs text-slate-500">Last run didn't complete — you can try again.</p>
+      {% endif %}
+    </form>
+    {% endif %}
+    {# The two ways to stop this asking, side by side, and the wording has to
+       keep them apart because they are not the same thing: Discard forgets what
+       was LEARNED, Skip forgets that the STEP was outstanding. A tenant with too
+       little sent mail to learn from needs the second one and never had it,
+       which is why the step could previously only be ignored by ignoring it. #}
+    <div class="pt-3 border-t border-slate-100 space-y-2">
+      <div class="flex items-center justify-center gap-5 flex-wrap">
+        {% if cfg.voice_profile or cfg.voice_learning_status %}
+        <form method="post" action="/app/settings/voice-discard" onsubmit="return confirm('Discard the learned profile? Your voice settings stay exactly as they are — only what was learned from your sent emails is forgotten.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="text-xs font-medium text-slate-400 hover:text-rose-600 transition underline underline-offset-2">Discard learned profile</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/app/settings/voice-ignore">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="ignored" value="{% if cfg.voice_learning_ignored %}0{% else %}1{% endif %}">
+          <button class="text-xs font-medium text-slate-400 hover:text-navy transition underline underline-offset-2">{% if cfg.voice_learning_ignored %}Remind me about this step{% else %}Skip this step{% endif %}</button>
+        </form>
+      </div>
+      <p class="text-center text-xs text-slate-400">
+        {% if cfg.voice_learning_ignored %}Skipped — it won't be listed as unfinished setup.{% else %}Discarding forgets the learned style and sample. Skipping only stops this being listed as unfinished setup.{% endif %}
+      </p>
+    </div>
+    </div>
+  </details>
+  {% endif %}
+
+  <form method="post" action="/app/settings">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <div class="divide-y divide-slate-200">
+
+    {% set label = "block text-sm font-semibold text-navy" %}
+    {% set help = "text-xs text-slate-400 mt-0.5" %}
+    {# `text-field` — its own token (config/tailwind/tailwind.config.js), because the two themes
+   want opposite moves. slate-700 remaps to rgb(39,50,68) in light, near enough
+   black for a page made of boxes you type into; but its DARK value is already
+   the right weight. Stepping down the shared ladder softened light by too
+   little to see and darkened dark for nothing — slate-500, the shade that
+   actually reads grey, drops to 3.5:1 on the dark field and fails AA. So the
+   token moves light to 5.5:1 and leaves dark at 6.7:1. #}
+{% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-field leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+
+    <!-- Sending mode -->
+    {# Never blank — the checkbox has a default either way, so this one always
+       reads as a settled value and never opens itself. Full-auto is the state
+       worth seeing without opening anything, so it is what the face says. #}
+    {# A ladder, not a switch (Kris 2026-09-01). Onboarding used to finish and
+       the agent would start drafting the same minute — before the owner had
+       walked their loaded history and marked the newsletters, suppliers and
+       no-reply robots they never want answered. Tokens spent on mail that was
+       never going to be replied to, and a first impression made of drafts
+       nobody asked for.
+
+       So a new tenant starts on the bottom rung and climbs: not yet → drafts I
+       approve → full-auto. The bottom rung is the last step of onboarding, so
+       it wears the amber dot and opens itself like every other unfinished
+       setup step on this page. #}
+    <details id="sending-mode" class="{{ subfold }}" {% if cfg.draft_hold %}open{% endif %}>
+      {% if cfg.draft_hold %}
+        {{ face("Sending mode", "Not drafting yet — finish with your inbox, then switch it on", needs=true) }}
+      {% elif cfg.auto_send %}
+        {{ face("Sending mode", "Full-auto — replies go straight to customers" ~ (", without the AI disclosure line" if not (cfg.ai_disclosure is not defined or cfg.ai_disclosure is none or cfg.ai_disclosure) else "")) }}
+      {% else %}
+        {{ face("Sending mode", "Every reply waits for you to approve it") }}
+      {% endif %}
+      <div class="{{ foldbody }} space-y-4">
+
+      {# One control for the whole ladder, so the rungs are visibly ordered and
+         a tenant can see where they are on it. The old lone "Full-auto"
+         checkbox could only say on or off, which left the held state with
+         nowhere to live. #}
+      {% set mode = 'hold' if cfg.draft_hold else ('auto' if cfg.auto_send else 'review') %}
+      <div class="space-y-3">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="radio" name="send_mode" value="hold" {% if mode == 'hold' %}checked{% endif %}
+                 class="mt-0.5 h-4 w-4 border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span>
+            <span class="block text-sm font-semibold text-navy">Not yet — I'm still going through my inbox</span>
+            <span class="block {{ help }} leading-relaxed">
+              Mail still arrives, threads and files as normal, and you can read and
+              triage all of it — the agent just doesn't write anything. Use this to
+              go through what's landed and
+              <a href="/app/ignored" class="text-brand hover:underline">ignore the senders</a>
+              you never want answered, before a single token is spent on them.
+            </span>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="radio" name="send_mode" value="review" {% if mode == 'review' %}checked{% endif %}
+                 class="mt-0.5 h-4 w-4 border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span>
+            <span class="block text-sm font-semibold text-navy">Draft replies for me to approve</span>
+            <span class="block {{ help }} leading-relaxed">
+              The agent writes the reply and waits. Nothing reaches a customer until
+              you press send. This is where most businesses stay.
+            </span>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="radio" name="send_mode" value="auto" {% if mode == 'auto' %}checked{% endif %}
+                 class="mt-0.5 h-4 w-4 border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span>
+            <span class="block text-sm font-semibold text-navy">Full-auto — send replies automatically</span>
+            <span class="block {{ help }} leading-relaxed">
+              The agent sends its reply immediately, with no review step. Only worth
+              turning on once you've read enough of its drafts to trust them.
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" name="ai_disclosure" value="1" {% if cfg.ai_disclosure is not defined or cfg.ai_disclosure is none or cfg.ai_disclosure %}checked{% endif %}
+               class="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+        <span>
+          <span class="block text-sm font-semibold text-navy">Disclose AI on auto-sent replies</span>
+          <span class="block {{ help }} leading-relaxed">
+            Adds a short line to replies the agent sends <span class="font-medium">by itself</span>, noting they were
+            written by an AI assistant. Replies you approve yourself never carry it. The EU AI Act
+            (from Aug 2026) requires this disclosure when AI replies to people directly — leave it
+            on unless none of your customers are in the EU.
+          </span>
+        </span>
+      </label>
+
+      <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+        {# "this" used to point at a lone checkbox; under three rungs it pointed at
+           nothing, so it names the rung. #}
+        <span class="font-semibold">Only pick full-auto once you're happy with the agent's drafts.</span>
+        Replies go straight to customers without anyone seeing them first. Emails that match your
+        escalation keywords are always held for review — never auto-sent.
+      </div>
+      </div>
+    </details>
+
+    {# Automated mail by kind (src/app/inbox_rules.py, Kris 2026-09-13: "generic
+       email ignorance… add it into Inbox settings so that it can be changed
+       to suit"). Three switches, on by default; saved with this form. #}
+    <details id="inbox-rules" class="{{ subfold }}">
+      {{ face("Automated mail", inbox_rules_summary) }}
+      <div class="{{ foldbody }} space-y-3">
+        <p class="{{ help }}">Mail of these kinds is filed under the Ignored filter the moment it lands — read it if you like, but the agent never writes a reply and never spends a token on it. Untick a kind to treat that mail like anyone else's.</p>
+        <input type="hidden" name="inbox_rules_present" value="1">
+        {% for key, rule in inbox_rules_all %}
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" name="ignore_{{ key }}" value="1" {% if inbox_rules_on[key] %}checked{% endif %}
+                 class="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+          <span>
+            <span class="block text-sm font-semibold text-navy">{{ rule.label }}</span>
+            <span class="block {{ help }} leading-relaxed">{{ rule.help }}</span>
+          </span>
+        </label>
+        {% endfor %}
+        <p class="{{ help }}">Got one wrong? Open it from the Ignored filter and draft a reply by hand, or ignore that sender for good under <a href="/app/ignored" class="text-brand hover:underline">Ignored contacts</a>.</p>
+      </div>
+    </details>
+
+    {% if routing_on %}
+    <!-- Transport planner (planner D6 — the auto ladder, mirroring auto_send) -->
+    <details class="{{ subfold }}">
+      {% if cfg.planner_auto_apply %}
+        {{ face("Transport planner", "Same-day vehicle moves apply themselves on Replan") }}
+      {% else %}
+        {{ face("Transport planner", "Every plan waits for you on the board") }}
+      {% endif %}
+      <div class="{{ foldbody }} space-y-4">
+
+      <label class="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" name="planner_auto_apply" value="1" {% if cfg.planner_auto_apply %}checked{% endif %}
+               class="mt-0.5 h-5 w-5 rounded border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
+        <span>
+          <span class="block text-sm font-semibold text-navy">Auto-apply safe plans</span>
+          <span class="block {{ help }} leading-relaxed">
+            When on, a plan whose moves ONLY shift bookings between vehicles on the
+            <span class="font-medium">same day</span> applies itself when you hit Replan, and the board says so.
+            Leave it off to review every plan first (the default).
+          </span>
+        </span>
+      </label>
+
+      <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-800 leading-relaxed">
+        <span class="font-semibold">The guardrails hold either way.</span>
+        A plan that would move a booking to a different date, split an order, or mix in anything
+        beyond same-day vehicle moves ALWAYS waits for your approval — never partially applied.
+        Every apply re-checks capacity in one transaction; if anything no longer fits, nothing moves.
+      </div>
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Identity & voice -->
+    {# The closed face reads back the three answers a person would recognise
+       their own agent by: what it calls itself, how it sounds, how it signs
+       off. The sign-off is flattened to one line — it is usually two. #}
+    {% set signline = (cfg.sign_off or '').replace('
+', ' ') %}
+    {% set idbits = [cfg.agent_name, cfg.tone, signline] | select | list %}
+    <details class="{{ subfold }}" {% if not idbits and not cfg.business_brief %}open{% endif %}>
+      {% if idbits and not signline %}
+        {{ face("Identity & voice", (idbits | join(" · ")) ~ " · no sign-off set", needs=true) }}
+      {% elif idbits %}
+        {{ face("Identity & voice", idbits | join(" · ")) }}
+      {% elif cfg.business_brief %}
+        {{ face("Identity & voice", cfg.business_brief) }}
+      {% else %}
+        {{ face("Identity & voice", "Nothing set — the agent has no name, tone or sign-off", needs=true) }}
+      {% endif %}
+      <div class="{{ foldbody }} space-y-5">
+      <p class="text-sm text-slate-400">Who the agent is and how it sounds.</p>
+
+      <div>
+        <label class="{{ label }}" for="business_brief">What your business does</label>
+        <p class="{{ help }}">One or two sentences — the agent uses this for context.</p>
+        <textarea id="business_brief" name="business_brief" rows="3" class="{{ field }}" placeholder="Describe what you do and who your customers are…">{{ cfg.business_brief or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="agent_name">What the agent calls itself</label>
+        <p class="{{ help }}">e.g. “the office team” or “Sarah from the office”. Leave blank to stay neutral.</p>
+        <input id="agent_name" name="agent_name" class="{{ field }}" value="{{ cfg.agent_name or '' }}" placeholder="the office team">
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="tone">Tone of voice</label>
+        <p class="{{ help }}">e.g. warm and professional · brisk and factual · friendly but concise.</p>
+        <input id="tone" name="tone" class="{{ field }}" value="{{ cfg.tone or '' }}" placeholder="warm and professional">
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="sign_off">Sign-off</label>
+        <p class="{{ help }}">How every reply ends. The agent uses this verbatim.</p>
+        <textarea id="sign_off" name="sign_off" rows="2" class="{{ field }}" placeholder="Kind regards,&#10;The team">{{ cfg.sign_off or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="voice_notes">How you write</label>
+        <p class="{{ help }}">Style notes the agent follows — auto-filled when BLAM8 learns your voice from sent emails; edit freely.</p>
+        <textarea id="voice_notes" name="voice_notes" rows="3" class="{{ field }}" placeholder="e.g. Short and friendly, first names, gets straight to the point.">{{ cfg.voice_notes or '' }}</textarea>
+      </div>
+      </div>
+    </details>
+
+    <!-- Rules & escalation -->
+    {# Four freeform boxes can't be read back verbatim in one line, so the face
+       counts them instead — how many rules are actually in force is the thing
+       you come to this section wanting to know. #}
+    {% set n_do = (cfg.do_list or '').splitlines() | map('trim') | select | list | length %}
+    {% set n_never = (cfg.never_do or '').splitlines() | map('trim') | select | list | length %}
+    {% set n_esc = (cfg.escalation or '').replace(',', '
+').splitlines() | map('trim') | select | list | length %}
+    {% set rulebits = [
+         ("%d always-do" % n_do) if n_do else "",
+         ("%d never-do" % n_never) if n_never else "",
+         ("%d escalation word%s" % (n_esc, '' if n_esc == 1 else 's')) if n_esc else "",
+         "your own notes" if cfg.custom_instructions else "",
+       ] | select | list %}
+    <details class="{{ subfold }}" {% if not rulebits %}open{% endif %}>
+      {% if rulebits %}
+        {{ face("Rules & escalation", rulebits | join(" · ")) }}
+      {% else %}
+        {{ face("Rules & escalation", "No rules yet — nothing is held back for a human", needs=true) }}
+      {% endif %}
+      <div class="{{ foldbody }} space-y-5">
+      <p class="text-sm text-slate-400">The dos, the don'ts, and what a human must always see.</p>
+
+      <div>
+        <label class="{{ label }}" for="do_list">Always do</label>
+        <p class="{{ help }}">Positive guidance, one per line.</p>
+        <textarea id="do_list" name="do_list" rows="3" class="{{ field }}" placeholder="Confirm the delivery postcode before quoting&#10;Offer a callback for anything urgent">{{ cfg.do_list or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="never_do">Never do</label>
+        <p class="{{ help }}">Things the agent must never promise or say.</p>
+        <textarea id="never_do" name="never_do" rows="3" class="{{ field }}" placeholder="Never quote a firm price&#10;Never confirm a delivery date without ops sign-off">{{ cfg.never_do or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="escalation">Always escalate to a human</label>
+        <p class="{{ help }}">Keywords or topics, comma- or line-separated. A matching email is flagged for review instead of auto-handled.</p>
+        <textarea id="escalation" name="escalation" rows="2" class="{{ field }}" placeholder="complaint, legal, cancel, refund, accident">{{ cfg.escalation or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="alert_words">Always tell me when an email mentions</label>
+        <p class="{{ help }}">Words that should reach you at once on Today, even when the reply goes out by itself — safety or emergency words for your line of work. Comma- or line-separated.</p>
+        <textarea id="alert_words" name="alert_words" rows="2" class="{{ field }}" placeholder="e.g. emergency, injured, not breathing, fire, flood">{{ cfg.alert_words or '' }}</textarea>
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="custom_instructions">Anything else</label>
+        <p class="{{ help }}">Freeform instructions that don't fit the boxes above.</p>
+        <textarea id="custom_instructions" name="custom_instructions" rows="4" class="{{ field }}" placeholder="If someone asks about weekend collections, mention we only run Mon–Fri…">{{ cfg.custom_instructions or '' }}</textarea>
+      </div>
+      </div>
+    </details>
+
+    <div data-save-row class="p-5 flex items-center gap-3 flex-wrap">
+      <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition whitespace-nowrap">Save settings</button>
+      <span class="text-xs text-slate-400">Applies to the next draft the agent writes — folded sections included.</span>
+    </div>
+    </div>
+  </form>
+    </div>
+  </details>
+
+  {# No fold (Kris 2026-09-01: "it's an unneccessary click to show the 2
+     buttons"). Every other section folds because its body is a form you edit
+     and save; this one's whole body is two buttons that act the moment you
+     press them. Hiding a control that IS its own value behind a disclosure
+     costs a tap and shows you nothing you didn't already know.
+
+     So the control sits in the row and reads as the value — the way the other
+     faces state theirs in words. It's the one setting the server can't know
+     (the theme is in localStorage), so paint() fills it in on load. #}
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="flex items-center gap-3 px-5 py-3">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-navy">Appearance</p>
+        <p class="text-xs text-slate-400 truncate">Saved on this device only</p>
+      </div>
+      {# A sliding thumb rather than two buttons that fill in: the movement is
+         the feedback, and it leaves ONE lit element on the row instead of a
+         hard-edged blue block. The thumb is bg-white on a bg-slate-100 track —
+         both flip with the theme (config/tailwind/tailwind.config.js), and in dark the track
+         becomes the page colour under a panel-coloured thumb, so it still
+         reads as raised rather than inverting into a bright slab. #}
+      <div id="theme-picker" role="radiogroup" aria-label="Appearance"
+           class="relative flex-none flex items-center rounded-full bg-slate-100 p-0.5 text-xs font-semibold">
+        <span id="theme-thumb" aria-hidden="true"
+              class="absolute inset-y-0.5 left-0.5 w-[calc(50%-2px)] rounded-full bg-white border border-slate-200 shadow-sm transition-transform duration-200 ease-out motion-reduce:transition-none"></span>
+        <button type="button" role="radio" data-theme-choice="light"
+                class="relative z-10 w-14 rounded-full py-1.5 transition-colors">Light</button>
+        <button type="button" role="radio" data-theme-choice="dark"
+                class="relative z-10 w-14 rounded-full py-1.5 transition-colors">Dark</button>
+      </div>
+    </div>
+  </section>
+  {# Ripples (Kris 2026-10-16): a soft moving water background behind every page, off until it is switched on. Like the theme it
+     is one more setting the server can't know (it lives in localStorage), so the script below paints it on load, and
+     _theme_head.html reads the same key pre-paint on every page. Its own row beside Appearance, not a third theme: it works
+     with Light and with Dark. #}
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="flex items-center gap-3 px-5 py-3">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-navy">Ripples</p>
+        <p class="text-xs text-slate-400 truncate">A soft moving water background &middot; saved on this device only</p>
+      </div>
+      <button id="water-switch" type="button" role="switch" aria-checked="false" aria-label="Ripples"
+              class="relative flex-none h-7 w-12 rounded-full bg-slate-100 p-0.5 transition-colors motion-reduce:transition-none">
+        <span id="water-thumb" aria-hidden="true"
+              class="block h-6 w-6 rounded-full bg-white border border-slate-200 shadow-sm transition-transform duration-200 ease-out motion-reduce:transition-none"></span>
+      </button>
+    </div>
+  </section>
+  <script>
+    (function () {
+      var sw = document.getElementById('water-switch');
+      var thumb = document.getElementById('water-thumb');
+      function isOn() {
+        try { return localStorage.getItem('blam8-water') === 'on'; } catch (e) { return false; }
+      }
+      function paint(on) {
+        sw.setAttribute('aria-checked', on ? 'true' : 'false');
+        sw.classList.toggle('bg-brand', on);
+        sw.classList.toggle('bg-slate-100', !on);
+        thumb.style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+      }
+      function set(on) {
+        try { localStorage.setItem('blam8-water', on ? 'on' : 'off'); } catch (e) {}
+        if (window.blam8ApplyWater) window.blam8ApplyWater(on ? 'on' : 'off');
+        paint(on);
+      }
+      sw.addEventListener('click', function () { set(!isOn()); });
+      paint(isOn());
+    })();
+  </script>
+  {# Concierge opens as (Kris 2026-10-17): the masthead Concierge button opens the pop-up or the full page. Per device
+     (localStorage, like Ripples); only a computer (a fine pointer that can hover, not the screen width) gets the choice, so a
+     phone or tablet shows it greyed out and a value saved on another device does nothing there (concierge_panel.js). #}
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="flex items-center gap-3 px-5 py-3">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-semibold text-navy">Concierge opens as</p>
+        <p id="cz-open-as-hint" class="text-xs text-slate-400">Pop-up or the full page &middot; saved on this device only</p>
+      </div>
+      <div id="cz-open-as" role="radiogroup" aria-label="Concierge opens as" class="flex-none flex rounded-full bg-slate-100 p-0.5 text-xs font-semibold">
+        <button type="button" role="radio" data-open-as="popup" class="rounded-full px-3 py-1.5 transition-colors">Pop-up</button>
+        <button type="button" role="radio" data-open-as="full" class="rounded-full px-3 py-1.5 transition-colors">Full screen</button>
+      </div>
+    </div>
+  </section>
+  <script>
+    (function () {
+      var KEY = 'blam8.conciergeOpensAs';
+      var wrap = document.getElementById('cz-open-as');
+      var btns = wrap.querySelectorAll('[data-open-as]');
+      var hint = document.getElementById('cz-open-as-hint');
+      var computer = false;
+      try { computer = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
+      function saved() {
+        try { return localStorage.getItem(KEY) === 'full' ? 'full' : 'popup'; } catch (e) { return 'popup'; }
+      }
+      function paint() {
+        // On a phone the saved value has no effect, so the control shows Pop-up and is greyed out.
+        var choice = computer ? saved() : 'popup';
+        btns.forEach(function (b) {
+          var on = b.getAttribute('data-open-as') === choice;
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+          b.disabled = !computer;
+          b.classList.toggle('bg-white', on);
+          b.classList.toggle('text-navy', on);
+          b.classList.toggle('text-slate-400', !on);
+          b.classList.toggle('opacity-50', !computer);
+          b.classList.toggle('cursor-not-allowed', !computer);
+        });
+        hint.textContent = computer ? 'Pop-up or the full page · saved on this device only' : 'Full screen is for computers';
+      }
+      btns.forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (!computer) return;
+          try { localStorage.setItem(KEY, b.getAttribute('data-open-as') === 'full' ? 'full' : 'popup'); } catch (e) {}
+          paint();
+        });
+      });
+      paint();
+    })();
+  </script>
+  <script>
+    (function () {
+      var wrap = document.getElementById('theme-picker');
+      var btns = wrap.querySelectorAll('[data-theme-choice]');
+      var thumb = document.getElementById('theme-thumb');
+      var byChoice = {};
+      btns.forEach(function (b) { byChoice[b.getAttribute('data-theme-choice')] = b; });
+      function paint(choice) {
+        btns.forEach(function (b) {
+          var on = b.getAttribute('data-theme-choice') === choice;
+          b.classList.toggle('text-navy', on);
+          b.classList.toggle('text-slate-400', !on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+          b.tabIndex = on ? 0 : -1;      // one stop for the group, arrow keys inside
+        });
+        // Its own width, so it lands exactly on the other half at any font size.
+        thumb.style.transform = choice === 'dark' ? 'translateX(100%)' : 'translateX(0)';
+      }
+      function current() {
+        try {
+          return localStorage.getItem('blam8-theme') === 'dark' ? 'dark' : 'light';
+        } catch (e) { return 'light'; }
+      }
+      function pick(choice) {
+        try { localStorage.setItem('blam8-theme', choice); } catch (e) {}
+        if (window.blam8ApplyTheme) window.blam8ApplyTheme(choice);
+        paint(choice);
+      }
+      btns.forEach(function (b) {
+        b.addEventListener('click', function () {
+          pick(b.getAttribute('data-theme-choice'));
+        });
+      });
+      // A radiogroup is one tab stop; the arrows move within it and choose as
+      // they go, which is what a segmented control does everywhere else.
+      wrap.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        var next = current() === 'dark' ? 'light' : 'dark';
+        pick(next);
+        byChoice[next].focus();
+      });
+      paint(current());
+    })();
+  </script>
+
+  <!-- Install BLAM8 (PWA) — hidden until push.js reveals it: beforeinstallprompt
+       fired (installable here, not yet installed), or iOS where install lives in
+       Share → "Add to Home Screen". Clicking the card triggers the prompt; it was
+       moved here from the burger menu (Julius 2026-07-26 — menu got long). -->
+  <section id="install-app" class="hidden bg-white rounded-xl border border-slate-200 p-5 cursor-pointer hover:border-brand/40 transition">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-3">
+        <img src="/static/icons/icon-96.png" alt="" class="h-10 w-10 rounded-xl flex-none">
+        <div>
+          <p class="font-semibold text-navy">Install BLAM8 on this device</p>
+          <p class="text-sm text-slate-400">Its own window, a dock/home-screen icon, and draft-ready notifications.</p>
+        </div>
+      </div>
+      <span class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Install</span>
+    </div>
+  </section>
+
+  <!-- Mailbox connection -->
+  {% if enterprise %}
+  <details class="{{ fold }}" {% if not mailbox_count %}open{% endif %}>
+    {{ face("Mailboxes",
+            "%d mailbox%s connected" % (mailbox_count, '' if mailbox_count == 1 else 'es'),
+            needs=not mailbox_count) }}
+    <div class="{{ foldbody }} space-y-3">
+      <p class="text-sm font-semibold text-navy">{{ mailbox_count }} mailbox{{ '' if mailbox_count == 1 else 'es' }} connected</p>
+      <p class="text-sm text-slate-400">This account runs multiple mailboxes, each with its own agent persona and knowledge on top of the company-wide settings below.</p>
+      <a href="/app/mailboxes" class="inline-block rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Manage mailboxes</a>
+    </div>
+  </details>
+  {% else %}
+  {# Not connected is the one state on this page that stops the product working
+     at all, so it never folds away — it opens itself and says so in amber. #}
+  <details class="{{ fold }}" {% if not connected or not (provider == 'google' or auto_draft_active) %}open{% endif %}>
+    {# "Auto-draft active" and the go-live hold are two different facts with one
+       name between them, and the fold said the wrong one (Kris 2026-09-01: "I
+       changed the draft reply mode but the Mailbox still shows Auto-draft
+       active?"). The mailbox WATCH being live means new mail reaches us. It
+       says nothing about whether a reply gets written — that is Sending mode.
+       Held, the honest sentence is that mail is arriving and nothing is being
+       drafted, so say that here rather than leaving the two to contradict each
+       other on the same screen. #}
+    {% if connected %}
+      {% if cfg.draft_hold %}
+        {{ face("Mailbox connection", (mailbox or 'Connected mailbox') ~ " · receiving mail, not drafting") }}
+      {% elif provider == 'google' or auto_draft_active %}
+        {{ face("Mailbox connection", (mailbox or 'Connected mailbox') ~ " · auto-draft active") }}
+      {% else %}
+        {{ face("Mailbox connection", (mailbox or 'Connected mailbox') ~ " · auto-draft inactive, the mailbox watch expired", needs=true) }}
+      {% endif %}
+    {% else %}
+      {{ face("Mailbox connection", "No mailbox connected — the agent has nothing to read", needs=true) }}
+    {% endif %}
+    <div class="{{ foldbody }} space-y-4">
+    {% if connected %}
+    {# The address, IN FULL (Kris 2026-09-01). It had been left to the closed
+       face on the grounds that repeating it was duplication — but the face
+       truncates on a phone ("admin.blam8@gmail.c…"), so opening the row showed
+       you everything except the one fact you opened it for. A face that
+       summarises and a body that states it whole is the fold working as
+       intended. break-all because an email address is unbreakable text and a
+       long one would otherwise push the card past the edge of the screen.
+
+       The explainer that used to head this body has moved into the
+       not-connected branch. Once the address and its state are in front of you,
+       "the inbox BLAM8 monitors, drafts for and sends from" is defining a thing
+       you are already looking at; before you have connected one, it is the
+       whole point. #}
+    <div>
+      <p class="text-sm font-semibold text-navy break-all">{{ mailbox or 'Connected mailbox' }}</p>
+      {% if cfg.draft_hold %}
+      {# Slate, not amber: the hold is a decision, not a fault, and Sending mode
+         already carries the one amber flag for it. Two amber rows for one state
+         would read as two problems. #}
+      <p class="mt-1.5 flex items-start gap-2 text-xs text-slate-500">
+        <span class="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-slate-400"></span>
+        <span>Mail is arriving and being filed as normal, but nothing is drafted —
+          Sending mode is set to <span class="font-medium text-navy">Not yet</span>.</span>
+      </p>
+      {% elif provider == 'google' or auto_draft_active %}
+      <p class="mt-1.5 flex items-start gap-2 text-xs text-slate-500">
+        <span class="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-emerald-500"></span>
+        <span>Auto-draft active — new mail is drafted automatically{% if provider == 'google' %}, checked every couple of minutes{% endif %}.</span>
+      </p>
+      {% else %}
+      <p class="mt-1.5 flex items-start gap-2 text-xs text-amber-700">
+        <span class="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-amber-500"></span>
+        <span>Auto-draft inactive — the mailbox watch has expired, so nothing is drafted until it's renewed.</span>
+      </p>
+      {% endif %}
+      {% set backlog_settings = true %}
+      {% include "_backlog_status.html" %}
+      <script src="/static/backlog_status.js?v={{ asset_rev }}" defer></script>
+    </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        {% if provider != 'google' and not auto_draft_active %}
+        <form method="post" action="/oauth/resubscribe">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Re-enable auto-draft</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/oauth/disconnect" onsubmit="return confirm('Disconnect this mailbox? BLAM8 will stop reading and drafting until you reconnect.');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:border-rose-400 hover:text-rose-600 transition">Disconnect</button>
+        </form>
+      </div>
+
+    {# A second inbox was reachable only from /app/mailboxes, a door that appears
+       in the Workspace list described as "every connected inbox and its own
+       agent settings" — which never says you can add one. Say it here, where
+       the mailbox you already have is.
+
+       The price is the headline £39; the exact arithmetic against THIS tenant's
+       plan is the confirm step's job (/app/mailboxes/add), which is where the
+       money is committed. And the link only ever goes to that step, never to
+       /oauth/connect?mode=add: that URL silently degrades to mode=replace for a
+       tenant who can't add, so handing it to a trial would swap their only
+       mailbox instead of adding one. A tenant who can't add is sent to the
+       plans page and nowhere near it. #}
+    <div class="border-t border-slate-200 pt-4">
+      {# The allowance is a live number, so wherever it is quoted it links to
+         the page that holds it — same as the confirm step does (Kris
+         2026-09-01). That cost the whole-row tap target: this WAS one <a> to
+         the add page, and an <a> cannot nest inside an <a> — the browser closes
+         the outer one early and the markup silently stops meaning what it says.
+         Two labelled links side by side instead, which is also the more honest
+         row: they go to different places. #}
+      {% if multimailbox %}
+      <div class="flex items-baseline gap-3">
+        <a href="/app/mailboxes/add" class="text-sm font-medium text-brand flex-none hover:underline">Add a mailbox &rarr;</a>
+        <span class="flex-1 min-w-0 text-xs text-slate-400">£{{ extra_mailbox_gbp }}/month, and it adds {{ "{:,}".format(extra_mailbox_emails) }} to your
+          <a href="/app/usage" class="text-brand hover:underline">monthly allowance</a>.</span>
+      </div>
+      {% else %}
+      <p class="text-xs text-slate-400">
+        Running a second inbox — orders@, accounts@ — is
+        <a href="/billing/plans" class="text-brand hover:underline">available on a paid plan</a>
+        at £{{ extra_mailbox_gbp }}/month each, and each one adds {{ "{:,}".format(extra_mailbox_emails) }} emails to your
+        <a href="/app/usage" class="text-brand hover:underline">monthly allowance</a>.
+      </p>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400">The inbox BLAM8 monitors, drafts for, and sends from.</p>
+    <div class="flex items-center gap-2 flex-wrap">
+      <a href="/oauth/connect?provider=microsoft" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Connect Outlook</a>
+      {% if gmail_connect_open(request) %}
+      <a href="/oauth/connect?provider=google" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy hover:border-slate-400 transition">Connect Gmail</a>
+      {% endif %}
+    </div>
+    {% if not gmail_connect_open(request) %}
+    <div class="mt-3 space-y-3">
+      {% set gate_next = "/app/settings" %}{% set gate_mode = "replace" %}
+      {% include "_gmail_gate.html" %}
+    </div>
+    {% endif %}
+    {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  {# Notifications (Kris 2026-09-01). The section was named after the one
+     notification it holds; it is named after the KIND now, so the next one has
+     somewhere to live. The morning brief stays the setting inside it, and the
+     face names which notification is scheduled rather than showing a bare
+     time that no longer says what it is the time OF. #}
+  {# Concierge task timings (Kris 2026-10-14: "other people might like to change
+     that and have different figures"). Its own form, portal-form pattern. A blank
+     field means the default; the server clamps every value. #}
+  <form method="post" action="/app/settings/concierge" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <details class="{{ fold }}">
+      {{ face("Concierge tasks", concierge_summary) }}
+      <div class="{{ foldbody }} space-y-5">
+        <p class="text-xs text-slate-400">How long a request can sit before the live screen calls it out. Leave a box empty to use the standard timing.</p>
+        <div>
+          <label class="block text-sm font-semibold text-navy" for="task_nudge_minutes">Remind me after</label>
+          <p class="text-xs text-slate-400 mt-0.5">A request waiting for your approval shows how long it has waited.</p>
+          <div class="mt-1.5 flex items-center gap-2"><input id="task_nudge_minutes" name="task_nudge_minutes" type="number" min="5" max="1440" inputmode="numeric" value="{{ concierge_chosen.get('task_nudge_minutes', '') }}" placeholder="{{ concierge_limits.task_nudge_minutes }}" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"><span class="text-sm text-slate-500">minutes (5 to 1,440)</span></div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-navy" for="task_expire_hours">Mark as expired after</label>
+          <p class="text-xs text-slate-400 mt-0.5">Waiting requests stop showing as active. They stay in your chat history.</p>
+          <div class="mt-1.5 flex items-center gap-2"><input id="task_expire_hours" name="task_expire_hours" type="number" min="1" max="168" inputmode="numeric" value="{{ (concierge_chosen.task_expire_minutes // 60) if concierge_chosen.get('task_expire_minutes') else '' }}" placeholder="{{ concierge_limits.task_expire_minutes // 60 }}" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"><span class="text-sm text-slate-500">hours (1 to 168)</span></div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-navy" for="task_stall_minutes">Say it has stopped after</label>
+          <p class="text-xs text-slate-400 mt-0.5">A request still working with no result after this long is shown as stopped.</p>
+          <div class="mt-1.5 flex items-center gap-2"><input id="task_stall_minutes" name="task_stall_minutes" type="number" min="2" max="60" inputmode="numeric" value="{{ concierge_chosen.get('task_stall_minutes', '') }}" placeholder="{{ concierge_limits.task_stall_minutes }}" class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"><span class="text-sm text-slate-500">minutes (2 to 60)</span></div>
+        </div>
+        <div data-save-row><button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save task timings</button></div>
+      </div>
+    </details>
+  </form>
+
+  <!-- docs/modules/module-morning-debrief.md — the scheduled "what does today need
+       from me?" push. Its own form, portal-form pattern. -->
+  <form method="post" action="/app/settings/debrief" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {% set brief_on = cfg.debrief_enabled is not defined or cfg.debrief_enabled %}
+    <details class="{{ fold }}">
+      {% if brief_on %}
+        {{ face("Notifications", notify_summary) }}
+      {% else %}
+        {{ face("Notifications", notify_summary ~ " · no brief") }}
+      {% endif %}
+      <div class="{{ foldbody }} space-y-5">
+
+      {# ── What reaches you (Kris 2026-09-02) ────────────────────────────────
+         Twenty kinds of notification existed and exactly one of them — the
+         brief below — had a switch. Not twenty switches: five families, because
+         nobody has an opinion about `quote_keeps_looking` before they have seen
+         one, and twenty rows is a chore rather than control.
+
+         Three settings, and the brief is the quiet tier: anything you don't
+         want interrupting you gets mentioned at 07:30 instead of vanishing.
+         Whatever you pick, the notification is still written to your feed —
+         a customer accepting a quote is a fact about the business, not a
+         message you can decline. #}
+      {# Says "this form rendered the notification fields" — the handler will
+         not touch a setting whose input was never on screen. #}
+      <input type="hidden" name="notify_form" value="1">
+      <div>
+        <p class="text-sm font-semibold text-navy">What reaches you</p>
+        <p class="{{ help }} mb-3">Every notification is still recorded in your feed. This is about which ones interrupt you.</p>
+        {# iPhone limitation (Kris 2026-09-24, ten test taps): a home-screen web
+           app that is already open is only brought forward by a notification
+           tap — iOS never tells it which one. Said plainly until the App Store
+           app, where a tap opens the right page. #}
+        <p class="{{ help }} mb-3" data-iphone-tap-note>On iPhone, tapping a notification opens BLAM8 where you left it rather than on what the notification is about — open your Inbox to find it. That's a limit Apple puts on home-screen web apps; it goes away with the BLAM8 app.</p>
+        <div class="rounded-xl border border-slate-200 divide-y divide-slate-200 overflow-hidden">
+          {% for col, fam in notify_families %}
+          {# Name and choice on ONE line, explanation under both. Stacked, each
+             family cost 150px of a phone and five of them filled the screen
+             before you reached quiet hours. #}
+          <div class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              {# No truncate: "Customer questions" and "Invoices & payments" both clipped
+                 to "Customer que…" at 375px, and a family whose NAME is cut is worse
+                 than a row one line taller. #}
+              <p class="flex-1 min-w-0 text-sm font-medium text-navy leading-snug">{{ fam.label }}</p>
+              {# Problems offer no "Never" (app/notify_prefs.FAMILIES): switching
+                 off "your mailbox has stopped" buys a week of silent downtime you
+                 find out about from a customer. "In the brief" stays — overnight,
+                 tomorrow morning is soon enough, and that is a real preference. #}
+              <select name="{{ col }}" class="flex-none w-36 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm bg-white text-field">
+                {% set offered = notify_modes[col] %}
+                {% set picked = cfg[col] if cfg[col] in offered else 'now' %}
+                <option value="now"   {% if picked == 'now' %}selected{% endif %}>Now</option>
+                <option value="brief" {% if picked == 'brief' %}selected{% endif %}>In the brief</option>
+                {% if 'never' in offered %}
+                <option value="never" {% if picked == 'never' %}selected{% endif %}>Never</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="mt-0.5">
+              <p class="text-xs text-slate-400">{{ fam.help }}</p>
+              {# The two per-kind opt-ins. A view is lower signal than an
+                 acceptance or a payment, so they are their own switch —
+                 defaults differ (quotes on, invoices off) and both live in
+                 app/notify_prefs.OPT_INS, which is where `notify_optin_on`
+                 comes from. The template used to re-state those defaults in
+                 Jinja, which is exactly the kind of second copy that drifts. #}
+              {% if col == 'notify_quotes' %}
+              <label class="mt-1.5 flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" name="notify_quote_viewed" value="1"
+                       {% if notify_optin_on.notify_quote_viewed %}checked{% endif %}
+                       class="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-brand focus:ring-brand/40">
+                <span class="text-xs text-slate-500">Also when they just <span class="font-medium text-navy">open</span> a quote</span>
+              </label>
+              {% elif col == 'notify_invoices' %}
+              {# This one existed as a column with NO interface and a default of
+                 false, so "they opened your invoice" has never fired for anyone
+                 and nobody could turn it on (Kris 2026-09-02). #}
+              <label class="mt-1.5 flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" name="notify_invoice_viewed" value="1"
+                       {% if notify_optin_on.notify_invoice_viewed %}checked{% endif %}
+                       class="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-brand focus:ring-brand/40">
+                <span class="text-xs text-slate-500">Also when they just <span class="font-medium text-navy">open</span> an invoice</span>
+              </label>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {# "In the brief" is a promise the brief has to keep. With the brief
+           switched off it kept nothing — the family neither buzzed nor got
+           mentioned, which is "Never" wearing another word's label (Kris
+           2026-09-04). Said here rather than hiding the option: the fix is one
+           checkbox further down, and the reader can see both at once. #}
+        {% set ns = namespace(held=0) %}
+        {% for col, fam in notify_families %}{% if cfg[col] == 'brief' %}{% set ns.held = ns.held + 1 %}{% endif %}{% endfor %}
+        {% if ns.held and not brief_on %}
+        <p class="mt-2 text-xs font-medium text-amber-700">
+          <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 mr-1 align-middle"></span>
+          {{ ns.held }} of these wait for a morning brief you've turned off, so nothing reaches you about them at all. Switch the brief back on below, or set them to Now.
+        </p>
+        {% endif %}
+      </div>
+
+      {# Email (Kris 2026-09-02: "Add the email channel next"). Push only reaches
+         a device that installed the app and granted permission; somebody who
+         lives in their inbox had nothing but a bubble to go looking for.
+
+         It obeys the same five settings above — "in the brief" and quiet hours
+         silence mail exactly as they silence a buzz, because both are
+         interruptions. And it must not be aimed at the mailbox the agent reads:
+         the mail is sent FROM that mailbox, so pointing it back would drop a
+         notification into the pile the agent drafts against. #}
+      <div>
+        <p class="text-sm font-semibold text-navy">Email</p>
+        <p class="{{ help }}">The same notifications as mail, sent from your connected mailbox. Leave blank for none.</p>
+        <input id="notify_email" name="notify_email" type="email" inputmode="email"
+               autocomplete="email" placeholder="you@yourbusiness.co.uk"
+               value="{{ cfg.notify_email or '' }}"
+               class="{{ field }} max-w-sm">
+        {% if cfg.notify_email and not notify_email_live %}
+        <p class="mt-1.5 text-xs font-medium text-amber-700">
+          <span class="inline-block h-1.5 w-1.5 rounded-full bg-amber-500 mr-1 align-middle"></span>
+          That's the mailbox BLAM8 is monitoring, so nothing is being sent — a notification landing there would be read as a customer email. Use a different address.
+        </p>
+        {% endif %}
+      </div>
+
+      {# Quiet hours ride the same road as "in the brief": an event at 03:00 is
+         not dropped, it is held and mentioned at breakfast. One window, and it
+         wraps midnight — 22:00 to 07:00 is one night, not two. #}
+      <div>
+        <p class="text-sm font-semibold text-navy">Quiet hours</p>
+        <p class="{{ help }}">Nothing buzzes between these times. Anything that happens overnight rides into your morning brief.</p>
+        <div class="mt-2 flex items-end gap-3 flex-wrap">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1" for="quiet_start">From</label>
+            <input id="quiet_start" name="quiet_start" type="time" value="{{ cfg.quiet_start or '' }}"
+                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-field">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1" for="quiet_end">Until</label>
+            <input id="quiet_end" name="quiet_end" type="time" value="{{ cfg.quiet_end or '' }}"
+                   class="rounded-lg border border-slate-300 px-3 py-2 text-sm text-field">
+          </div>
+          <p class="text-xs text-slate-400 pb-2.5">Leave both blank for none.</p>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-200 pt-5">
+      <p class="text-sm font-semibold text-navy">Morning brief</p>
+      <p class="{{ help }} mb-3">One notification at your chosen time: drafts waiting, today's diary, overdue invoices, quotes needing a decision — plus anything held from the list above. Nothing happening &rarr; nothing sent.</p>
+
+      <label class="flex items-center gap-3">
+        <input type="checkbox" name="debrief_enabled" {% if cfg.debrief_enabled is not defined or cfg.debrief_enabled %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+        <span class="text-sm text-slate-700 font-medium">Send me a morning brief</span>
+      </label>
+
+      <div>
+        <label class="{{ label }}" for="debrief_time">Time</label>
+        <p class="{{ help }}">UK time. Delivered within 15 minutes of this.</p>
+        <select id="debrief_time" name="debrief_time" class="{{ field }} max-w-[10rem]">
+          {% set current = cfg.debrief_time or '07:30' %}
+          {% for h in range(5, 13) %}{% for m in ('00', '15', '30', '45') %}
+          {% set opt = '%02d:%s' % (h, m) %}
+          <option value="{{ opt }}" {% if opt == current %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}{% endfor %}
+        </select>
+      </div>
+
+      {# What the brief tells you (Kris 2026-09-25) — the same list as the cog
+         on the brief's bubble in the Concierge (app/debrief.TOPICS). #}
+      <div data-brief-topics>
+        <input type="hidden" name="debrief_topics_form" value="1">
+        <p class="{{ label }}">What the brief tells you</p>
+        <p class="{{ help }} mb-2">Like a good receptionist, she mentions what needs you — not the work she does anyway.</p>
+        <div class="space-y-2">
+          {% for t in brief_topics %}
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="debrief_topic_{{ t.key }}" {% if t.on %}checked{% endif %}
+                   class="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+            <span class="text-sm"><span class="font-medium text-slate-700">{{ t.label }}</span>
+              <span class="block text-xs text-slate-400">{{ t.help }}</span></span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if scheduling_cfg %}
+      <label class="flex items-center gap-3">
+        <input type="checkbox" name="debrief_on_closed_days" {% if cfg.debrief_on_closed_days %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+        <span class="text-sm text-slate-700 font-medium">Also on closed days</span>
+        <span class="text-xs text-slate-400">— by default the brief follows your diary's working days and skips days you're closed.</span>
+      </label>
+      {% endif %}
+
+      </div>
+
+      <div data-save-row><button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save notifications</button></div>
+      </div>
+    </details>
+  </form>
+
+  {# Today's order (Kris 2026-09-04: "maybe there should be settings for users
+     to pick what they deem most important?"). Its own form, like the brief's —
+     a save here must not be able to touch a notification setting one section
+     up. Deliberately the same three-way row shape as "What reaches you": the
+     two settings are neighbours doing related jobs, and a reader who has
+     learned one should not have to learn a second control to use the other. #}
+  <form method="post" action="/app/settings/deck" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <details class="{{ fold }}">
+      {{ face("Today's order", deck_summary) }}
+      <div class="{{ foldbody }} space-y-5">
+        <p class="{{ help }}">Today stacks a card for each person who needs you, and the loudest thing on a card decides where it sits. This is what counts as loud — for you. Move the topics into your own order; the top one wins.</p>
+        {# One list control, shared with the cog on Today (Kris 2026-09-13). #}
+        {% include "app/_deck_order.html" %}
+        <p class="{{ help }}">Nothing is hidden — the bottom of the list still shows, it just comes last.</p>
+        <div data-save-row><button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save Today's order</button></div>
+      </div>
+    </details>
+  </form>
+
+  <!-- Scheduling / Fleet diary (modules 2/3) — shown when either is active.
+       In fleet mode the capacity/window fields are hidden (the fleet resource pool is
+       the capacity); days, notice, horizon and blackouts still apply. -->
+  {% if scheduling_cfg %}
+  {% set sched_return = '/app/settings' %}
+  {% set sched_fold = true %}
+  {% include "app/_scheduling_settings.html" %}
+  {% endif %}
+
+  {# Down here because it is on its way to being an add-on rather than part of
+     the core product (Kris 2026-09-01) — the things every tenant configures
+     come first, and this sits with the rest of the not-quite-core. #}
+  <!-- Customer Portal — the invite-only self-service page at /c/{slug} -->
+  {% set label = "block text-sm font-semibold text-navy" %}
+  {% set help = "text-xs text-slate-400 mt-0.5" %}
+  {# `text-field` — its own token (config/tailwind/tailwind.config.js), because the two themes
+   want opposite moves. slate-700 remaps to rgb(39,50,68) in light, near enough
+   black for a page made of boxes you type into; but its DARK value is already
+   the right weight. Stepping down the shared ladder softened light by too
+   little to see and darkened dark for nothing — slate-500, the shade that
+   actually reads grey, drops to 3.5:1 on the dark field and fails AA. So the
+   token moves light to 5.5:1 and leaves dark at 6.7:1. #}
+{% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-field leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+  {% if portal_msg == 'slug_taken' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">That web address is already taken — please pick another.</div>
+  {% elif portal_msg == 'slug_invalid' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Web addresses use 3–40 lowercase letters, numbers and hyphens.</div>
+  {% elif portal_msg == 'banner_invalid' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Settings saved, but that banner isn't an image we can use — please upload a PNG, JPG, WEBP or GIF.</div>
+  {% elif portal_msg == 'banner_too_big' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Settings saved, but that banner is over 4&nbsp;MB — please upload a smaller image.</div>
+  {% elif portal_msg == 'banner_storage' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">Settings saved, but the banner couldn't be stored just now — please try again in a moment.</div>
+  {% endif %}
+  <form method="post" action="/app/settings/portal" enctype="multipart/form-data" class="space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    {# The address IS the setting, so it is the whole face. The "Open your
+       portal" link moves into the body: a link inside a <summary> is a control
+       inside a control, and one of the two always wins the tap. #}
+    {% set portal_on = cfg.portal_enabled is not defined or cfg.portal_enabled %}
+    <details class="{{ fold }}" {% if not portal_slug %}open{% endif %}>
+      {% if portal_slug %}
+        {{ face("Customer Portal", "blam8.com/c/" ~ portal_slug ~ (" · invite only" if portal_on else " · switched off")) }}
+      {% else %}
+        {{ face("Customer Portal", "No web address yet — your replies have no portal link to carry", needs=true) }}
+      {% endif %}
+      <div class="{{ foldbody }} space-y-5">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <p class="text-sm text-slate-400 flex-1 min-w-0">Your customers' own page — they book, check and reschedule their bookings, and ask questions. It's invite only: every reply you send carries the customer's reference code and this link, and that's the way in. Anyone else is asked for a code and gets nothing without one.</p>
+        {% if portal_slug %}
+        <a href="/c/{{ portal_slug }}" target="_blank" rel="noopener" class="flex-none rounded-lg bg-brand-50 text-brand px-3 py-1.5 text-xs font-semibold hover:bg-blue-100 transition">Open your portal &rarr;</a>
+        {% endif %}
+      </div>
+
+      <label class="flex items-center gap-3">
+        <input type="checkbox" name="portal_enabled" {% if cfg.portal_enabled is not defined or cfg.portal_enabled %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+        <span class="text-sm text-slate-700 font-medium">Portal on</span>
+        <span class="text-xs text-slate-400">— off shows visitors an "unavailable" page and drops the sign-off link.</span>
+      </label>
+
+      <div>
+        <label class="{{ label }}" for="portal_slug">Web address</label>
+        <p class="{{ help }}">blam8.com/c/<span class="font-mono">{{ portal_slug or 'your-business' }}</span> — lowercase letters, numbers and hyphens.</p>
+        <input id="portal_slug" name="portal_slug" class="{{ field }}" value="{{ portal_slug or '' }}" placeholder="your-business">
+      </div>
+
+      {# No "put it on your website" snippets (Kris 2026-09-24): the portal is
+         invite only, so a public link or Book now button only leads
+         strangers to a door they can't open. #}
+
+      <div>
+        <label class="{{ label }}" for="portal_description">Description</label>
+        <p class="{{ help }}">One or two lines under your business name.</p>
+        <input id="portal_description" name="portal_description" class="{{ field }}" maxlength="200" value="{{ cfg.portal_description or '' }}" placeholder="Your services, in your own words">
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="portal_service_area">Service area</label>
+        <p class="{{ help }}">Shown as "Serving …" — leave blank to hide.</p>
+        <input id="portal_service_area" name="portal_service_area" class="{{ field }}" maxlength="120" value="{{ cfg.portal_service_area or '' }}" placeholder="Thame and surrounding areas">
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="portal_banner">Banner image</label>
+        <p class="{{ help }}">Shown across the top of your portal page. PNG, JPG, WEBP or GIF up to 4&nbsp;MB — wide images (around 3:1) look best.</p>
+        {% if portal_banner_url %}
+        <img src="{{ portal_banner_url }}" alt="Current portal banner" class="mt-2 w-full h-24 object-cover rounded-lg border border-slate-200">
+        {% endif %}
+        <input id="portal_banner" type="file" name="portal_banner" accept="image/png,image/jpeg,image/webp,image/gif"
+               class="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand hover:file:bg-blue-100">
+        {% if portal_banner_url %}
+        <label class="mt-2 flex items-center gap-2">
+          <input type="checkbox" name="portal_banner_remove" class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+          <span class="text-xs text-slate-500">Remove the current banner</span>
+        </label>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="{{ label }}" for="portal_welcome">Welcome message</label>
+        <p class="{{ help }}">Shown above the request for a reference code, before a customer is in. Leave blank for none.</p>
+        <input id="portal_welcome" name="portal_welcome" class="{{ field }}" maxlength="300" value="{{ cfg.portal_welcome or '' }}" placeholder="Welcome back — how can we help?">
+      </div>
+
+      <label class="flex items-center gap-3">
+        <input type="checkbox" name="portal_show_prices" {% if cfg.portal_show_prices is not defined or cfg.portal_show_prices %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+        <span class="text-sm text-slate-700 font-medium">Quote prices in the portal</span>
+        <span class="text-xs text-slate-400">— off makes the assistant take details for a personal quote instead.</span>
+      </label>
+
+      {% if scheduling_cfg %}
+      <label class="flex items-center gap-3">
+        <input type="checkbox" name="portal_booking_confirmation" {% if cfg.portal_booking_confirmation is not defined or cfg.portal_booking_confirmation is none or cfg.portal_booking_confirmation %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+        <span class="text-sm text-slate-700 font-medium">Email booking confirmations</span>
+        <span class="text-xs text-slate-400">— a customer who books on the portal gets an email with the reference and their booking page link.</span>
+      </label>
+
+      <label class="flex items-center gap-3">
+        <input type="checkbox" name="portal_customer_notes" {% if cfg.portal_customer_notes is not defined or cfg.portal_customer_notes is none or cfg.portal_customer_notes %}checked{% endif %}
+               class="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand/40">
+        <span class="text-sm text-slate-700 font-medium">Customers can add notes to their own record</span>
+        <span class="text-xs text-slate-400">— a customer's own log of how a session went, from the portal; the business reads it on the booking. Never on a dependant's booking (a separately tracked subject).</span>
+      </label>
+
+      <div>
+        <label class="{{ label }}" for="portal_max_active_bookings">Booking limit per customer</label>
+        <p class="{{ help }}">The most upcoming bookings one customer can hold through the portal at once. Blank or 0 = no limit; the assistant offers to pass extra requests to you instead.</p>
+        <input id="portal_max_active_bookings" name="portal_max_active_bookings" type="number" min="0" max="99"
+               class="{{ field }} max-w-[8rem]" value="{{ cfg.portal_max_active_bookings or '' }}" placeholder="0">
+      </div>
+
+      <div>
+        <p class="text-sm text-slate-700 font-medium">Customer reschedules</p>
+        <p class="{{ help }}">When a customer asks to move their own booking on the portal.</p>
+        <label class="flex items-start gap-3 mt-2">
+          <input type="radio" name="portal_reschedule_mode" value="auto" {% if (cfg.portal_reschedule_mode or 'auto') != 'approve' %}checked{% endif %}
+                 class="mt-0.5 h-4 w-4 border-slate-300 text-brand focus:ring-brand/40">
+          <span class="text-sm text-slate-700"><span class="font-medium">Move it straight away</span>
+            <span class="text-xs text-slate-400">— only their own bookings, only into genuinely free slots; you're notified and it shows in your diary instantly.</span></span>
+        </label>
+        <label class="flex items-start gap-3 mt-2">
+          <input type="radio" name="portal_reschedule_mode" value="approve" {% if cfg.portal_reschedule_mode == 'approve' %}checked{% endif %}
+                 class="mt-0.5 h-4 w-4 border-slate-300 text-brand focus:ring-brand/40">
+          <span class="text-sm text-slate-700"><span class="font-medium">Ask me first</span>
+            <span class="text-xs text-slate-400">— the request lands in your inbox to confirm or counter-offer; their booking stays put until you move it. The new slot isn't held.</span></span>
+        </label>
+      </div>
+      {% endif %}
+
+      <div data-save-row><button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save portal settings</button></div>
+      </div>
+    </details>
+  </form>
+
+  <!-- Danger zone: close account + delete all data (GDPR / OAuth verification) -->
+  {# The one section that is never "settled" and never opens itself: a DELETE
+     box sitting open at the bottom of every visit is an accident waiting for a
+     thumb. It opens only when a failed confirm bounced you back to it. #}
+  <details class="group/row bg-rose-50 rounded-xl border border-rose-200 overflow-hidden" {% if request.query_params.get('err') == 'confirm' %}open{% endif %}>
+    <summary data-fold="Close account" data-needs class="flex items-baseline gap-3 px-5 py-3.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-rose-100 transition">
+      <span class="text-sm font-semibold text-rose-900 flex-none">Close account</span>
+      <span class="flex-1 min-w-0 truncate text-xs text-rose-700 group-open/row:invisible">Permanently deletes everything, and cannot be undone</span>
+      <span class="flex-none text-rose-300 transition group-open/row:rotate-90">&rsaquo;</span>
+    </summary>
+    <div class="border-t border-rose-200 p-5 space-y-4">
+    <p class="text-sm text-rose-800">Closing your account permanently deletes everything — connected mailboxes and their tokens, drafts and email history, knowledge, bookings, fleet and invoices. This cannot be undone.</p>
+    {% if request.query_params.get('err') == 'confirm' %}
+    <div class="rounded-lg bg-rose-100 border border-rose-300 px-3 py-2 text-sm text-rose-800">Type <span class="font-mono">DELETE</span> exactly to confirm.</div>
+    {% endif %}
+    <form method="post" action="/app/settings/close-account" onsubmit="return confirm('This permanently deletes your account and all data. Continue?');" class="space-y-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div>
+        <label class="block text-sm font-semibold text-rose-900" for="confirm">Type <span class="font-mono bg-rose-100 px-1 rounded">DELETE</span> to confirm</label>
+        <input id="confirm" name="confirm" type="text" autocomplete="off" class="mt-1 w-full max-w-xs rounded-lg border border-rose-300 p-2.5 text-sm outline-none focus:border-rose-600 focus:ring-2 focus:ring-rose-600/20" placeholder="DELETE">
+      </div>
+      <button type="submit" class="rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition">Close account &amp; delete all data</button>
+    </form>
+    </div>
+  </details>
+
+  {# A section you opened to edit must not slam shut on you when the save
+     reloads the page, so the fold remembers itself per device — the same
+     trick the inbox month-folds use. It only ever re-opens what you opened:
+     a section the server opened because it still wants you (data-needs) is
+     never closed from storage. #}
+  {# Save appears when there is something to save (Kris 2026-09-01: "I am trying
+     to limit how much we see that button, it feels old"). Every form on this
+     page carried a permanent Save row, which on a page of folded rows is a
+     button advertising work you have not done.
+
+     Rendered VISIBLE and hidden by this script, deliberately the other way
+     round from the obvious. If the script never runs — a JS error, an old
+     browser — the row simply stays where it was and the page behaves exactly as
+     it did yesterday. Rendering it hidden and revealing it with JS would mean a
+     broken script leaves someone unable to save at all.
+
+     Dirtiness is a signature comparison rather than a "something was typed"
+     flag, so typing a change and undoing it hides the button again. Files are
+     compared by name and size because a File always stringifies to the same
+     thing, and a picked banner would otherwise register as no change. #}
+  {# Arrive at the row you were sent to, not the top of the page (Kris
+     2026-09-01). Three things the browser will not do on its own here:
+
+       * a fragment pointing AT a <details> scrolls to it but leaves it shut —
+         auto-expansion only applies to a target INSIDE one;
+       * the app scrolls in <main>, not the window, so the row lands under the
+         sticky masthead unless it is nudged down by its height;
+       * the fold-memory script below may have just reopened rows, which moves
+         everything — so this runs after a frame, once the page has settled.
+
+     Generic on purpose: any fold with an id can be linked now, not just this
+     one. #}
+  <script>
+    (function () {
+      var target = location.hash && document.querySelector(location.hash);
+      if (!target) return;
+      requestAnimationFrame(function () {
+        if (target.tagName === 'DETAILS') target.open = true;
+        // ...and every fold it lives inside, or the row is opened inside a shut
+        // group and the link lands on nothing. Only bites once a sheet is
+        // collapsible and the operator has collapsed it — which is exactly the
+        // tenant who has settled their setup and would still follow a link here.
+        for (var p = target.parentElement; p; p = p.parentElement) {
+          if (p.tagName === 'DETAILS') p.open = true;
+        }
+        var scroller = target.closest('main') || document.scrollingElement;
+        // The masthead only needs allowing for when the DOCUMENT is what
+        // scrolls. <main> already begins below it, so counting it there pushes
+        // the row a masthead's height further down than asked for.
+        var masthead = document.querySelector('header, .masthead');
+        var pad = 12 + (scroller === document.scrollingElement && masthead
+                        ? masthead.offsetHeight : 0);
+        var top = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + top - pad),
+                            behavior: 'smooth' });
+      });
+    })();
+  </script>
+
+
+  <script>
+    (function () {
+      var KEY = 'blam8-settings-open', state = {};
+      try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) {}
+      document.querySelectorAll('summary[data-fold]').forEach(function (sum) {
+        var d = sum.parentElement, k = sum.getAttribute('data-fold');
+        if (!d || d.tagName !== 'DETAILS') return;
+        if (state[k] === true) d.open = true;
+        else if (state[k] === false && !sum.hasAttribute('data-needs')) d.open = false;
+        d.addEventListener('toggle', function () {
+          state[k] = d.open;
+          try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+        });
+      });
+    })();
+  </script>
+
+</div>
+{% endblock %}

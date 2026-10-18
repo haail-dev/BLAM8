@@ -1,0 +1,170 @@
+{% extends "app/base.html" %}
+{% block title %}Assets OS · BLAM8{% endblock %}
+{% block heading %}Assets OS{% endblock %}
+
+{# Deposit lifecycle chip (§2/§6): ✓ held / ⏳ unpaid / refunded / £X deducted #}
+{% macro deposit_chip(h) %}
+  {% if h.deposit_chip %}
+  {% set tone = h.deposit_chip.tone %}
+  <span class="rounded-full px-2 py-0.5 text-xs font-medium
+    {{ 'bg-emerald-100 text-emerald-700' if tone == 'good' else
+       'bg-amber-100 text-amber-700' if tone == 'warn' else
+       'bg-slate-100 text-slate-500' }}">{{ h.deposit_chip.label }}</span>
+  {% endif %}
+{% endmacro %}
+
+{# Per-hire deposit actions (§2 board mock): Send deposit link / Refund / Deduct. #}
+{% macro deposit_actions(h) %}
+  {% set st = h.deposit_chip.status if h.deposit_chip else none %}
+  <span class="flex items-center gap-1.5 text-xs">
+    {% if st in (none, 'pending', 'failed') %}
+    <button data-deposit-action="link" data-booking="{{ h.id }}" data-amount="{{ h.deposit or '' }}"
+            class="text-brand hover:underline">Send deposit link →</button>
+    {% endif %}
+    {% if st in ('held', 'paid') %}
+    <button data-deposit-action="refund" data-booking="{{ h.id }}"
+            class="text-brand hover:underline">Refund →</button>
+    <button data-deposit-action="deduct" data-booking="{{ h.id }}"
+            class="text-amber-700 hover:underline">Deduct →</button>
+    {% endif %}
+  </span>
+{% endmacro %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'held' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Hire held against the unit — it shows on the board below.</div>{% endif %}
+  {% if msg == 'full' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That unit is already booked across those dates — pick another span or unit.</div>{% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>{{ board.today_label }} — units going out and coming back, and what's coming up. Every hire books atomically against a specific unit, so you can't double-book.</p>
+    <span class="flex items-center gap-3">
+      <a href="/app/assets/damage" class="text-brand font-medium hover:underline">Damage cases{% if board.open_damage_count %} ({{ board.open_damage_count }}){% endif %} →</a>
+      <a href="/app/assets/units" class="text-brand font-medium hover:underline">Unit registry →</a>
+    </span>
+  </div>
+
+  <!-- Lane 1 — handovers today (§2) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Handovers today</h2>
+      <span class="text-xs text-slate-400">{{ board.handover_count }} today</span>
+    </div>
+    {% if board.handovers %}
+    <ul class="divide-y divide-slate-50">
+      {% for h in board.handovers %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold {{ 'bg-blue-100 text-blue-700' if h.direction == 'out' else 'bg-emerald-100 text-emerald-700' }}">{{ 'OUT' if h.direction == 'out' else 'BACK' }}</span>
+        <span class="font-medium text-navy">{{ h.unit }}</span>
+        <span class="text-slate-500">{{ h.contact }}</span>
+        <span class="text-slate-400 ml-auto">{{ h.arrival }}{% if h['return'] %} → {{ h['return'] }}{% endif %}</span>
+        {% if h.deposit is not none %}<span class="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">dep £{{ '%g'|format(h.deposit) }}</span>{% endif %}
+        {{ deposit_chip(h) }}
+        {{ deposit_actions(h) }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No collections or returns today.</p>
+    {% endif %}
+  </section>
+
+  <!-- Lane 2 — upcoming (§2) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Upcoming</h2>
+      <span class="text-xs text-slate-400">next 14 days · {{ board.upcoming_count }} hire{{ '' if board.upcoming_count == 1 else 's' }}</span>
+    </div>
+    {% if board.upcoming %}
+    <ul class="divide-y divide-slate-50">
+      {% for h in board.upcoming %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="text-slate-400 w-24">{{ h.arrival }}</span>
+        <span class="font-medium text-navy">{{ h.unit }}</span>
+        <span class="text-slate-500">{{ h.contact }}</span>
+        <span class="rounded-full bg-slate-100 text-slate-500 px-2 py-0.5 text-xs ml-auto">{{ h.hire_state or h.status }}</span>
+        {% if h.deposit is not none %}<span class="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">dep £{{ '%g'|format(h.deposit) }}</span>{% endif %}
+        {{ deposit_chip(h) }}
+        {{ deposit_actions(h) }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">Nothing booked in the next fortnight.</p>
+    {% endif %}
+  </section>
+
+  {% if msg == 'serviced' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Service logged — the next service date has moved on by the unit's interval.</div>{% endif %}
+
+  <!-- Lane 3 — damage & maintenance (§2) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Damage &amp; maintenance</h2>
+      <span class="text-xs text-slate-400">{{ (board.open_damage_count or 0) + (board.maintenance_count or 0) }} to look at</span>
+    </div>
+    {% if board.open_damage or board.maintenance %}
+    <ul class="divide-y divide-slate-50">
+      {% for c in board.open_damage %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-700"><span class="h-1.5 w-1.5 rounded-full bg-rose-600 self-center"></span>Damage</span>
+        <span class="font-medium text-navy">{{ c.description or 'Damage case' }}</span>
+        {% if c.severity %}<span class="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-xs">{{ c.severity }}</span>{% endif %}
+        <a href="/app/assets/damage/{{ c.id }}" class="text-brand hover:underline ml-auto">Review evidence →</a>
+      </li>
+      {% endfor %}
+      {% for m in board.maintenance %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold {{ 'bg-amber-100 text-amber-700' if m.below_floor else 'bg-sky-100 text-sky-700' }}">{{ 'Condition' if m.below_floor else 'Service' }}</span>
+        <span class="font-medium text-navy">{{ m.unit }}</span>
+        <span class="text-slate-500">{{ m.reason }}</span>
+        <span class="ml-auto">
+          <form method="post" action="/app/assets/units/{{ m.id }}/serviced" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="text-brand hover:underline">Mark serviced →</button>
+          </form>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No open damage cases and nothing due for service.</p>
+    {% endif %}
+  </section>
+
+  <p class="text-xs text-slate-400">Condition photo-diffs are live: photograph the unit at handover and return, and the before/after comparison flags new damage into the <a href="/app/assets/damage" class="text-brand hover:underline">damage queue</a> with the evidence to back a deduction — your decision, always.</p>
+</div>
+
+<script>
+// Deposit actions (§7): POST to /api/assets/bookings/{id}/deposit/{link|refund|deduct} with the
+// double-submit CSRF token. On a minted link, we surface the Stripe URL to paste into the draft.
+(function () {
+  const CSRF = "{{ csrf_token(request) }}";
+  async function post(booking, action, extra) {
+    const body = new FormData();
+    body.append("csrf_token", CSRF);
+    for (const k in (extra || {})) body.append(k, extra[k]);
+    const r = await fetch(`/api/assets/bookings/${booking}/deposit/${action}`,
+                          { method: "POST", body });
+    return r.json().catch(() => ({ ok: false, reason: "Unexpected response" }));
+  }
+  document.querySelectorAll("[data-deposit-action]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const booking = btn.dataset.booking;
+      const action = btn.getAttribute("data-deposit-action");
+      let extra = {};
+      if (action === "deduct") {
+        const amt = prompt("Amount to deduct (£):");
+        if (!amt) return;
+        extra.amount = amt;
+      }
+      btn.disabled = true;
+      const res = await post(booking, action, extra);
+      btn.disabled = false;
+      if (!res.ok) { alert(res.reason || "Could not complete that action."); return; }
+      if (res.url) { prompt("Deposit link to send to the customer:", res.url); }
+      else { location.reload(); }
+    });
+  });
+})();
+</script>
+{% endblock %}

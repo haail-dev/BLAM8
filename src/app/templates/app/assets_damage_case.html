@@ -1,0 +1,141 @@
+{% extends "app/base.html" %}
+{% block title %}Evidence bundle · Assets OS · BLAM8{% endblock %}
+{% block heading %}Evidence bundle{% endblock %}
+{% set back = ('/app/assets/damage', 'Damage queue') %}
+{% block content %}
+<div class="max-w-4xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center gap-2 text-sm">
+    <a href="/app/assets/damage/{{ case.id }}/export.pdf" class="ml-auto text-slate-500 hover:underline">Export PDF</a>
+    <a href="/api/assets/damage/{{ case.id }}/export" class="text-slate-500 hover:underline">Export JSON</a>
+  </div>
+
+  <!-- Case header -->
+  <section class="bg-white rounded-xl border border-slate-200 p-5">
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+        {{ 'bg-rose-100 text-rose-700' if case.severity == 'major' else
+           'bg-amber-100 text-amber-700' if case.severity == 'moderate' else
+           'bg-slate-100 text-slate-600' }}">{{ case.severity or 'review' }}</span>
+      <span class="text-sm font-medium text-navy">{{ case.description or 'Damage case' }}</span>
+      {% if case.diff_confidence is not none %}
+      <span class="text-xs text-slate-400">model confidence {{ '%.2f'|format(case.diff_confidence) }}</span>
+      {% endif %}
+      {% if deposit_chip %}<span class="ml-auto rounded-full px-2 py-0.5 text-xs font-medium
+        {{ 'bg-emerald-100 text-emerald-700' if deposit_chip.tone == 'good' else
+           'bg-amber-100 text-amber-700' if deposit_chip.tone == 'warn' else
+           'bg-slate-100 text-slate-500' }}">{{ deposit_chip.label }}</span>{% endif %}
+    </div>
+    {% if booking %}<p class="text-xs text-slate-400 mt-2">Hire {{ booking.booking_ref or booking.id[:8] }} · {{ booking.contact or '—' }}</p>{% endif %}
+    {% if not has_baseline %}
+    <div class="mt-3 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+      No handover (out) baseline was captured for this hire, so a deposit deduction can't be made — no baseline, no claim.
+    </div>
+    {% endif %}
+  </section>
+
+  <!-- Side-by-side out/in photos per finding (§12b evidence bundle) -->
+  <section class="space-y-4">
+    {% for f in findings %}
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-100 flex items-center gap-2">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+          {{ 'bg-rose-100 text-rose-700' if f.severity == 'major' else
+             'bg-amber-100 text-amber-700' if f.severity == 'moderate' else
+             'bg-slate-100 text-slate-600' }}">{{ f.severity }}</span>
+        <span class="text-sm font-medium text-navy">{{ f.area }}</span>
+        <span class="text-sm text-slate-500">{{ f.change }}</span>
+        {% if f.confidence is not none %}<span class="ml-auto text-xs text-slate-400">{{ '%.2f'|format(f.confidence) }}</span>{% endif %}
+      </div>
+      <div class="grid grid-cols-2 divide-x divide-slate-100">
+        <figure class="p-3">
+          <figcaption class="text-xs uppercase tracking-wide text-slate-400 mb-1">Before (handover)</figcaption>
+          {% if f.out_signed %}<img src="{{ f.out_signed }}" class="w-full rounded-lg object-cover" alt="before" />
+          {% else %}<div class="h-40 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">photo unavailable</div>{% endif %}
+        </figure>
+        <figure class="p-3">
+          <figcaption class="text-xs uppercase tracking-wide text-slate-400 mb-1">After (return)</figcaption>
+          {% if f.in_signed %}<img src="{{ f.in_signed }}" class="w-full rounded-lg object-cover" alt="after" />
+          {% else %}<div class="h-40 rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">photo unavailable</div>{% endif %}
+        </figure>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl border border-slate-200 p-5 text-sm text-slate-500">
+      No per-finding photos on this case (it may be flagged for manual review).
+    </div>
+    {% endfor %}
+  </section>
+
+  <!-- Deposit trail + timestamps -->
+  <section class="bg-white rounded-xl border border-slate-200 p-5 text-sm text-slate-500 space-y-1">
+    {% if out_report %}<p>Handover captured {{ (out_report.captured_at or '')[:16].replace('T',' ') }}{% if out_report.captured_by %} by {{ out_report.captured_by }}{% endif %}.</p>{% endif %}
+    {% if in_report %}<p>Return captured {{ (in_report.captured_at or '')[:16].replace('T',' ') }}{% if in_report.captured_by %} by {{ in_report.captured_by }}{% endif %}.</p>{% endif %}
+    {% if deposit %}<p>Deposit £{{ '%g'|format(deposit.amount) }} · {{ deposit.status }}{% if deposit.deducted_amount %} · £{{ '%g'|format(deposit.deducted_amount) }} deducted{% endif %}.</p>{% endif %}
+    {% if case.get('proposed_deduction') is not none %}<p class="text-slate-600">Suggested deduction <span class="font-medium">£{{ '%g'|format(case.get('proposed_deduction')) }}</span> — from your repair-cost defaults. A proposal only; your decision.</p>{% endif %}
+  </section>
+
+  <!-- Resolution actions — human-approved always (§14) -->
+  {% if case.status != 'resolved' %}
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+    <h2 class="text-sm font-semibold text-navy">Resolve</h2>
+    <p class="text-xs text-slate-400">Your decision. BLAM8 gives the evidence; you choose the outcome.</p>
+    <div class="flex items-center gap-2 flex-wrap text-sm">
+      <button data-resolve="deducted" data-case="{{ case.id }}" data-suggested="{{ case.get('proposed_deduction') if case.get('proposed_deduction') is not none else '' }}" {{ 'disabled' if not can_deduct }}
+              class="rounded-lg px-3 py-2 font-medium {{ 'bg-amber-600 text-white hover:bg-amber-700' if can_deduct else 'bg-slate-100 text-slate-400 cursor-not-allowed' }}"
+              {% if not can_deduct %}title="No handover baseline or deposit — deduction blocked"{% endif %}>Deduct from deposit →</button>
+      <button data-resolve="refunded" data-case="{{ case.id }}"
+              class="rounded-lg px-3 py-2 font-medium bg-emerald-600 text-white hover:bg-emerald-700">Refund deposit →</button>
+      <button data-resolve="waived" data-case="{{ case.id }}"
+              class="rounded-lg px-3 py-2 font-medium bg-white border border-slate-300 text-slate-600 hover:bg-slate-50">Waive →</button>
+      <button data-rerun data-case="{{ case.id }}"
+              class="ml-auto text-brand hover:underline">Re-run diff</button>
+    </div>
+  </section>
+  {% else %}
+  <section class="bg-white rounded-xl border border-slate-200 p-5 text-sm text-slate-500">
+    Resolved: {{ case.resolution }}{% if case.resolved_amount %} · £{{ '%g'|format(case.resolved_amount) }}{% endif %}.
+  </section>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  const CSRF = "{{ csrf_token(request) }}";
+  async function post(caseId, path, extra) {
+    const body = new FormData();
+    body.append("csrf_token", CSRF);
+    for (const k in (extra || {})) body.append(k, extra[k]);
+    const r = await fetch(`/api/assets/damage/${caseId}/${path}`, { method: "POST", body });
+    return r.json().catch(() => ({ ok: false, reason: "Unexpected response" }));
+  }
+  document.querySelectorAll("[data-resolve]").forEach((btn) => {
+    if (btn.disabled) return;
+    btn.addEventListener("click", async () => {
+      const resolution = btn.getAttribute("data-resolve");
+      const extra = { resolution };
+      if (resolution === "deducted") {
+        const amt = prompt("Amount to deduct from the deposit (£):", btn.dataset.suggested || "");
+        if (!amt) return;
+        extra.amount = amt;
+      }
+      btn.disabled = true;
+      const res = await post(btn.dataset.case, "resolve", extra);
+      btn.disabled = false;
+      if (!res.ok) { alert(res.reason || "Could not complete that action."); return; }
+      location.reload();
+    });
+  });
+  document.querySelectorAll("[data-rerun]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const res = await post(btn.dataset.case, "rerun", {});
+      btn.disabled = false;
+      if (!res.ok) { alert(res.reason || "Could not re-run."); return; }
+      alert(`Re-ran: ${res.outcome} (confidence ${res.diff_confidence ?? '—'}, ${res.severity})`);
+      location.reload();
+    });
+  });
+})();
+</script>
+{% endblock %}

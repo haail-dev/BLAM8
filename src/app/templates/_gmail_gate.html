@@ -1,0 +1,122 @@
+{# Gated "Connect Gmail" block — shown wherever gmail_connect_open(request) is
+   false (onboarding mailbox step, Settings, Mailboxes). Gmail connects consume
+   Google's 100 unverified-app grants (src/app/slots.py), so they need an invite
+   code or a vetted access request; Microsoft never does. Server-side
+   enforcement is in /oauth/connect — this partial is just the honest UI.
+   Set before including: gate_next (return path), gate_mode (replace|add). #}
+{% set gslots = gmail_slots() %}
+{% set gmail_msg = request.query_params.get('gmail') %}
+{% if gmail_msg == 'requested' %}
+<div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3.5 py-2.5 text-sm text-emerald-800"><span class="font-semibold">Request received</span> — we'll be in touch at that address shortly. If you'd rather not wait, Microsoft connects right now, no invite needed.</div>
+{% elif gmail_msg == 'badcode' %}
+<div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700">That invite code wasn't recognised. Check it and try again — or connect Microsoft (no invite needed).</div>
+{% elif gmail_msg == 'bademail' %}
+<div class="rounded-lg bg-red-50 border border-red-200 px-3.5 py-2.5 text-sm text-red-700">That email address doesn't look right — check it and try again.</div>
+{% elif gmail_msg == 'gate' %}
+<div class="rounded-lg bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-sm text-amber-800">Connecting Gmail needs an invite code right now — enter yours below, request access, or connect Microsoft (no invite needed).</div>
+{% elif gmail_msg == 'full' %}
+<div class="rounded-lg bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-sm text-amber-800">Gmail connections are temporarily full while Google verifies our app — connect Microsoft (no cap), or request access below and we'll let you know the moment a place frees up.</div>
+{% endif %}
+{% if gslots.full %}
+<div class="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-semibold text-slate-400 cursor-not-allowed" aria-disabled="true" title="Gmail connections temporarily full — connect Microsoft.">Gmail connections temporarily full</div>
+{% else %}
+<form method="post" action="/oauth/google-invite" class="rounded-lg border border-slate-300 px-4 py-3">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <input type="hidden" name="next" value="{{ gate_next }}">
+  <input type="hidden" name="mode" value="{{ gate_mode or 'replace' }}">
+  <label for="gmail-invite-email" class="block text-sm font-semibold text-slate-700">Email address on your invite</label>
+  <input id="gmail-invite-email" name="email" type="email" autocomplete="username"
+         value="{{ request.state.user_email if request and request.state else '' }}"
+         placeholder="you@gmail.com"
+         class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30" />
+  <p id="gmail-invite-email-status" class="mt-1.5 min-h-4 text-xs text-slate-500" aria-live="polite">Use the Google account address your existing BLAM8 invite was registered to.</p>
+  <div id="gmail-invite-code-wrap" class="mt-3">
+  <label for="gmail-invite-code" class="flex items-center justify-between text-sm">
+    <span class="font-semibold text-slate-700">Gmail invite code</span>
+    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Invite only</span>
+  </label>
+  <input id="gmail-invite-code" name="code" required placeholder="e.g. BLAM8-XXXX-XXXX" autocomplete="off"
+         class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30" />
+  </div>
+  <button id="gmail-invite-btn" type="submit" title="Enter your invite code first"
+          class="mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition enabled:hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">
+    Connect Gmail with this code
+  </button>
+</form>
+<script>
+  (function () {
+    var form = document.querySelector('form[action="/oauth/google-invite"]'),
+        email = document.getElementById('gmail-invite-email'),
+        status = document.getElementById('gmail-invite-email-status'),
+        code = document.getElementById('gmail-invite-code'),
+        wrap = document.getElementById('gmail-invite-code-wrap'),
+        btn  = document.getElementById('gmail-invite-btn'),
+        csrf = form.querySelector('[name="csrf_token"]'),
+        eligible = false,
+        timer = null;
+    // Progressive enhancement: without JS the button stays enabled and the
+    // input's `required` still blocks an empty submit natively.
+    var sync = function () {
+      code.required = !eligible;
+      wrap.hidden = eligible;
+      btn.disabled = !eligible && code.value.trim() === '';
+      btn.title = btn.disabled ? 'Enter your invite code first' : '';
+      btn.textContent = eligible ? 'Connect Gmail' : 'Connect Gmail with this code';
+    };
+    var check = function () {
+      var value = email.value.trim();
+      eligible = false;
+      sync();
+      if (!value || !email.validity.valid) {
+        status.textContent = 'Use the Google account address your existing BLAM8 invite was registered to.';
+        return;
+      }
+      status.textContent = 'Looking for your existing invite…';
+      var data = new URLSearchParams({csrf_token: csrf.value, email: value});
+      fetch('/oauth/google-email-check', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: data.toString()})
+        .then(function (response) { if (!response.ok) throw new Error('check failed'); return response.json(); })
+        .then(function (result) {
+          if (email.value.trim() !== value) return;
+          eligible = !!result.eligible;
+          status.textContent = eligible
+            ? 'We found your existing invite. You can connect without typing its code.'
+            : 'No unused invite found for this email. If you have a code, enter it below.';
+          sync();
+        })
+        .catch(function () {
+          eligible = false;
+          status.textContent = 'Could not check right now. You can still enter your invite code.';
+          sync();
+        });
+    };
+    email.addEventListener('input', function () {
+      clearTimeout(timer);
+      eligible = false;
+      sync();
+      timer = setTimeout(check, 450);
+    });
+    code.addEventListener('input', sync);
+    form.addEventListener('submit', function (event) {
+      if (eligible) return;
+      if (!code.value.trim()) event.preventDefault();
+    });
+    sync();
+    if (email.value.trim() && email.validity.valid) check();
+  })();
+</script>
+{% endif %}
+<details class="rounded-lg border border-dashed border-slate-300 px-4 py-3">
+  <summary class="cursor-pointer select-none text-sm font-semibold text-brand">No invite code? Request access</summary>
+  <form method="post" action="/oauth/request-google-access" class="mt-3 space-y-2">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <input type="hidden" name="next" value="{{ gate_next }}">
+    <input name="email" type="email" required placeholder="you@company.co.uk"
+           class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30" />
+    <textarea name="message" rows="2" maxlength="2000" placeholder="Tell us a little about your business (optional — it helps us say yes faster)"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy/30"></textarea>
+    <button type="submit" class="w-full rounded-lg border border-navy px-4 py-2 text-sm font-semibold text-navy hover:bg-navy hover:text-white transition">Request access</button>
+  </form>
+</details>
+<p class="rounded-lg bg-slate-50 border border-slate-200 px-3.5 py-2.5 text-xs text-slate-500">
+  <span class="font-semibold text-slate-600">Connecting Gmail is invite-only</span> while Google verifies our app — it allows 100 founding Gmail connections until then{% if not gslots.verified %} (<span class="{% if gslots.low %}font-semibold text-amber-600{% endif %}">{{ gslots.remaining }} of {{ gslots.cap }} left</span>){% endif %}, so we're saving them for invited founding users. Signing in was free for everyone — this only affects which inbox your agent can work. <span class="font-semibold">Microsoft 365 / Outlook connects instantly</span>, no invite needed.
+</p>

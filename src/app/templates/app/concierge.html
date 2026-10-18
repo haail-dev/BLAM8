@@ -1,0 +1,11 @@
+{% extends "app/base.html" %}
+{% block title %}Concierge — BLAM8{% endblock %}
+{% block heading %}Concierge{% endblock %}
+
+{% block content %}
+{# In a window narrower than the column (a phone, a squeezed window) concierge_sidebar.js turns this wrapper into a two-page strip: the Concierge, then the column. Until then it takes no part in layout (base.html). #}
+<div id="cz-pager" class="cz-pager">
+{% include "app/_concierge_panel.html" %}
+</div>
+{# Wired by /static/concierge_panel.js, which base.html loads on every page. #}
+{% endblock %}

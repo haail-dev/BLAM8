@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% if t %}{{ t.name }} — book & ask{% else %}Business not found{% endif %} · BLAM8</title>
+  <meta name="robots" content="noindex" />
+  {# The app's Flight Deck shell (Julius 2026-09-03: "the Customer Portal
+     should match the app") — same fonts, same BUILT tw.css with the theme
+     token maps, same pre-paint theme script. This also retires the Tailwind
+     Play CDN here (a compiler running in the customer's browser on every
+     visit — real seconds on a phone). Customers default light; a browser
+     that has chosen dark in the app renders the portal dark to match. #}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  {% include "_theme_head.html" %}
+  <style>
+    /* iOS Safari auto-zooms any focused input under 16px — bump form controls to
+       16px on small screens only so tapping any field never zooms. */
+    @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
+    /* Clip horizontal overflow at the root so the page is always exactly one
+       screen wide on mobile (no pinch-out-and-it-sits-left); wide content
+       scrolls inside its own container instead. */
+    html, body { overflow-x: hidden; overflow-x: clip; }
+  </style>
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+{% if not t %}
+<div class="max-w-md mx-auto p-6">
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center">
+    <h1 class="text-lg font-bold text-navy">This business isn't on BLAM8</h1>
+    <p class="text-sm text-slate-500 mt-2">If you're looking for a specific business, please check the link is correct — or the business may have switched its portal off. You can contact them directly instead.</p>
+  </div>
+  <p class="text-center text-xs text-slate-400 mt-4">Powered by <a href="https://blam8.com" class="underline decoration-slate-300 underline-offset-2 hover:text-brand transition">BLAM8</a></p>
+</div>
+{% else %}
+<div class="max-w-xl mx-auto p-4 sm:p-6 flex flex-col min-h-full"
+     id="portal" data-slug="{{ slug }}"
+     data-customer-ref="{{ customer.reference_code if customer else '' }}"
+     data-customer-name="{{ customer.name if customer else '' }}">
+
+  <!-- Business header (banner: one original image, responsive CSS cropping via
+       object-cover — h-32 on phones, h-44 up; a dead URL hides itself) -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden text-center">
+    {% if banner_url %}
+    <img src="{{ banner_url }}" alt="" class="w-full h-32 sm:h-44 object-cover"
+         onerror="this.style.display='none'">
+    {% endif %}
+    <div class="p-6">
+      <div class="mx-auto h-12 w-12 rounded-xl bg-navy text-white flex items-center justify-center text-xl font-bold">{{ t.name[:1]|upper }}</div>
+      <h1 class="text-xl font-bold text-navy mt-3">{{ t.name }}</h1>
+      {% if description %}<p class="text-sm text-slate-500 mt-1">{{ description }}</p>{% endif %}
+      {% if services %}<p class="text-xs text-slate-400 mt-2">{{ services|join(' · ') }}</p>{% endif %}
+      {% if service_area %}<p class="text-xs text-slate-400 mt-1">Serving {{ service_area }}</p>{% endif %}
+    </div>
+  </div>
+
+  {% if held_times %}
+  <section id="held-times" class="bg-white rounded-2xl border border-slate-200 p-4 mt-4" data-token="{{ offer_token }}">
+    <h2 class="font-bold text-navy">Your held times</h2>
+    <p id="held-result" role="status" class="text-sm py-2"></p>
+    {% for held in held_times %}
+    <div class="py-3 border-t border-slate-100" data-held-row>
+      <p>{{ held.label }}</p>
+      <p class="text-sm text-slate-500">Held until {{ held.until }}</p>
+      <p class="text-sm" data-held-until="{{ held.until_iso }}"></p>
+      <button type="button" data-choose-offer="{{ held.id }}" class="rounded-lg bg-brand text-white px-4 py-2 mt-2">Choose</button>
+    </div>
+    {% endfor %}
+  </section>
+  <script src="/static/portal_offers.js" defer></script>
+  {% endif %}
+
+  <!-- Chat transcript -->
+  <div id="pt-messages" class="flex-1 space-y-3 py-4 overflow-y-auto">
+    <div class="rounded-2xl bg-white border border-slate-200 px-4 py-3 text-sm text-slate-600 max-w-[85%]">
+      {%- if customer -%}
+        Hi{% if customer.name %} {{ customer.name.split(' ')[0] }}{% endif %} — good to see you!
+        {%- if customer.next_booking %} You're booked in for {{ customer.next_booking }}. Would you like to reschedule, book something else, or ask a question?
+        {%- else %} You've no upcoming bookings with {{ t.name }} — would you like to book one, or ask a question?
+        {%- endif -%}
+      {%- else -%}
+        {#- Invite-only (Kris 2026-09-24): an unverified visitor sees the way
+            in, and nothing else works until they are through it. -#}
+        {% if welcome %}{{ welcome }} {% endif %}This page is for {{ t.name }}'s customers. To carry on, type the reference code from any email from us (it looks like {{ ref_prefix }}-XXXX), or the email address we have for you and we'll send it there.
+      {%- endif -%}
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  {# Hidden until the visitor is a verified customer — each chip is an ask
+     the invite gate would only turn away. #}
+  <div id="pt-chips" class="flex flex-wrap gap-2 pb-3{% if not customer %} hidden{% endif %}">
+    {% if scheduling_on %}<button type="button" data-pt-ask="I'd like to book a service" class="rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand transition">Book a service</button>{% endif %}
+    <button type="button" data-pt-ask="I'd like to check my booking" class="rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand transition">Check my booking</button>
+    <button type="button" data-pt-ask="I'd like a quote" class="rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand transition">Get a quote</button>
+    <button type="button" data-pt-ask="Can I see my invoices — do I owe anything?" class="rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand transition">My invoices</button>
+    <button type="button" data-pt-ask="Can I see my quotes — is anything waiting on me?" class="rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand transition">My quotes</button>
+    {% if scheduling_on and customer_notes_on %}<button type="button" data-pt-ask="Show me the notes on my record — how am I getting on?" class="rounded-full border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:border-brand hover:text-brand transition">My notes</button>{% endif %}
+  </div>
+
+  <!-- Composer -->
+  <form id="pt-form" class="flex items-end gap-2">
+    <textarea id="pt-input" rows="1" maxlength="1000" placeholder="{{ 'Ask anything…' if customer else 'Your reference code or email address…' }}"
+              class="flex-1 resize-none rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand">{{ prefill or '' }}</textarea>
+    <button id="pt-send" type="submit"
+            class="flex-none rounded-xl bg-brand text-white px-4 py-2.5 text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition">Send</button>
+  </form>
+  <p class="text-center text-xs text-slate-400 mt-4 pb-2">Powered by <a href="https://blam8.com" class="underline decoration-slate-300 underline-offset-2 hover:text-brand transition">BLAM8</a> — answers come from {{ t.name }}'s own information.</p>
+</div>
+
+<script>
+(function () {
+  var root = document.getElementById('portal');
+  var slug = root.getAttribute('data-slug');
+  var messages = document.getElementById('pt-messages');
+  var form = document.getElementById('pt-form');
+  var input = document.getElementById('pt-input');
+  var send = document.getElementById('pt-send');
+  var chips = document.getElementById('pt-chips');
+  var busy = false;
+  var history = [];                    // this visit's turns, replayed for context
+  var storeKey = 'blam8-portal-' + slug;
+  // ref comes ONLY from the ?ref= link the visitor arrived with; sticky
+  // identity across turns is the opaque session token a verified turn mints
+  // (the full reference code never rides the chat wire or storage).
+  var ref = root.getAttribute('data-customer-ref') || '';
+  var sessionTok = '';
+  try { sessionTok = sessionStorage.getItem(storeKey + ':s') || ''; } catch (e) {}
+  // A tab that already verified carries on where it was: the chips (hidden
+  // for a visitor the invite gate hasn't let in) come back.
+  if (sessionTok && !history.length) chips.classList.remove('hidden');
+
+  function scrollDown() { window.scrollTo(0, document.body.scrollHeight); }
+  // URLs in assistant replies become real links (live e2e 2026-09-01: the pay
+  // link arrived as dead text). Built with DOM nodes, never innerHTML — the
+  // reply is model text and must stay inert; only https?:// gets an anchor.
+  function linkify(el, text) {
+    text.split(/(https?:\/\/[^\s<>"'\)\]]+)/g).forEach(function (part) {
+      if (/^https?:\/\//.test(part)) {
+        var m = part.match(/[.,;:!?]+$/);          // punctuation glued on the end
+        var url = m ? part.slice(0, -m[0].length) : part;
+        var a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        a.className = 'text-brand underline underline-offset-2 break-all';
+        a.textContent = url;
+        el.appendChild(a);
+        if (m) el.appendChild(document.createTextNode(m[0]));
+      } else if (part) {
+        el.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+  function bubble(role, text) {
+    var wrap = document.createElement('div');
+    if (role === 'user') {
+      wrap.className = 'flex justify-end';
+      var b = document.createElement('div');
+      b.className = 'rounded-2xl bg-brand text-white px-4 py-2.5 text-sm max-w-[85%] whitespace-pre-wrap';
+      b.textContent = text;
+      wrap.appendChild(b);
+    } else {
+      wrap.className = 'rounded-2xl bg-white border border-slate-200 px-4 py-3 text-sm text-slate-700 max-w-[85%] whitespace-pre-wrap';
+      linkify(wrap, text);
+    }
+    messages.appendChild(wrap);
+    scrollDown();
+    return wrap;
+  }
+  function statusBubble() {
+    var el = document.createElement('div');
+    el.className = 'rounded-2xl bg-white border border-slate-200 px-4 py-3 text-sm text-slate-400 max-w-[85%] italic';
+    el.textContent = 'One moment…';
+    messages.appendChild(el);
+    scrollDown();
+    return el;
+  }
+
+  // Ghost trail: each lookup stays as a small pill above the answer, so the
+  // customer can see where the answer came from. Tap = what it looked for.
+  function trailStrip() {
+    var wrap = document.createElement('div');
+    wrap.className = 'max-w-[85%] space-y-1';
+    var row = document.createElement('div');
+    row.className = 'flex flex-wrap items-center gap-1';
+    var detail = document.createElement('p');
+    detail.className = 'hidden text-[11px] text-slate-400 italic px-1 break-words';
+    wrap.appendChild(row); wrap.appendChild(detail);
+    messages.appendChild(wrap);
+    scrollDown();
+    return { row: row, detail: detail };
+  }
+  function trailPill(strip, item, active) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-500 transition' +
+                  (active ? ' animate-pulse' : '') +
+                  (item.detail ? ' hover:bg-slate-100' : ' cursor-default');
+    b.textContent = active ? (item.hint || 'One moment…') : (item.label || 'Checked');
+    if (item.detail) {
+      b.addEventListener('click', function () {
+        var open = !strip.detail.classList.contains('hidden') && strip.detail._for === b;
+        strip.detail._for = b;
+        strip.detail.textContent = 'Looked for: “' + item.detail + '”';
+        strip.detail.classList.toggle('hidden', open);
+      });
+    }
+    strip.row.appendChild(b);
+    scrollDown();
+    return b;
+  }
+  function settlePill(pill, item) {
+    if (!pill) return;
+    pill.classList.remove('animate-pulse');
+    pill.textContent = (item && item.label) || 'Checked';
+  }
+
+  async function ask(question) {
+    if (busy || !question) return;
+    busy = true; send.disabled = true;
+    chips.classList.add('hidden');
+    bubble('user', question);
+    var status = statusBubble();
+    var strip = null, livePill = null, liveItem = null;
+    try {
+      var res = await fetch('/api/portal/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: slug, question: question,
+                               history: history.slice(-16), ref: ref,
+                               session: sessionTok })
+      });
+      if (!res.ok) throw new Error('http ' + res.status);
+      var reader = res.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      var done = null;
+      while (true) {
+        var chunk = await reader.read();
+        if (chunk.done) break;
+        buf += decoder.decode(chunk.value, { stream: true });
+        var lines = buf.split('\n');
+        buf = lines.pop();
+        lines.forEach(function (line) {
+          if (!line.trim()) return;
+          var ev;
+          try { ev = JSON.parse(line); } catch (e) { return; }
+          if (ev.type === 'tool') {
+            if (!strip) { status.remove(); strip = trailStrip(); }
+            settlePill(livePill, liveItem);
+            liveItem = ev;
+            livePill = trailPill(strip, ev, true);
+          }
+          if (ev.type === 'tool_done') {
+            // Honest pills: the server corrects the settled label once the
+            // tool's RESULT is known (a refused booking never reads "Booked
+            // you in").
+            if (liveItem && liveItem.name === ev.name) liveItem.label = ev.label;
+          }
+          if (ev.type === 'done') done = ev;
+        });
+      }
+      settlePill(livePill, liveItem);
+      if (!strip) status.remove();
+      var reply = (done && done.reply) || "Sorry — I had trouble with that. Could you try again?";
+      bubble('assistant', reply);
+      if (done && done.customer && done.customer.session) {
+        input.placeholder = 'Ask anything…';
+        sessionTok = done.customer.session;
+        try { sessionStorage.setItem(storeKey + ':s', sessionTok); } catch (e) {}
+      }
+      history.push({ role: 'user', content: question });
+      history.push({ role: 'assistant', content: reply });
+    } catch (e) {
+      settlePill(livePill, liveItem);
+      if (!strip) status.remove();
+      bubble('assistant', "Sorry — I had trouble with that. Could you try again in a moment?");
+    }
+    busy = false; send.disabled = false;
+    input.focus();
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = input.value.trim();
+    if (!q) return;
+    input.value = '';
+    ask(q);
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+  });
+  document.querySelectorAll('[data-pt-ask]').forEach(function (btn) {
+    btn.addEventListener('click', function () { ask(btn.getAttribute('data-pt-ask')); });
+  });
+  // ?intent=book staged an ask in the composer server-side — put the cursor
+  // on it so the visitor's next tap is Send.
+  if (input.value) {
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+})();
+</script>
+{% endif %}
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

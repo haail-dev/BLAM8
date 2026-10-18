@@ -1,0 +1,170 @@
+{% extends "app/base.html" %}
+{% block title %}Storefront OS · BLAM8{% endblock %}
+{% block heading %}Storefront OS{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set err = request.query_params.get('err') %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'stocked' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Stock added — the delivery's on the shelf.</div>{% endif %}
+  {% if msg == 'reserved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Held — the stock's reserved for collection.</div>{% endif %}
+  {% if msg == 'oos' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">Out of stock — not enough available to reserve that.</div>{% endif %}
+  {% if msg in ('completed','ready') %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Order updated.</div>{% endif %}
+  {% if err or msg == 'err' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">Couldn't do that — check the details and try again.</div>{% endif %}
+
+  <p class="text-sm text-slate-500">
+    Your shop at a glance — who's collecting today, what's going off, and what's running low.
+    Stock fills itself in from a photo of the delivery note — no typing.
+  </p>
+
+  <!-- Panel 1 — today's collections (§2) -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <div>
+        <h2 class="text-sm font-semibold text-navy">Today's collections</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Reservations ready to collect (and any overdue), oldest first.</p>
+      </div>
+      <span class="text-xs text-slate-400">{{ collections|length }} today</span>
+    </div>
+    {% if collections %}
+    <ul class="divide-y divide-slate-50">
+      {% for t in collections %}
+      <li class="px-5 py-3">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-slate-700 truncate">
+                {% for it in t.shop_transaction_items %}{{ it.qty|int }}× {{ it.product_name }}{% if not loop.last %}, {% endif %}{% else %}Order{% endfor %}
+              </span>
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold {% if t.status == 'ready' %}bg-emerald-100 text-emerald-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ t.status }}</span>
+            </div>
+            <div class="text-xs text-slate-400 truncate mt-0.5">
+              {% if t.total_amount %}£{{ '%.2f'|format(t.total_amount|float) }}{% endif %}
+              {% if t.ready_date %} · ready {{ t.ready_date | pretty_date }}{% endif %}
+            </div>
+          </div>
+          <form method="post" action="/app/shop/transactions/{{ t.id }}/status" class="shrink-0 flex items-center gap-1">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="next" value="/app/shop">
+            {% if t.status != 'ready' %}<button name="status" value="ready" class="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Ready</button>{% endif %}
+            <button name="status" value="completed" class="rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 transition">Complete</button>
+          </form>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400 text-center">No collections due today.</p>
+    {% endif %}
+  </div>
+
+  <!-- Panel 2 — best-before specials (§12.2) -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <div>
+        <h2 class="text-sm font-semibold text-navy">Best-before specials</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Stock going off, and how many regulars who buy it BLAM8 can nudge.</p>
+      </div>
+      <span class="text-xs text-slate-400">{{ expiring|length }} going off</span>
+    </div>
+    {% if expiring %}
+    <ul class="divide-y divide-slate-50">
+      {% for p in expiring %}
+      <li class="flex items-center justify-between gap-3 px-5 py-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-700 truncate">{{ p.name }}</span>
+            <span class="rounded-full bg-rose-100 text-rose-700 px-2 py-0.5 text-[11px] font-semibold">Going off</span>
+          </div>
+          <div class="text-xs text-slate-400 truncate mt-0.5">
+            {{ p.qty_on_hand|int }} {{ p.unit }} at risk
+            {% if p.best_before_date %} · best before {{ p.best_before_date | pretty_date }}{% endif %}
+            · <span class="font-medium text-slate-500">{{ p.past_buyers or 0 }} past {{ 'buyer' if (p.past_buyers or 0) == 1 else 'buyers' }}</span>
+          </div>
+        </div>
+        <button type="button"
+                data-draft-specials="/api/shop/products/{{ p.id }}/draft-specials"
+                data-name="{{ p.name }}"
+                class="shrink-0 rounded-lg border border-rose-300 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50 transition disabled:opacity-50"
+                {% if not p.past_buyers %}title="No past buyers yet — flag a chalkboard special"{% endif %}>
+          Draft specials →
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400 text-center">Nothing going off in its lead window — the shelf's fresh.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    // [Draft specials] — fire the best-before drafter for one product's batch of past
+    // buyers now (the same compose/queue path as the 07:30 job). CSRF-carried POST.
+    document.querySelectorAll('[data-draft-specials]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        btn.disabled = true;
+        var name = btn.getAttribute('data-name') || 'this product';
+        try {
+          var body = new FormData();
+          body.append('csrf_token', '{{ csrf_token(request) }}');
+          var res = await fetch(btn.getAttribute('data-draft-specials'), {
+            method: 'POST', body: body, headers: { 'X-CSRF-Token': '{{ csrf_token(request) }}' },
+          });
+          var data = await res.json();
+          if (res.ok && (data.drafted || data.sent)) {
+            btn.textContent = (data.sent ? 'Sent ' : 'Drafted ') + ((data.drafted || 0) + (data.sent || 0)) + ' ✓';
+          } else if (res.ok) {
+            btn.textContent = 'No new buyers';
+          } else {
+            btn.textContent = 'Couldn’t draft'; btn.disabled = false;
+          }
+        } catch (e) {
+          btn.textContent = 'Couldn’t draft'; btn.disabled = false;
+        }
+      });
+    });
+  </script>
+
+  <!-- Panel 3 — stock levels + reorder (§2) -->
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <div>
+        <h2 class="text-sm font-semibold text-navy">Stock levels</h2>
+        <p class="text-xs text-slate-400 mt-0.5">On-hand quantities; anything at/below its reorder point is flagged amber.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="/app/shop/products" class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">Manage catalogue</a>
+        <a href="/app/shop/stock-in" class="rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand/90 transition">Photograph delivery</a>
+      </div>
+    </div>
+    {% if products %}
+    <ul class="divide-y divide-slate-50">
+      {% for p in products %}
+      {% set avail = (p.qty_on_hand|float) - (p.qty_reserved|float) %}
+      {% set is_low = p.reorder_threshold is not none and (p.qty_on_hand|float) <= (p.reorder_threshold|float) %}
+      <li class="flex items-center justify-between gap-3 px-5 py-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-700 truncate">{{ p.name }}</span>
+            {% if is_low %}<span class="rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-[11px] font-semibold">Reorder</span>{% endif %}
+          </div>
+          <div class="text-xs text-slate-400 truncate mt-0.5">
+            {% if p.unit_price %}£{{ '%.2f'|format(p.unit_price|float) }}/{{ p.unit }}{% else %}{{ p.unit }}{% endif %}
+            {% if p.reorder_threshold is not none %} · threshold {{ p.reorder_threshold|int }}{% endif %}
+            {% if p.best_before_date %} · BB {{ p.best_before_date | pretty_date }}{% endif %}
+          </div>
+        </div>
+        <div class="shrink-0 text-right">
+          <div class="text-sm font-semibold text-navy {% if is_low %}text-amber-700{% endif %}">{{ p.qty_on_hand|int }} <span class="text-xs font-normal text-slate-400">{{ p.unit }}</span></div>
+          {% if (p.qty_reserved|float) > 0 %}<div class="text-[11px] text-slate-400">{{ p.qty_reserved|int }} held · {{ avail|int }} free</div>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400 text-center">No products yet — <a href="/app/shop/products" class="text-brand font-medium">add your first</a>, or stock one in.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

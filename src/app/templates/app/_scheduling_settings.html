@@ -1,0 +1,1047 @@
+<!-- Scheduling config form (module 2). Included by settings.html (embedded card)
+     and diary_settings.html (standalone page). Parent must set `sched_return`
+     (where to land after save) and pass scheduling_cfg + sched_saved.
+
+     Layout (docs/architecture/unified-slot-grid.md Phase 5): the BASE is the time grid every
+     business needs — working days, opening hours, slot length, blackout dates. The
+     capacity/parallelism knobs and each vertical's capacity model live under an
+     "Advanced" panel; a module's row is grayed (a preview + upsell) until that module
+     is unlocked, so one scheduling area serves every industry. All inputs stay inside
+     the one <form> (a collapsed <details> still submits), so the save handler is
+     unchanged. -->
+{# ── The values each row reads back ──────────────────────────────────────────
+   Kris 2026-09-01: "Suggested update for Scheduling block?" — 48 fields in 19
+   groups, 37 of them behind one disclosure called Advanced, and a closed face
+   that stated two of the nineteen. Advanced was not a category, it was the pile
+   of things nobody grouped.
+
+   Every group is a row now, stating its own answer, so the block reads as a
+   list of decisions rather than a wall of inputs. Nothing about the form
+   changed: same names, same values, same one <form>, so the save handler and
+   every {% if %} around a field are untouched. #}
+{% set DAYS = ['mon','tue','wed','thu','fri','sat','sun'] %}
+{% set _set = (scheduling_cfg.working_days or '')|replace(' ', '')|lower %}
+{% set _on = [] %}
+{% for d in DAYS %}{% if d in _set.split(',') %}{% set _ = _on.append(d) %}{% endif %}{% endfor %}
+{% set _daylbl = 'Every day' if _on|length == 7
+                 else ('Mon–Fri' if _on == ['mon','tue','wed','thu','fri']
+                 else (_on|map('capitalize')|join(', ') if _on else 'No days set')) %}
+{% set _open = ((scheduling_cfg.open_time or '')|string)[:5] %}
+{% set _close = ((scheduling_cfg.close_time or '')|string)[:5] %}
+{% set _slot = scheduling_cfg.slot_minutes or 60 %}
+{% set _slotlbl = (_slot ~ ' min') if _slot < 60
+                  else ((_slot // 60) ~ ' hr' ~ ((' ' ~ (_slot % 60) ~ ' min') if _slot % 60 else '')) %}
+{% set _svc = service_types|length %}
+{# With mornings/afternoons or per-service lengths the slot value is only the
+   grid the diary places things on, not a slot a customer can book (Kris
+   2026-09-04: "30 min slots" on a services rig's am/pm diary read as wrong). #}
+{% set _gridface = (_slotlbl ~ ' slots') if (scheduling_cfg.windows in (none, '', 'slots') and not _svc) else (_slotlbl ~ ' grid') %}
+{% set _res = resource_types|length %}
+{% set _bo = (scheduling_cfg.blackout_dates or [])|length %}
+{% set _cap = scheduling_cfg.capacity_per_window if scheduling_cfg.capacity_per_window is not none else 'Not set yet' %}
+{% set _ovr = [] %}
+{% for d in DAYS %}{% if day_hours[d] %}{% set _ = _ovr.append(d) %}{% endif %}{% endfor %}
+{% set _buf = scheduling_cfg.buffer_minutes or 0 %}
+
+{# One face, one shape — the same row the rest of Settings uses. #}
+{# A NAMED group (group/row), not a bare one. `group-open:` compiles to
+   `.group[open] &`, which matches ANY open .group ancestor — and these rows sit
+   inside the sheet's own .group. Unnamed, every row's value went invisible the
+   moment the sheet was opened, which is the one time you are looking at them. #}
+{% macro sface(name, value) %}
+      <summary class="flex items-baseline gap-3 px-5 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+        <span class="text-sm font-semibold text-navy flex-none">{{ name }}</span>
+        <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open/row:invisible">{{ value }}</span>
+        <span class="flex-none text-slate-300 transition group-open/row:rotate-90">&rsaquo;</span>
+      </summary>
+{% endmacro %}
+
+<form method="post" action="/app/settings/scheduling" id="scheduling" class="space-y-5">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <input type="hidden" name="return_to" value="{{ sched_return }}">
+  <input type="hidden" name="booking_revision" value="{{ scheduling_cfg.get('booking_revision', 0) }}">
+  <fieldset class="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+    <legend>Booking settings</legend>
+    {% set review = scheduling_cfg.get('booking_setting_review') or {} %}
+    {% for key, label, value in [('capacity', 'Capacity', scheduling_cfg.capacity_per_window),
+                                ('working_days', 'Working days', scheduling_cfg.working_days),
+                                ('opening_hours', 'Opening hours', scheduling_cfg.open_time),
+                                ('timezone', 'Timezone', scheduling_cfg.get('timezone'))] %}
+      {% set meta = review.get(key, {}) %}
+      {% set state = meta.get('state', 'set' if value is not none and value is defined else 'unset') %}
+      <div>
+        <label>{{ label }}
+          <select name="{{ key }}_state">
+            {% for option, text in [('unset', 'Not set yet: booking unavailable'), ('set', 'Apply value'),
+                                    ('off', 'Explicitly off: booking unavailable'), ('not_applicable', 'Not applicable')] %}
+            <option value="{{ option }}" {{ 'selected' if state == option }}>{{ text }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <p>{{ 'In use: carried over, please confirm' if meta.get('review_status') == 'carried_over_review'
+               else ('Confirmed' if meta.get('review_status') == 'confirmed' else 'Not set yet: booking unavailable') }}</p>
+        <label><input type="checkbox" name="confirm_booking_setting" value="{{ key }}"> Confirm {{ label|lower }}</label>
+      </div>
+    {% endfor %}
+    <label>Business timezone
+      <select name="timezone">
+        <option value="" {{ 'selected' if not scheduling_cfg.get('timezone') }}>Not set yet</option>
+        <option value="Europe/London" {{ 'selected' if scheduling_cfg.get('timezone') == 'Europe/London' }}>Europe/London</option>
+      </select>
+    </label>
+    <p>Other timezones are not supported yet. Not applicable capacity requires configured resource pools.</p>
+  </fieldset>
+  {# `sched_fold` (set only by settings.html, where this is one card among a
+     dozen) turns the header into a one-line closed face, matching the fold the
+     rest of that page grew. On /app/diary/settings this partial IS the page, so
+     it stays open with its normal header. #}
+  {# It used to read "mon, tue, wed, thu, fri · 09:00–17:00" — lowercase, and
+     two of the nineteen things inside. Days compress to a run, and the slot
+     length and service count come along because they are what a diary IS. #}
+  {% set schedface = _daylbl ~ ' ' ~ _open ~ '–' ~ _close
+                     ~ ('' if fleet_mode else (' · ' ~ (_svc ~ ' services' if _svc else _gridface))) %}
+  <{{ 'details' if sched_fold else 'section' }} class="{{ 'group ' if sched_fold }}bg-white rounded-xl border border-slate-200 overflow-hidden">
+    {% if sched_fold %}
+    <summary data-fold="{{ 'Fleet diary' if fleet_mode else 'Scheduling' }}" class="flex items-baseline gap-3 px-5 py-3.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+      <span class="text-sm font-semibold text-navy flex-none">{{ 'Fleet diary' if fleet_mode else 'Scheduling' }}</span>
+      <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open:invisible">{{ schedface }}</span>
+      <span class="flex-none text-slate-300 transition group-open:rotate-90">&rsaquo;</span>
+    </summary>
+    {% endif %}
+    {# The rows below own their padding and their own rules, so the shell adds
+       neither — otherwise every row is inset inside a padded box and the rules
+       stop reaching the card edge. #}
+    <div class="{{ 'border-t border-slate-200' if sched_fold else '' }}">
+    <div class="px-5 py-4">
+      <div>
+        {% if not sched_fold %}
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ 'Fleet diary' if fleet_mode else 'Scheduling' }}</p>
+        {% endif %}
+        <p class="text-sm text-slate-400">
+          {% if fleet_mode %}
+          When the diary is open for bookings — see it at <a href="/app/diary" class="text-brand hover:underline">Diary</a>. Capacity itself comes from your <a href="/app/fleet" class="text-brand hover:underline">vehicles</a>.
+          {% else %}
+          The diary the agent checks and books against — see it at <a href="/app/diary" class="text-brand hover:underline">Diary</a>.
+          {% endif %}
+        </p>
+        {# Opens the in-app assistant pre-asked to walk THIS business through its
+           settings — it already knows the tenant's industry + current setup
+           (src/app/settings_guide.py). It was a bordered button the size of the
+           section title, which on a phone took half the header and broke the
+           sentence above it into four ragged lines. It is an offer, not the
+           subject of the section. #}
+        <span hidden data-concierge-ask="Set up my diary settings for my business: put a full recommended diary settings card in your FIRST reply from what you already know about me, and list every number you assumed (people working at once, how far ahead I book, the notice I need) so I can correct it. Don't ask me questions first unless you genuinely can't tell whether my bookings are overnight stays, visits or timed slots."></span>
+{% include "app/_help_hint.html" %}
+        {# Booking requirements left the diary menu with the other settings
+           rows (2026-09-02), and the cog lands here — so this page has to be
+           the door to it, or the checklist would only be reachable from the
+           general Settings page. #}
+        {# Not during the setup walk (Kris 2026-09-13): the strip already says
+           the next step, and a link ahead is a way to skip it. #}
+        {% if not fleet_mode and not setup_walk_active %}
+        <p class="mt-2 text-xs text-slate-400">
+          What the agent asks every customer before it books lives in
+          <a href="/app/diary/intake" class="text-brand hover:underline">Booking requirements</a>.
+        </p>
+        {% endif %}
+      </div>
+    </div>
+    {% if sched_saved %}
+    <div class="px-5 pb-4">
+    <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Diary settings saved — they apply from the next availability check.</div>
+    </div>
+    {% endif %}
+
+    {# ── BASE — the time grid every business needs ───────────────────────────── #}
+    {% if not fleet_mode %}
+        <details class="group/row border-t border-slate-200">
+      {{ sface('Opening hours', _open ~ '–' ~ _close ~ ' · ' ~ _gridface) }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+            <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs text-slate-500 mb-1" for="open_time">Open from</label>
+          <input id="open_time" name="open_time" type="time"
+                 value="{{ ((scheduling_cfg.open_time or '')|string)[:5] }}"
+                 class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-500 mb-1" for="close_time">Until</label>
+          <input id="close_time" name="close_time" type="time"
+                 value="{{ ((scheduling_cfg.close_time or '')|string)[:5] }}"
+                 class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+        </div>
+        <div>
+          {# Slot length on the 15-minute grid (docs/architecture/unified-slot-grid.md): every option is
+             a multiple of 15, from 15 min up to a full 8-hour day (the diary engine caps a
+             slot at 480 min; for a single whole-day booking use Windows → Whole day under
+             Advanced). #}
+          <label class="block text-xs text-slate-500 mb-1" for="slot_minutes">Slot length</label>
+          <select id="slot_minutes" name="slot_minutes" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+            {% for m in [15, 30, 45, 60, 90, 120, 180, 240, 360, 480] %}
+            {% set lbl = (m ~ ' min') if m < 60 else ((m // 60) ~ ' hr' ~ ((' ' ~ (m % 60) ~ ' min') if m % 60 else '')) %}
+            <option value="{{ m }}" {{ 'selected' if scheduling_cfg.slot_minutes == m }}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+      </div>
+    </details>
+    {% endif %}
+
+        <details class="group/row border-t border-slate-200">
+      {{ sface('Working days', _daylbl) }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+            <div class="flex flex-wrap gap-2">
+        {% set active_days = (scheduling_cfg.working_days or '').replace(' ', '').lower().split(',') %}
+        {% for d in ['mon','tue','wed','thu','fri','sat','sun'] %}
+        <label class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-brand-50 has-[:checked]:text-brand has-[:checked]:font-semibold">
+          <input type="checkbox" name="working_days" value="{{ d }}" class="accent-blue-600"
+                 {{ 'checked' if d in active_days }}>{{ d|title }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+      </div>
+    </details>
+
+        <details class="group/row border-t border-slate-200">
+      {{ sface('Blackout dates', (_bo ~ ' date' ~ ('' if _bo == 1 else 's')) if _bo else 'None') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+      <label class="block text-sm font-medium text-navy mb-1" for="blackout_dates">Blackout dates</label>
+      <p class="text-xs text-slate-400 mb-1.5">Days you never take bookings (holidays, shutdowns) — one per line, YYYY-MM-DD.</p>
+      <textarea id="blackout_dates" name="blackout_dates" rows="3" placeholder="2026-12-25"
+                class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">{{ scheduling_cfg.blackout_dates|join('\n') }}</textarea>
+    </div>
+    {# Bank holidays (D1): the official gov.uk list for the business's nation,
+       kept up to date daily; closed for normal work, open for a service's out
+       of hours when it covers them. None = as before. #}
+    <div>
+      <label class="block text-sm font-medium text-navy mb-1" for="bank_holiday_nation">Bank holidays</label>
+      <p class="text-xs text-slate-400 mb-1.5">Closed on the official bank holidays for your nation (kept up to date for you). A service with out-of-hours cover on bank holidays is still bookable at its out-of-hours price.</p>
+      <select id="bank_holiday_nation" name="bank_holiday_nation" class="rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+        {% set bhn = scheduling_cfg.bank_holiday_nation or '' %}
+        <option value="" {{ 'selected' if not bhn else '' }}>Don't close for bank holidays</option>
+        <option value="england-and-wales" {{ 'selected' if bhn == 'england-and-wales' else '' }}>England &amp; Wales</option>
+        <option value="scotland" {{ 'selected' if bhn == 'scotland' else '' }}>Scotland</option>
+        <option value="northern-ireland" {{ 'selected' if bhn == 'northern-ireland' else '' }}>Northern Ireland</option>
+      </select>
+      <label class="block text-xs text-slate-500 mt-2" for="bank_holidays_open">Bank holidays you DO work, as normal — one per line, YYYY-MM-DD</label>
+      <textarea id="bank_holidays_open" name="bank_holidays_open" rows="2" placeholder="2026-08-31"
+                class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">{{ (scheduling_cfg.bank_holidays_open or [])|join('\n') }}</textarea>
+    </div>
+    {# After the job (docs/plan-after-job-tasks.md): who says a job is done —
+       the moment each service's after-the-job deadlines start counting. #}
+    <div>
+      <label class="block text-sm font-medium text-navy mb-1" for="job_done_when">A job counts as done when</label>
+      <p class="text-xs text-slate-400 mb-1.5">Starts the clock on a service's "After the job" tasks.</p>
+      {% set jdw = scheduling_cfg.job_done_when or 'marked' %}
+      <select id="job_done_when" name="job_done_when" class="rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+        <option value="marked" {{ 'selected' if jdw == 'marked' else '' }}>You or your team mark it done</option>
+        <option value="day_end" {{ 'selected' if jdw == 'day_end' else '' }}>Its last day ends</option>
+      </select>
+    </div>
+      </div>
+    </details>
+
+    {# ── SERVICES — per-service durations (src/app/services.py) ───────────────────────
+       Each service the business offers, with how long it takes (and an optional price), so
+       the agent books the RIGHT slot length per service instead of one fixed slot. Empty =
+       the single fixed-slot diary (the slot length above), unchanged. Office tenants only. #}
+    {% if not fleet_mode %}
+        <details class="group/row border-t border-slate-200">
+      {% if diary_stay_mode %}
+      {{ sface('Appointments', ((_svc ~ ' appointment' ~ ('' if _svc == 1 else 's')) ~ (' · front desk rule' if front_desk.enabled else '')) if _svc else 'None — stays only') }}
+      {% else %}
+      {{ sface('Services & durations', (_svc ~ ' service' ~ ('' if _svc == 1 else 's')) if _svc else ('One fixed length — ' ~ _slotlbl)) }}
+      {% endif %}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+      {% if diary_stay_mode %}
+      {# A stays diary's other use (Kris 2026-09-13): timed visits the customer
+         comes to, each with its own "at once", kept apart from the spaces. #}
+            <p class="text-xs text-slate-400 mb-2.5" data-appointments-help>Timed visits alongside the stays — a meet &amp; greet, an assessment. Each has how long it takes and how many can run <strong>at once</strong>, separate from your spaces. The agent books these with their own tools; stays and same-day visits stay as they are.</p>
+            <p class="text-xs text-slate-400 mb-2.5 -mt-1.5">Each can also take bookings only between set times, on set days, and up to a set number a day — leave any blank for no limit.</p>
+      {% else %}
+            <p class="text-xs text-slate-400 mb-2.5">List the services you offer, each with how long it takes — the agent books that length when a customer asks for it. Leave empty to use one fixed slot length (above) for every booking.</p>
+      <p class="text-xs text-slate-400 mb-2.5 -mt-1.5">Resource &amp; buffer are optional: tie a service to a <em>resource type</em> below (its own capacity/skill), and set its own turnaround gap.</p>
+      <p class="text-xs text-slate-400 mb-2.5 -mt-1.5">Each service can also take bookings only between set times, on set days, and up to a set number a day — leave any blank for no limit.</p>
+      <p class="text-xs text-slate-400 mb-2.5 -mt-1.5"><strong>Timing</strong> is what the customer is offered: an <em>exact time</em> for an appointment they come to; <em>morning or afternoon</em> for work at their address where you manage the hour (a survey, a fitting); <em>whole day</em> for a day-long job. The diary still reserves the service's real length.</p>
+      {% endif %}
+      {# Practice OS (docs/os/practice.md §4.2): a per-service Recall cadence (months) rides
+         in the SAME service row — only shown for practice tenants; the positional array
+         stays aligned with service_name for every tenant because the input is always emitted
+         (a hidden empty one for non-practice), so parse_form never misaligns. #}
+      {% set svc_cols = "1.4fr_5rem_5rem_9rem_1fr_5rem_5rem_2rem" if practice_on else "1.4fr_5rem_5rem_9rem_1fr_5rem_2rem" %}
+      <div class="hidden md:grid grid-cols-[{{ svc_cols }}] gap-2 px-1 pb-1 text-xs font-semibold text-slate-400">
+        {% if diary_stay_mode %}<span>Appointment</span><span>Mins</span><span>Price £</span><span>At once</span><span></span><span></span>{% else %}<span>Service</span><span>Mins</span><span>Price £</span><span>Timing</span><span>Resource</span><span>Buffer</span>{% endif %}{% if practice_on %}<span>Recall mo</span>{% endif %}<span></span>
+      </div>
+      {# A service's own booking rules (docs/plan-diary-multiview.md, Kris 2026-09-23):
+         hours, days and a max a day. Positional like the rest of the row — every row
+         always posts all four, blank = no rule. #}
+      {% macro svc_rules(s) %}
+          <div class="md:col-span-full flex flex-wrap items-center gap-x-2 gap-y-1.5 pl-1 pb-1.5 text-xs text-slate-500" data-svc-rules>
+            <span>Takes bookings</span>
+            <input name="service_from" type="time" step="900" value="{{ s.hours_from or '' }}" aria-label="Takes bookings from"
+                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>to</span>
+            <input name="service_until" type="time" step="900" value="{{ s.hours_until or '' }}" aria-label="Takes bookings until"
+                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>or only at</span>
+            <input name="service_starts" value="{{ (s.starts or [])|join(', ') }}" placeholder="e.g. 11:00, 15:00" aria-label="Only starts at"
+                   class="w-36 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span class="ml-1">on</span>
+            <input type="hidden" name="service_days" value="{{ (s.days or [])|join(',') }}">
+            <span class="inline-flex gap-1" title="None ticked = every day you're open">
+              {% for d in range(7) %}<button type="button" class="svc-day h-7 w-7 rounded-full border border-slate-300 text-[11px] font-semibold text-slate-500 transition aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-white"
+                      data-day="{{ d }}" aria-pressed="{{ 'true' if s.days and d in s.days else 'false' }}" aria-label="{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][d] }}">{{ 'MTWTFSS'[d] }}</button>{% endfor %}
+            </span>
+            <span class="ml-1">max</span>
+            <input name="service_max" type="number" min="1" max="500" step="1" value="{{ s.max_per_day or '' }}" placeholder="—" aria-label="Most a day"
+                   class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>a day</span>
+            {# Urgent (docs/plan-service-urgency.md, D1): same day when asked before a
+               cut-off, on the service's own notice. Blank = not urgent, diary notice. #}
+            <span class="ml-1" title="An urgent job: done the same day when the customer asks before this time">same day if asked before</span>
+            <input name="service_same_day" type="time" step="900" value="{{ s.same_day_until or '' }}" aria-label="Same day if asked before"
+                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>with</span>
+            <input name="service_notice" type="number" min="0" max="72" step="1" value="{{ s.notice_hours if s.notice_hours is not none else '' }}" placeholder="—" aria-label="Notice for this service, hours"
+                   class="w-14 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>h notice</span>
+            {# Out of hours (docs/plan-service-urgency.md, D1): evenings until a time,
+               extra days, bank holidays, its own price, and who decides. Blank until
+               or no price = none. Every row posts all six. #}
+            {% set o = s.out_of_hours or {} %}
+            <span class="basis-full h-0"></span>
+            <span title="Evenings, extra days or bank holidays at a different price">Out of hours: until</span>
+            <input name="service_ooh_until" type="time" step="900" value="{{ o.until or '' }}" aria-label="Out of hours until"
+                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>and on</span>
+            <input name="service_ooh_days" value="{% for d in o.days or [] %}{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d] }}{{ ', ' if not loop.last }}{% endfor %}" placeholder="e.g. Sun" aria-label="Out of hours extra days"
+                   class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <select name="service_ooh_bh" aria-label="Bank holidays" class="rounded-lg border border-slate-300 px-2 py-1 text-sm bg-white">
+              <option value="" {{ '' if o.bank_holidays else 'selected' }}>not bank holidays</option>
+              <option value="1" {{ 'selected' if o.bank_holidays else '' }}>and bank holidays</option>
+            </select>
+            <span>at £</span>
+            <input name="service_ooh_price" type="number" min="0" step="0.01" value="{{ o.price if o.price is not none else '' }}" placeholder="—" aria-label="Out-of-hours first hour"
+                   class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <select name="service_ooh_basis" aria-label="Out-of-hours price basis" class="rounded-lg border border-slate-300 px-2 py-1 text-sm bg-white">
+              <option value="unspecified" {{ 'selected' if not o.price_basis or o.price_basis == 'unspecified' else '' }}>price basis not specified</option>
+              <option value="booking" {{ 'selected' if o.price_basis == 'booking' else '' }}>per booking</option>
+              <option value="first_hour" {{ 'selected' if o.price_basis == 'first_hour' else '' }}>first hour</option>
+            </select>
+            <span>then (first-hour pricing only) £</span>
+            <input name="service_ooh_after" type="number" min="0" step="0.01" value="{{ o.price_after if o.price_after is not none else '' }}" placeholder="—" aria-label="Out-of-hours per hour after"
+                   class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span>an hour —</span>
+            {% if o.carried_over_review %}
+            <p class="text-sm text-amber-700">{{ 'Price basis and terms' if 'terms' in o.carried_over_review else 'Price basis' }} carried over, awaiting owner review. Check these before saving.</p>
+            <label><input type="checkbox" name="service_ooh_reviewed" value="{{ s.name }}"> I have reviewed these terms and price basis</label>
+            {% endif %}
+            <input name="service_ooh_terms" value="{{ o.terms or '' }}" maxlength="1000" aria-label="Out-of-hours terms" placeholder="Your additional terms, if any" class="rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <select name="service_ooh_offer" aria-label="Who decides" class="rounded-lg border border-slate-300 px-2 py-1 text-sm bg-white">
+              <option value="ask" {{ 'selected' if (o.offer or 'ask') == 'ask' else '' }}>ask me first</option>
+              <option value="auto" {{ 'selected' if o.offer == 'auto' else '' }}>offer it automatically</option>
+              <option value="existing" {{ 'selected' if o.offer == 'existing' else '' }}>automatically for existing customers</option>
+            </select>
+            {# After the job (docs/plan-after-job-tasks.md): work this service leaves
+               for the business, each with a deadline from the job being done.
+               Every row posts it, so the positional lists stay aligned. #}
+            <span class="basis-full h-0"></span>
+            <span title="Tasks this job leaves for you, each with a deadline counted from when the job is done">After the job:</span>
+            <input name="service_after_job" value="{% for t in s.after_job or [] %}{{ t.title }} — {{ t.days }} {{ 'working ' if t.unit == 'working' }}day{{ 's' if t.days != 1 }}{{ '; ' if not loop.last }}{% endfor %}" aria-label="After the job tasks"
+                   placeholder="e.g. Send the report — 2 days; Book the check-up — 30 working days"
+                   class="min-w-0 flex-1 basis-64 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+          </div>
+      {% endmacro %}
+      <div id="svc-rows" class="space-y-2">
+        {% for s in service_types %}
+        <div class="svc-row grid grid-cols-1 md:grid-cols-[{{ svc_cols }}] gap-2 items-center">
+          <input name="service_name" value="{{ s.name }}" placeholder="e.g. Cut &amp; blow dry"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="service_minutes" type="number" min="5" max="1440" step="5" value="{{ s.minutes }}" placeholder="60"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="service_price" type="number" min="0" step="0.01" value="{{ s.price if s.price is not none else '' }}" placeholder="—"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% if diary_stay_mode %}
+          <input name="service_at_once" type="number" min="1" max="999" step="1" value="{{ appointment_at_once.get(s.name, 1) }}" placeholder="1" title="How many can run at the same time"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <span></span><span></span>
+          <input type="hidden" name="service_timing" value="time"><input type="hidden" name="service_resource" value="{{ s.resource or '' }}"><input type="hidden" name="service_buffer" value="">
+          {% else %}
+          <select name="service_timing" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+            <option value="time" {{ 'selected' if (s.timing or 'time') == 'time' else '' }}>Exact time</option>
+            <option value="half" {{ 'selected' if s.timing == 'half' else '' }}>Morning or afternoon</option>
+            <option value="day" {{ 'selected' if s.timing == 'day' else '' }}>Whole day</option>
+          </select>
+          <input name="service_resource" value="{{ s.resource or '' }}" placeholder="(any)" list="resource-names"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="service_buffer" type="number" min="0" max="480" step="5" value="{{ s.buffer if s.buffer is not none else '' }}" placeholder="—"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% endif %}
+          {% if practice_on %}
+          <input name="service_recall_months" type="number" min="1" max="60" step="1" value="{{ s.recall_months if s.recall_months is not none else '' }}" placeholder="—"
+                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% else %}
+          <input type="hidden" name="service_recall_months" value="{{ s.recall_months if s.recall_months is not none else '' }}">
+          {% endif %}
+          <button type="button" class="svc-remove text-slate-400 hover:text-rose-600 text-xl leading-none px-2" aria-label="Remove">&times;</button>
+          {{ svc_rules(s) }}
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" id="svc-add"
+              class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+        <span class="text-lg leading-none">+</span> {{ 'Add an appointment' if diary_stay_mode else 'Add a service' }}
+      </button>
+      {% if diary_stay_mode %}
+      {# The front desk rule (Kris 2026-09-13): whether an appointment may overlap
+         a drop-off or a collection — off when a partner or employee can take one
+         while you take the other. #}
+      <div class="mt-4 rounded-lg border border-slate-200 px-4 py-3" data-front-desk>
+        <input type="hidden" name="front_desk_present" value="1">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" name="front_desk_enabled" value="1" {{ 'checked' if front_desk.enabled }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+          <span class="min-w-0">
+            <span class="block text-sm font-medium text-navy">Front desk rule <span class="font-normal text-slate-400">— one person handles drop-offs, collections and appointments</span></span>
+            <span class="block text-xs text-slate-400 mt-0.5">On: no appointment is offered while a drop-off or collection is being handled, and no drop-off or collection is booked inside an appointment. Off: they may overlap — a partner or employee takes one while you take the other.</span>
+          </span>
+        </label>
+        <div class="mt-2 pl-7 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <span>A drop-off or collection takes</span>
+          <input name="front_desk_minutes" type="number" min="5" max="120" step="5" value="{{ front_desk.minutes }}"
+                 class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+          <span>minutes of the desk.</span>
+        </div>
+      </div>
+      {% endif %}
+      <template id="svc-template">
+        <div class="svc-row grid grid-cols-1 md:grid-cols-[{{ svc_cols }}] gap-2 items-center">
+          <input name="service_name" placeholder="e.g. Cut &amp; blow dry" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="service_minutes" type="number" min="5" max="1440" step="5" placeholder="60" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="service_price" type="number" min="0" step="0.01" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% if diary_stay_mode %}
+          <input name="service_at_once" type="number" min="1" max="999" step="1" placeholder="1" title="How many can run at the same time" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <span></span><span></span>
+          <input type="hidden" name="service_timing" value="time"><input type="hidden" name="service_resource" value=""><input type="hidden" name="service_buffer" value="">
+          {% else %}
+          <select name="service_timing" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+            <option value="time">Exact time</option>
+            <option value="half">Morning or afternoon</option>
+            <option value="day">Whole day</option>
+          </select>
+          <input name="service_resource" placeholder="(any)" list="resource-names" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="service_buffer" type="number" min="0" max="480" step="5" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% endif %}
+          {% if practice_on %}
+          <input name="service_recall_months" type="number" min="1" max="60" step="1" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% else %}
+          <input type="hidden" name="service_recall_months" value="">
+          {% endif %}
+          <button type="button" class="svc-remove text-slate-400 hover:text-rose-600 text-xl leading-none px-2" aria-label="Remove">&times;</button>
+          {{ svc_rules({}) }}
+        </div>
+      </template>
+      <script>
+        (function () {
+          var rows = document.getElementById('svc-rows');
+          var tpl = document.getElementById('svc-template');
+          if (!rows || !tpl) return;
+          document.getElementById('svc-add').addEventListener('click', function () {
+            rows.appendChild(tpl.content.cloneNode(true));
+            rows.lastElementChild.querySelector('input[name="service_name"]').focus();
+          });
+          rows.addEventListener('click', function (e) {
+            if (e.target.classList.contains('svc-remove')) e.target.closest('.svc-row').remove();
+            var day = e.target.closest('.svc-day');
+            if (day) {
+              day.setAttribute('aria-pressed', day.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+              var wrap = day.closest('[data-svc-rules]');
+              wrap.querySelector('input[name="service_days"]').value =
+                Array.prototype.map.call(wrap.querySelectorAll('.svc-day[aria-pressed="true"]'),
+                                         function (b) { return b.getAttribute('data-day'); }).join(',');
+            }
+          });
+        })();
+      </script>
+    </div>
+      </div>
+    </details>
+    {% endif %}
+
+    {# Resource-type names for the service-row and resource-row autocompletes. #}
+    <datalist id="resource-names">
+      {% for r in resource_types %}<option value="{{ r.name }}">{% endfor %}
+    </datalist>
+
+    {# ── RESOURCE TYPES — typed capacity catalogue (src/app/diary_config.py) ──────────
+       Different KINDS of bookable unit, each its own pool (stay sizes, room types, hire
+       stock, bays, staff). Empty = one shared pool of "Bookings per slot". Office only. #}
+    {% if not fleet_mode %}
+        <details class="group/row border-t border-slate-200">
+      {{ sface('Resource types', (_res ~ ' type' ~ ('' if _res == 1 else 's')) if _res else 'One shared pool') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+      <span class="block text-sm font-medium text-navy mb-1">Resource types <span class="font-normal text-slate-400">— different kinds of bookable unit</span></span>
+      <p class="text-xs text-slate-400 mb-2.5">Add a type for each distinct thing customers book — use the names of your own resource types. Each has its own count, so one can be full while another is free. Leave empty to use one shared pool (Bookings per slot, under Advanced).</p>
+      <div class="hidden md:grid grid-cols-[1.4fr_4.5rem_5rem_6rem_1fr_2rem] gap-2 px-1 pb-1 text-xs font-semibold text-slate-400">
+        <span>Type</span><span>How many</span><span>Rate £</span><span>Per</span><span>Skills/notes</span><span></span>
+      </div>
+      <div id="rt-rows" class="space-y-2">
+        {% for r in resource_types %}
+        <div class="rt-row grid grid-cols-1 md:grid-cols-[1.4fr_4.5rem_5rem_6rem_1fr_2rem] gap-2 items-center">
+          <input name="resource_name" value="{{ r.name }}" placeholder="Your resource type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="resource_count" type="number" min="1" max="9999" value="{{ r.count }}" placeholder="1" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="resource_rate" type="number" min="0" step="0.01" value="{{ r.rate if r.rate is not none else '' }}" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <select name="resource_rate_unit" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white">
+            {% for u in ['booking','hour','day','night','week'] %}
+            <option value="{{ u }}" {{ 'selected' if r.rate_unit == u }}>{{ u }}</option>
+            {% endfor %}
+          </select>
+          <input name="resource_skills" value="{{ r.skills|join(', ') }}" placeholder="optional, comma-separated" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <button type="button" class="rt-remove text-slate-400 hover:text-rose-600 text-xl leading-none px-2" aria-label="Remove">&times;</button>
+        </div>
+        {% endfor %}
+      </div>
+      <button type="button" id="rt-add" class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+        <span class="text-lg leading-none">+</span> Add a resource type
+      </button>
+      <template id="rt-template">
+        <div class="rt-row grid grid-cols-1 md:grid-cols-[1.4fr_4.5rem_5rem_6rem_1fr_2rem] gap-2 items-center">
+          <input name="resource_name" placeholder="Your resource type" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="resource_count" type="number" min="1" max="9999" placeholder="1" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <input name="resource_rate" type="number" min="0" step="0.01" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <select name="resource_rate_unit" class="rounded-lg border border-slate-300 px-2 py-2 text-sm bg-white">
+            {% for u in ['booking','hour','day','night','week'] %}<option value="{{ u }}">{{ u }}</option>{% endfor %}
+          </select>
+          <input name="resource_skills" placeholder="optional, comma-separated" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          <button type="button" class="rt-remove text-slate-400 hover:text-rose-600 text-xl leading-none px-2" aria-label="Remove">&times;</button>
+        </div>
+      </template>
+      <script>
+        (function () {
+          var rows = document.getElementById('rt-rows'), tpl = document.getElementById('rt-template');
+          if (!rows || !tpl) return;
+          document.getElementById('rt-add').addEventListener('click', function () {
+            rows.appendChild(tpl.content.cloneNode(true));
+            rows.lastElementChild.querySelector('input[name="resource_name"]').focus();
+          });
+          rows.addEventListener('click', function (e) {
+            if (e.target.classList.contains('rt-remove')) e.target.closest('.rt-row').remove();
+          });
+        })();
+      </script>
+    </div>
+      </div>
+    </details>
+    {% endif %}
+
+    {# ── ADVANCED — capacity/parallelism + each vertical's capacity model ─────── #}
+
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Notice, holds & capacity', scheduling_cfg.min_notice_hours ~ ' hrs notice · ' ~ scheduling_cfg.horizon_days ~ ' days ahead' ~ ('' if fleet_mode else (' · ' ~ _cap ~ ' per slot'))) }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="min_notice_hours">Minimum notice (hours)</label>
+            <input id="min_notice_hours" name="min_notice_hours" type="number" min="0" max="336"
+                   value="{{ scheduling_cfg.min_notice_hours }}"
+                   class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="horizon_days">Booking horizon (days)</label>
+            <input id="horizon_days" name="horizon_days" type="number" min="1" max="365"
+                   value="{{ scheduling_cfg.horizon_days }}"
+                   class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          {% if not fleet_mode %}
+          <div>
+            <input type="hidden" name="offer_last_call_present" value="1">
+            <label class="block text-sm font-medium text-navy mb-1" for="offer_last_call">Close offers on the day before at</label>
+            <input id="offer_last_call" name="offer_last_call" type="time" value="{{ (scheduling_cfg.offer_last_call or '')[:5] }}" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+            <p class="text-xs text-slate-500">N/A when blank. Offers end at the earliest of this time, the hold duration, or the notice cut-off.</p>
+            {% if scheduling_cfg.offer_last_call_review == 'carried_over_review' %}<p class="text-sm text-amber-700">In use: carried over, please confirm</p>{% endif %}
+            <label class="block text-sm font-medium text-navy mb-1" for="offer_ttl_hours">Hold offered slots for (hours)</label>
+            <input id="offer_ttl_hours" name="offer_ttl_hours" type="number" min="1" max="168"
+                   value="{{ scheduling_cfg.offer_ttl_hours or 24 }}"
+                   class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            <p class="text-xs text-slate-400 mt-1">When the agent offers a customer a choice of times, each is reserved exclusively for them (nobody else gets offered it) — and released this many hours later if they don't reply. The deadline is stated in their email. 24 is a good default.</p>
+            <label class="mt-2.5 flex items-start gap-2">
+              <input type="checkbox" name="offer_nudge_enabled" value="1"
+                     {% if scheduling_cfg.offer_nudge_enabled is not defined or scheduling_cfg.offer_nudge_enabled %}checked{% endif %}
+                     class="mt-0.5 rounded border-slate-300">
+              <span class="text-xs text-slate-500"><span class="font-medium text-navy">Nudge before release</span> — a few hours before offered slots free up, remind the customer once ("still want Tuesday 10:00? It's released at 17:00"). Queued for your approval unless you're on full-auto.</span>
+            </label>
+          </div>
+          {% endif %}
+          {% if not fleet_mode %}
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="capacity_per_window">Bookings per slot</label>
+            <input id="capacity_per_window" name="capacity_per_window" type="number" min="0" max="9999"
+                   value="{{ scheduling_cfg.capacity_per_window if scheduling_cfg.capacity_per_window is not none else '' }}"
+                   class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            <p class="text-xs text-slate-400 mt-1">How many bookings can share one slot — e.g. 3 if three of you work in parallel. Leave at 1 for a single person.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="windows">Booking unit</label>
+            <select id="windows" name="windows" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="slots" {{ 'selected' if scheduling_cfg.windows == 'slots' }}>Booked times (use slot length)</option>
+              <option value="ampm" {{ 'selected' if scheduling_cfg.windows == 'ampm' }}>Mornings &amp; afternoons</option>
+              <option value="day" {{ 'selected' if scheduling_cfg.windows == 'day' }}>Whole day</option>
+            </select>
+            <p class="text-xs text-slate-400 mt-1">How a day is divided when you don't use Services &amp; durations. "Booked times" uses your slot length above; the other two ignore it.</p>
+            {% if scheduling_cfg.service_types %}
+            <p class="text-xs text-amber-600 mt-1">You've added Services &amp; durations, so each booking already uses its own service length — this setting is ignored while you have services.</p>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </details>
+
+        {# Inbound vs outbound — a diary CAPABILITY, not a vertical. "We travel to the job"
+           turns on the travel assistant (route + travel-time aware scheduling), a paid add-on.
+           Gated like the capacity rows: a locked preview + upsell until the travel add-on is
+           active (travel_on), then a real on/off toggle. #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Travel', ((_buf ~ ' min buffer') if _buf else 'No buffer') ~ (' · assistant on' if scheduling_cfg.travel_mode else '')) }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+          <span class="block text-sm font-medium text-navy mb-1">How you schedule</span>
+          <p class="text-xs text-slate-400 mb-2.5">Customers come to you, or you go to them — this shapes the whole diary.</p>
+          {% if not fleet_mode %}
+          <div class="mb-3 max-w-xs">
+            <label class="block text-sm font-medium text-navy mb-1" for="buffer_minutes">Travel buffer between jobs (minutes)</label>
+            <input id="buffer_minutes" name="buffer_minutes" type="number" min="0" max="480" step="5"
+                   value="{{ scheduling_cfg.buffer_minutes or 0 }}"
+                   class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            <p class="text-xs text-slate-400 mt-1">If you travel to the job, leave a gap between bookings so the agent never books back-to-back without travel time — e.g. 45 min to cross your area. 0 = no buffer (customers come to you).</p>
+          </div>
+          {% endif %}
+          <div class="flex items-start gap-3 rounded-lg border px-4 py-3 {% if travel_on %}border-slate-200 bg-white{% else %}border-brand/30 bg-brand-50{% endif %}">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-navy">
+                Travel assistant
+                <span class="ml-1 align-middle rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[10px] font-semibold">Mobile / field</span>
+                {% if not travel_on %}<span class="ml-1 align-middle text-[11px] font-semibold text-amber-600">Paid add-on</span>{% endif %}
+              </p>
+              <p class="text-xs text-slate-600 mt-0.5 leading-relaxed">A flat buffer pads every gap the same. The travel assistant works out the <span class="font-semibold text-navy">real drive time</span> between each job — a short hop leaves a small gap, a longer one leaves more — so you stop losing the day to dead time and <span class="font-semibold text-navy">fit more jobs in</span>. It plans your route order too, and usually pays for itself in the extra work you can take on.</p>
+            </div>
+            {% if travel_on %}
+            <label class="flex-none inline-flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+              <input type="checkbox" name="travel_mode" value="1" {{ 'checked' if scheduling_cfg.travel_mode }} class="accent-blue-600 h-4 w-4">On
+            </label>
+            {% else %}
+            <a href="/billing/plans" class="flex-none self-center rounded-lg bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition shadow-sm">Unlock →</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {# Module-gated capacity extras — each vertical adds its own capacity model to the
+           SAME diary. Shown to everyone (a preview + upsell); the row un-grays and its
+           setup link goes live only when the module is unlocked (fsm_on / tms_on). #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Capacity by industry', 'Trades and transport add their own' if (fsm_on or tms_on) else 'Nothing unlocked') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+                    <p class="text-xs text-slate-400 mb-2.5">Unlock a module to add its capacity model to this diary — only what you switch on appears.</p>
+          {% set extras = [
+            {'on': fsm_on, 'name': 'Field OS · Trades', 'badge': 'Trades',
+             'desc': 'Capacity is your engineers + their skills — the agent books a skill-matched engineer for the right job length.',
+             'setup': '/app/fsm/engineers', 'cta': 'Set up engineers'},
+            {'on': tms_on, 'name': 'Field OS · Transport', 'badge': 'Logistics',
+             'desc': 'Capacity is your vehicles + pallet-space and weight — the agent books each load onto the right van.',
+             'setup': '/app/fleet', 'cta': 'Set up vehicles'},
+          ] %}
+          <div class="space-y-2">
+            {% for e in extras %}
+            <div class="flex items-start gap-3 rounded-lg border px-4 py-3 {% if e.on %}border-slate-200 bg-white{% else %}border-slate-200 bg-slate-50 opacity-70{% endif %}">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold {{ 'text-navy' if e.on else 'text-slate-500' }}">
+                  {{ e.name }}
+                  <span class="ml-1 align-middle rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[10px] font-semibold">{{ e.badge }}</span>
+                  {% if not e.on %}<span class="ml-1 align-middle text-[11px] font-medium text-slate-400">Locked</span>{% endif %}
+                </p>
+                <p class="text-xs text-slate-400 mt-0.5">{{ e.desc }}</p>
+              </div>
+              {% if e.on %}
+              <a href="{{ e.setup }}" class="flex-none rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-brand hover:text-brand transition">{{ e.cta }} →</a>
+              {% else %}
+              <a href="/billing/plans" class="flex-none rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Unlock →</a>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {% if not fleet_mode %}
+        {# ── STAYS — pricing, minimum stay, deposit, check-in/out (app/diary_config) ── #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Stays', ('£' ~ stay_pricing.rate ~ ' per ' ~ (stay_pricing.rate_unit or 'night')) if stay_pricing.rate is not none else 'Not used') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+          <span class="block text-sm font-medium text-navy mb-1">Stays &amp; pricing</span>
+          <p class="text-xs text-slate-400 mb-2.5">For businesses that book by the night/day (arrival-to-departure bookings). Used when Overnight stays is on, or with a resource type that has its own rate. Leave blank if not applicable.</p>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <div class="flex gap-2">
+              <div class="flex-1">
+                <label class="block text-xs text-slate-500 mb-1" for="stay_rate">Rate £</label>
+                <input id="stay_rate" name="stay_rate" type="number" min="0" step="0.01" value="{{ stay_pricing.rate if stay_pricing.rate is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+              </div>
+              <div class="w-28">
+                <label class="block text-xs text-slate-500 mb-1" for="stay_rate_unit">Per</label>
+                <select id="stay_rate_unit" name="stay_rate_unit" class="w-full rounded-lg border-slate-300 border px-2 py-2 text-sm bg-white">
+                  {% for u in ['night','day','week'] %}<option value="{{ u }}" {{ 'selected' if stay_pricing.rate_unit == u }}>{{ u }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="stay_deposit">Deposit to hold £ (optional)</label>
+              <input id="stay_deposit" name="stay_deposit" type="number" min="0" step="0.01" value="{{ stay_pricing.deposit if stay_pricing.deposit is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="stay_min_nights">Minimum nights</label>
+              <input id="stay_min_nights" name="stay_min_nights" type="number" min="0" max="365" value="{{ stay_pricing.min_nights or '' }}" placeholder="0" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div class="flex gap-2">
+              <div class="flex-1">
+                <label class="block text-xs text-slate-500 mb-1" for="checkin_after">Check-in from</label>
+                <input id="checkin_after" name="checkin_after" type="time" value="{{ day_hours.checkin_after or '' }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+              </div>
+              <div class="flex-1">
+                <label class="block text-xs text-slate-500 mb-1" for="checkout_before">Check-out by</label>
+                <input id="checkout_before" name="checkout_before" type="time" value="{{ day_hours.checkout_before or '' }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {# ── PER-DAY OPENING HOURS — overrides of the standard hours ──────────────── #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Hours by day', (_ovr|map('capitalize')|join(', ') ~ ' differ') if _ovr else 'Same every day') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+          <span class="block text-sm font-medium text-navy mb-1">Opening hours by day <span class="font-normal text-slate-400">— overrides</span></span>
+          <p class="text-xs text-slate-400 mb-2.5">Set hours for any day that differs from your standard hours (e.g. Sat 09:00–13:00). Leave a day blank to use the standard hours above.</p>
+          <div class="space-y-1.5">
+            {% for d in ['mon','tue','wed','thu','fri','sat','sun'] %}
+            <div class="flex items-center gap-2">
+              <span class="w-12 text-xs font-medium text-slate-500">{{ d|title }}</span>
+              <input name="dayhours_{{ d }}_open" type="time" value="{{ (day_hours[d].open if day_hours[d]) or '' }}" class="rounded-lg border-slate-300 border px-2 py-1.5 text-sm">
+              <span class="text-xs text-slate-400">to</span>
+              <input name="dayhours_{{ d }}_close" type="time" value="{{ (day_hours[d].close if day_hours[d]) or '' }}" class="rounded-lg border-slate-300 border px-2 py-1.5 text-sm">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {# ── PARTY SIZE — a booking is for N people (covers/guests) ───────────────── #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Party size', ('Up to ' ~ party_size.max_people ~ ' at once' if party_size.max_people else 'On') if party_size.enabled else 'Off') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="party_enabled" value="1" {{ 'checked' if party_size.enabled }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-navy">Book by party size <span class="font-normal text-slate-400">— covers / guests</span></span>
+              <span class="block text-xs text-slate-400 mt-0.5">Each booking is for a number of people, counted against your total capacity (restaurant covers, class places, venue guests).</span>
+            </span>
+          </label>
+          <div class="mt-2 max-w-[12rem] pl-7">
+            <label class="block text-xs text-slate-500 mb-1" for="party_max_people">Max people at once (optional)</label>
+            <input id="party_max_people" name="party_max_people" type="number" min="1" max="100000" value="{{ party_size.max_people or '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {# ── CANCELLATIONS & CREDITS — how a package credit is spent (src/app/wallet.py) ── #}
+            <details class="group/row border-t border-slate-200">
+      {% set noun_b = nouns.booking if (nouns is defined and nouns and nouns.booking) else 'booking' %}
+      {{ sface('Cancellations & credits', ('spent ' ~ ('when the ' ~ noun_b ~ ' happens' if credits.spend == 'auto' else 'when you mark the register') ~ ' · ' ~ credits.late_hours ~ ' hrs notice · no-show ' ~ ('spends' if credits.no_show_spends else 'free') ~ ' · late move ' ~ ('charged' if credits.late_move_charged else 'free'))) }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+        <p class="text-xs text-slate-400">For businesses that sell packages, blocks or passes (Settings → Getting paid → Packages). Every line here is your call; the customer sees the rule on the portal and the agent states it before it books.</p>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="credits_spend">A credit is spent</label>
+            <select id="credits_spend" name="credits_spend" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="auto" {{ 'selected' if credits.spend == 'auto' }}>Automatically when the {{ noun_b }} happens</option>
+              <option value="register" {{ 'selected' if credits.spend == 'register' }}>Only when I mark the register</option>
+            </select>
+            <p class="text-xs text-slate-400 mt-1">Either way the register on a booking (attended · no-show · late cancel · excused) has the last word for that one.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="late_cancel_hours">Late-cancel window (hours)</label>
+            <input id="late_cancel_hours" name="late_cancel_hours" type="number" min="0" max="336" value="{{ credits.late_hours }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="no_show_spends">A no-show or a late cancel</label>
+            <select id="no_show_spends" name="no_show_spends" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="1" {{ 'selected' if credits.no_show_spends }}>Spends the session or hour</option>
+              <option value="0" {{ 'selected' if not credits.no_show_spends }}>Is free — nothing spent</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="excused_refunds">An excused absence</label>
+            <select id="excused_refunds" name="excused_refunds" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="1" {{ 'selected' if credits.excused_refunds }}>Gives the session or hour back</option>
+              <option value="0" {{ 'selected' if not credits.excused_refunds }}>Still spends it</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="late_move_charged">Moving a booking inside the window</label>
+            <select id="late_move_charged" name="late_move_charged" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="1" {{ 'selected' if credits.late_move_charged }}>Counts as a late cancel, then a fresh booking</option>
+              <option value="0" {{ 'selected' if not credits.late_move_charged }}>Is free — the booking just moves</option>
+            </select>
+          </div>
+          {# ── MAKE-UPS (src/app/makeups.py, slice 6): a class missed with notice, made up once ── #}
+          {% set makeups = makeups if makeups is defined else {'on': false, 'per_term': 1, 'notice_hours': 24, 'within_days': 42, 'no_show_ok': false, 'free': true} %}
+          <div class="sm:col-span-2 border-t border-slate-100 pt-4">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" name="makeups_on" value="1" {{ 'checked' if makeups.on }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+              <span class="min-w-0">
+                <span class="block text-sm font-medium text-navy">Make-up classes <span class="font-normal text-slate-400">— a class missed with notice can be made up</span></span>
+                <span class="block text-xs text-slate-400 mt-0.5">A make-up is a one-off booking bound to the missed class (the register's "excused"), subject to space. The agent and the portal book it against this rule; the customer's record lists what qualifies.</span>
+              </span>
+            </label>
+          </div>
+          <div class="pl-7 sm:col-span-2 grid sm:grid-cols-5 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="makeup_per_term">Per participant per block <span class="text-slate-400">(0 = no limit)</span></label>
+              <input id="makeup_per_term" name="makeup_per_term" type="number" min="0" max="12" value="{{ makeups.per_term }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="makeup_notice_hours">Notice needed (hours)</label>
+              <input id="makeup_notice_hours" name="makeup_notice_hours" type="number" min="0" max="336" value="{{ makeups.notice_hours }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="makeup_within_days">Take it within (days) <span class="text-slate-400">(0 = any time)</span></label>
+              <input id="makeup_within_days" name="makeup_within_days" type="number" min="0" max="365" value="{{ makeups.within_days }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="makeup_no_show_ok">A no-show or late cancel</label>
+              <select id="makeup_no_show_ok" name="makeup_no_show_ok" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+                <option value="0" {{ 'selected' if not makeups.no_show_ok }}>Earns no make-up</option>
+                <option value="1" {{ 'selected' if makeups.no_show_ok }}>Also earns one</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="makeup_free">A make-up is</label>
+              <select id="makeup_free" name="makeup_free" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+                <option value="1" {{ 'selected' if makeups.free }}>Free</option>
+                <option value="0" {{ 'selected' if not makeups.free }}>Charged as a normal class</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-navy mb-1" for="hours_unit">Packages sold in hours spend</label>
+            <select id="hours_unit" name="hours_unit" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+              <option value="minutes" {{ 'selected' if credits.hours == 'minutes' }}>The booking's actual minutes (a 45-minute booking = 0.75 h)</option>
+              <option value="hour" {{ 'selected' if credits.hours == 'hour' }}>A whole hour per session</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {# ── WHEN IT'S FULL (docs/plan-when-its-full.md, Kris 2026-09-23) ─────────────
+           How the diary behaves around a busy request — for every kind of booking
+           (a stay, a slot, an appointment). Each choice decides what the agent is
+           TOLD, not an option it weighs. The waiting list moved here from Courses;
+           its stored settings are the same keys. #}
+        {% set courses = courses if courses is defined else {'courses': false, 'waitlist': false, 'waitlist_notify': 'approve', 'offer_hours': 48, 'reenrol_days': 21, 'reenrol_notify': 'approve', 'other_dates': 'hold', 'hold_while_gathering': true} %}
+        {% set _hwg = courses.hold_while_gathering if courses.hold_while_gathering is defined else true %}
+        {% set _od = courses.other_dates or 'hold' %}
+            <details class="group/row border-t border-slate-200" data-when-full>
+      {{ sface("When it's full", ('Held while details come in' if _hwg else 'Nothing held until details are in') ~ ' · ' ~ {'hold': 'other dates offered and held', 'offer': 'other dates offered, not held', 'off': 'no other dates'}[_od] ~ ' · ' ~ (('waiting list, offers held ' ~ courses.offer_hours ~ ' h') if courses.waitlist else 'no waiting list')) }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+        <input type="hidden" name="full_card_present" value="1">
+        <label class="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" name="hold_while_gathering" value="1" {{ 'checked' if _hwg }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+          <span class="min-w-0">
+            <span class="block text-sm font-medium text-navy">Hold it while details come in</span>
+            <span class="block text-xs text-slate-400 mt-0.5">When all that's missing is a detail the customer hasn't sent yet (a time or subject name), what they asked for is held for them until they reply. Off: nothing is held until every detail is in.</span>
+          </span>
+        </label>
+        <div class="border-t border-slate-100 pt-4">
+          <span class="block text-sm font-medium text-navy mb-1">When what they ask for is full</span>
+          <div class="space-y-1.5 text-sm">
+            <label class="flex items-start gap-2.5 cursor-pointer"><input type="radio" name="other_dates" value="hold" {{ 'checked' if _od == 'hold' }} class="mt-1 accent-blue-600"><span>Offer the nearest free dates <strong>and hold them</strong> for the customer</span></label>
+            <label class="flex items-start gap-2.5 cursor-pointer"><input type="radio" name="other_dates" value="offer" {{ 'checked' if _od == 'offer' }} class="mt-1 accent-blue-600"><span>Offer the nearest free dates, but <strong>hold nothing</strong> until they say yes</span></label>
+            <label class="flex items-start gap-2.5 cursor-pointer"><input type="radio" name="other_dates" value="off" {{ 'checked' if _od == 'off' }} class="mt-1 accent-blue-600"><span><strong>Don't offer other dates</strong> — just say it's full</span></label>
+          </div>
+        </div>
+        <div class="border-t border-slate-100 pt-4 space-y-3">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="waitlist_on" value="1" {{ 'checked' if courses.waitlist }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-navy">Waiting list</span>
+              <span class="block text-xs text-slate-400 mt-0.5">A full class, slot, appointment or stay offers a place on the list instead of "no space" (by email and on the portal); a participant may wait on several. A place that frees up is offered to the first waiting.</span>
+            </span>
+          </label>
+          <div class="pl-7 grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="waitlist_notify">A freed place is offered</label>
+              <select id="waitlist_notify" name="waitlist_notify" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+                <option value="approve" {{ 'selected' if courses.waitlist_notify == 'approve' }}>As a message for my approval</option>
+                <option value="auto" {{ 'selected' if courses.waitlist_notify == 'auto' }}>Automatically</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="offer_hours">Offer held for (hours)</label>
+              <input id="offer_hours" name="offer_hours" type="number" min="1" max="336" value="{{ courses.offer_hours }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+          </div>
+          {# The CRM link (Kris 2026-09-05): the list moves the contact's deal along YOUR pipeline. #}
+          {% set crm_stages = crm_stages if crm_stages is defined else [] %}
+          <div class="pl-7 grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="waitlist_stage">When someone joins the list, move their deal to</label>
+              {% if crm_stages %}
+              <select id="waitlist_stage" name="waitlist_stage" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+                <option value="">— leave the pipeline alone —</option>
+                {% for s in crm_stages %}<option value="{{ s }}" {{ 'selected' if courses.waitlist_stage and courses.waitlist_stage|lower == s|lower }}>{{ s }}</option>{% endfor %}
+              </select>
+              {% else %}
+              <input id="waitlist_stage" name="waitlist_stage" value="{{ courses.waitlist_stage or '' }}" placeholder="a pipeline stage name (CRM settings)" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="booked_stage">When they book from the list, move it to</label>
+              {% if crm_stages %}
+              <select id="booked_stage" name="booked_stage" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+                <option value="">— leave the pipeline alone —</option>
+                {% for s in crm_stages %}<option value="{{ s }}" {{ 'selected' if courses.booked_stage and courses.booked_stage|lower == s|lower }}>{{ s }}</option>{% endfor %}
+              </select>
+              {% else %}
+              <input id="booked_stage" name="booked_stage" value="{{ courses.booked_stage or '' }}" placeholder="a pipeline stage name (CRM settings)" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+              {% endif %}
+            </div>
+            <p class="sm:col-span-2 text-xs text-slate-400">Every list event (joined, offered, booked, lapsed) lands on the contact's timeline regardless; the stage moves only when you name one. A contact with no open deal gets one.</p>
+          </div>
+          <p class="text-xs text-slate-400">With the waiting list on and other dates offered, the customer is offered the list for exactly what they asked for first, then the nearest free dates.</p>
+        </div>
+      </div>
+    </details>
+
+        {# ── RECURRING — standing weekly/term bookings ───────────────────────────── #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Recurring bookings', (recurring.frequencies|map('replace', 'six_weekly', 'Every 6 weeks')|map('capitalize')|join(', ') if recurring.frequencies else 'On') if recurring.enabled else 'Off') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="recurring_enabled" value="1" {{ 'checked' if recurring.enabled }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-navy">Recurring bookings <span class="font-normal text-slate-400">— standing slots</span></span>
+              <span class="block text-xs text-slate-400 mt-0.5">Let customers book a regular repeating slot (using the frequencies you choose). Each date is capacity-checked.</span>
+            </span>
+          </label>
+          <div class="mt-2 pl-7 flex flex-wrap items-end gap-4">
+            <div>
+              <span class="block text-xs text-slate-500 mb-1">Allowed frequencies</span>
+              <div class="flex gap-2">
+                {% for f, lbl in [('weekly','Weekly'),('fortnightly','Fortnightly'),('monthly','Monthly'),('six_weekly','Every 6 weeks'),('quarterly','Quarterly')] %}
+                <label class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs cursor-pointer has-[:checked]:border-brand has-[:checked]:bg-brand-50 has-[:checked]:text-brand">
+                  <input type="checkbox" name="recurring_freq" value="{{ f }}" class="accent-blue-600" {{ 'checked' if (not recurring.frequencies) or (f in recurring.frequencies) }}>{{ lbl }}
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="w-32">
+              <label class="block text-xs text-slate-500 mb-1" for="recurring_max">Max repeats</label>
+              <input id="recurring_max" name="recurring_max" type="number" min="1" max="52" value="{{ recurring.max_occurrences or 12 }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+          </div>
+        </div>
+        {# ── YOUR WORDS (Kris 2026-09-05): a booking is a "session", the person a "participant" ── #}
+        {% set nouns = nouns if nouns is defined else {'booking': 'booking', 'participant': 'customer'} %}
+        <div class="border-t border-slate-100 pt-4 grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1" for="noun_booking">What you call a booking</label>
+            <input id="noun_booking" name="noun_booking" value="{{ nouns.booking }}" placeholder="Your word for a booking" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1" for="noun_participant">What you call the person who attends</label>
+            <input id="noun_participant" name="noun_participant" value="{{ nouns.participant }}" placeholder="Your word for a participant" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+          </div>
+          <p class="sm:col-span-2 text-xs text-slate-400">The agent, the portal and the rules below use your words.</p>
+        </div>
+        {# ── COURSES + THE WAITING LIST (src/app/courses.py, slice 3): every knob a setting ── #}
+        {% set courses = courses if courses is defined else {'courses': false, 'waitlist': false, 'waitlist_notify': 'approve', 'offer_hours': 48, 'reenrol_days': 21, 'reenrol_notify': 'approve'} %}
+        <div class="border-t border-slate-100 pt-4 space-y-3">
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="courses_on" value="1" {{ 'checked' if courses.courses }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-navy">Courses <span class="font-normal text-slate-400">— fixed-start blocks with a set number of places</span></span>
+              <span class="block text-xs text-slate-400 mt-0.5">For a fixed-start block: the customer books the whole block as a series; places per class are your capacity per slot. Current participants keep their place in the next block until the last session.</span>
+            </span>
+          </label>
+          <div class="pl-7 grid sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="reenrol_days">Re-enrol note, days before the last session <span class="text-slate-400">(0 = never)</span></label>
+              <input id="reenrol_days" name="reenrol_days" type="number" min="0" max="120" value="{{ courses.reenrol_days }}" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1" for="reenrol_notify">That note goes</label>
+              <select id="reenrol_notify" name="reenrol_notify" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+                <option value="approve" {{ 'selected' if courses.reenrol_notify == 'approve' }}>For my approval</option>
+                <option value="auto" {{ 'selected' if courses.reenrol_notify == 'auto' }}>Automatically</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+        {# ── DELIVERY — a stay/hire that is delivered + collected ─────────────────── #}
+            <details class="group/row border-t border-slate-200">
+      {{ sface('Delivery & collection', ('£' ~ delivery.fee if delivery.fee is not none else 'On') if delivery.offered else 'Off') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+<div>
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" name="delivery_offered" value="1" {{ 'checked' if delivery.offered }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-navy">Delivery &amp; collection</span>
+              <span class="block text-xs text-slate-400 mt-0.5">You can deliver and collect the booking (hire, skip, equipment). The agent captures the delivery address.</span>
+            </span>
+          </label>
+          <div class="mt-2 pl-7 flex flex-wrap items-end gap-4">
+            <div class="w-32">
+              <label class="block text-xs text-slate-500 mb-1" for="delivery_fee">Fee £ (optional)</label>
+              <input id="delivery_fee" name="delivery_fee" type="number" min="0" step="0.01" value="{{ delivery.fee if delivery.fee is not none else '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+            <div class="w-36">
+              <label class="block text-xs text-slate-500 mb-1" for="delivery_radius">Radius (miles)</label>
+              <input id="delivery_radius" name="delivery_radius" type="number" min="0" max="1000" value="{{ delivery.radius_miles or '' }}" placeholder="—" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+        {% endif %}
+
+
+    {# The marker moves to the BAR now that the bar has a rule and padding of
+       its own — hiding only the button would leave a bordered strip holding a
+       caption about a save you cannot make. #}
+    <div data-save-row class="flex items-center gap-3 border-t border-slate-200 px-5 py-4 flex-wrap">
+      <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save diary settings</button>
+      <span class="text-xs text-slate-400">Existing bookings are never changed by these settings.</span>
+    </div>
+    </div>
+  </{{ 'details' if sched_fold else 'section' }}>
+</form>

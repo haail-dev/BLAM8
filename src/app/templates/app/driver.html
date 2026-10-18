@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Driver run · BLAM8</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/tw-plain.css?v={{ asset_rev }}">
+</head>
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<div class="max-w-md mx-auto min-h-full bg-slate-50">
+  <header class="bg-navy text-white px-4 py-3 sticky top-0 z-10" data-pull-bar>
+    <div class="flex items-center justify-between">
+      <span class="font-bold tracking-tight">BLAM8 <span class="font-normal text-white/60">Driver</span></span>
+      <span class="text-xs text-white/70">{{ day }} · {{ delivered }}/{{ total }} done</span>
+    </div>
+    <form method="get" action="/app/driver" class="mt-2">
+      <select name="vehicle" onchange="this.form.submit()"
+              class="w-full rounded-lg bg-navy/40 border border-white/20 text-white px-3 py-2 text-sm outline-none">
+        {% for v in vehicles %}
+        <option value="{{ v.id }}" {% if v.id == selected %}selected{% endif %}>{{ v.name }}{% if v.registration %} · {{ v.registration }}{% endif %}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </header>
+
+  <main class="p-3 space-y-3">
+    {% if not vehicle %}
+    <p class="text-center text-slate-400 py-16 text-sm">No vehicle to drive yet.</p>
+    {% endif %}
+    {% for s in stops %}
+    <div class="rounded-2xl bg-white border {{ 'border-emerald-200' if s.done else 'border-slate-200' }} p-4 shadow-sm">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="font-semibold text-navy {{ 'line-through text-slate-400' if s.done }}">{{ s.summary }}</p>
+          <p class="text-xs text-slate-400 mt-0.5">{{ s.ref }} · {{ s.spaces }}</p>
+        </div>
+        <span class="text-2xl font-bold {{ 'text-emerald-500' if s.done else 'text-slate-300' }}">{{ '✓' if s.done else '' }}</span>
+      </div>
+      <div class="mt-2 text-sm text-slate-600">
+        {% if s.collection %}<span class="text-slate-400">From</span> {{ s.collection }}<br>{% endif %}
+        <span class="text-slate-400">To</span> <span class="font-medium text-navy">{{ s.delivery or '—' }}</span>
+      </div>
+      {% if s.done %}
+        <p class="mt-2 text-xs text-emerald-600">Delivered{% if s.state.signed_by %} · signed {{ s.state.signed_by }}{% endif %}</p>
+      {% else %}
+      <form method="post" action="/app/tms/pod/{{ s.id }}" class="mt-3 space-y-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="/app/driver?vehicle={{ selected }}">
+        <input name="signed_by" placeholder="Customer signature / name"
+               class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base outline-none focus:border-brand">
+        <div class="flex gap-2">
+          <button name="outcome" value="delivered" class="flex-1 rounded-xl bg-emerald-600 py-3 text-white font-semibold active:bg-emerald-700">Mark delivered</button>
+          <button name="outcome" value="failed" class="rounded-xl border border-rose-300 px-4 text-rose-600 font-semibold active:bg-rose-50">Failed</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </main>
+</div>
+<script src="/static/pull_refresh.js?v={{ asset_rev }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+{% extends "app/base.html" %}
+{% block title %}Standing orders · Wholesale OS · BLAM8{% endblock %}
+{% block heading %}Standing orders{% endblock %}
+{% set back = ('/app/wholesale', 'Wholesale') %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'created' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Standing order created — it generates on its schedule from now on.</div>{% endif %}
+  {% if msg == 'incomplete' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">A standing order needs a buyer, at least one line, and (for weekly/fortnightly) at least one weekday.</div>{% endif %}
+  {% if msg == 'skipped' %}<div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">Next cycle skipped.</div>{% endif %}
+  {% if msg in ('confirmed', 'drafted') %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Cycle generated — the confirmation is {{ 'sent' if msg == 'confirmed' else 'in your approval queue' }}.</div>{% endif %}
+  {% if msg == 'held' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Cycle generated but HELD — the buyer is over their credit limit; the credit conversation is drafted for you.</div>{% endif %}
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>Set the Tuesday book once — every cycle spawns its order, runs the credit gate, and drafts its own confirmation.</p>
+  </div>
+
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    {% if standing %}
+    <ul class="divide-y divide-slate-50">
+      {% for so in standing %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm flex-wrap">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+          {{ 'bg-emerald-100 text-emerald-700' if so.status == 'active' else 'bg-slate-100 text-slate-500' }}">{{ so.status | upper }}</span>
+        <span class="font-medium text-navy">{{ so.name or 'Standing order' }}</span>
+        <span class="text-slate-500">{{ so.buyer }} · {{ so.cadence }} · {{ so.line_count }} line{{ '' if so.line_count == 1 else 's' }}{% if so.auto_confirm %} · auto-confirm{% endif %}</span>
+        <span class="text-slate-400">next: {{ so.next_run_on or '—' }}</span>
+        <span class="ml-auto flex items-center gap-2">
+          {% if so.status == 'active' %}
+          <form method="post" action="/app/wholesale/standing/{{ so.id }}/run" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="text-xs text-brand hover:underline">Generate now</button>
+          </form>
+          <form method="post" action="/app/wholesale/standing/{{ so.id }}/skip" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="text-xs text-slate-500 hover:underline">Skip next</button>
+          </form>
+          {% endif %}
+          <form method="post" action="/app/wholesale/standing/{{ so.id }}/pause" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <button class="text-xs {{ 'text-amber-700' if so.status == 'active' else 'text-emerald-700' }} hover:underline">{{ 'Pause' if so.status == 'active' else 'Resume' }}</button>
+          </form>
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400">No standing orders yet — build the first one below.</p>
+    {% endif %}
+  </section>
+
+  <!-- builder -->
+  <section class="bg-white rounded-xl border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold text-navy mb-3">New standing order</h2>
+    <form method="post" action="/app/wholesale/standing" class="space-y-3 text-sm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="grid sm:grid-cols-3 gap-3">
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">Buyer</span>
+          <select name="company_id" required class="mt-1 w-full rounded-lg border-slate-300 text-sm">
+            <option value="">— pick a buyer —</option>
+            {% for c in companies %}<option value="{{ c.id }}">{{ c.name or c.id }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">Name</span>
+          <input name="name" placeholder="Cornerstone — Tue/Fri bread" class="mt-1 w-full rounded-lg border-slate-300 text-sm">
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-slate-500">Cadence</span>
+          <select name="cadence" class="mt-1 w-full rounded-lg border-slate-300 text-sm">
+            <option value="weekly">Weekly</option>
+            <option value="fortnightly">Fortnightly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </label>
+      </div>
+      <div class="flex items-center gap-4 flex-wrap">
+        <span class="text-xs font-medium text-slate-500">Days (weekly/fortnightly):</span>
+        {% for d, label in [(0,'Mon'),(1,'Tue'),(2,'Wed'),(3,'Thu'),(4,'Fri'),(5,'Sat'),(6,'Sun')] %}
+        <label class="flex items-center gap-1 text-xs"><input type="checkbox" name="days_of_week" value="{{ d }}" class="rounded border-slate-300"> {{ label }}</label>
+        {% endfor %}
+        <label class="flex items-center gap-1.5 text-xs ml-4">
+          <span class="text-slate-500">Day of month (monthly):</span>
+          <input name="day_of_month" inputmode="numeric" placeholder="1" class="w-14 rounded-lg border-slate-300 text-sm">
+        </label>
+      </div>
+      <div class="space-y-2">
+        <span class="text-xs font-medium text-slate-500">Line template</span>
+        {% for i in range(4) %}
+        <div class="grid grid-cols-12 gap-2">
+          <input name="line_desc_{{ i }}" placeholder="Sourdough 800g" class="col-span-6 rounded-lg border-slate-300 text-sm">
+          <input name="line_qty_{{ i }}" placeholder="Qty" inputmode="decimal" class="col-span-2 rounded-lg border-slate-300 text-sm">
+          <input name="line_unit_{{ i }}" placeholder="ea / case" class="col-span-2 rounded-lg border-slate-300 text-sm">
+          <input name="line_price_{{ i }}" placeholder="£ / unit" inputmode="decimal" class="col-span-2 rounded-lg border-slate-300 text-sm">
+        </div>
+        {% endfor %}
+      </div>
+      <label class="flex items-center gap-2 text-xs text-slate-600">
+        <input type="checkbox" name="auto_confirm" class="rounded border-slate-300">
+        Auto-confirm this account (trusted buyer — the cycle confirmation sends itself when full-auto is on; credit holds always wait for you)
+      </label>
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Create standing order</button>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

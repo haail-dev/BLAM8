@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy · BLAM8{% endblock %}
+{% block meta_description %}How BLAM8 handles your data: what we store, where it's hosted (UK database, EU compute), every sub-processor we use, and your rights under UK GDPR.{% endblock %}
+{% block content %}
+{#
+  ── BEFORE PUBLISHING / SUBMITTING FOR OAUTH VERIFICATION ──────────────────
+  Solicitor-ready draft (2026-06-22). Have a solicitor review, then fill the
+  bracketed placeholders and delete this comment + the draft note below:
+    [LEGAL ENTITY]      – the contracting company name (e.g. "Haail Ltd")
+    [REGISTERED ADDRESS]– registered office address
+    [COMPANY NO.]       – Companies House number (if a limited company)
+    [ICO REG NO.]       – ICO data-protection registration number
+    hello@blam8.com placeholders filled 2026-07-03
+  Google restricted-scope verification specifically checks for the
+  "Limited Use" section below — keep it accurate and prominent.
+#}
+<section class="mx-auto max-w-3xl px-5 py-16 md:py-20">
+  <h1 class="text-3xl font-bold tracking-tight text-navy">Privacy Policy</h1>
+  <p class="mt-2 text-sm text-slate-500">Last updated: 22 June 2026</p>
+  <p class="mt-1 text-xs text-slate-400">Draft pending final legal review — bracketed items to be completed before publication.</p>
+
+  <div class="mt-8 space-y-6 text-slate-600 leading-relaxed">
+    <p>This Privacy Policy explains how <span class="font-medium text-slate-700">[LEGAL ENTITY]</span> ("BLAM8", "we", "us", "our"), which operates the BLAM8 platform ("Business Logistics Automated") at blam8.com, collects, uses, stores and shares personal data. It applies to the businesses that subscribe to BLAM8 ("Customers") and to the individuals whose data is processed through the service.</p>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Our role (controller vs processor)</h2>
+      <p class="mt-2">For your <span class="font-medium text-slate-700">account and billing data</span> we act as a <span class="font-medium text-slate-700">controller</span>. For the <span class="font-medium text-slate-700">email, calendar and operational content</span> we process on your behalf when you connect a mailbox, we act as a <span class="font-medium text-slate-700">processor</span> and you are the controller — you are responsible for having a lawful basis to process the data of the people who email you, and for telling them about it where required.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">The data we process</h2>
+      <ul class="mt-3 space-y-2 list-disc pl-5">
+        <li><span class="font-medium text-slate-700">Account &amp; identity</span> — your name and email address from Microsoft or Google single sign-on, and your tenant/company record.</li>
+        <li><span class="font-medium text-slate-700">Mailbox content</span> — when you connect a mailbox, we read incoming messages so the agent can draft replies, and we store those drafts and a record of handled emails (sender, subject, status, timestamps, and — temporarily — message and draft text).</li>
+        <li><span class="font-medium text-slate-700">Calendar data</span> — if you enable Scheduling, we read free/busy events to compute capacity and write the bookings you confirm.</li>
+        <li><span class="font-medium text-slate-700">Configuration &amp; knowledge</span> — the business brief, tone, rules, examples and knowledge sources (files, URLs, notes) you provide to ground the agent.</li>
+        <li><span class="font-medium text-slate-700">Operational records</span> — if you use Scheduling/Fleet/Field OS modules: bookings, vehicles, drivers, proof-of-delivery, pricing and invoices you create through the service.</li>
+        <li><span class="font-medium text-slate-700">Authentication tokens</span> — the OAuth tokens that let us access your mailbox/calendar, encrypted at rest.</li>
+        <li><span class="font-medium text-slate-700">Usage &amp; billing</span> — metered usage events (for cost/allowance) and subscription/billing metadata (card details are handled by Stripe, never by us).</li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">How we use it &amp; our lawful bases</h2>
+      <p class="mt-2">We use the data <span class="font-medium text-slate-700">solely to provide and operate the service</span>: reading incoming mail, drafting replies, sending only the replies a human approves (or, where you switch on full-auto, the messages your configuration authorises), running the scheduling/fleet features you enable, metering usage, and supporting and securing the platform. Under UK GDPR our lawful bases are <span class="font-medium text-slate-700">performance of our contract</span> with you and our <span class="font-medium text-slate-700">legitimate interests</span> in operating, securing and improving the service. <span class="font-medium text-slate-700">We do not sell personal data, and we do not use your content to train third-party AI models.</span></p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Google user data — Limited Use</h2>
+      <p class="mt-2">BLAM8's use and transfer of information received from Google APIs to any other app will adhere to the <a class="text-navy underline" href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the <span class="font-medium text-slate-700">Limited Use</span> requirements. Specifically:</p>
+      <ul class="mt-3 space-y-2 list-disc pl-5">
+        <li>We only use Google user data to provide and improve the user-facing features described in this policy (reading your inbound email to draft replies, sending replies you approve, and the calendar features you enable).</li>
+        <li>We do not transfer Google user data except as necessary to provide or improve those features, to comply with applicable law, or as part of a merger or acquisition with adequate safeguards — and, where required, with your consent.</li>
+        <li>We do not use Google user data for serving advertisements.</li>
+        <li>We do not allow humans to read your Google user data unless: (a) you give specific consent (e.g. to debug a message); (b) it is necessary for security, abuse prevention, or to comply with law; or (c) the data is aggregated and anonymised for internal operations. We also do not use it to train generalised AI/ML models.</li>
+      </ul>
+      <p class="mt-2 text-sm text-slate-500">We request the minimum Google scopes needed: read-only inbox access (<code>gmail.readonly</code>), send (<code>gmail.send</code>) for approved replies, and calendar events (<code>calendar.events</code>) for Scheduling.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Microsoft data</h2>
+      <p class="mt-2">For Microsoft 365 mailboxes we request only least-privilege Microsoft Graph permissions — read mail, send mail, calendar read/write, and your basic identity — used solely to provide the same features. We never receive your Microsoft password, and access can be revoked at any time.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Automated drafting (AI)</h2>
+      <p class="mt-2">Replies are drafted by a large language model (Anthropic's Claude). By default <span class="font-medium text-slate-700">a human reviews and approves every reply before it is sent</span>; full-auto sending is an explicit per-mailbox opt-in. The agent uses only the knowledge you provide as its source of facts and defers when it is unsure. Anthropic does not use API inputs or outputs to train its models.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Storage, security &amp; isolation</h2>
+      <p class="mt-2">Each Customer's data is isolated at the database level using row-level security. Sign-in and mailbox/calendar access use Microsoft or Google OAuth — never your password. Data is encrypted in transit (TLS), and OAuth tokens are encrypted at rest. Access to production systems is restricted and audited.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Sub-processors</h2>
+      <p class="mt-2">We share only what each provider needs to deliver its part of the service:</p>
+      <ul class="mt-3 space-y-2 list-disc pl-5">
+        <li><span class="font-medium text-slate-700">Microsoft &amp; Google</span> — mailbox/calendar access and single sign-on, via OAuth.</li>
+        <li><span class="font-medium text-slate-700">Anthropic</span> (USA) — drafting replies and answering the public website assistant. Email content and text visitors enter in the website assistant are sent as prompts. Anthropic does not train on API data.</li>
+        <li><span class="font-medium text-slate-700">Voyage AI</span> (USA) — generates embeddings of your knowledge sources for retrieval.</li>
+        <li><span class="font-medium text-slate-700">Supabase</span> (UK, London / eu-west-2) — database, authentication and vector storage.</li>
+        <li><span class="font-medium text-slate-700">Stripe</span> — subscription billing and, if you connect your own Stripe account, your customers' invoice payments; card details go straight to Stripe and never touch our systems. <a href="/stripe" class="text-brand font-medium hover:underline">How BLAM8 uses Stripe</a>.</li>
+        <li><span class="font-medium text-slate-700">Render</span> (EU, Frankfurt) — application hosting.</li>
+        <li><span class="font-medium text-slate-700">OpenAI</span> (USA) — the assistant's voice features only: turning your speech into text and the assistant's answers into speech, and live voice conversation. Receives what you say and what the assistant says back, only when you use voice. Does not train on API data.</li>
+        <li><span class="font-medium text-slate-700">Twilio</span> (USA) — text messages, only if you switch texting on: the recipient's number and the message.</li>
+        <li><span class="font-medium text-slate-700">Google Maps Platform</span> (USA) — maps and route planning where you use them: the addresses or postcodes being planned.</li>
+        <li><span class="font-medium text-slate-700">postcodes.io</span> (UK) — postcode lookups for distances and travel time: the postcode only.</li>
+        <li><span class="font-medium text-slate-700">Google Fonts</span> (USA) — the typefaces on our pages; your browser fetches them from Google, which sees your IP address.</li>
+      </ul>
+      <p class="mt-3 text-sm text-slate-500">This list was last updated on 27 September 2026 (added OpenAI, Twilio, Google Maps Platform, postcodes.io and Google Fonts).</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">International transfers</h2>
+      <p class="mt-2">Some sub-processors (Anthropic, Voyage, OpenAI, Twilio, Google) are located in the United States. Where personal data is transferred outside the UK/EEA, we rely on appropriate safeguards such as the UK International Data Transfer Addendum or EU Standard Contractual Clauses.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Retention</h2>
+      <p class="mt-2">The content of handled emails (the incoming message, the drafted reply, and the notes the agent made from them, such as summaries, booking details and search terms) is automatically redacted after 90 days; we keep only the audit record — sender, subject, status and timestamps. OAuth tokens are deleted when you disconnect a mailbox. Knowledge sources are kept until you delete them or close your account. Account and billing records are kept for as long as your account is active and for a reasonable period afterwards to meet legal and accounting obligations.</p>
+      <p class="mt-2">The public website assistant keeps its conversation in the visitor's browser session and sends it to Anthropic to generate answers. BLAM8 retains usage and reliability metadata for these calls for up to 30 days, but not the prompt or answer content in its LLM call log.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Deleting your data</h2>
+      <p class="mt-2">You can disconnect any mailbox at any time, which deletes its OAuth tokens and stops all processing for that mailbox. You can request closure of your account and deletion of your data, which removes your mailboxes' tokens, knowledge sources, configuration, operational records, stored files (documents, photos and your portal banner) and portal chats, and redacts retained email logs. Contact us at <span class="font-medium text-slate-700">hello@blam8.com</span> to make a deletion request; we will action verified requests without undue delay.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Your rights</h2>
+      <p class="mt-2">Under UK GDPR you have the right to access, rectify, erase, restrict or object to the processing of your personal data, and to data portability. To exercise these rights, contact <span class="font-medium text-slate-700">hello@blam8.com</span>. Where we act as a processor for a Customer's email data, requests from that Customer's contacts should be directed to the Customer (the controller); we will assist the Customer in responding. You also have the right to complain to the UK Information Commissioner's Office (ico.org.uk).</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Cookies</h2>
+      <p class="mt-2">We use only strictly-necessary cookies to keep you signed in and to protect against cross-site request forgery. We do not use advertising or third-party tracking cookies.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Children</h2>
+      <p class="mt-2">BLAM8 is a business service not directed at children and is not intended for anyone under 18.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Changes to this policy</h2>
+      <p class="mt-2">We will update this page and notify account contacts before adding a new sub-processor or materially changing how we process personal data.</p>
+    </div>
+
+    <div>
+      <h2 class="font-semibold text-navy text-lg">Contact</h2>
+      <p class="mt-2">Data controller: <span class="font-medium text-slate-700">[LEGAL ENTITY]</span>, [REGISTERED ADDRESS] (company no. [COMPANY NO.], ICO reg. [ICO REG NO.]). For any privacy question or to exercise your rights, contact <span class="font-medium text-slate-700">hello@blam8.com</span>.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}

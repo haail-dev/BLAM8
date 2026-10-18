@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 Partner Programme — Earn 20% Recurring Commission, for Life{% endblock %}
+{% block meta_description %}Refer a business to BLAM8 and earn 20% of every subscription payment we collect from them — for life. Free to join: sign the agreement online and your referral code is issued instantly. Paid monthly, no cap on referrals or earnings.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/partners#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How much can I earn from a BLAM8 referral?",
+          "acceptedAnswer": { "@type": "Answer", "text": "20% of every subscription payment BLAM8 collects from each business you refer — for as long as they stay subscribed. A business on Pro at £99/month earns you £19.80 every month, for life. If they upgrade, your commission rises with them, and there's no cap on how many businesses you refer or how much you earn." }
+        },
+        {
+          "@type": "Question",
+          "name": "When and how do I get paid?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Monthly. You get a commission statement each month, and payment lands within 30 days of the end of the month the commission was earned in. Balances under £{{ min_payout }} roll forward to the next month. Commission is earned only on money BLAM8 actually collects — if a payment is refunded, the commission comes off your next statement." }
+        },
+        {
+          "@type": "Question",
+          "name": "How are my referrals tracked?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Three ways, and the first one to land wins: your share link, your code typed in at signup, or an introduction you register on your partner page before the business signs up — which protects your attribution even if they never click your link. An introduction must convert to a paid subscription within {{ window_days }} days; once it does, the lifetime commission has no expiry." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I have to be a BLAM8 customer to be a partner?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. The programme is free to join and there's nothing to buy: sign in, read the Partner Referral Agreement, sign it with your typed name, and your code is issued instantly. Many partners do run BLAM8 on their own inbox — but referring your own business doesn't earn commission." }
+        },
+        {
+          "@type": "Question",
+          "name": "What do I see about the businesses I refer?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Business name, signup date, status, plan and your commission — that's it. You never see their emails, contacts, bookings or any customer data." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Partner programme · accountants · IT providers · agencies · connectors
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      Refer a business. Earn {{ rate_pct }}% of their subscription — for life.
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      You know businesses drowning in their own inbox; BLAM8 answers their email and books the job. Introduce them, and every
+      payment they ever make earns you {{ rate_pct }}% — not for a year, not for the first payment, for the life of their account.
+      Free to join, signed online in two minutes, no requirement to be a customer yourself.
+    </p>
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <a href="/partner/join" class="inline-flex items-center rounded-lg bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Become a partner</a>
+      <a href="#how" class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:border-slate-400 transition">How it works</a>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy max-w-2xl">From signing up to getting paid</h2>
+    <div class="mt-10 grid md:grid-cols-3 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <span class="text-sm font-bold text-brand">Step 1</span>
+        <h3 class="mt-2 font-semibold text-navy text-lg">Sign the agreement online</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed">Sign in, read the Partner Referral Agreement in full on the page, and sign it by typing your name. Your referral code and share link are issued instantly — no approval queue, no paperwork.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <span class="text-sm font-bold text-brand">Step 2</span>
+        <h3 class="mt-2 font-semibold text-navy text-lg">Share your link — or register an introduction</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed">Send your link, or let them type your code when they sign up. Making the introduction in person? Register the company and contact email on your partner page first, and the referral is yours even if they never click anything.</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6">
+        <span class="text-sm font-bold text-brand">Step 3</span>
+        <h3 class="mt-2 font-semibold text-navy text-lg">Earn on every payment, forever</h3>
+        <p class="mt-2 text-slate-600 leading-relaxed">Every subscription payment BLAM8 collects from your referral earns you {{ rate_pct }}% — month after month, for as long as they stay. Statements monthly; payment within 30 days of each month's end.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">What that adds up to</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl leading-relaxed">One referral, every month, for as long as they subscribe:</p>
+  <div class="mt-8 grid sm:grid-cols-3 gap-5">
+    <div class="rounded-xl border border-slate-200 p-6">
+      <p class="text-sm font-semibold text-slate-500">Starter · £39/mo</p>
+      <p class="mt-2 text-3xl font-bold text-navy">£7.80<span class="text-base font-semibold text-slate-400">/mo</span></p>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">£93.60 a year, from one introduction.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <p class="text-sm font-semibold text-slate-500">Pro · £99/mo</p>
+      <p class="mt-2 text-3xl font-bold text-navy">£19.80<span class="text-base font-semibold text-slate-400">/mo</span></p>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">£237.60 a year — and it rises if they upgrade.</p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-6">
+      <p class="text-sm font-semibold text-slate-500">Pro + 2 extra mailboxes · £177/mo</p>
+      <p class="mt-2 text-3xl font-bold text-navy">£35.40<span class="text-base font-semibold text-slate-400">/mo</span></p>
+      <p class="mt-2 text-sm text-slate-600 leading-relaxed">£424.80 a year. Ten of these is £4,248 a year, recurring.</p>
+    </div>
+  </div>
+  <p class="mt-5 text-sm text-slate-500 leading-relaxed max-w-3xl">Commission is {{ rate_pct }}% of what BLAM8 actually collects — excluding any VAT and net of discounts, so a promo price earns proportionally until it ends. Payment-processor fees are never deducted, and there's no cap on referrals or total earnings.</p>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">The mechanics, stated plainly</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl leading-relaxed">Everything below is a term of the agreement you sign — not marketing copy. <a href="/partner/terms" class="font-semibold text-brand hover:underline">Read the full agreement</a> before you join, it's short.</p>
+    <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="rounded-xl border border-slate-200 bg-white p-6"><h3 class="font-semibold text-navy">Lifetime means lifetime</h3><p class="mt-2 text-sm text-slate-600 leading-relaxed">Commission is payable for the life of the referred account — every payment while they remain subscribed. Upgrades raise it; downgrades lower it; it never expires while they're active.</p></div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6"><h3 class="font-semibold text-navy">{{ window_days }}-day conversion window</h3><p class="mt-2 text-sm text-slate-600 leading-relaxed">An introduction must become a paid subscription within {{ window_days }} days of the referral. Once that first payment lands in-window, the lifetime entitlement is locked in.</p></div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6"><h3 class="font-semibold text-navy">Three ways attribution sticks</h3><p class="mt-2 text-sm text-slate-600 leading-relaxed">Your link, your code typed at signup, or an introduction registered on your partner page before they sign up. First attribution wins and is never rewritten.</p></div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6"><h3 class="font-semibold text-navy">Paid monthly</h3><p class="mt-2 text-sm text-slate-600 leading-relaxed">A statement every month, payment within 30 days of the month's end, in GBP. Balances under £{{ min_payout }} simply roll forward — nothing is forfeited.</p></div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6"><h3 class="font-semibold text-navy">Earned when collected</h3><p class="mt-2 text-sm text-slate-600 leading-relaxed">Commission exists only when the business actually pays. Free trials earn nothing until they convert; refunds and chargebacks are deducted from your next statement.</p></div>
+      <div class="rounded-xl border border-slate-200 bg-white p-6"><h3 class="font-semibold text-navy">No self-referral</h3><p class="mt-2 text-sm text-slate-600 leading-relaxed">Your own business — or one you control — doesn't qualify. Use BLAM8 yourself by all means; it just doesn't pay you commission.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20 grid md:grid-cols-2 gap-10 items-start">
+  <div>
+    <h2 class="text-3xl font-bold tracking-tight text-navy">Who partners with BLAM8</h2>
+    <ul class="mt-6 space-y-4 text-slate-600 leading-relaxed">
+      <li><span class="font-semibold text-navy">Accountants &amp; bookkeepers.</span> Your clients already tell you their admin is drowning them — this is the referral that answers it.</li>
+      <li><span class="font-semibold text-navy">IT providers &amp; MSPs.</span> You run their mailboxes; BLAM8 sits on top of Outlook or Gmail with read-and-send access only.</li>
+      <li><span class="font-semibold text-navy">Agencies &amp; web designers.</span> The site you built brings the enquiries in — BLAM8 answers them and books the work.</li>
+      <li><span class="font-semibold text-navy">People who know people.</span> Trade associations, networking groups, or just someone whose mate runs a small business. No business entity required — sign with your own name.</li>
+    </ul>
+  </div>
+  <div class="rounded-2xl border border-brand/30 bg-brand-50/60 p-7 md:p-8">
+    <p class="text-sm font-semibold uppercase tracking-wider text-slate-400">Your partner page · their privacy</p>
+    <p class="mt-3 text-slate-700 leading-relaxed">Once enrolled you get a live partner page: your code and share link, each referral on its status ladder (registered → trial → active), your earnings — this month, scheduled, lifetime — and every payout statement. What you'll never see is inside their account: no emails, no contacts, no bookings, no customer data. You see business name, date, status, plan and your commission. That's the deal, and it's what makes you safe to recommend us.</p>
+  </div>
+</section>
+
+<section id="faq" class="border-t border-slate-100 bg-slate-50/40">
+  <div class="mx-auto max-w-3xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+    <div class="mt-8 divide-y divide-slate-200">
+      <details class="group py-5">
+        <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How much can I earn from a referral?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+        <p class="mt-3 text-slate-600 leading-relaxed">{{ rate_pct }}% of every subscription payment BLAM8 collects from each business you refer — for as long as they stay subscribed. A business on Pro at £99/month earns you £19.80 every month, for life. Upgrades raise your commission automatically, and there's no cap on referrals or total earnings.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">When and how do I get paid?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+        <p class="mt-3 text-slate-600 leading-relaxed">Monthly. You get a commission statement each month, and payment lands within 30 days of the end of the month it was earned in. Balances under £{{ min_payout }} roll forward. Commission is earned only on money actually collected — if a payment is refunded, it comes off your next statement.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How are my referrals tracked?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+        <p class="mt-3 text-slate-600 leading-relaxed">Three ways, and the first to land wins: your share link, your code typed in at signup, or an introduction you register on your partner page before the business signs up — which protects you even if they never click your link. An introduction must convert within {{ window_days }} days; once it does, the lifetime commission has no expiry.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Do I have to be a BLAM8 customer?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+        <p class="mt-3 text-slate-600 leading-relaxed">No. The programme is free to join and there's nothing to buy: sign in, read the agreement, sign with your typed name, and your code is issued instantly. Many partners do run BLAM8 on their own inbox — but referring your own business doesn't earn commission.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">What do I see about the businesses I refer?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+        <p class="mt-3 text-slate-600 leading-relaxed">Business name, signup date, status, plan and your commission — that's it. You never see their emails, contacts, bookings or any customer data.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="px-5 py-16 md:py-20">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Two minutes from now, you have a code.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Read the agreement, sign with your name, and your link is live. The next business you talk to could be paying you {{ rate_pct }}% for years.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/partner/join" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Become a partner</a>
+      <a href="/partner/terms" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">Read the full agreement</a>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

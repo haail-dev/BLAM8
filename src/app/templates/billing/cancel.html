@@ -1,0 +1,12 @@
+{% extends "app/base.html" %}
+{% block title %}Checkout cancelled · BLAM8{% endblock %}
+{% block heading %}Billing{% endblock %}
+{% block content %}
+<section class="mx-auto max-w-2xl px-5 py-16 md:py-24 text-center">
+  <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-navy">No charge made.</h1>
+  <p class="mt-3 text-slate-600 text-lg">You stepped out before finishing — your card was never used. Pick up where you left off whenever you're ready.</p>
+  <div class="mt-8">
+    <a href="/billing/plans" class="inline-flex items-center rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Back to plans</a>
+  </div>
+</section>
+{% endblock %}

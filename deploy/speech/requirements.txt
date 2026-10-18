@@ -1,0 +1,9 @@
+# Separate environment from the web app. Versions used by Relay's speech engines.
+fastapi==0.135.2
+uvicorn[standard]==0.32.1
+pydantic-settings==2.7.1
+faster-whisper==1.2.1
+kokoro-onnx==0.4.9
+onnxruntime==1.31.0
+numpy==2.5.3
+av==16.1.0

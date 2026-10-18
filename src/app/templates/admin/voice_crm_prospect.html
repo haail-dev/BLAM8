@@ -1,0 +1,128 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ p.business_name }} · Voice CRM{% endblock %}
+{% block content %}
+{% set STATUS_STYLE = {'IDENTIFIED': 'bg-slate-100 text-slate-600', 'EMAILED': 'bg-sky-50 text-sky-600',
+                       'REPLIED': 'bg-amber-50 text-amber-700', 'CALL_BOOKED': 'bg-emerald-50 text-emerald-600',
+                       'SIGNED_UP': 'bg-emerald-500 text-white', 'NOT_NOW': 'bg-slate-100 text-slate-400',
+                       'NEW': 'bg-slate-100 text-slate-600', 'CALLED': 'bg-sky-50 text-sky-600',
+                       'CALLBACK': 'bg-amber-50 text-amber-700', 'INTERESTED': 'bg-emerald-50 text-emerald-600',
+                       'WON': 'bg-emerald-500 text-white', 'LOST': 'bg-rose-50 text-rose-600',
+                       'JUNK': 'bg-slate-100 text-slate-400'} %}
+<a href="/admin/voice-crm" class="text-sm text-slate-500 hover:text-navy">← Voice CRM</a>
+<div class="mt-2 mb-4 flex items-center justify-between gap-3">
+  <div class="min-w-0">
+    <h1 class="text-xl font-bold text-navy truncate">{{ p.business_name }}</h1>
+    <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+      <span class="rounded-full px-2 py-0.5 font-semibold {{ STATUS_STYLE.get(p.status, 'bg-slate-100 text-slate-500') }}">{{ p.status.replace('_', ' ') }}</span>
+      {% if p.kind == 'partner' %}<span class="rounded bg-indigo-50 text-indigo-600 px-1.5 font-semibold">partner</span>{% endif %}
+      {% if p.email %}<a href="mailto:{{ p.email }}" class="text-brand font-medium hover:underline">✉ {{ p.email }}</a>{% endif %}
+      {% if p.maps_url %}<a href="{{ p.maps_url }}" target="_blank" rel="noopener" class="text-brand font-medium hover:underline">Maps ↗</a>{% endif %}
+      {% if p.phone %}<a href="tel:{{ p.phone }}" class="text-brand font-medium hover:underline">📞 {{ p.phone }}</a>{% endif %}
+      {% if p.website %}<a href="{{ p.website if '://' in p.website else 'https://' + p.website }}" target="_blank" rel="noopener" class="text-brand font-medium hover:underline">Site ↗</a>{% endif %}
+    </div>
+  </div>
+  <a href="/admin/voice-crm/new?prospect={{ p.id }}" class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition whitespace-nowrap">🎙 Log a call</a>
+</div>
+
+{% if request.query_params.get('err') == 'name' %}
+<div class="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">The business name can't be blank.</div>
+{% endif %}
+
+<form method="post" action="/admin/voice-crm/{{ p.id }}/update" class="rounded-xl bg-white border border-slate-200 p-4 space-y-3 mb-6">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <input type="hidden" name="maps_url" value="{{ p.maps_url or '' }}">
+  <input type="hidden" name="lat" value="{{ p.lat if p.lat is not none else '' }}">
+  <input type="hidden" name="lng" value="{{ p.lng if p.lng is not none else '' }}">
+  {% set inp = "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-navy" %}
+  {% set lbl = "block text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1" %}
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Business name</label>
+      <input class="{{ inp }}" name="business_name" required value="{{ p.business_name }}"></div>
+    <div><label class="{{ lbl }}">Status</label>
+      <select class="{{ inp }}" name="status">
+        {% for s in (partner_statuses if p.kind == 'partner' else call_statuses) %}<option value="{{ s }}" {{ 'selected' if p.status == s }}>{{ s.replace('_', ' ') }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <div class="grid grid-cols-3 gap-3">
+    <div><label class="{{ lbl }}">Type</label>
+      <select class="{{ inp }}" name="kind">
+        <option value="customer" {{ 'selected' if p.kind != 'partner' }}>Customer</option>
+        <option value="partner" {{ 'selected' if p.kind == 'partner' }}>Partner</option>
+      </select></div>
+    <div><label class="{{ lbl }}">Role</label>
+      <input class="{{ inp }}" name="role" value="{{ p.role or '' }}" placeholder="bookkeeper"></div>
+    <div><label class="{{ lbl }}">Channel</label>
+      <select class="{{ inp }}" name="channel">
+        <option value=""></option>
+        {% for c in channels %}<option value="{{ c }}" {{ 'selected' if p.channel == c }}>{{ c }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Email</label>
+      <input class="{{ inp }}" type="email" name="email" value="{{ p.email or '' }}"></div>
+    <div><label class="{{ lbl }}">Found via</label>
+      <input class="{{ inp }}" name="source" value="{{ p.source or '' }}" placeholder="ICB directory, Taunton network..."></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Next action</label>
+      <input class="{{ inp }}" name="next_action" value="{{ p.next_action or '' }}"></div>
+    <div><label class="{{ lbl }}">By date</label>
+      <input class="{{ inp }}" type="date" name="next_action_date" value="{{ p.next_action_date or '' }}"></div>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Contact name</label>
+      <input class="{{ inp }}" name="contact_name" value="{{ p.contact_name or '' }}"></div>
+    <div><label class="{{ lbl }}">Phone</label>
+      <input class="{{ inp }}" name="phone" value="{{ p.phone or '' }}"></div>
+  </div>
+  <div><label class="{{ lbl }}">What they do</label>
+    <input class="{{ inp }}" name="description" value="{{ p.description or '' }}"></div>
+  <div class="grid grid-cols-2 gap-3">
+    <div><label class="{{ lbl }}">Location</label>
+      <input class="{{ inp }}" name="location" value="{{ p.location or '' }}"></div>
+    <div><label class="{{ lbl }}">Website</label>
+      <input class="{{ inp }}" name="website" value="{{ p.website or '' }}"></div>
+  </div>
+  <div><label class="{{ lbl }}">Address</label>
+    <input class="{{ inp }}" name="address" value="{{ p.address or '' }}"></div>
+  <div><label class="{{ lbl }}">Notes</label>
+    <textarea class="{{ inp }}" name="notes" rows="2">{{ p.notes or '' }}</textarea></div>
+  <button type="submit" class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition">Save changes</button>
+</form>
+
+<form method="post" action="/admin/voice-crm/{{ p.id }}/touch" class="rounded-xl bg-white border border-slate-200 p-4 mb-6 space-y-2">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <label class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Log a touch (email sent, reply, met at an event)</label>
+  <textarea name="summary" rows="2" required class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-navy"></textarea>
+  <div class="flex items-center gap-2">
+    <select name="status" class="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+      <option value="">keep status</option>
+      {% for s in (partner_statuses if p.kind == 'partner' else call_statuses) %}<option value="{{ s }}">{{ s.replace('_', ' ') }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="rounded-lg bg-navy px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition">Add</button>
+  </div>
+</form>
+
+<h2 class="text-sm font-bold text-navy mb-2">History <span class="text-slate-400 font-normal">({{ calls | length }})</span></h2>
+{% if calls %}
+<div class="space-y-2">
+  {% for c in calls %}
+  <div class="rounded-xl bg-white border border-slate-200 px-4 py-3">
+    <div class="flex items-center justify-between gap-3 text-xs">
+      <span class="text-slate-400 whitespace-nowrap">{{ c.called_at[:16].replace('T', ' · ') if c.called_at }}</span>
+      {% if c.outcome %}<span class="rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 font-semibold whitespace-nowrap">{{ c.outcome.replace('_', ' ') }}</span>{% endif %}
+    </div>
+    {% if c.summary %}<p class="mt-1.5 text-sm text-slate-700">{{ c.summary }}</p>{% endif %}
+    {% if c.transcript %}
+    <details class="mt-1.5 text-sm">
+      <summary class="cursor-pointer text-slate-400 text-xs font-medium">Transcript</summary>
+      <p class="mt-2 whitespace-pre-wrap text-slate-600 bg-slate-50 rounded-lg p-3">{{ c.transcript }}</p>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-slate-400 py-6 text-center rounded-xl border border-slate-200 bg-white">Nothing logged yet.</p>
+{% endif %}
+{% endblock %}

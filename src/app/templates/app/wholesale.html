@@ -1,0 +1,85 @@
+{% extends "app/base.html" %}
+{% block title %}Wholesale OS · BLAM8{% endblock %}
+{% block heading %}Wholesale OS{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap text-sm text-slate-500">
+    <p>The recurring book, the credit picture and this week's fulfilment — filled in from the inbox the agent already reads.</p>
+    <span class="flex items-center gap-3">
+      <a href="/app/wholesale/orders" class="text-brand font-medium hover:underline">Order book →</a>
+      <a href="/app/wholesale/credit" class="text-brand font-medium hover:underline">Credit ledger →</a>
+    </span>
+  </div>
+
+  <!-- Card 1 — standing orders due (§2; populates with the W3 engine) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Standing orders due this week</h2>
+      <span class="text-xs text-slate-400">{{ view.standing_due | length }} due</span>
+    </div>
+    {% if view.standing_due %}
+    <ul class="divide-y divide-slate-50">
+      {% for so in view.standing_due %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="font-medium text-navy">{{ so.name or 'Standing order' }}</span>
+        <span class="text-slate-500">{{ so.cadence }}</span>
+        <span class="text-slate-400 ml-auto">next: {{ so.next_run_on }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No standing orders yet — set up the Tuesday book once and it generates itself.</p>
+    {% endif %}
+  </section>
+
+  <!-- Card 2 — credit-limit risk (§2) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Credit-limit risk</h2>
+      <a href="/app/wholesale/credit" class="text-xs text-brand hover:underline">Full ledger →</a>
+    </div>
+    {% set risky = view.credit_risk | selectattr('over') | list %}
+    {% if risky %}
+    <ul class="divide-y divide-slate-50">
+      {% for r in risky %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold bg-red-100 text-red-700">OVER</span>
+        <span class="font-medium text-navy">{{ r.name }}</span>
+        <span class="text-slate-500">£{{ '%.2f' | format(r.exposure) }} exposure on a £{{ '%.2f' | format(r.limit) }} limit</span>
+        <span class="text-xs text-amber-700 ml-auto">new orders will be held</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">No buyers over their limit. Exposure counts open orders plus the invoices BLAM8 has raised.</p>
+    {% endif %}
+  </section>
+
+  <!-- Card 3 — orders due this week (full plan view lands with W4) -->
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Orders due this week</h2>
+      <span class="text-xs text-slate-400">{{ view.week_start }} → {{ view.week_end }}</span>
+    </div>
+    {% if view.due_orders %}
+    <ul class="divide-y divide-slate-50">
+      {% for o in view.due_orders %}
+      <li class="px-5 py-3 flex items-center gap-3 text-sm">
+        <span class="rounded px-1.5 py-0.5 text-xs font-semibold
+          {{ 'bg-amber-100 text-amber-700' if o.wholesale_status in ('held', 'on_hold_short') else 'bg-blue-100 text-blue-700' }}">
+          {{ (o.wholesale_status or 'quote') | upper }}</span>
+        <a href="/app/wholesale/orders/{{ o.id }}" class="font-medium text-navy hover:underline">{{ o.title }}</a>
+        <span class="text-slate-500">{{ o.buyer }}</span>
+        <span class="text-slate-400 ml-auto">{{ o.required_by or 'no date' }} · £{{ '%.2f' | format(o.total) }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-6 text-sm text-slate-400">Nothing due this week yet. <a href="/app/wholesale/orders" class="text-brand hover:underline">Create the first order →</a></p>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

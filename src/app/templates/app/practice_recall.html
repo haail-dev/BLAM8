@@ -1,0 +1,51 @@
+{% extends "app/base.html" %}
+{% block title %}Recall queue · Practice OS · BLAM8{% endblock %}
+{% block heading %}Recall queue{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+
+  {% if msg == 'drafted' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Recall drafted — it's waiting in your inbox for approval.</div>{% endif %}
+  {% if msg == 'outcome' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Appointment marked done — recall scheduled and a follow-up drafted.</div>{% endif %}
+  {% if msg == 'cancelled' %}<div class="rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">Appointment cancelled.</div>{% endif %}
+  {% if msg == 'err' %}<div class="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">Couldn't draft that recall — try again.</div>{% endif %}
+
+  <p class="text-sm text-slate-500">
+    Patients whose routine appointment is due within the next {{ 14 }} days (plus any overdue).
+    The daily engine drafts these in your voice; here you can trigger one now.
+  </p>
+
+  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60">
+      <h2 class="text-sm font-semibold text-navy">Due recall</h2>
+      <span class="text-xs text-slate-400">{{ queue|length }} patient(s)</span>
+    </div>
+    {% if queue %}
+    <ul class="divide-y divide-slate-50">
+      {% for b in queue %}
+      <li class="flex items-center justify-between gap-3 px-5 py-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-700 truncate">{{ b.summary or 'Appointment' }}</span>
+            {% if b.practitioner %}<span class="text-xs text-slate-400">· {{ b.practitioner }}</span>{% endif %}
+          </div>
+          <div class="text-xs text-slate-400 truncate">
+            {{ b.contact }}
+            {% if b.booking_date %} · last seen {{ b.booking_date|string|truncate(10, True, '') }}{% endif %}
+            {% if b.recall_due_date %} · due {{ b.recall_due_date|string|truncate(10, True, '') }}{% endif %}
+          </div>
+        </div>
+        <form method="post" action="/app/practice/recall/{{ b.id }}/draft" class="shrink-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="rounded-lg border border-brand/40 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand-50 transition">Draft recall now</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="px-5 py-8 text-sm text-slate-400 text-center">No recalls due right now. Completed appointments with a recall cadence appear here as they come due.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

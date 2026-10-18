@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}BLAM8 vs Zapier — Buy a Worker, or Build the Plumbing?{% endblock %}
+{% block meta_description %}Honest comparison: Zapier sells tasks and zaps you assemble into workflows yourself — it has no built-in email agent, knowledge base or diary. BLAM8 arrives working: it answers your email and books the job. Prices checked September 2026.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "FAQPage",
+      "@id": "{{ base_url }}/vs/zapier#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Can Zapier answer my customer emails automatically?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not out of the box. Zapier is workflow plumbing: you can assemble a Zap (new email → AI step → create draft) yourself, and each inbound email consumes 2–3 billable tasks. What you build has no approval queue, no knowledge base grounding replies in your real prices and policies, no conversation memory, and you maintain it yourself. BLAM8 is that whole system pre-built as a product: connect a mailbox and the next email in gets a draft in your voice from your own business facts." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Zapier do appointment scheduling?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No — Zapier has no diary or availability concept. The standard answer is integrating a booking-link tool such as Calendly (from £8 per seat/month billed yearly), where the customer leaves the email, opens a link, and self-serves against one person's meeting availability. Nothing decides an email is a booking request or holds a slot. BLAM8 books from the conversation itself: it checks your live diary, places a hold that can't double-book, and confirms in the same thread." }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Zapier pricing compare to BLAM8?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Zapier bills by task (one action step) and shows USD to UK visitors: there's a Free plan, Professional starts at $19.99/month billed annually, and Team at $69/month billed annually, with the price rising as your task allowance grows. AI agents are a separate add-on. A DIY email-answering Zap costs 2–3 tasks per email, so 300 emails a month is 600–900 tasks before any AI costs, and you still need a booking tool. BLAM8's £39/month Starter plan includes the drafting AI, knowledge base, approval queue and live-diary booking as a finished product, for 300 emails. Prices checked September 2026." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is BLAM8 a Zapier alternative?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Only for one job. Zapier connects thousands of apps and automates workflows across them — BLAM8 doesn't compete with that and never will. But if the workflow you were about to build in Zapier is 'answer my customer emails and book the jobs', BLAM8 is that workflow as a finished product: answered in your voice, booking details gathered into a pinned card, and booked into your live diary, on every plan." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use both?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. Keep Zapier for moving data between your other tools, and let BLAM8 own the inbox and the diary. They meet different needs, which is exactly why this page exists." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block content %}
+
+<section class="relative overflow-hidden">
+  <div class="absolute inset-0 -z-10 bg-slate-50"></div>
+  <div class="mx-auto max-w-6xl px-5 pt-16 pb-14 md:pt-24 md:pb-20">
+    <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span class="h-1.5 w-1.5 rounded-full bg-brand"></span> Honest comparison · prices checked September 2026
+    </p>
+    <h1 class="mt-4 text-4xl md:text-5xl font-bold tracking-tight text-navy leading-[1.1] max-w-3xl">
+      BLAM8 vs Zapier: buy a worker, or build the plumbing?
+    </h1>
+    <p class="mt-5 text-lg text-slate-600 leading-relaxed max-w-2xl">
+      Zapier is a genuinely great toolkit — thousands of app integrations, triggers, and actions you wire together yourself. But a toolkit is what it is: <span class="font-semibold text-navy">you're the builder, and you're the maintenance department.</span> BLAM8 is one job done completely: your email answered in your voice and the bookings behind it placed in your diary — working the day you connect a mailbox.
+    </p>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 grid md:grid-cols-2 gap-8">
+    <div class="rounded-xl border border-slate-200 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When Zapier is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You need to connect many different apps: forms to CRMs, spreadsheets to Slack, shops to accounting</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You enjoy building automations and want full control of every step</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>Your workflows are about moving data between tools, not holding a conversation</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">That's what Zapier is built for. BLAM8 connects your mailbox and calendar — it is not a general integration platform and doesn't try to be.</p>
+    </div>
+    <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+      <h2 class="font-semibold text-navy text-xl">When BLAM8 is the right choice</h2>
+      <ul class="mt-4 space-y-2.5 text-slate-600 leading-relaxed">
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>The "workflow" you actually need is: answer customer emails properly and get the jobs booked</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want it grounded in your real prices, policies and FAQs, with an approval queue, not raw AI</span></li>
+        <li class="flex gap-2"><span class="text-brand">&check;</span><span>You want zero workflows to build or babysit, and control by feedback: thumbs-down a bad line once and it becomes a standing rule</span></li>
+      </ul>
+      <p class="mt-4 text-sm text-slate-500 leading-relaxed">You could approximate some of this in Zapier. You'd be building it, paying per task for it, and fixing it when it breaks.</p>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Side by side</h2>
+  <p class="mt-3 text-slate-600 max-w-2xl">Zapier prices from <a href="https://zapier.com/pricing" rel="nofollow" class="text-brand hover:underline">zapier.com/pricing</a> (USD to UK visitors, annual billing). Checked September 2026. Zapier bills per task (one action step in a workflow); BLAM8 bills per handled email. Zapier reviewers often mention surprise bills from looping Zaps and task limits used up in days, which is worth knowing before you build.</p>
+  <div class="mt-8 overflow-x-auto rounded-xl border border-slate-200">
+    <table class="w-full text-sm text-left">
+      <thead class="bg-slate-50 text-navy">
+        <tr>
+          <th class="px-5 py-3.5 font-semibold w-1/3"></th>
+          <th class="px-5 py-3.5 font-semibold">Zapier</th>
+          <th class="px-5 py-3.5 font-semibold">BLAM8</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100 text-slate-600">
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">What it is</td><td class="px-5 py-3.5">Integration platform — you assemble workflows ("Zaps") from triggers and actions</td><td class="px-5 py-3.5">Finished AI agent — answers inbound email and books the work</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Answering customer email</td><td class="px-5 py-3.5">DIY: mailbox trigger → AI step → draft, ~2–3 tasks per email; no approval queue, knowledge base or thread memory unless you build them</td><td class="px-5 py-3.5">Built in: drafts in your voice from your own uploaded knowledge, approval-first, whole conversation remembered</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Booking / scheduling</td><td class="px-5 py-3.5">None native: integrate a booking-link tool (e.g. Calendly, from £8/seat/mo); the customer self-serves outside the email</td><td class="px-5 py-3.5">Built in: live-diary booking with holds that can't double-book, and it never books a date or a time nobody chose. Included on every plan, from £39/mo</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Pricing</td><td class="px-5 py-3.5">Free plan · Professional from $19.99/mo billed annually · Team from $69/mo billed annually · both rise with your task allowance · AI agents are a separate add-on</td><td class="px-5 py-3.5">Starter £39/mo (replies, booking, diary, quotes and invoices, 300 emails) · Pro £99/mo (adds the self-filling CRM, 750 emails) · Pro + Concierge £249/mo (adds the Concierge, 750 emails) · no per-task metering · 14-day free trial of the full product, the Concierge included, no card to start</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Realistic cost for 500 answered emails/mo</td><td class="px-5 py-3.5">~1,000–1,500 tasks a month at 2–3 tasks per email, so a task tier above Professional's entry price, or Team from $69/mo; plus the AI step's costs; plus a booking tool such as Calendly from £8/seat/mo (no native booking). All before your build time</td><td class="px-5 py-3.5">Pro £99/mo covers this volume (750 emails included), all-in, nothing to build</td></tr>
+        <tr><td class="px-5 py-3.5 font-medium text-slate-800">Connecting thousands of other apps</td><td class="px-5 py-3.5">Yes: its whole purpose</td><td class="px-5 py-3.5">No: mailbox, calendar, and its own diary and CRM</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="border-y border-slate-100 bg-slate-50/60">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:py-20">
+    <h2 class="text-3xl font-bold tracking-tight text-navy">The same email, through both</h2>
+    <p class="mt-3 text-slate-600 max-w-2xl">A customer writes: <span class="italic">"Hi, any chance someone could come out Thursday to take a look? Mornings are best for us."</span></p>
+    <div class="mt-8 grid md:grid-cols-2 gap-8">
+      <div class="rounded-xl border border-slate-200 bg-white p-7">
+        <h3 class="font-semibold text-navy">In Zapier (after you've built the Zap)</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">The trigger fires, an AI step writes a generic reply (it doesn't know your prices or availability unless you've engineered that), a draft appears in your mailbox, and 2–3 tasks are billed. Nobody holds Thursday morning. If the customer replies, the thread context is whatever you built. If the Zap breaks, it's your Tuesday evening. And every email spends tasks from your monthly allowance.</p>
+      </div>
+      <div class="rounded-xl border-2 border-brand/30 bg-white p-7">
+        <h3 class="font-semibold text-navy">In BLAM8</h3>
+        <p class="mt-3 text-slate-600 leading-relaxed">A reply is drafted in your voice, quoting your actual services and rates; the Thursday-morning slot is held so you can't double-book; the booking details sit pinned on the thread. You approve: sent and in the diary. Full-auto once it's earned your trust.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="mx-auto max-w-3xl px-5 py-16 md:py-20">
+  <h2 class="text-3xl font-bold tracking-tight text-navy">Frequently asked questions</h2>
+  <div class="mt-8 divide-y divide-slate-200">
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can Zapier answer my customer emails automatically?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Not out of the box. Zapier is workflow plumbing: you can assemble a Zap (new email → AI step → create draft) yourself, and each inbound email consumes 2–3 billable tasks. What you build has no approval queue, no knowledge base grounding replies in your real prices and policies, no conversation memory, and you maintain it yourself. BLAM8 is that whole system pre-built as a product: connect a mailbox and the next email in gets a draft in your voice from your own business facts.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Does Zapier do appointment scheduling?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">No — Zapier has no diary or availability concept. The standard answer is integrating a booking-link tool such as Calendly (from £8 per seat/month billed yearly), where the customer leaves the email, opens a link, and self-serves against one person's meeting availability. Nothing decides an email is a booking request or holds a slot. BLAM8 books from the conversation itself: it checks your live diary, places a hold that can't double-book, and confirms in the same thread.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">How does Zapier pricing compare to BLAM8?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Zapier bills by task (one action step) and shows USD to UK visitors: there's a Free plan, Professional starts at $19.99/month billed annually, and Team at $69/month billed annually, with the price rising as your task allowance grows. AI agents are a separate add-on. A DIY email-answering Zap costs 2–3 tasks per email, so 300 emails a month is 600–900 tasks before any AI costs, and you still need a booking tool. BLAM8's £39/month Starter plan includes the drafting AI, knowledge base, approval queue and live-diary booking as a finished product, for 300 emails. Prices checked September 2026.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Is BLAM8 a Zapier alternative?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Only for one job. Zapier connects thousands of apps and automates workflows across them — BLAM8 doesn't compete with that and never will. But if the workflow you were about to build in Zapier is 'answer my customer emails and book the jobs', BLAM8 is that workflow as a finished product: answered in your voice, booking details gathered into a pinned card, and booked into your live diary, on every plan.</p>
+    </details>
+    <details class="group py-5">
+      <summary class="flex cursor-pointer items-center justify-between font-semibold text-navy text-lg list-none">Can I use both?<span class="ml-4 text-brand transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+      <p class="mt-3 text-slate-600 leading-relaxed">Absolutely. Keep Zapier for moving data between your other tools, and let BLAM8 own the inbox and the diary. They meet different needs, which is exactly why this page exists.</p>
+    </details>
+  </div>
+</section>
+
+<section class="px-5 pb-20 md:pb-28">
+  <div class="mx-auto max-w-6xl rounded-2xl bg-navy px-8 py-14 md:px-14 text-center">
+    <h2 class="text-3xl md:text-4xl font-bold tracking-tight text-white">Skip the build. Connect the mailbox.</h2>
+    <p class="mt-4 text-slate-300 max-w-xl mx-auto leading-relaxed">Free 14-day trial of the full product, no card. The thing you were about to spend a weekend wiring together is already running.</p>
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a href="/login" class="inline-flex items-center rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition">Start free</a>
+      <a href="/#pricing" class="inline-flex items-center rounded-lg border border-white/25 px-6 py-3 text-sm font-semibold text-white hover:bg-white/10 transition">View pricing</a>
+    </div>
+  </div>
+  <p class="mt-8 text-center text-xs text-slate-400 max-w-2xl mx-auto leading-relaxed">Zapier is a trademark of Zapier Inc.; Calendly is a trademark of Calendly LLC. BLAM8 is not affiliated with or endorsed by either. Competitor details and prices were checked against public sources in September 2026 and may have changed — see <a href="https://zapier.com/pricing" rel="nofollow" class="hover:underline">Zapier's pricing page</a> for current rates.</p>
+</section>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{# Transport sections + rare actions, rendered INSIDE the masthead dropdown
+   (menu_sections block) — the cockpit's tab strip folded into the one menu
+   (Counting House masthead rule, 2026-08-29). Inherits {{ item }} / {{ on }}
+   from app/base.html's menu scope. #}
+<p class="px-4 pt-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Field OS · Transport</p>
+<a href="/app/tms" class="{{ item }} {% if active=='tms' %}{{ on }}{% endif %}"><span class="flex-1">Cockpit</span></a>
+<a href="/app/board" class="{{ item }} {% if active=='board' %}{{ on }}{% endif %}"><span class="flex-1">Board</span></a>
+<a href="/app/fleet" class="{{ item }} {% if active=='fleet' %}{{ on }}{% endif %}"><span class="flex-1">Fleet</span></a>
+<a href="/app/tms/pod" class="{{ item }} {% if active=='pod' %}{{ on }}{% endif %}"><span class="flex-1">POD</span></a>
+<a href="/app/invoices" class="{{ item }} {% if active=='invoices' %}{{ on }}{% endif %}"><span class="flex-1">Invoices</span></a>
+<a href="/app/tms/tracking" class="{{ item }} {% if active=='tracking' %}{{ on }}{% endif %}"><span class="flex-1">Tracking</span></a>
+<a href="/app/tms/compliance" class="{{ item }} {% if active=='compliance' %}{{ on }}{% endif %}"><span class="flex-1">Compliance</span></a>
+<a href="/app/fleet/import" class="{{ item }}"><span class="flex-1">Import order book</span></a>
+<a href="/app/driver" class="{{ item }}" target="_blank"><span class="flex-1">Driver app ↗</span></a>
+<div class="my-1 border-t border-slate-100"></div>
+{# The section's own settings left this menu on 2026-09-02: they live behind
+   the cog in the masthead, which is beside you on every page of the section
+   rather than two taps down a dropdown. Navigation stayed. #}

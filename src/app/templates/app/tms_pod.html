@@ -1,0 +1,42 @@
+{% extends "app/base.html" %}
+{% block title %}Proof of delivery · Field OS · Transport · BLAM8{% endblock %}
+{% block heading %}Proof of delivery{% endblock %}
+{% block menu_sections %}{% include "app/_tms_nav.html" %}{% endblock %}
+{% block content %}
+{% set msg = request.query_params.get('msg') %}
+{% set badge = {'emerald':'bg-emerald-100 text-emerald-700','rose':'bg-rose-100 text-rose-700','blue':'bg-blue-100 text-blue-700','amber':'bg-amber-100 text-amber-700','slate':'bg-slate-100 text-slate-600'} %}
+<div class="max-w-5xl mx-auto p-6 space-y-5">
+  {% if msg == 'pod' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Delivery recorded.</div>{% endif %}
+  <p class="text-sm text-slate-500 max-w-2xl">Every drop's status from the same events your drivers (and the customer portal) see. Record a delivery here, or let the driver do it from the <a href="/app/driver" target="_blank" class="text-brand font-medium">driver app</a>.</p>
+
+  <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+    {% for r in rows %}
+    <div class="p-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-navy">{{ r.ref }}</span>
+          <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ badge.get(r.state.colour, badge['slate']) }}">{{ r.state.label }}</span>
+        </div>
+        <p class="text-sm text-slate-600 truncate">{{ r.summary }}</p>
+        <p class="text-xs text-slate-400">{{ r.date }} · {{ r.spaces }} · {{ r.vehicle }} · → {{ r.delivery }}
+          {% if r.state.signed_by %}· signed <span class="text-slate-600 font-medium">{{ r.state.signed_by }}</span> {{ r.state.at }}{% endif %}
+        </p>
+      </div>
+      {% if not r.closed %}
+      <form method="post" action="/app/tms/pod/{{ r.id }}" class="flex items-center gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="return_to" value="/app/tms/pod">
+        <input name="signed_by" placeholder="Signed by" class="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">
+        <button name="outcome" value="delivered" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 transition">Delivered</button>
+        <button name="outcome" value="failed" class="rounded-lg border border-rose-300 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition">Failed</button>
+      </form>
+      {% else %}
+      <span class="text-emerald-600 text-sm font-medium">✓ POD captured</span>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400 py-10 text-center">No drops in this window yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

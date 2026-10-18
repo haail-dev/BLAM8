@@ -1,0 +1,234 @@
+{% extends "app/base.html" %}
+{% block title %}Knowledge · BLAM8{% endblock %}
+{% block heading %}Knowledge{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-6 space-y-5">
+
+  {% if msg %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">{{ msg }}</div>
+  {% endif %}
+  {% if err %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">{{ err }}</div>
+  {% endif %}
+
+  <p class="text-sm text-slate-500 leading-relaxed">
+    Upload your pricing, policies, hours, service area, FAQs — anything the agent
+    should answer from. When an email comes in, the most relevant pieces are pulled
+    in as the <em>only</em> source for specific prices, dates, and policies. If a
+    fact isn't here, the agent says a colleague will confirm rather than guessing.
+    {% if enterprise and boxes %}Company-wide sources ground <em>every</em> mailbox;
+    a mailbox-specific source grounds only its own.{% endif %}
+  </p>
+
+  {% if enterprise and boxes %}
+  {% macro scope_select() -%}
+  <label class="block">
+    <span class="text-xs font-semibold text-navy">Applies to</span>
+    <select name="mailbox_id" class="mt-1 w-full rounded-lg border border-slate-300 p-2.5 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">
+      <option value="">Company-wide — every mailbox</option>
+      {% for b in boxes %}
+      <option value="{{ b.id }}" {% if sel == b.id %}selected{% endif %}>{{ b.display }} only</option>
+      {% endfor %}
+    </select>
+  </label>
+  {%- endmacro %}
+  {% else %}
+  {% macro scope_select() %}{% endmacro %}
+  {% endif %}
+
+  {% if not configured %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+    The knowledge base is off. Set <code class="font-mono">VOYAGE_API_KEY</code> in your
+    environment to enable fact-checking. You can still add sources once it's set.
+  </div>
+  {% endif %}
+
+{# Knowledge via chat (Kris 2026-09-04): what the agent can answer, read back
+   from the notes as the eight kinds every business needs — and the assistant
+   asks for exactly the ones that aren't there. #}
+{% if coverage %}
+<div class="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+  <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">What the agent can answer <span class="normal-case font-normal text-slate-400">· {{ coverage.score }} kinds covered</span></p>
+  <div class="mt-2 flex flex-wrap gap-1.5">
+    {% for k in coverage.covered %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs text-emerald-800"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>{{ k.label }}</span>{% endfor %}
+    {% for k in coverage.missing %}<span class="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-2.5 py-0.5 text-xs text-slate-500" title="{{ k.ask }}">{{ k.label }}</span>{% endfor %}
+  </div>
+  {% if coverage.missing %}<p class="mt-2 text-xs text-slate-500">Grey ones the agent will have to defer on.{% if ask_text %} <button type="button" data-concierge-ask="{{ ask_text }}" class="text-brand font-medium hover:underline">Ask me for them →</button>{% endif %}</p>{% endif %}
+</div>
+{% endif %}
+  <!-- Existing sources -->
+  <section class="bg-white rounded-xl border border-slate-200">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Your sources</p>
+    </div>
+    {% if not sources %}
+    <div class="px-5 py-8 text-center text-sm text-slate-400">No sources yet. Add one below.</div>
+    {% else %}
+    <div class="divide-y divide-slate-100">
+      {% for s in sources %}
+      <div class="px-5 py-3" data-kb-row>
+      <div class="flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="font-medium text-navy truncate">{{ s.source }}
+            {% if enterprise %}
+            {% if s.scope %}<span class="ml-1.5 rounded bg-indigo-50 text-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold align-middle">{{ s.scope }}</span>
+            {% elif s.mailbox_id %}<span class="ml-1.5 rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[10px] font-semibold align-middle">disconnected mailbox</span>
+            {% else %}<span class="ml-1.5 rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[10px] font-semibold align-middle">Company-wide</span>{% endif %}
+            {% endif %}
+          </p>
+          <p class="text-xs text-slate-400">{{ s.chunks }} chunk{{ '' if s.chunks == 1 else 's' }}</p>
+        </div>
+        <div class="flex flex-none items-center gap-2">
+          {# Correcting a fact used to mean Remove, then retype the whole note from
+             memory (Kris 2026-09-04). Notes open here, with their own text in the
+             box; an imported document stays Remove + re-import. #}
+          {% if s.editable %}
+          <button type="button" data-kb-edit
+                  data-source="{{ s.source }}" data-mailbox="{{ s.mailbox_id or '' }}"
+                  class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-brand hover:text-brand transition">Edit</button>
+          {% endif %}
+          <form method="post" action="/app/knowledge/delete" onsubmit="return confirm('Remove this source?');">
+            <input type="hidden" name="knowledge_versions" value="{{ knowledge_versions|default([])|tojson|forceescape }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+            <input type="hidden" name="source" value="{{ s.source }}">
+            <input type="hidden" name="mailbox_id" value="{{ s.mailbox_id or '' }}">
+            <button class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:border-rose-400 hover:text-rose-600 transition">Remove</button>
+          </form>
+        </div>
+      </div>
+      {% if s.editable %}
+      <form method="post" action="/app/knowledge/edit" class="hidden mt-3 space-y-2" data-kb-form>
+        <input type="hidden" name="knowledge_versions" value="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="source" value="{{ s.source }}">
+        <input type="hidden" name="mailbox_id" value="{{ s.mailbox_id or '' }}">
+        <input name="label" value="{{ s.source }}" required
+               class="w-full rounded-lg border border-slate-300 p-2.5 text-sm font-medium text-navy focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">
+        <textarea name="content" rows="6" required disabled data-kb-text
+                  class="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">Loading…</textarea>
+        <div class="flex items-center gap-2">
+          {# The app-wide idiom: Save appears once the note stops matching what
+             was loaded. The editor fires dirty-save:reset after the fetch, so
+             "Loading…" is never what it compares against. #}
+          <span data-save-row>
+            <button type="submit" class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Save note</button>
+          </span>
+          <button type="button" data-kb-cancel class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 transition">Cancel</button>
+          <span class="text-xs text-slate-400" data-kb-note></span>
+        </div>
+      </form>
+      {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+
+  {% set label = "block text-sm font-semibold text-navy" %}
+  {% set help = "text-xs text-slate-400 mt-0.5" %}
+  {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
+  {% set btn = "rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition" %}
+
+  <!-- Upload a file -->
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Upload a file</p>
+      <p class="{{ help }}">PDF, Word (.docx), Excel (.xlsx), CSV, or plain text · max 5&nbsp;MB.</p>
+    </div>
+    <form method="post" action="/app/knowledge/upload" enctype="multipart/form-data" class="space-y-3">
+      <input type="hidden" name="knowledge_versions" value="{{ knowledge_versions|default([])|tojson|forceescape }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {{ scope_select() }}
+      <div class="flex flex-wrap items-center gap-3">
+        <input type="file" name="file" required accept=".pdf,.docx,.xlsx,.xlsm,.csv,.tsv,.txt,.md"
+               class="text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200">
+        <button type="submit" class="{{ btn }}">Import</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Import from URL -->
+  <section class="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Import from a URL</p>
+      <p class="{{ help }}">A web page or a published Google Sheet (File → Share → Publish to web → CSV). Imported once now.</p>
+    </div>
+    <form method="post" action="/app/knowledge/url" class="space-y-3">
+      <input type="hidden" name="knowledge_versions" value="{{ knowledge_versions|default([])|tojson|forceescape }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {{ scope_select() }}
+      <input name="url" type="url" required class="{{ field }}" placeholder="https://docs.google.com/…/pub?output=csv">
+      <input name="label" class="{{ field }}" placeholder="Label (optional) — e.g. 'Price list'">
+      <button type="submit" class="{{ btn }}">Import</button>
+    </form>
+  </section>
+
+  <!-- Paste text -->
+  <section id="paste" class="bg-white rounded-xl border border-slate-200 p-5 space-y-3{% if prefill %} ring-2 ring-amber-300{% endif %}">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Paste text</p>
+      <p class="{{ help }}">Quick facts — hours, service area, “we don't ship to X”.</p>
+      {% if prefill and redraft %}<p class="text-xs text-amber-700 mt-1">The agent held a reply for this missing fact. Add it below and the reply drafts itself the moment you save.</p>
+      {% elif prefill %}<p class="text-xs text-amber-700 mt-1">A draft deferred this to a colleague. Add the missing fact below and the agent will use it next time.</p>{% endif %}
+    </div>
+    <form method="post" action="/app/knowledge/text" class="space-y-3">
+      <input type="hidden" name="knowledge_versions" value="{{ knowledge_versions|default([])|tojson|forceescape }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      {% if redraft %}<input type="hidden" name="redraft_log" value="{{ redraft }}">{% endif %}
+      {{ scope_select() }}
+      <input name="label" required class="{{ field }}" placeholder="Label — e.g. 'Opening hours'" value="{{ prefill or '' }}">
+      <textarea name="content" rows="5" required class="{{ field }}" placeholder="We're open Mon–Fri 8am–6pm. We don't run weekend collections…"{% if prefill %} autofocus{% endif %}></textarea>
+      <button type="submit" class="{{ btn }}">Add</button>
+    </form>
+  </section>
+
+</div>
+
+<script>
+  // Edit a note in place: the text is fetched when the editor opens, so the page
+  // never carries the whole knowledge base just in case someone edits one line.
+  (function () {
+    document.querySelectorAll("[data-kb-edit]").forEach(function (btn) {
+      var row = btn.closest("[data-kb-row]");
+      var form = row.querySelector("[data-kb-form]");
+      var box = form.querySelector("[data-kb-text]");
+      var note = form.querySelector("[data-kb-note]");
+      var loaded = false;
+      form.addEventListener("submit", function (event) {
+        if (!loaded) {
+          event.preventDefault();
+          note.textContent = "Wait for the saved note to load before saving.";
+        }
+      });
+      btn.addEventListener("click", async function () {
+        if (!form.classList.contains("hidden")) { form.classList.add("hidden"); return; }
+        form.classList.remove("hidden");
+        if (loaded) { box.focus(); return; }
+        try {
+          var q = new URLSearchParams({ source: btn.dataset.source,
+                                        mailbox_id: btn.dataset.mailbox || "" });
+          var res = await fetch("/app/knowledge/note?" + q.toString());
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          var saved = await res.json();
+          box.value = saved.content || "";
+          form.elements.knowledge_versions.value = JSON.stringify(saved.knowledge_versions);
+          loaded = true;
+          box.disabled = false;
+          note.textContent = "";
+          // What loaded IS the pristine state — otherwise Save would sit there
+          // offering to save "Loading…" replaced by the note itself.
+          form.dispatchEvent(new Event("dirty-save:reset"));
+          box.focus();
+        } catch (e) {
+          box.value = "";
+          form.dispatchEvent(new Event("dirty-save:reset"));
+          note.textContent = "Couldn't load this note — try again in a moment.";
+        }
+      });
+      form.querySelector("[data-kb-cancel]").addEventListener("click", function () {
+        form.classList.add("hidden");
+      });
+    });
+  })();
+</script>
+{% endblock %}

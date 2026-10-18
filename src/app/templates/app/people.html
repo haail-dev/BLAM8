@@ -1,0 +1,265 @@
+{% extends "app/base.html" %}
+{% block title %}People · BLAM8{% endblock %}
+{% block heading %}People{% endblock %}
+{% set back = ('/app/settings', 'Settings') %}
+{% block content %}
+{# The business's own people (docs/plan-people.md, Kris 2026-09-13: "we need
+   some way to add employees to BLAM8 … added via invite or QR"). A list with
+   a page per person, reached from a Settings row — the Mailboxes idiom, which
+   this is the same shape as. Seats are free; the cap is only an abuse floor. #}
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-4" data-people-page>
+
+  {% if msg == 'sendfailed' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">That email wouldn't send just now — the link below still works, so send it yourself, or try again.</div>
+  {% elif msg == 'noemail' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">There's no address on that invitation — send them the link below instead.</div>
+  {% endif %}
+  {% if invite_link %}
+  {% set link = invite_link %}
+  <section class="rounded-xl border border-brand/30 bg-brand-50 p-5" data-invite-made>
+    <p class="text-sm font-semibold text-navy">Their invitation is ready</p>
+    <p class="mt-1 text-xs text-slate-600">Email it to them, send the link yourself, or hold up the code. It works once, for the next 7 days, and signs them in with their own Google or Microsoft account — they never need a password of yours.</p>
+    {% if invite_to %}
+    <form method="post" action="/app/people/invite/send" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <input type="hidden" name="token" value="{{ invite_token }}">
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition" data-send-invite>Email it to {{ invite_to }}</button>
+      <span class="ml-2 text-xs text-slate-400">from your own mailbox, so they know who it's from</span>
+    </form>
+    {% else %}
+    <p class="mt-3 text-xs text-slate-400">No address for them, so there's nothing to email — send the link yourself.</p>
+    {% endif %}
+    <div class="mt-3 flex flex-wrap items-start gap-4">
+      <div class="min-w-0 flex-1">
+        <input type="text" readonly value="{{ link }}" data-invite-link
+               class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-600">
+        <button type="button" data-copy-invite class="mt-2 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Copy the link</button>
+      </div>
+      {% if invite_qr %}
+      <div class="flex-none rounded-lg border border-slate-200 bg-white p-2" data-invite-qr aria-label="Invitation QR code">{{ invite_qr | safe }}</div>
+      {% endif %}
+    </div>
+  </section>
+  {% elif msg == 'sent' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Invitation emailed to {{ sent_to }}. It's in your sent folder like any other message.</div>
+  {% elif msg == 'stale' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That invitation has been used or cancelled — make a new one.</div>
+  {% elif msg == 'full' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That's as many people as one business can hold for now — deactivate someone, or ask us to raise it.</div>
+  {% elif msg == 'revoked' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Invitation cancelled — that link no longer works.</div>
+  {% elif msg == 'added' %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Added to your freelancers & helpers. Give them a mobile or an email and each job you give them is sent to them as a job sheet; a login from their page whenever you like.</div>
+  {% elif msg == 'noname' %}
+  <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Give them a name first.</div>
+  {% elif msg == 'failed' %}
+  <div class="rounded-lg bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">That invitation couldn't be made just now. Try again.</div>
+  {% endif %}
+
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">On this business</h2>
+    </div>
+    <ul class="divide-y divide-slate-100">
+      {% for m in members %}
+      <li>
+        <a href="/app/people/{{ m.user_id }}" class="flex items-baseline gap-3 px-4 py-3 hover:bg-slate-50 transition" data-person-row>
+          {% set mine = m.user_id == (me.user_id if me else '') %}
+          <span class="text-sm font-medium text-navy flex-none">{{ m.display_name or m.email or ('You' if mine else 'Invited person') }}{% if mine and (m.display_name or m.email) %} <span class="font-normal text-slate-400">· you</span>{% endif %}</span>
+          <span class="flex-1 min-w-0 truncate text-xs text-slate-400">
+            {{ m.role_label }}{% if not m.active %} · no longer here{% elif m.role in tailorable %} · {% if m.scopes.pages %}{% for p in m.scopes.pages %}{{ page_labels[p] }}{{ ', ' if not loop.last }}{% endfor %}{% else %}no doors yet{% endif %}{% if m.scopes.does %} · {% for k in kinds if k.key in m.scopes.does %}{{ k.label | lower }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}{% endif %}
+          </span>
+          <span class="flex-none text-slate-400">→</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if no_login %}
+  {# People who don't sign in (docs/plan-people-team-and-jobs.md step 1): on
+     the team, given work, counted in the diary — and no door to open. #}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden" data-no-login>
+    <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Freelancers &amp; helpers</h2>
+      <p class="mt-0.5 text-xs text-slate-400">They don't use the app — each job you give them is sent to them as a job sheet.</p>
+    </div>
+    <ul class="divide-y divide-slate-100">
+      {% for t in no_login %}
+      <li>
+        <a href="/app/people/team/{{ t.id }}" class="flex items-baseline gap-3 px-4 py-3 hover:bg-slate-50 transition" data-team-row>
+          <span class="text-sm font-medium text-navy flex-none">{{ t.name }}</span>
+          <span class="flex-1 min-w-0 truncate text-xs text-slate-400">
+            {{ t.role_label }}{% if not t.active %} · no longer here{% elif t.does %} · {% for k in kinds if k.key in t.does %}{{ k.label | lower }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}
+          </span>
+          <span class="flex-none text-slate-400">→</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <details class="bg-white rounded-xl border border-slate-200 p-5" data-add-team {{ 'open' if msg == 'noname' }}>
+    <summary class="cursor-pointer text-sm font-semibold text-brand">+ Add a freelancer or helper <span class="font-normal text-slate-400">— a subbie, a partner, anyone you give work to who won't use the app</span></summary>
+    <p class="mt-1 text-xs text-slate-400">A subcontractor, a partner who works the floor, a weekend helper — they can be put on jobs and count towards how many things can happen at once. They don't use the app: give them a mobile or an email and each job they're put on is sent to them as a job sheet — when, where, who's there, and a link to tap On my way and Done. Give them a login later and everything stays theirs.</p>
+    <form method="post" action="/app/people/team/add" class="mt-4 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-500 mb-1">Their name</span>
+          <input name="name" required placeholder="e.g. Kristie" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        </label>
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-500 mb-1">What they are</span>
+          <select name="role" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            {% for r in team_roles %}<option value="{{ r.key }}" {{ 'selected' if r.key == 'staff' }}>{{ r.label }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-500 mb-1">Mobile <span class="font-normal text-slate-400">— their jobs are texted here</span></span>
+          <input name="phone" type="tel" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        </label>
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-500 mb-1">Email <span class="font-normal text-slate-400">— or emailed here</span></span>
+          <input name="email" type="email" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        </label>
+      </div>
+      {% if kinds %}
+      <div>
+        <span class="block text-xs font-medium text-slate-500 mb-1.5">What they do{% include "app/_tick_all.html" %}</span>
+        <div class="space-y-1.5">
+          {% for k in kinds %}
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" name="kind" value="{{ k.key }}" class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+            <span class="block text-sm text-navy">{{ k.label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Add them</button>
+    </form>
+  </details>
+
+  {% if out_notes %}
+  {# What you have asked of people and are still waiting on (slice 3). The
+     booking keeps the note for good; this list is only what is outstanding. #}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden" data-out-notes>
+    <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">You've asked for</h2>
+    </div>
+    <ul class="divide-y divide-slate-100">
+      {% for n in out_notes %}
+      <li class="flex items-baseline gap-3 px-4 py-3">
+        <span class="inline-block h-1.5 w-1.5 flex-none self-center rounded-full {{ 'bg-slate-300' if n.seen_at else 'bg-amber-400' }}" aria-hidden="true"></span>
+        <span class="min-w-0 flex-1">
+          <span class="text-sm text-navy"><span class="font-medium">{{ n.to_name or 'Someone' }}</span>{% if n.about_label %} <span class="text-slate-500">· {{ n.about_label }}</span>{% endif %}</span>
+          <span class="block text-xs text-slate-500 truncate">{{ n.body }}</span>
+        </span>
+        <span class="flex-none text-xs {{ 'text-slate-400' if n.seen_at else 'text-amber-700' }}">{{ 'seen' if n.seen_at else 'not seen yet' }}</span>
+        <form method="post" action="/app/people/note/{{ n.id }}/cancel" class="flex-none">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="return_to" value="/app/people">
+          <button class="text-xs text-slate-400 hover:text-rose-600 hover:underline transition">Drop it</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if invites %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+      <h2 class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Invitations out</h2>
+    </div>
+    <ul class="divide-y divide-slate-100">
+      {% for i in invites %}
+      <li class="flex items-baseline gap-3 px-4 py-3" data-invite-row>
+        <span class="text-sm font-medium text-navy flex-none">{{ i.display_name or i.email or 'Someone' }}</span>
+        <span class="flex-1 min-w-0 truncate text-xs text-slate-400">{{ i.role | capitalize }} · {{ 'waiting for them to sign in' if i.state == 'pending' else i.state }}</span>
+        {% if i.email and i.state == 'pending' %}
+        <form method="post" action="/app/people/invite/send" class="flex-none">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <input type="hidden" name="token" value="{{ i.token }}">
+          <button class="text-xs font-medium text-brand hover:underline transition" data-resend-invite>Email it</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/app/people/invite/{{ i.id }}/revoke" class="flex-none">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <button class="text-xs text-slate-400 hover:text-rose-600 hover:underline transition">Cancel</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+
+  <section class="bg-white rounded-xl border border-slate-200 p-5" data-invite-form>
+    <h2 class="text-sm font-semibold text-navy">Invite someone</h2>
+    <p class="mt-1 text-xs text-slate-400">They sign in with their own Google or Microsoft account. People are free — you share the same allowance, not a bill per head.</p>
+    <form method="post" action="/app/people/invite" class="mt-4 space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-500 mb-1">Their name</span>
+          <input name="display_name" placeholder="e.g. Sam" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        </label>
+        <label class="block">
+          <span class="block text-xs font-medium text-slate-500 mb-1">Their email <span class="font-normal text-slate-400">— optional, for your records</span></span>
+          <input name="email" type="email" placeholder="sam@example.com" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+        </label>
+      </div>
+      <div>
+        <span class="block text-xs font-medium text-slate-500 mb-1.5">What they are</span>
+        <div class="space-y-1.5">
+          {% for r in roles %}
+          <label class="flex items-start gap-2.5 cursor-pointer">
+            <input type="radio" name="role" value="{{ r.key }}" {{ 'checked' if r.key == 'staff' }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none" data-role-radio>
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-navy">{{ r.label }}</span>
+              <span class="block text-xs text-slate-400">{{ r.blurb }}</span>
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div data-doors hidden>
+        <span class="block text-xs font-medium text-slate-500 mb-1.5">What they can open, and what they can change</span>
+        {% with open_pages = ['today', 'diary'], can = [], mailboxes_on = [] %}{% include "app/_people_doors.html" %}{% endwith %}
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition" {{ 'disabled' if seats_left <= 0 }}>Make their invitation</button>
+        <span class="text-xs text-slate-400">{{ seats_left }} more {{ 'person' if seats_left == 1 else 'people' }} can be added</span>
+      </div>
+    </form>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    // The doors only exist for a role whose doors the business chooses.
+    var doors = document.querySelector("[data-doors]");
+    function sync() {
+      var r = document.querySelector("[data-role-radio]:checked");
+      if (doors) doors.hidden = !r || r.value !== "staff";
+    }
+    document.querySelectorAll("[data-role-radio]").forEach(function (el) {
+      el.addEventListener("change", sync);
+    });
+    sync();
+    var copy = document.querySelector("[data-copy-invite]");
+    if (copy) copy.addEventListener("click", function () {
+      var box = document.querySelector("[data-invite-link]");
+      box.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      if (navigator.clipboard) { navigator.clipboard.writeText(box.value).catch(function () {}); }
+      copy.textContent = "Copied";
+      setTimeout(function () { copy.textContent = "Copy the link"; }, 2000);
+    });
+  })();
+</script>
+{% endblock %}

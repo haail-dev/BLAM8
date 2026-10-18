@@ -1,0 +1,77 @@
+{% extends "app/base.html" %}
+{% block title %}{{ t.name }} · People · BLAM8{% endblock %}
+{% block heading %}{{ t.name }}{% endblock %}
+{% set back = ('/app/people', 'People') %}
+{% block content %}
+{# Someone on the team who doesn't sign in (docs/plan-people-team-and-jobs.md
+   step 1). No doors — there is nothing to sign in with — only who they are,
+   what they do and how to reach them. "Give them a login" makes a normal
+   invitation that joins the sign-in to this row, so their history stays. #}
+<div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-4" data-team-person-page>
+  {% if saved %}
+  <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>
+  {% endif %}
+
+  <form method="post" action="/app/people/team/{{ t.id }}" class="bg-white rounded-xl border border-slate-200 p-5 space-y-5">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+    <div class="grid sm:grid-cols-2 gap-4">
+      <label class="block">
+        <span class="block text-xs font-medium text-slate-500 mb-1">Their name</span>
+        <input name="name" value="{{ t.name }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+      </label>
+      <label class="block">
+        <span class="block text-xs font-medium text-slate-500 mb-1">What they are</span>
+        <select name="role" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          {% for r in team_roles %}<option value="{{ r.key }}" {{ 'selected' if r.key == t.role }}>{{ r.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="block">
+        <span class="block text-xs font-medium text-slate-500 mb-1">Mobile{% if not t.has_login %} <span class="font-normal text-slate-400">— their jobs are texted here</span>{% endif %}</span>
+        <input name="phone" type="tel" value="{{ t.phone }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+      </label>
+      <label class="block">
+        <span class="block text-xs font-medium text-slate-500 mb-1">Email{% if not t.has_login %} <span class="font-normal text-slate-400">— or emailed here</span>{% endif %}</span>
+        <input name="email" type="email" value="{{ t.email }}" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+      </label>
+    </div>
+    <div data-kinds>
+      <span class="block text-xs font-medium text-slate-500 mb-1.5">What they do{% include "app/_tick_all.html" %}</span>
+      {% if kinds %}
+      <div class="space-y-1.5">
+        {% for k in kinds %}
+        <label class="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" name="kind" value="{{ k.key }}" {{ 'checked' if k.key in t.does }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+          <span class="min-w-0">
+            <span class="block text-sm text-navy">{{ k.label }}</span>
+            {% if k.blurb %}<span class="block text-xs text-slate-400">{{ k.blurb }}</span>{% endif %}
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+      <p class="mt-2 text-xs text-slate-400">Counts towards how many things the diary lets happen at once, the same as someone who signs in.</p>
+      {% else %}
+      <p class="text-xs text-slate-400">Nothing to hand out yet — add your services under Diary settings and they'll appear here.</p>
+      {% endif %}
+    </div>
+    <label class="flex items-start gap-2.5 cursor-pointer">
+      <input type="checkbox" name="active" value="1" {{ 'checked' if t.active }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none">
+      <span class="min-w-0">
+        <span class="block text-sm font-medium text-navy">Still works here</span>
+        <span class="block text-xs text-slate-400">Turn this off and they stop counting. Their name stays on everything they did.</span>
+      </span>
+    </label>
+    <div data-save-row>
+      <button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
+    </div>
+  </form>
+
+  <section class="bg-white rounded-xl border border-slate-200 p-5" data-give-login>
+    <p class="text-sm font-semibold text-navy">Freelancer or helper — gets job sheets</p>
+    <p class="mt-1 text-xs text-slate-500">They don't use BLAM8: each job you give them is sent to their mobile or email as a job sheet. Give them a login and they get an invitation like anyone else{% if t.role == 'owner' %} (a second owner signs in as a manager — an account has one owner who signs in){% endif %}; when they accept, their jobs and history stay theirs.</p>
+    <form method="post" action="/app/people/team/{{ t.id }}/login" class="mt-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+      <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-navy hover:border-brand hover:text-brand transition">Give them a login</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

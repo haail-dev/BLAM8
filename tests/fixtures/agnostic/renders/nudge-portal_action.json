@@ -1,0 +1,4 @@
+{
+  "sha256": "861c4204d1ae320dd53f1eb78865f6acf9678dfdd714bdf00f536133fc75c8cf",
+  "excerpt": "[{\"messages\":[{\"content\":\"My bookings?\",\"role\":\"user\"}],\"operation\":\"portal_chat\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":false,\"properties\""
+}
