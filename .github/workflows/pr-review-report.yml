@@ -4,7 +4,7 @@ on:
   pull_request_target:
     types: [opened, reopened, synchronize, edited, ready_for_review, converted_to_draft, closed]
   workflow_run:
-    workflows: [Offline tests and agnostic guard, Review automation tests]
+    workflows: [Platform tests and agnostic guard, Review automation tests]
     types: [completed]
   workflow_dispatch:
 

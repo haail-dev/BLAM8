@@ -5,7 +5,7 @@
 const MARKER = '<!-- blam8-pr-review:v1 -->';
 const SECTIONS = ['Purpose', 'Changes', 'Validation', 'Risks and rollback'];
 const WORKFLOWS = [
-  { path: '.github/workflows/offline-tests.yml', job: 'offline' },
+  { path: '.github/workflows/offline-tests.yml', job: 'Platform tests and agnostic guard' },
   { path: '.github/workflows/review-automation-tests.yml', job: 'review-tests' },
 ];
 
