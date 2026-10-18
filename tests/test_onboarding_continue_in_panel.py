@@ -56,7 +56,8 @@ def test_panel_renders_the_action_not_just_a_hint():
     # notes save refreshes <main> in place and replaces the Finish button, so
     # a reference taken when the panel rendered pointed at a detached node
     # (run #9, 2026-09-05: "Finish setup →" did nothing after a save)
-    assert "var live = pageContinueBtn() || btn;" in js and "live.click()" in js
+    assert "var live = pageContinueBtn();" in js and "live.click()" in js
+    assert "!currentState.ready" in js
     # …and still degrades to words when no step button is on screen
     assert "Looks good? Review the form and hit Continue." in js
 

@@ -777,6 +777,16 @@ def _onboarding_sections(step: str, current: dict | None = None, coverage: dict 
                     + settings_recommend.catalogue_block() + "\n"
                     + setup_held.catalogue_extra_block())
     stable, sections = sections, []
+    from app import onboarding_journey
+    journey = (tenant or {}).get("onboarding_journey") or onboarding_journey.describe(step)
+    if journey and step in onboarding_journey.STEPS:
+        import json
+        sections.append("Authoritative current journey (application state, not a proposed action): "
+                        + json.dumps(journey, ensure_ascii=False) + "\n"
+                        "Use this order and next action, not the conversation's earlier descriptions or tuning documentation. "
+                        "An available Continue button does not submit or navigate until the owner clicks it. "
+                        "A review pause must not suppress an available button. Never promise a skip or unsupported route. "
+                        "The legacy ready_to_advance field does not authorise execution or decide button availability.")
     filled = {k: v for k, v in (current or {}).items() if v}
     if filled:
         import json

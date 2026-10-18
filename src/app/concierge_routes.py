@@ -541,6 +541,7 @@ class OnboardResponse(BaseModel):
     ready_to_advance: bool
     notes: list[dict] = Field(default_factory=list)
     review_link: dict | None = None
+    journey: dict | None = None
     # Labels of the pages this turn held facts for — written ONLY from what
     # the server recorded, so the widget's "Kept for later" line is never a
     # claim the store did not make good on (src/app/setup_held.py).
@@ -568,6 +569,24 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
     question = body.question.strip()[:MAX_INAPP_QUESTION_CHARS]
     history = concierge.sanitize_history(
         [t.model_dump() for t in body.history], MAX_HISTORY_TURNS, MAX_TURN_CHARS)
+    from app import onboarding_journey
+    saved, connected = {}, None
+    try:
+        t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
+        cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+        connected = bool(db.get_connection_status(ctx.tenant_id, client=ctx.client))
+        saved = {"interview": bool(t.get("industry")), "mailbox": connected,
+                 "voice": bool(cfg.get("voice_profile_source")), "knowledge": bool(t.get("onboarded_at"))}
+    except Exception:
+        pass  # Unknown completion is never described as false or complete.
+    journey = onboarding_journey.describe(body.step, connected=connected, saved=saved)
+    if body.step == "knowledge":
+        try:
+            from app.onboarding import _next_step_target
+            journey = onboarding_journey.describe(body.step, connected=connected, saved=saved,
+                                                   next_target=_next_step_target(ctx))
+        except Exception:
+            pass  # The next tuning destination remains unverified, not guessed.
     coverage = None
     if body.step == "knowledge":
         from app import knowledge_coverage, knowledge_review
@@ -585,6 +604,11 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
     # The later steps know the business from step 1 (brief, sector) instead of
     # relying on the chat history to carry it (run #9 hand-off). Best-effort.
     tenant = _tenant_context(ctx) if body.step in ("voice", "knowledge", "mailbox") else None
+    tenant = dict(tenant or {})
+    tenant["onboarding_journey"] = journey
+    if journey and body.step != "knowledge" and onboarding_journey.is_navigation_request(question):
+        return OnboardResponse(reply=onboarding_journey.navigation_reply(journey), form_fill={},
+                               ready_to_advance=False, journey=journey)
     # What earlier turns held (any step): the prompt carries it so nothing is
     # asked twice; what THIS turn holds is recorded after the reply.
     from app import setup_held
@@ -611,7 +635,7 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
             review_link = {"label":"Review pending Knowledge", "href":f"/onboarding/knowledge/review/{row['id']}"}
         return OnboardResponse(reply=result.reply, form_fill=result.form_fill,
                                ready_to_advance=result.ready_to_advance,
-                               notes=list(result.notes or []), held_for=held_for, review_link=review_link)
+                               notes=list(result.notes or []), held_for=held_for, review_link=review_link, journey=journey)
     return await run_in_threadpool(_blocking)
 
 

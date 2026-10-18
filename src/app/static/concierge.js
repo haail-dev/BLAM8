@@ -580,7 +580,20 @@
   function showContinueHint() {
     ADVANCE_WANTED = true;
     var btn = pageContinueBtn();
+    var state = window.Blam8OnboardingJourney ? window.Blam8OnboardingJourney.read(PENDING_KB_CARDS.length) : {ready:!!btn, action:btn};
     cta.innerHTML = "";
+    if (!state.ready) {
+      if (state.blocker === "pending_reviews") {
+        var later = document.querySelector("[data-knowledge-later]");
+        if (later && later.hidden) later.hidden = false; // reveal the existing explicit choice; never select it
+      }
+      var reason = document.createElement("p");
+      reason.className = "text-xs text-slate-500 text-center";
+      reason.textContent = state.reason || "No Continue action is available on this page.";
+      cta.appendChild(reason);
+      cta.classList.remove("hidden");
+      return;
+    }
     if (PENDING_KB_CARDS.length) {
       var hold = document.createElement("p");
       hold.className = "text-[11px] text-amber-700 text-center";
@@ -591,7 +604,6 @@
       cta.classList.remove("hidden");
       return;
     }
-    if (btn) flash(btn);
     if (btn) {
       var go = document.createElement("button");
       go.type = "button";
@@ -602,7 +614,9 @@
         // step's notes save refreshes <main> in place, which replaces the
         // Finish button node — a click on the detached original submitted
         // nothing (run #9, 2026-09-05: "Finish setup →" dead after a save).
-        var live = pageContinueBtn() || btn;
+        var live = pageContinueBtn();
+        var currentState = window.Blam8OnboardingJourney ? window.Blam8OnboardingJourney.read(PENDING_KB_CARDS.length) : {ready:!!live};
+        if (!live || !currentState.ready || live.disabled) { showContinueHint(); return; }
         go.disabled = true;
         go.className += " opacity-60";
         live.click();
@@ -1395,7 +1409,7 @@
       appendRecommendCard({ page: "knowledge", label: "Knowledge notes", href: "/app/knowledge",
         values: notes.map(function (n) { return { name: "note", value: n.label + " | " + n.content }; }) });
     }
-    if (advance) showContinueHint();
+    showContinueHint();
     pinToTop(replyEl);
     return spoke;
   }
@@ -2687,6 +2701,19 @@
   // step message to the TOP of the view — history sits above, one scroll up.
   // rAF so the panel's layout has settled before measuring.
   if (HANDOFF) requestAnimationFrame(pinLastToTop);
+
+  // Availability is application-owned, including arrival and manual changes.
+  if (ONB_MODE) {
+    showContinueHint();
+    document.addEventListener("input", function (event) { if (event.target.closest("main")) showContinueHint(); });
+    document.addEventListener("change", function (event) { if (event.target.closest("main")) showContinueHint(); });
+    window.addEventListener("blam8:onboarding-readiness", showContinueHint);
+    var journeyMain = document.querySelector("main");
+    if (journeyMain && typeof MutationObserver !== "undefined") {
+      new MutationObserver(showContinueHint).observe(journeyMain, {subtree:true, childList:true,
+        attributes:true, attributeFilter:["disabled", "hidden", "class"]});
+    }
+  }
 
   // Expire an idle thread even while the tab just sits open.
   setInterval(function () { if (isStale()) clearThread(); }, 60 * 1000);

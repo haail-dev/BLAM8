@@ -44,7 +44,8 @@ router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 # step came OFF the wizard 2026-08-02 (Julius: another step between them and the
 # plan; reintroduce later as an in-app prompt) — its routes below survive
 # off-flow, so nothing links break and the capture can return cheaply.
-STEPS = ["interview", "mailbox", "voice", "knowledge"]
+from app import onboarding_journey
+STEPS = list(onboarding_journey.STEPS)
 
 INDUSTRIES = [
     {"id": "logistics", "label": "Logistics & haulage", "os": "field",
@@ -269,7 +270,16 @@ def _step_ctx(step: str, **extra) -> dict:
     # The classic industry picker isn't in STEPS (the interview replaced it) but
     # still renders — on the stepper it borrows the interview's slot.
     stepper = step if step in STEPS else "interview"
+    saved = {}
+    if "selected" in extra:
+        saved["interview"] = bool(extra["selected"])
+    if "connected" in extra:
+        saved["mailbox"] = bool(extra["connected"])
+    if "cfg" in extra:
+        saved["voice"] = bool((extra["cfg"] or {}).get("voice_profile_source"))
     return {"steps": STEPS, "step": step, "stepper": stepper,
+            "journey": onboarding_journey.describe(step, connected=extra.get("connected"), saved=saved,
+                                                     next_target=extra.get("next_target")),
             "step_index": STEPS.index(stepper), "step_count": len(STEPS),
             "tuning": tuning_steps(), "knowledge_source_review_enabled": settings.knowledge_source_review_enabled, **extra}
 
@@ -315,12 +325,15 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     return RedirectResponse(nxt["href"] if nxt else "/app/", status_code=303)
 
 
-def _next_step_label(ctx: TenantCtx) -> str:
-    """The wizard's last button: 'Next: Diary settings' — the first tuning step
-    still open (a tenant with nothing left to tune sees 'Finish setup')."""
+def _next_step_target(ctx: TenantCtx) -> dict:
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
-    return f"Next: {nxt['label']}" if nxt else "Finish setup"
+    return {"label": nxt["label"], "href": nxt["href"]} if nxt else {"label": "Today", "href": "/app/"}
+
+
+def _next_step_label(ctx: TenantCtx) -> str:
+    target = _next_step_target(ctx)
+    return "Finish setup" if target["href"] == "/app/" else "Next: " + target["label"]
 
 
 # ── resume ───────────────────────────────────────────────────────────────────
@@ -701,13 +714,15 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
     from app import setup_held
     held_notes = setup_held.for_page(
         [i for i in (cfg.get("setup_held") or []) if isinstance(i, dict)], "knowledge")
+    next_target = _next_step_target(ctx)
     return templates.TemplateResponse(request, "onboarding/knowledge.html", _step_ctx(
         "knowledge", sources=sources, configured=kb.is_configured(), coverage=cov,
         review_coverage=knowledge_review.topic_view(review_context), pending_reviews=pending_reviews,
         source_texts=text_by_source,
         coverage_ask=coverage_ask, site_url=website, auto_site=auto_site,
         site_done=site_read, site_note_count=len(site_sources), held_notes=held_notes,
-        next_label=_next_step_label(ctx),
+        next_target=next_target,
+        next_label="Finish setup" if next_target["href"] == "/app/" else "Next: " + next_target["label"],
         msg=request.query_params.get("msg"), err=request.query_params.get("err")))
 
 
