@@ -87,10 +87,11 @@ def client():
     app.dependency_overrides.clear()
 
 
-def test_finish_lands_on_the_first_open_tuning_step(client, monkeypatch):
+def test_finish_lands_on_the_first_open_tuning_step(client, monkeypatch, review_store):
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
     monkeypatch.setattr(onboarding.db, "upsert_tenant_config", lambda *a, **k: None)
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: list(STEPS))
+    assert review_store.rows == []  # completion is permitted only after pending review is checked
     r = client.post("/onboarding/knowledge/text", data={"label": "", "content": "", "then": "continue"},
                     follow_redirects=False)
     assert r.status_code == 303
