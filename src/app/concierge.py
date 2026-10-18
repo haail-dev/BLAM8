@@ -1020,6 +1020,7 @@ class HelpReply(NamedTuple):
     # Facts for other pages, [{page, values}] — the route records them.
     held: list = []
     setup_changes: list | None = None
+    evidence: list | None = None
 
 
 def _held_rule_for_help() -> str:
@@ -1430,15 +1431,19 @@ def _parse_help(text: str) -> tuple[str, str, dict | None, list[dict] | None]:
         return _salvage_reply(text) or text.strip(), "", None, None
 
 
+@llm.with_request_scope
 async def answer_help(question: str, history: list[dict] | None = None,
-                      tenant: dict | None = None, tenant_id: str | None = None) -> HelpReply:
+                      tenant: dict | None = None, tenant_id: str | None = None,
+                      investigator=None) -> HelpReply:
     """Answer from shared local product content and explicit tenant context.
 
     Saved configuration supplies context, never an inferred policy or default.
     Only a supplied durable proposal context allows supported setup proposals;
     acceptance and persistence remain with the existing settings workflow.
     Return the reply and a resolved navigation link, when supplied."""
-    from app import platform_help
+    import asyncio
+    import json
+    from app import platform_help, help_investigation
     guide = None  # Generic controls and explicit owner facts replace industry recipes.
     system = help_system(facts=platform_facts.sheet(),
                          knowledge=platform_help.prompt(question,(tenant or {}).get('_product_context')),
@@ -1449,23 +1454,71 @@ async def answer_help(question: str, history: list[dict] | None = None,
         system.append({"type": "text", "text": tenant["setup_card_context"]})
         output_schema = setup_card_model.schema(HELP_SCHEMA)
     messages = (history or []) + [{"role": "user", "content": question}]
-    msg = await llm.create(
-        client=client(), tenant_id=tenant_id, operation="concierge_help",
-        module="concierge",
-        model=settings.anthropic_model,
-        max_tokens=4000 if output_schema is HELP_SCHEMA else 8000,
-        system=system,
-        messages=messages,
-        output_config={"format": {"type": "json_schema", "schema": output_schema}},
-    )
+    if investigator is not None:
+        system.append({'type': 'text', 'text': help_investigation.instructions()})
+    totals = metering.Totals()
+    used = 0
+    for round_index in range(help_investigation.MAX_TOOL_ROUNDS + 1):
+        allowed = investigator is not None and round_index < help_investigation.MAX_TOOL_ROUNDS and used < help_investigation.MAX_TOOL_CALLS
+        options = ({'tools': help_investigation.TOOLS, 'tool_choice': {'type': 'auto' if allowed else 'none'}}
+                   if investigator is not None else {})
+        try:
+            msg = await llm.create(
+                client=client(), tenant_id=tenant_id, operation="concierge_help",
+                module="concierge", model=settings.anthropic_model,
+                max_tokens=4000 if output_schema is HELP_SCHEMA else 8000,
+                system=system, messages=messages,
+                output_config={"format": {"type": "json_schema", "schema": output_schema}},
+                **options,
+            )
+        except Exception:
+            if not used:
+                raise
+            return HelpReply(reply=investigator.diagnostic_reply() or
+                             "I completed some checks but couldn't finish the explanation. Please try again. No settings or Knowledge were changed.",
+                             link=None, submit=None, recommend=None, usage=totals,
+                             model=settings.anthropic_model, evidence=list(investigator.checked))
+        metering.add(totals, msg.usage)
+        calls = [b for b in msg.content if getattr(b, 'type', None) == 'tool_use']
+        if not calls or not allowed:
+            break
+        messages.append({'role': 'assistant', 'content': [b.model_dump(exclude_none=True) for b in msg.content]})
+        results = []
+        for call in calls:
+            if used >= help_investigation.MAX_TOOL_CALLS:
+                value = {'status': 'budget_exhausted', 'detail': 'Answer from checked evidence; other checks remain unverified.'}
+            else:
+                used += 1
+                try:
+                    value = await asyncio.wait_for(asyncio.to_thread(investigator.execute, call.name, call.input), timeout=10)
+                except Exception:
+                    value = {'status': 'unknown', 'detail': 'The check could not finish. Do not assume availability.'}
+                investigator.record(call.name, value)
+            results.append({'type': 'tool_result', 'tool_use_id': call.id, 'content': json.dumps(value)})
+        messages.append({'role': 'user', 'content': results})
     text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text").strip()
     reply, nav, submit, recommend = _parse_help(text)
+    suppress_setup = bool(used)
+    if investigator is not None:
+        try:
+            complete = json.loads(text)
+            if not isinstance(complete.get('reply'), str) or not complete['reply'].strip() or getattr(msg, 'stop_reason', None) == 'max_tokens':
+                raise ValueError()
+        except (ValueError, AttributeError):
+            reply, nav, submit, recommend = "I couldn't finish a complete explanation. Please try again. No settings or Knowledge were changed.", '', None, None
+            suppress_setup = True
+        unresolved = investigator.diagnostic_reply()
+        if unresolved:
+            reply, nav, submit = unresolved, '', None
     dest = NAV_DESTINATIONS.get(nav) if nav else None
     link = {"label": dest["label"], "href": dest["href"]} if dest else None
-    return HelpReply(reply=reply, link=link, submit=submit, recommend=recommend,
-                     usage=msg.usage, model=msg.model,
-                     no_dependants=_help_no_dependants(text),
-                     held=_help_held(text), setup_changes=_help_setup_changes(text))
+    # Investigation turns cannot smuggle setup side effects through the existing
+    # help response fields. A later setup turn retains its normal proposal path.
+    return HelpReply(reply=reply, link=link, submit=submit, recommend=None if suppress_setup else recommend,
+                     usage=totals if investigator is not None else msg.usage, model=msg.model,
+                     no_dependants=False if suppress_setup else _help_no_dependants(text),
+                     held=[] if suppress_setup else _help_held(text), setup_changes=None if suppress_setup else _help_setup_changes(text),
+                     evidence=list(investigator.checked) if investigator is not None else [])
 
 
 def _help_setup_changes(text):

@@ -65,6 +65,13 @@ reviewed policy/provider evidence, not an inference from an endpoint existing.
 
 ## Versions and refreshes
 
+Signed-in typed Help can additionally investigate with complete document lookup,
+selected code evidence and request-bound account diagnostics. Account permissions
+are checked before private context is loaded, and investigation turns cannot
+save setup state. See [Help investigation](operations/help-investigation.md) for
+the exact coverage, limits and evidence contract. Public help retains its existing
+product-only access; code evidence never establishes deployment readiness by itself.
+
 Bundles hash complete articles and the definition catalogue. A refresh plan names
 added, changed and retired stable IDs, the expected old version and the desired
 complete manifest. Renaming a title retains its ID. An incomplete, tampered, old

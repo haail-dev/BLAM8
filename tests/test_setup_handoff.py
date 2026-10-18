@@ -283,10 +283,11 @@ def test_the_assistants_no_kind_answer_closes_the_dependants_step(client, monkey
     monkeypatch.setattr(routes, "_tenant_context", lambda ctx: {})
     from app.auth import require_tenant, TenantCtx
     from app.main import app
-    app.dependency_overrides[require_tenant] = lambda: TenantCtx(tenant_id="t1", client=None)
+    app.dependency_overrides[require_tenant] = lambda: TenantCtx(tenant_id="t1", client=None, user_id="owner")
+    monkeypatch.setattr(routes.db, "get_member", lambda *a: None)
 
     def fake(recommend):
-        async def answer_help(question, history, tenant=None, tenant_id=None):
+        async def answer_help(question, history, tenant=None, tenant_id=None, investigator=None):
             return SimpleNamespace(reply="ok", link=None, submit=None, recommend=recommend,
                                    model="m", usage=None)
         return answer_help
@@ -342,10 +343,11 @@ def test_the_prose_no_dependants_verdict_closes_the_step_and_names_it(client, mo
     monkeypatch.setattr(routes, "_tenant_context", lambda ctx: {})
     from app.auth import require_tenant, TenantCtx
     from app.main import app
-    app.dependency_overrides[require_tenant] = lambda: TenantCtx(tenant_id="t1", client=None)
+    app.dependency_overrides[require_tenant] = lambda: TenantCtx(tenant_id="t1", client=None, user_id="owner")
+    monkeypatch.setattr(routes.db, "get_member", lambda *a: None)
 
     def fake(recommend, flag):
-        async def answer_help(question, history, tenant=None, tenant_id=None):
+        async def answer_help(question, history, tenant=None, tenant_id=None, investigator=None):
             return SimpleNamespace(reply="Nothing of the sort applies.", link=None, submit=None,
                                    recommend=recommend, model="m", usage=None, no_dependants=flag)
         return answer_help

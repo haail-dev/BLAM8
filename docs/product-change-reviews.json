@@ -1,9 +1,9 @@
 {
   "format": 1,
-  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. Agent answer-grounding review: single-pass contexts now receive every compact core guide. Money guidance covers existing online/manual quote acceptance; Knowledge guidance covers draft admission, attribution, expiry and manual fallback. Public instructions separate unknown support from absence and chat access from product capability. Reviewed the exact before/after platform-help render: only product JSON guide coverage and content/definition versions changed; caller permissions, schema, tenant context and actions are unchanged. No production deployment or universal model-quality claim.",
+  "basis": "Author source review of the selected six-commit product-knowledge delta adapted to the BLAM8 src layout. Existing permission, settings-guidance and Knowledge admission implementations are retained; the separate retained-source review redesign is not imported. No production, model-quality or human-approval claim. Release compatibility review adds existing live Assistant presentation sources to the product-help evidence map; other capability definitions, guides and surfaces are unchanged. PM-ONB-001: reviewed Step 1 field capture, pause guidance and factual widget receipt; no new settings writer, capability, route or deployment claim. Retained-source Knowledge port: the eight historical commits are adapted to the current admission pipeline; raw-source snapshots, exact corrections, serialized review and mixed authorship are included behind a disabled release flag. This supersedes the earlier retained-source redesign exclusion. No production migration or deployment is claimed. PR5 integration retains the restored public Assistant launcher and its surface evidence alongside the Knowledge port. Agent answer-grounding review: single-pass contexts now receive every compact core guide. Money guidance covers existing online/manual quote acceptance; Knowledge guidance covers draft admission, attribution, expiry and manual fallback. Public instructions separate unknown support from absence and chat access from product capability. Reviewed the exact before/after platform-help render: only product JSON guide coverage and content/definition versions changed; caller permissions, schema, tenant context and actions are unchanged. No production deployment or universal model-quality claim. Internal Help investigation: reviewed bounded document/code/account tools, authenticated tenant binding, fail-closed member/settings access, setup-side-effect suppression and per-call usage aggregation. The exact platform-help render differs only in the product.help guide and its two article copies, plus definition/content versions; all other guide text, permissions, caller data and schema are unchanged. The agnostic lexical debt diff is empty. Public routes acquire no tools and commercial values are unchanged. General-purpose workspace files, migrations and provider credentials are not added. No deployment claim.",
   "capabilities": {
     "email": {
-      "signature": "d4a6b0ac4aa55a267c940d9760dea366d637a92c09890a1ebdd90bd08ed17d52",
+      "signature": "eb9928f112ed35bebef10385f2b154759784666d8dab2a8ec564b0578b04d344",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -43,27 +43,27 @@
           ]
         },
         "agent:email": {
-          "disposition": "updated",
-          "reason": "Email drafts and approval: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Email drafts and approval: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Email drafts and approval: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Email drafts and approval: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "knowledge": {
-      "signature": "2c126d8f7cbee69d7d2cb2e7c33937891046c2ac0a4704cd674765143992574c",
+      "signature": "a2a1ca393ab175b516d60c0bc1930b727f1e912e4c914e0f80c9a4756c79318c",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -94,27 +94,27 @@
           ]
         },
         "agent:knowledge": {
-          "disposition": "updated",
-          "reason": "Business knowledge: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Business knowledge: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Business knowledge: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Business knowledge: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "scheduling": {
-      "signature": "b406421d67485d04f1976eaa30f57e4d134119627ba51e56ea549503d55ff9e1",
+      "signature": "c186f9cd749faa552a27d03e80b6ef634ae7972632b8474161d525ec1220cfde",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -135,21 +135,21 @@
           ]
         },
         "agent:scheduling": {
-          "disposition": "updated",
-          "reason": "Services, capacity and booking rules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Services, capacity and booking rules: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Services, capacity and booking rules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Services, capacity and booking rules: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -164,7 +164,7 @@
       }
     },
     "calendar": {
-      "signature": "b493ab65079a7bd940314e78c6d18f95c90d822274337d79f47d8125496cce20",
+      "signature": "574d5190c8fa0d855af544251305afaeb207f719e587c6ab034c1d0476b181df",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -195,27 +195,27 @@
           ]
         },
         "agent:calendar": {
-          "disposition": "updated",
-          "reason": "Calendar connection and sync: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Calendar connection and sync: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Calendar connection and sync: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Calendar connection and sync: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "crm": {
-      "signature": "ad02185d4f9019f1120c91e826df7a0ffefbdbdb93b01152a030f9522653fe2f",
+      "signature": "049a64e120597597b2b409a7aa08522e0a3f743d0b2df1b4637b4cf548e83f93",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -237,21 +237,21 @@
           ]
         },
         "agent:crm": {
-          "disposition": "updated",
-          "reason": "Customer records and follow-ups: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Customer records and follow-ups: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Customer records and follow-ups: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Customer records and follow-ups: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -266,7 +266,7 @@
       }
     },
     "subjects": {
-      "signature": "9130eaf232814a5f084b75fb5167ecf577a3a68003670596ae54b72182fd3714",
+      "signature": "0327fde92bfcaf9a86284bda1fe16f66d9f574c3fba03e1c698fe2a11cf972de",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -278,21 +278,21 @@
           ]
         },
         "agent:subjects": {
-          "disposition": "updated",
-          "reason": "Separately tracked subjects and evidence: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Separately tracked subjects and evidence: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Separately tracked subjects and evidence: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Separately tracked subjects and evidence: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -307,7 +307,7 @@
       }
     },
     "packages": {
-      "signature": "32db4b88aae79d9a41d71537f09c3b6c2814ed832d4cdcc3fcd214b59c3aabb4",
+      "signature": "cebf936f6878b3c11d02661999dec5df1e4b250d4a390276e58f61663c5c980f",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -339,21 +339,21 @@
           ]
         },
         "agent:packages": {
-          "disposition": "updated",
-          "reason": "Packages and credits: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Packages and credits: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Packages and credits: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Packages and credits: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -368,7 +368,7 @@
       }
     },
     "progress": {
-      "signature": "dfb20a3bf48e35e6387cd555865c123cb8d85aa20dcd7e30ac34a98cedaa6b60",
+      "signature": "61c220e974b200c172eec952f03bc0ec05ac8456770ec32049468fff7af984e2",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -400,21 +400,21 @@
           ]
         },
         "agent:progress": {
-          "disposition": "updated",
-          "reason": "Progress levels and prerequisites: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Progress levels and prerequisites: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Progress levels and prerequisites: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Progress levels and prerequisites: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -429,7 +429,7 @@
       }
     },
     "money": {
-      "signature": "172e42dd457dcd1027b2ac4dfa8cfb38dd9474092caacf79a0b075b4950b865b",
+      "signature": "3b3c4714d1a3d2e55d56e54190cb338d90b0deb27c1e9d903b652f68dcb91d8c",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -452,21 +452,21 @@
           ]
         },
         "agent:money": {
-          "disposition": "updated",
-          "reason": "Quotes, invoices and payment records: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped. Reviewed acceptance-versus-send and raw-evidence-expiry qualifications against the existing executors; this changes descriptions, not available operations.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Quotes, invoices and payment records: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Quotes, invoices and payment records: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Quotes, invoices and payment records: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -481,7 +481,7 @@
       }
     },
     "people": {
-      "signature": "b406b8548ecc027fdeeaa708efb332ba967e6049d926bde01fc199f7669d8a34",
+      "signature": "a5f60dbe24edf22a8aea3a0b8859a94819f7253ddfa716be240c03c43ded9a76",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -503,21 +503,21 @@
           ]
         },
         "agent:people": {
-          "disposition": "updated",
-          "reason": "People and permissions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "People and permissions: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "People and permissions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "People and permissions: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -532,7 +532,7 @@
       }
     },
     "portal": {
-      "signature": "6bb4f54f37aca23aebca1032857a168d7242b351acf69825f7993823888022da",
+      "signature": "4996cdfcd2fc3ecac87ed01ae8ee96a88a87c80c8ff2ba2252ad662127c447ee",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -562,27 +562,27 @@
           ]
         },
         "agent:portal": {
-          "disposition": "updated",
-          "reason": "Customer portal and job sheets: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Customer portal and job sheets: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Customer portal and job sheets: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Customer portal and job sheets: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "mailboxes": {
-      "signature": "725a61db068d19c18a4ddaa0a26fe34311b2f6e28cf5f084bae765e943779460",
+      "signature": "b5cfa032faf4296dbea1d7a1b2beddd1f63db71948bb68fef7f65a8de78c7aab",
       "surfaces": {
         "/help": {
           "disposition": "generated",
@@ -613,27 +613,27 @@
           ]
         },
         "agent:mailboxes": {
-          "disposition": "updated",
-          "reason": "Mailbox connections and overrides: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Mailbox connections and overrides: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Mailbox connections and overrides: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Mailbox connections and overrides: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "owner.assistant": {
-      "signature": "6036cefbc1e68fe118f250c1428130624d95d580af34c6b4969a00ea45606872",
+      "signature": "2025831d10c0a8fa61a21af03115c8e9a88bb1192d320e45dbf38f4ee3f74f94",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -655,21 +655,21 @@
           ]
         },
         "agent:owner.assistant": {
-          "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Owner assistance, voice and confirmed actions: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Owner assistance, voice and confirmed actions: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -684,64 +684,67 @@
       }
     },
     "product.help": {
-      "signature": "0a206fee95b65f348db8fb5a70ccacb672de3d583280a453c10c757e7ef88144",
+      "signature": "bcf059eaf2ffd7b98d0bc825700cc4e6ee0623d1ab119d68e420b8031196d86e",
       "surfaces": {
         "/help": {
-          "disposition": "reviewed_unchanged",
-          "reason": "The help hub and articles remain unchanged: Step 1 capture guidance and its widget receipt add no public capability, entitlement or sending control. The maintained Concierge reference records this narrower contract. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "disposition": "generated",
+          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
           "evidence": [
-            "docs/modules/module-concierge.md",
-            "docs/onboarding-interview-capture.md",
-            "tests/test_onboarding_capture.py",
-            "src/app/concierge.py",
-            "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "src/app/concierge_routes.py",
+            "src/app/product_guides.py",
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "/pages": {
-          "disposition": "reviewed_unchanged",
-          "reason": "The page inventory remains unchanged: the fix uses the existing About you route, form fields and held-suggestion path, adding no route or access change. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "disposition": "generated",
+          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
           "evidence": [
-            "docs/modules/module-concierge.md",
-            "docs/onboarding-interview-capture.md",
-            "tests/test_onboarding_capture.py",
-            "src/app/concierge.py",
-            "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "src/app/concierge_routes.py",
+            "src/app/product_guides.py",
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "agent:product.help": {
           "disposition": "updated",
-          "reason": "Step 1 now instructs capture of supplied goals separately from business facts, retaining material qualifiers and respecting review pauses. The widget reports unsubmitted edits and server-confirmed held suggestions without claiming applied settings. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
           "evidence": [
-            "docs/modules/module-concierge.md",
-            "docs/onboarding-interview-capture.md",
-            "tests/test_onboarding_capture.py",
-            "src/app/concierge.py",
-            "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "src/app/concierge_routes.py",
+            "src/app/product_guides.py",
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
-          "disposition": "reviewed_unchanged",
-          "reason": "Source ownership, product discovery, Knowledge admission and publication rules remain unchanged. The linked Concierge module reference and focused capture document describe this Step 1 prompt and UI contract with explicit offline-only evidence. Landing and sign-in share the existing glass launcher; the presentation change leaves help content and action permissions unchanged. Shared product evidence now also describes restricted source-backed Knowledge corrections; its separate migration and disabled release flag are explicit.",
+          "disposition": "updated",
+          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
           "evidence": [
-            "docs/modules/module-concierge.md",
-            "docs/onboarding-interview-capture.md",
-            "tests/test_onboarding_capture.py",
-            "src/app/concierge.py",
-            "src/app/static/concierge.js",
-            "tests/test_assistant_glass_logo.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "src/app/concierge_routes.py",
+            "src/app/product_guides.py",
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
+          ]
+        },
+        "docs/operations/help-investigation.md": {
+          "disposition": "updated",
+          "reason": "Signed-in typed Help now has bounded read-only investigation. The shared guide and operational reference describe selected code evidence, permission-scoped checks, unknown outcomes and separate setup turns. Public Help remains product-only.",
+          "evidence": [
+            "src/app/help_investigation.py",
+            "src/app/concierge_routes.py",
+            "src/app/product_guides.py",
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "billing": {
-      "signature": "efd5c5c6d5b76c9bfa3223d40b7f7a298c6166276044356a49ac39c0cc9d5b81",
+      "signature": "c3889b4f20531c8558d9f63d5181b35159ce7aab07678fde934fc735a7203218",
       "surfaces": {
         "/": {
           "disposition": "generated",
@@ -1013,27 +1016,27 @@
           ]
         },
         "agent:billing": {
-          "disposition": "updated",
-          "reason": "Plans and billing: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Plans and billing: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Plans and billing: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Plans and billing: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "installable": {
-      "signature": "100f2641c4cbe606ce1a69844130d36c2aa05f3fa65a5cd9bc1ea127407419c7",
+      "signature": "cbe2ed55d0d7d0bb43e201387b9e4af89d2a68a77061c91f13e5f2ee3c1ea216",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1054,27 +1057,27 @@
           ]
         },
         "agent:installable": {
-          "disposition": "updated",
-          "reason": "Installable app and notifications: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Installable app and notifications: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Installable app and notifications: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Installable app and notifications: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         }
       }
     },
     "extensions": {
-      "signature": "3a36ef61e087754f1c3b4e21d3ef2fd0989a5df8a02db2008f59077b7a5f4df6",
+      "signature": "510cb6917843766d08aec0fbfebdc1c564f89f40caa6ef3177222a414b20143b",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
@@ -1095,21 +1098,21 @@
           ]
         },
         "agent:extensions": {
-          "disposition": "updated",
-          "reason": "Restricted operational modules: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Restricted operational modules: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Restricted operational modules: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Restricted operational modules: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -1124,7 +1127,7 @@
       }
     },
     "automation.scheduled": {
-      "signature": "8eae25e8b77092b45ee0d40eb7e1bc9424317b33d09af24b3f3d68ff48b8ba9d",
+      "signature": "c79190ce9c24c5d09285802bb9c21f2a53f7d243cb51731d7c98c63ab3c5d80c",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1136,21 +1139,21 @@
           ]
         },
         "agent:automation.scheduled": {
-          "disposition": "updated",
-          "reason": "Scheduled plans: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Scheduled plans: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Scheduled plans: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Scheduled plans: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -1165,7 +1168,7 @@
       }
     },
     "outreach": {
-      "signature": "5ede8970d61615dfa971b258fca06cdcf5486c574a6438d97389dbea38bda413",
+      "signature": "32b748acc18694d5d3cc75694255216d48faf8f1d9cc5d7721ffd1d059dab529",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1177,21 +1180,21 @@
           ]
         },
         "agent:outreach": {
-          "disposition": "updated",
-          "reason": "Tenant outreach: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Tenant outreach: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Tenant outreach: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks.",
+          "reason": "Tenant outreach: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
@@ -1206,7 +1209,7 @@
       }
     },
     "knowledge.review": {
-      "signature": "57e6c145cbbd9b867c89e8f83dcdf6917b6ae535cda34093c2de206018bd0103",
+      "signature": "70674f8e92ae51ff13b4d2c4aef522f1530423a41d4a92f71ffca5a7cf9c5bc7",
       "surfaces": {
         "/pages": {
           "disposition": "updated",
@@ -1220,25 +1223,21 @@
           ]
         },
         "agent:knowledge.review": {
-          "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim. One-pass help now receives the complete compact guide set with the same access qualifications; the repeatable Agent lookup remains read-only and scoped. Reviewed acceptance-versus-send and raw-evidence-expiry qualifications against the existing executors; this changes descriptions, not available operations.",
+          "disposition": "reviewed_unchanged",
+          "reason": "Knowledge admission review: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged.",
           "evidence": [
             "src/app/product_guides.py",
-            "tests/test_platform_help.py",
-            "docs/operations/knowledge-source-review.md",
-            "tests/test_knowledge_source_review.py",
-            "tests/test_knowledge_source_routes.py"
+            "src/app/help_investigation.py",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Knowledge admission remains the final write path. The source-correction addition preserves exact drafts and mixed authorship, requires a separate migration and disabled-by-default flag, and does not bypass source coverage, overlap decisions or permissions. The catalogue still marks availability restricted; source inclusion is not a deployment claim.",
+          "reason": "Knowledge admission review: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability.",
           "evidence": [
             "docs/product-knowledge.md",
-            "src/app/product_inventory.py",
-            "docs/operations/knowledge-source-review.md",
-            "tests/test_knowledge_source_review.py",
-            "tests/test_knowledge_source_routes.py"
+            "docs/operations/help-investigation.md",
+            "tests/test_help_investigation.py"
           ]
         },
         "docs/verified-behaviours.md": {
