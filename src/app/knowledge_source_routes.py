@@ -42,6 +42,29 @@ class ApplyRequest(DraftRequest):
     owner_request: str = Field(default='', max_length=4000)
 
 
+class GuideRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    form: dict[str, str] = Field(max_length=4000)
+    question: str = Field(default='', max_length=4000)
+    focus_hash: str = Field(default='', max_length=128)
+
+
+@router.post('/{review_id}/guide', dependencies=[Depends(require_csrf_header)])
+async def guide(review_id: UUID, body: GuideRequest, ctx: TenantCtx = Depends(require_source_review)):
+    # This route reads stored drafts and prepares local choices only. The existing
+    # admission endpoint remains the sole writer of saved Knowledge.
+    from app import knowledge_guidance
+    if sum(len(k)+len(v) for k,v in body.form.items())>350000 or any(len(k)>200 or len(v)>60000 for k,v in body.form.items()):
+        raise HTTPException(422, 'This review is too large. Split it before continuing.')
+    context = knowledge_review.load(ctx.tenant_id)
+    row = next((r for r in context['reviews'] if r['id'] == str(review_id)), None)
+    if not row:
+        raise HTTPException(404, 'Review not found.')
+    if knowledge_guidance.needs_model(body.question) and not fairuse.onboarding_allowed(ctx.tenant_id, 'concierge_onboard', client=ctx.client):
+        raise HTTPException(429, 'Today\'s setup review allowance is used. Your review choices remain on the page.')
+    return await knowledge_guidance.turn(ctx.tenant_id, context, row, body.form, body.question, body.focus_hash)
+
+
 def state(ctx, review_id, version):
     context = knowledge_review.load(ctx.tenant_id)
     row = next((r for r in context['reviews'] if r['id'] == str(review_id)), None)

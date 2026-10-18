@@ -4,6 +4,7 @@
 {% block subheading %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endblock %}
 {% block content %}
 <script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script><span hidden data-knowledge-source-mode></span>
+{% if knowledge_source_review_enabled %}<script src="/static/knowledge_guidance.js?v={{ asset_rev }}" defer></script>{% endif %}
 {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
 {% if msg %}<div class="mb-3 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">{{ msg }}</div>{% endif %}
 {% if err %}<div class="mb-3 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-800">{{ err }}</div>{% endif %}
