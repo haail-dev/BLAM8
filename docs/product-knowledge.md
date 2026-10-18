@@ -30,6 +30,24 @@ bundle. The owner's typed and voice assistants have the same read-only product
 tool. An exhaustive request returns the complete capability index and the actual
 setup definitions, not a nearest-neighbour sample.
 
+Single-pass public, scenario and signed-in help prompts include all compact core
+guides, with their availability qualifications. Keyword ranking selects additional
+articles; it cannot exclude a core guide merely because a multi-part question
+matches other topics more often. The signed-in Agent's repeatable product lookup
+still supports focused and exhaustive requests. Neither path gains write access.
+
+The shared guides distinguish message-send approval from recording customer quote
+acceptance, including acceptance received by phone/email. Knowledge guidance covers
+draft correction versus final admission, separate owner/source attribution and the
+30-day raw-evidence expiry, which does not delete approved Knowledge. Expired-source
+drafts remain manually reviewable. Customer-facing answers explain account/setup
+limits without quoting deployment flags or migration instructions.
+
+Regression checks verify that multi-part questions and vague follow-ups receive
+the relevant core evidence. These checks do not prove a model will use it correctly:
+repeat the actual prospect questions with the live model, including unsupported
+requests and requests to act from public chat, and inspect the answers before release.
+
 Availability distinguishes unknown context, permission required, module required,
 preview, restricted, disabled and configuration-dependent access. Discovery never
 authorises execution. Actual record reads, proposals and confirmed execution keep

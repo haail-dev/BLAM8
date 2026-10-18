@@ -22,7 +22,7 @@ _ENTRIES = [
     _entry('subjects', 'Separately tracked subjects and evidence', 'src/app/intake.py src/app/dependants_extract.py', 'tests/test_ladders.py', 'docs/verified-behaviours.md', '/capabilities'),
     _entry('packages', 'Packages and credits', 'src/app/setup_card_packages.py', 'tests/test_setup_card_packages.py', 'docs/verified-behaviours.md', '/capabilities / /help'),
     _entry('progress', 'Progress levels and prerequisites', 'src/app/ladders.py', 'tests/test_ladders.py', 'docs/verified-behaviours.md', '/capabilities / /help'),
-    _entry('money', 'Quotes, invoices and payment records', 'src/app/invoice_send.py src/app/quote_send.py src/app/payments.py', 'tests/test_portal_billing.py', 'docs/verified-behaviours.md', '/capabilities /stripe'),
+    _entry('money', 'Quotes, invoices and payment records', 'src/app/invoice_send.py src/app/quote_send.py src/app/payments.py src/app/quote_public.py src/app/dashboard.py src/app/concierge_actions.py', 'tests/test_portal_billing.py tests/test_quotes.py tests/test_quotes_phase2.py', 'docs/verified-behaviours.md', '/capabilities /stripe'),
     _entry('people', 'People and permissions', 'src/app/people.py src/app/job_people.py', 'tests/test_pages_index.py', 'docs/verified-behaviours.md', '/capabilities /help'),
     _entry('portal', 'Customer portal and job sheets', 'src/app/portal.py src/app/job_sheet_public.py', 'tests/test_pages_index.py', 'README.md', '/for-customers /capabilities'),
     _entry('mailboxes', 'Mailbox connections and overrides', 'src/app/mailbox.py src/app/oauth.py', 'tests/test_pages_index.py', 'README.md', '/help /how-it-works'),
