@@ -224,3 +224,8 @@ note `claim`. Replacing precisely the system prompt and schema in the complete
 candidate with the base values reproduces the previous record byte for byte.
 The obsolete comment describing that booking-route substitution is removed with
 its exact source-debt occurrence. No detector, vocabulary or scan scope changes.
+The product evidence map now includes the capture/fidelity/evidence-template
+sources and their guards. The full `platform-help` comparison changes only the
+`content_version` and `definition_version` fields inside the retrieved catalogue
+JSON; replacing those fields restores the base request exactly. Its visible
+answer context, permissions, actions and selected articles are unchanged.

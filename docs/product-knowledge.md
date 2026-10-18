@@ -68,6 +68,10 @@ corrections are now adapted to that admission pipeline, behind the disabled
 in place; a separate source-snapshot migration and explicit release verification
 are required. See [Source-backed Knowledge corrections](operations/knowledge-source-review.md)
 for installation, retention and rollback. The catalogue does not claim enablement.
+Website capture now inventories location-labelled non-main source wording too,
+reports page/character limits and requests separate exact passages per note
+clause. The owner still resolves literal coverage and exclusions. Attribution
+does not prove semantic completeness, and older pending drafts are unchanged.
 
 ## Updating a feature
 
