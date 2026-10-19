@@ -9,10 +9,11 @@ const fields={version:{name:'version',value:'v1'},csrf_token:{name:'csrf_token',
 for(const field of Object.values(fields))field.dispatchEvent=()=>{};
 let submitted=0;
 let focused=0,scrolled=0,closed=0;
-const section={dataset:{draft:'one'},scrollIntoView(){scrolled++;}};
+const disclosure={open:false};
+const section={dataset:{draft:'one'},scrollIntoView(){scrolled++;},querySelector(){return disclosure;}};
 fields.content_one.focus=()=>{focused++;};
 const form={dataset:{knowledgeReview:'batch'},elements:fields,action:'/review/batch',
-  appendChild(el){fields[el.name]=el;},querySelector(selector){return selector.includes('operation') ? {disabled:false} : null;},
+  appendChild(el){fields[el.name]=el;},querySelector(selector){return selector.includes('operation') ? {disabled:false} : selector.startsWith('[data-draft=') ? section : null;},
   querySelectorAll(){return [section];},
   requestSubmit(){submitted++;}};
 let activeForm=form;
@@ -30,6 +31,7 @@ const guide=window.Blam8KnowledgeGuide;
 const finish=(index,data)=>requests[index].resolve({ok:true,json:async()=>data});
 const result=(patches={},hash='h1')=>({reply:'Review this actual note.',patches,focus_hash:hash,focus:{kind:'note',id:'one'},actions:[],shared_caveats:[]});
 
+assert.equal(disclosure.open,false); // Pending cards start collapsed.
 const first=guide.ask('');
 assert(window.blam8KnowledgeImportBusy && window.Blam8KnowledgeSourceReview.working());
 await assert.rejects(guide.ask('second'),/wait/);
@@ -37,6 +39,7 @@ assert.equal(requests.length,1);
 assert.equal(JSON.parse(requests[0].options.body).form.csrf_token,undefined);
 assert.equal(requests[0].options.headers['X-CSRF-Token'],'secret');
 finish(0,result());await first;
+assert(disclosure.open); // The note under active review opens automatically.
 assert(guide.isCurrent('h1'));
 assert(!window.blam8KnowledgeImportBusy);
 
@@ -45,7 +48,7 @@ assert.equal(fields.action_one.value,'keep');
 assert(!guide.isCurrent('h1') && guide.isCurrent('h2'));
 assert.equal(guide.edit('stale','one'),false);
 assert.equal(guide.edit('h2','one'),true);
-assert.equal(focused,1);assert.equal(scrolled,1);assert.equal(closed,1);
+assert(disclosure.open);assert.equal(focused,1);assert.equal(scrolled,1);assert.equal(closed,1);
 
 const racing=guide.ask('Keep the wording');fields.content_one.value='Manual edit during request.';
 finish(2,result({source_unit:'note:one'},'h3'));

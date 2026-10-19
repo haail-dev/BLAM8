@@ -25,8 +25,11 @@
   <p class="text-xs text-slate-500">Nothing is selected automatically. Overlaps are candidates, not proof of a duplicate. Check wording, figures and source caveats. Merging combines the selected texts and preserves both sources; review the combined preview before saving. Saved notes change only when you explicitly choose that merge.</p>
   {% for n in review.entries %}
   <section class="space-y-2 rounded-lg border border-slate-200 p-3" data-draft="{{ n.id }}" aria-labelledby="note-heading-{{ review.id }}-{{ n.id }}">
-    <h3 id="note-heading-{{ review.id }}-{{ n.id }}" class="text-sm font-semibold text-navy">{{ loop.index }}. {{ n.label }}</h3>
-    <p class="text-xs text-slate-600">Pending draft{% if review.source_view.qualifications %} · Shared caveats apply{% endif %}{% if n.matches %} · Possible overlap — review below{% endif %}</p>
+    <details data-note-details>
+    <summary class="cursor-pointer"><span id="note-heading-{{ review.id }}-{{ n.id }}" class="block text-sm font-semibold text-navy">{{ loop.index }}. {{ n.label }}</span>
+      <span class="mt-1 block text-xs text-slate-600">Pending draft{% if review.source_view.qualifications %} · Shared caveats apply{% endif %}{% if n.matches %} · Possible overlap — review below{% endif %}</span>
+    </summary>
+    <div class="mt-2 space-y-2">
     <details class="text-xs text-slate-600"><summary class="cursor-pointer">Edit note heading</summary><label class="mt-2 block text-sm font-medium">Note heading<input name="label_{{ n.id }}" value="{{ n.label }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2"></label></details>
     <label class="block text-sm">Note content<textarea name="content_{{ n.id }}" rows="4" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">{{ n.content }}</textarea></label>
     <label class="block text-sm font-medium">Decision<select name="action_{{ n.id }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">
@@ -46,7 +49,8 @@
       <label class="mt-2 block"><input type="checkbox" name="match_{{ m.key }}" value="keep_both"{% if review.form.get("match_"+m.key)=="keep_both" %} checked{% endif %}> I reviewed this match: keep both intentionally.</label>
     </div>
     {% endfor %}
-
+    </div>
+    </details>
   </section>
   {% endfor %}
   {% include "_knowledge_source_coverage.html" %}

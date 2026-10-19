@@ -47,7 +47,8 @@
       data.guide_actions=data.actions || [];
       data.guide_save=!!data.save_ready;
       var item=data.focus || {}, section=item.kind==='note' ? f.querySelector('[data-draft="'+item.id+'"]') : null;
-      if(section && section.tagName==='DETAILS')section.open=true;
+      var disclosure=section && (section.tagName==='DETAILS' ? section : section.querySelector('[data-note-details]'));
+      if(disclosure)disclosure.open=true;
       return data;
     } catch (err) {
       if(question.trim() && !['', 'show the current note', 'start reviewing the notes', 'show the next decision'].includes(question.trim().toLowerCase()) &&
@@ -79,6 +80,8 @@
       var section=Array.from(f.querySelectorAll('[data-draft]')).find(function(node){return node.dataset.draft===id;});
       var field=f.elements['content_'+id];
       if(!section || !field)return false;
+      var disclosure=section.tagName==='DETAILS' ? section : section.querySelector('[data-note-details]');
+      if(disclosure)disclosure.open=true;
       if(window.blam8ConciergeClose)window.blam8ConciergeClose();
       if(section.scrollIntoView)section.scrollIntoView({behavior:'smooth',block:'center'});
       field.focus();
