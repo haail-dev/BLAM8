@@ -332,6 +332,7 @@ export function createVoiceLive(deps) {
     root.id = "voice-live-root";
     root.innerHTML = `
       <div class="vl-stage">
+        <button type="button" class="cz-voice-settings" aria-label="Concierge settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5ZM19.5 13.5a7.9 7.9 0 0 0 0-3l1.3-1-1.5-2.6-1.6.6a7.4 7.4 0 0 0-2.6-1.5L14.8 4h-3l-.3 2a7.4 7.4 0 0 0-2.6 1.5l-1.6-.6-1.5 2.6 1.3 1a7.9 7.9 0 0 0 0 3l-1.3 1 1.5 2.6 1.6-.6a7.4 7.4 0 0 0 2.6 1.5l.3 2h3l.3-2a7.4 7.4 0 0 0 2.6-1.5l1.6.6 1.5-2.6-1.3-1Z"/></svg></button>
         <div class="vl-toasts" aria-live="polite"></div>
         <!-- The Tour starts from the Concierge's settings cog (Kris 2026-09-23). -->
         <div class="vl-tour" role="dialog" aria-live="polite" hidden></div>
@@ -353,6 +354,9 @@ export function createVoiceLive(deps) {
       </div>
     `;
     document.body.appendChild(root);
+    root.querySelector('.cz-voice-settings').addEventListener('click', (event) => {
+      event.stopPropagation(); deps.onSettings?.();
+    });
     root.querySelector('.vl-stop').addEventListener('click',()=>{if(phase==='speaking' || phase==='thinking'){bargeIn();setPhase('listening');}});
     root.querySelector('.vl-discard').addEventListener('click',()=>discardHeard());
     els.orb = root.querySelector(".vl-orb");

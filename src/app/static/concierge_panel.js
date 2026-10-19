@@ -59,6 +59,25 @@
     })]).finally(function () { clearTimeout(timer); });
   }
 
+  function keepPlatformRecordInAnotherTab(anchor, href) {
+    if (location.pathname !== '/concierge/live' || !/^\/(?:app|onboarding)(?:\/|$)/.test(href || '')) return;
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+  }
+  function openPlatformRecord(href) {
+    if (location.pathname === '/concierge/live' && /^\/(?:app|onboarding)(?:\/|$)/.test(href || '')) {
+      window.open(href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    window.location.href = href;
+  }
+  function closeVoiceBeforeSettings(voice, show) {
+    var closing;
+    try { closing = voice ? voice.close('settings') : null; }
+    catch (_) { closing = null; }
+    return Promise.resolve(closing).catch(function () {}).then(show);
+  }
+
   function csrfToken() {
     var m = document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/);
     return m ? decodeURIComponent(m[1]) : '';
@@ -355,6 +374,7 @@
         if (!l || !l.href || l.href.charAt(0) !== '/') return;
         var a = document.createElement('a');
         a.href = l.href;
+        keepPlatformRecordInAnotherTab(a, l.href);
         a.className = 'inline-flex items-center gap-1 rounded-lg bg-brand-50 text-brand px-2.5 py-1 text-xs font-semibold hover:bg-blue-100 transition';
         a.textContent = (l.label || 'Open') + ' →';
         row.appendChild(a);
@@ -981,7 +1001,7 @@
         var ti = Math.min(i, DONE_LAYERS), ri = Math.min(n - 1 - i, DONE_LAYERS);
         var card = document.createElement(d.href && d.href.charAt(0) === '/' ? 'a' : 'div');
         card.className = 'cz-done-card glass-card';
-        if (card.tagName === 'A') { card.href = d.href; card.title = 'Open it'; }
+        if (card.tagName === 'A') { card.href = d.href; card.title = 'Open it'; keepPlatformRecordInAnotherTab(card, d.href); }
         card.style.top = (DONE_TOP + ti * DONE_TOP_STEP) + 'px';
         card.style.bottom = (ri * DONE_BOT_STEP) + 'px';
         card.style.zIndex = String(i + 1);
@@ -1521,7 +1541,7 @@
       // (after Clear history): step the board aside so the card is where the owner is looking.
       if (discovery && !(voiceLiveInstance && voiceLiveInstance.isOpen())) discovery.hide();
       // A draft invoice waits to be looked at and sent: the tap opens it.
-      if (w.type === 'link') { if (w.href && w.href.charAt(0) === '/') window.location.href = w.href; return; }
+      if (w.type === 'link') { if (w.href && w.href.charAt(0) === '/') openPlatformRecord(w.href); return; }
       if (w.type === 'draft') {
         // A draft needs no rebuild: the same card, thumbs-up and ✕, comes back.
         noteShown(w);
@@ -1655,6 +1675,7 @@
       var foot = document.createElement('a');
       foot.className = 'cz-draft-open';
       foot.href = d.href;
+      keepPlatformRecordInAnotherTab(foot, d.href);
       foot.textContent = 'Open the thread →';
       var footRow = document.createElement('div');
       footRow.className = 'cz-draft-foot';
@@ -2351,6 +2372,7 @@
         if (modeGeneration !== voiceModeGeneration || savedVoiceMode() !== requestedMode) { releasePreMic(); return; }
         if (voiceLiveInstance) { voiceLiveInstance.open(opts); return; }
         voiceLiveInstance = mod.createVoiceLive({
+          onSettings: openSettingsFromVoice,
           confirmationBusy: function () { return pendingConfirmations > 0; },
           approvalWaiting: function () {
             var draft = voiceStage.draft;
@@ -2718,6 +2740,14 @@
       if (on) { syncVoiceChoice(); paintTalk(); paintModeSections(); startMeter(); }
       else { stopMeter(); stopVoiceSample(); }
     }
+    function openSettingsFromVoice() {
+      var voice = voiceLiveInstance;
+      voiceLiveInstance = null;
+      return closeVoiceBeforeSettings(voice, function () { showSettings(true); });
+    }
+    root.addEventListener('click', function (event) {
+      if (event.target.closest && event.target.closest('[data-cz-settings]')) showSettings();
+    });
     // Her voice's loudness (Kris 2026-09-23: "very quiet and my phone is full
     // volume"): a percentage over the phone's own volume, per device, under
     // voice-live.js's key; voice reads it at the start of each conversation.

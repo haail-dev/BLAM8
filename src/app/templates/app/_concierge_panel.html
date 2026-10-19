@@ -92,6 +92,13 @@
      data-cz-empty="{{ 'false' if chat_history else 'true' }}"
      data-cz-newest="{{ chat_history[-1].created_at if chat_history else '' }}">
 
+  <div class="cz-settings-launch flex-none flex justify-end -mt-2 -mb-1" role="toolbar" aria-label="Concierge controls">
+    <button type="button" data-cz-settings aria-label="Concierge settings" title="Settings"
+            class="inline-flex items-center justify-center h-11 w-11 rounded-full text-slate-500 hover:bg-slate-200/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5ZM19.5 13.5a7.9 7.9 0 0 0 0-3l1.3-1-1.5-2.6-1.6.6a7.4 7.4 0 0 0-2.6-1.5L14.8 4h-3l-.3 2a7.4 7.4 0 0 0-2.6 1.5l-1.6-.6-1.5 2.6 1.3 1a7.9 7.9 0 0 0 0 3l-1.3 1 1.5 2.6 1.6-.6a7.4 7.4 0 0 0 2.6 1.5l.3 2h3l.3-2a7.4 7.4 0 0 0 2.6-1.5l1.6.6 1.5-2.6-1.3-1Z"/></svg>
+    </button>
+  </div>
+
   {# Settings (Kris 2026-09-23): the cog in the Concierge bar opens this. The
      mic line is a per-device setting (this phone's mic, this room), so it
      lives in localStorage where voice-live.js reads it (MIC_LINE_KEY); the
@@ -334,6 +341,16 @@
        tokens so it follows Light/Dark. */
     .cz-settings { position: absolute; inset: 0; z-index: 5; overflow-y: auto;
                    background: rgb(var(--c-bg-slate-50)); padding: 1rem 1rem 1.5rem; }
+    #cz-modal #cz-root .cz-settings-launch { display: none; }
+    #voice-live-root .cz-voice-settings, #voice-gptlive-root .cz-voice-settings {
+      position: absolute; top: calc(max(0.9rem, env(safe-area-inset-top)) + 3.25rem); left: 1rem; z-index: 5;
+      width: 2.75rem; height: 2.75rem; padding: 0; border: 1px solid rgba(148,163,184,.45);
+      border-radius: 9999px; background: rgba(226,232,240,.08); color: #e2e8f0;
+      display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    }
+    #voice-live-root .cz-voice-settings svg, #voice-gptlive-root .cz-voice-settings svg { width: 1.2rem; height: 1.2rem; }
+    #voice-live-root .cz-voice-settings:focus-visible, #voice-gptlive-root .cz-voice-settings:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
     .cz-set-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .cz-set-title { font-weight: 600; font-size: 1rem; color: rgb(var(--c-tx-navy)); }
     .cz-set-x { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center;

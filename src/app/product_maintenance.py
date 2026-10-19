@@ -31,6 +31,8 @@ SOURCE_CAPABILITIES = {
     'src/app/templates/app/_concierge_panel.html': 'owner.assistant',
     'src/app/templates/app/_concierge_history.html': 'owner.assistant',
     'src/app/static/concierge_busy.css': 'product.help',
+    'src/app/static/voice-live.js': 'owner.assistant',
+    'src/app/static/voice-gptlive.js': 'owner.assistant',
 }
 
 

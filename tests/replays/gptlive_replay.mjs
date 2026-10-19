@@ -124,7 +124,7 @@ function panelRig() {
   const module=deferred();let created=0,opened=0;
   const c={voiceLiveInstance:null,voiceInstances:{},voiceModeGeneration:0,historyLifecycle:0,historyReadGeneration:0,savedVoiceMode:()=> 'gptlive',
     timing(){},releasePreMic(){},document:{querySelector:()=>null},loadModule:()=>module.promise,
-    voiceUserTurn(){},voiceAssistantTurn(){},voiceDiscardTurn(){},voiceGreeting(){},voiceRenderStage(){},mountBadge(){},loadWaiting(){},
+    voiceUserTurn(){},voiceAssistantTurn(){},voiceDiscardTurn(){},voiceGreeting(){},voiceRenderStage(){},mountBadge(){},loadWaiting(){},openSettingsFromVoice(){},
     module,create:()=>{created++;return {open(){opened++;}};}};
   vm.createContext(c);vm.runInContext(rewritten,c);
   return {c,module,get created(){return created;},get opened(){return opened;}};

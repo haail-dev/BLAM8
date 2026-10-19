@@ -83,6 +83,37 @@ def test_page_and_modal_render_the_same_panel(client, monkeypatch):
     # outside it (app shell vs the #cz-modal overlay that wraps the fetched fragment).
 
 
+def test_live_entry_has_its_own_shell_and_shared_settings_sheet(client, monkeypatch):
+    import app.dashboard as dashboard
+    from app.auth import TenantCtx, require_subscription
+    from app.main import app
+    monkeypatch.setattr(dashboard.db, "visible_modules", lambda *a, **k: {"scheduling", "crm", "concierge"})
+    monkeypatch.setattr(dashboard.db, "active_modules", lambda *a, **k: {"scheduling", "crm", "concierge"})
+    monkeypatch.setattr(dashboard.db, "list_concierge_messages", lambda *a, **k: [])
+    monkeypatch.setattr(dashboard.db, "list_email_log", lambda *a, **k: [])
+    monkeypatch.setattr(dashboard.db, "get_tenant", lambda *a, **k: {"name": "Koth Logistics"})
+    monkeypatch.setattr(dashboard.db, "is_enterprise", lambda *a, **k: False)
+    monkeypatch.setattr(dashboard.billing, "has_active_subscription", lambda *a, **k: True)
+    monkeypatch.setattr(dashboard, "has_concierge", lambda *a, **k: True)
+    app.dependency_overrides[require_subscription] = lambda: TenantCtx(tenant_id="t1", client=None)
+
+    live = client.get("/concierge/live")
+    normal = client.get("/app/concierge")
+    modal = client.get("/app/concierge/panel")
+
+    assert live.status_code == normal.status_code == modal.status_code == 200
+    assert 'class="h-full font-sans bg-slate-100 text-slate-800 antialiased concierge-dedicated"' in live.text
+    assert not re.search(r'<header[^>]+id="app-bar"', live.text)
+    assert not re.search(r'<nav[^>]+aria-label="Primary"', live.text)
+    assert re.search(r'<header[^>]+id="app-bar"', normal.text)
+    assert re.search(r'<nav[^>]+aria-label="Primary"', normal.text)
+    assert live.text.count('id="cz-settings"') == 1
+    assert 'data-cz-settings aria-label="Concierge settings"' in live.text
+    assert 'rel="manifest" href="/static/concierge-manifest.json"' in live.text
+    assert 'rel="manifest" href="/manifest.json"' in normal.text
+    assert 'data-cz-settings aria-label="Concierge settings"' in modal.text
+
+
 def test_both_frames_use_one_mount_and_one_copy_of_send_and_scroll():
     assert JS.count("function mount(root)") == 1
     assert "mount(pageRoot)" in JS                       # the page frame
