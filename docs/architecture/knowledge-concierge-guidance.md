@@ -58,8 +58,16 @@ corrections remain additive: undoing local retention uses the guide, and local
 merges must be finished or undone before source corrections. Both preview and
 apply reject conflicting local/body snapshots. Applying a correction records a
 hash of its local review context without implicitly saving the source decisions.
+Provider credit, quota and availability failures return an actionable service
+message while preserving the local form. After a failed natural-language turn,
+the browser makes one read-only request to show the current note and restore its
+current actions; it never retries the failed choice or correction. Unreadable
+server responses use the same recovery path rather than exposing a JSON parser
+error. Owner exclusion reasons remain owner-authored while comparison tolerates
+typographic apostrophe and quotation substitutions from structured model output;
+the saved reason is the matching original span from the owner's message.
 
-Empty model changes and already-recorded exact citations produce a visible no-op
+Empty model changes, already-retained passages and already-recorded exact citations produce a visible no-op
 explanation. An identical citation does not suppress independent valid changes;
 invalid references, claims and versions still reject the proposal. Citation-only
 previews explicitly say they change no wording. A no-op cannot reach the draft

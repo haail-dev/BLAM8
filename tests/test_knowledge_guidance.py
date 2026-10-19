@@ -121,6 +121,22 @@ async def test_natural_answer_cannot_invent_an_owner_reason(monkeypatch):
     assert exc.value.status_code==422
 
 
+@pytest.mark.asyncio
+async def test_natural_exclusion_accepts_typographic_apostrophe_without_rewriting_owner_words(monkeypatch):
+    ctx,row,form=fixture(); act(ctx,row,form,'keep'); shown=act(ctx,row,form,'details')
+    from app import llm, usage, concierge
+    reason='It\'s only a page heading, and the actual prices and payment terms are already in the notes.'
+    async def model(**kw):
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice('exclude',reason=reason)))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    question='Leave that heading out. It’s only a page heading, and the actual prices and payment terms are already in the notes.'
+    result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
+    assert result['patches']['source_'+shown['focus']['id']]=='exclude'
+    assert result['patches']['source_reason_'+shown['focus']['id']]=='It’s only a page heading, and the actual prices and payment terms are already in the notes.'
+
+
 def test_browser_controller_replays_owner_decisions_and_races():
     result=subprocess.run([shutil.which('node'),'tests/replays/knowledge_guidance.mjs'],
         cwd=Path(__file__).resolve().parents[1],capture_output=True,text=True,timeout=30)

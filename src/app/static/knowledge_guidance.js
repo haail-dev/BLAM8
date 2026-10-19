@@ -22,14 +22,16 @@
     try {
       var response=await fetch(f.action+'/guide', {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':f.elements.csrf_token.value},
         body:JSON.stringify({form:base,question:question,focus_hash:focus && focus.key===key ? focus.hash : ''})});
-      var data=await response.json();
+      var data;
+      try { data=await response.json(); }
+      catch (_) { throw new Error('The review service returned an unreadable response. Your choices remain on the page; ask to show the current note to recover.'); }
       if(!response.ok)throw new Error(typeof data.detail==='string' ? data.detail : 'The review could not be checked. Nothing has been saved.');
       if(form()!==f || JSON.stringify(values(f))!==signature)throw new Error('The review changed while I was checking. Your edits remain; ask to see the current note.');
       if(data.correction_requested) {
         // Release this read-only turn before the existing source correction tool.
         busy=false; window.blam8KnowledgeImportBusy=false; ready();
         focus=null;
-        return window.Blam8KnowledgeGuide.sourceAsk(question);
+        return await window.Blam8KnowledgeGuide.sourceAsk(question);
       }
       Object.keys(data.patches || {}).forEach(function(name){
         var field=f.elements[name];
@@ -47,6 +49,18 @@
       var item=data.focus || {}, section=item.kind==='note' ? f.querySelector('[data-draft="'+item.id+'"]') : null;
       if(section && section.tagName==='DETAILS')section.open=true;
       return data;
+    } catch (err) {
+      if(question.trim() && !['', 'show the current note', 'start reviewing the notes', 'show the next decision'].includes(question.trim().toLowerCase()) &&
+          form()===f && JSON.stringify(values(f))===signature) {
+        busy=false; window.blam8KnowledgeImportBusy=false; ready(); focus=null;
+        try {
+          var recovered=await ask('Show the current note');
+          recovered.reply=(err.message || 'The review could not be checked.')+'\n\n'+recovered.reply;
+          recovered.recovered_after_error=true;
+          return recovered;
+        } catch (_) { /* Keep the original error and local choices visible. */ }
+      }
+      throw err;
     } finally { busy=false; window.blam8KnowledgeImportBusy=false; ready(); }
   }
   function maybeStart() {

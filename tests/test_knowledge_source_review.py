@@ -96,6 +96,22 @@ def test_source_reference_identity_hash_expiry_and_bounds():
     with pytest.raises(setup_cards.Invalid): evidence.build([{'url':'https://example.invalid','text':'x'*12001}])
 
 
+def test_existing_passage_is_a_noop_without_blocking_an_independent_source_addition():
+    row,saved=seeded(); card=review.draft_card(row,saved); line=card['lines'][0]
+    existing='We manage properties and coordinate maintenance reports.'
+    existing_ref=evidence.reference(saved,0,existing)
+    new_quote='We do not make a legal determination from an email.'
+    page=next(i for i,p in enumerate(saved['pages']) if new_quote in p['text'])
+    new_ref=evidence.reference(saved,page,new_quote)
+    raw={'revision':card['revision'],'changes':[{'id':line['id'],'content_hash':evidence.digest(line['fields']['content']),
+        'insertions':[{'position':'after','reference':existing_ref},
+                      {'position':'after','reference':new_ref}]}], 'overlaps':[],'questions':[]}
+    checked=review.validate(card,saved,raw)
+    assert len(checked['changes'])==1
+    assert [p['quote'] for p in checked['changes'][0]['passages']]==[new_quote]
+    assert 'unchanged or already-recorded item' in checked['summary']
+
+
 def test_business_type_does_not_change_source_contract():
     row, saved = seeded(); card = review.draft_card(row, saved)
     for kind in ['property management', 'music lessons', 'repairs']:

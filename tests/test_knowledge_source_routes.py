@@ -66,6 +66,21 @@ def test_gates_reject_before_model_or_mutation(source_client, monkeypatch, case,
     assert calls == []
 
 
+def test_knowledge_guide_provider_credit_error_is_actionable_and_keeps_local_form(source_client,monkeypatch):
+    from app import knowledge_guidance
+    client,row,evidence,context,calls,ctx=source_client
+    class BadRequestError(Exception): pass
+    async def unavailable(*args): raise BadRequestError('Your credit balance is too low to access the API.')
+    monkeypatch.setattr(knowledge_guidance,'turn',unavailable)
+    response=client.post('/onboarding/knowledge/review/'+row['id']+'/guide',json={
+        'form':{'version':'v1','action_'+row['payload']['entries'][0]['id']:'keep'},
+        'question':'Leave out that page heading.','focus_hash':'focus'})
+    assert response.status_code==503
+    assert 'API credit' in response.json()['detail'] and 'manually' in response.json()['detail']
+    assert 'credit balance' not in response.json()['detail']
+    assert calls==[]
+
+
 def test_csrf_is_enforced(source_client):
     client, row, *_ = source_client
     app.dependency_overrides.pop(require_csrf_header)

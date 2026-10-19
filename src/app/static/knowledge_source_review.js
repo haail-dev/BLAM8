@@ -42,7 +42,9 @@
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': form.elements.csrf_token.value},
       body: JSON.stringify(body)
     });
-    var data = await response.json();
+    var data;
+    try { data = await response.json(); }
+    catch (_) { throw new Error('The source review service returned an unreadable response. Your edits remain on the page; check the current note before retrying.'); }
     if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'The operation could not be confirmed. Reload before retrying.');
     return data;
   }
