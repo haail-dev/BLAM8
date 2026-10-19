@@ -68,3 +68,44 @@ def test_shortcut_landing_invokes_existing_voice_launcher():
         script = 'let calls=[]; let location={hash:' + json.dumps(fragment) + ',pathname:'+json.dumps(path)+',search:""}; let history={replaceState(a,b,url){if(url!==location.pathname)throw Error("URL changed")}}; let pageApi={afterVoiceRefresh(){calls.push("refresh")},afterTalkLaunch(){calls.push("talk")}};\n' + landing + '\nconsole.log(JSON.stringify(calls));'
         result = subprocess.run([node, '-e', script], capture_output=True, text=True, check=True)
         assert json.loads(result.stdout) == ([] if expected is None else [expected])
+
+
+def test_dedicated_record_links_open_separately_and_voice_closes_before_settings():
+    import shutil
+    import subprocess
+    node = shutil.which('node')
+    if not node:
+        pytest.fail('Node is required to verify Concierge settings and record-link interaction')
+    js = Path('src/app/static/concierge_panel.js').read_text(encoding='utf-8')
+    start = js.index('  function keepPlatformRecordInAnotherTab(')
+    end = js.index('\n\n  function csrfToken()', start)
+    helpers = js[start:end]
+    voice = Path('src/app/static/voice-live.js').read_text(encoding='utf-8')
+    gptlive = Path('src/app/static/voice-gptlive.js').read_text(encoding='utf-8')
+    assert 'class="cz-voice-settings" aria-label="Concierge settings"' in voice
+    assert 'class="cz-voice-settings" aria-label="Concierge settings"' in gptlive
+    script = '''
+      const assert = require('node:assert/strict');
+      const opened = [], navigated = [];
+      const location = {pathname: '/concierge/live'};
+      const window = {open: (...args) => opened.push(args), location: {set href(v) { navigated.push(v); }}};
+    ''' + helpers + '''
+      const link = {};
+      keepPlatformRecordInAnotherTab(link, '/app/invoices/inv-4');
+      assert.equal(link.target, '_blank');
+      assert.equal(link.rel, 'noopener noreferrer');
+      openPlatformRecord('/app/invoices/inv-4');
+      assert.deepEqual(opened, [['/app/invoices/inv-4', '_blank', 'noopener,noreferrer']]);
+      assert.deepEqual(navigated, []);
+      location.pathname = '/app/concierge';
+      const ordinary = {};
+      keepPlatformRecordInAnotherTab(ordinary, '/app/invoices/inv-4');
+      openPlatformRecord('/app/invoices/inv-4');
+      assert.equal(ordinary.target, undefined);
+      assert.deepEqual(navigated, ['/app/invoices/inv-4']);
+      const order = [];
+      closeVoiceBeforeSettings({close: async reason => { order.push('close:' + reason); }}, () => order.push('settings'))
+        .then(() => { assert.deepEqual(order, ['close:settings', 'settings']); console.log('ok'); });
+    '''
+    result = subprocess.run([node, '-e', script], capture_output=True, text=True, check=True)
+    assert result.stdout.strip() == 'ok'

@@ -25,6 +25,10 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
 SOURCE_CAPABILITIES = {
     'src/app/booking_policy.py': 'scheduling',
     'src/app/setup_handoff.py': 'scheduling',
+    'src/app/templates/app/_concierge_panel.html': 'owner.assistant',
+    'src/app/static/concierge_panel.js': 'owner.assistant',
+    'src/app/static/voice-live.js': 'owner.assistant',
+    'src/app/static/voice-gptlive.js': 'owner.assistant',
 }
 
 
