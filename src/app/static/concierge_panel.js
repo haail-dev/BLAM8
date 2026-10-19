@@ -119,10 +119,6 @@
     }
     function newTask() {
       history.length = 0;
-      nativeContextHistory = [];
-      nativeContextReady = false;
-      contextOpen = false;
-      if (contextChip) contextChip.classList.remove('is-open');
       try { localStorage.setItem(CONTEXT_FROM_KEY, String(Date.now())); } catch (e) {}
       var line = document.createElement('div');
       line.className = 'cz-new-task-line';
@@ -186,7 +182,7 @@
       node.insertBefore(label,node.firstChild);
       return node;
     }
-    var activeVoiceVisitId = '', activeVoiceMode = '', nativeContextHistory = [], nativeContextReady = false;
+    var activeVoiceVisitId = '', activeVoiceMode = '';
     var modeObserver = null;
     // The newest section's gradient carries on under the composer on a phone (panel CSS): its mode picks the colour, its height places
     // the next stretch of the same gradient, so the join does not show. Kept current by a ResizeObserver on that one section.
@@ -1086,73 +1082,6 @@
     function stageForList() {
       if (voiceStage.cardNode) clearVoiceCard();
     }
-    // ── Context: what the Concierge will be given with the next question ──
-    var contextOpen = false, contextChip = null, contextNote = '', contextChips = [], contextBarTimer = 0;
-    // Keep the accessible context count current without drawing a usage meter.
-    function paintContextBar() {
-      var source = activeVoiceMode === 'gptlive' ? nativeContextHistory : history;
-      var n = Math.min(source.slice(-CONTEXT_TURNS).filter(function (m) { return m.role === 'user'; }).length,
-                       CONTEXT_ROUNDS);
-      contextChips.forEach(function (chip) {
-        chip.setAttribute('data-rounds', n + '/' + CONTEXT_ROUNDS);
-        chip.setAttribute('aria-label', 'Conversation context: ' + n + ' of ' + CONTEXT_ROUNDS + ' rounds in use. Tap to review; press and hold for one second to clear it.');
-      });
-    }
-    function loadContextNote() {
-      fetch('/concierge/voice/context', { credentials: 'same-origin' })
-        .then(function (r) { return r.ok ? r.json() : { note: '' }; })
-        .then(function (d) {
-          contextNote = d.note || '';
-          if (contextOpen && voiceLiveInstance) voiceLiveInstance.refreshStage();
-        })
-        .catch(function () {});
-    }
-    function contextView() {
-      var wrap = document.createElement('div');
-      wrap.className = 'cz-context';
-      wrap.id = 'cz-context-details';
-      wrap.setAttribute('role', 'region');
-      wrap.setAttribute('aria-label', 'Conversation context');
-      var h = document.createElement('p');
-      h.className = 'cz-context-h';
-      // The same slice buildChatBody sends: the last 8 rounds before the question.
-      var native = activeVoiceMode === 'gptlive';
-      var turns = (native ? nativeContextHistory : history).slice(-CONTEXT_TURNS);
-      var rounds = turns.filter(function (m) { return m.role === 'user'; }).length;
-      h.textContent = native && !nativeContextReady
-        ? 'Checking the context GPT-Live will use…'
-        : turns.length
-        ? 'With your next question it also sees these ' + rounds + ' of ' + CONTEXT_ROUNDS + ' rounds:'
-        : 'A fresh start — it sees only your next question.';
-      wrap.appendChild(h);
-      turns.forEach(function (m) {
-        var line = document.createElement('p');
-        line.className = 'cz-context-turn';
-        var who = document.createElement('b');
-        who.textContent = m.role === 'user' ? 'You: ' : 'Concierge: ';
-        line.appendChild(who);
-        line.appendChild(document.createTextNode(m.content || ''));
-        if (m.lookups && m.lookups.length) {
-          var lk = document.createElement('span');
-          lk.className = 'cz-context-lookups';
-          lk.textContent = ' [Looked up: ' + m.lookups.join('; ') + ']';
-          line.appendChild(lk);
-        }
-        wrap.appendChild(line);
-      });
-      if (contextNote) {
-        var n = document.createElement('p');
-        n.className = 'cz-context-note';
-        n.textContent = 'Also added by the server: ' + contextNote;
-        wrap.appendChild(n);
-      }
-      var foot = document.createElement('p');
-      foot.className = 'cz-context-foot';
-      foot.textContent = "Plus its standing instructions, and your business's data when it looks something up. Hold Context for a second to clear it.";
-      wrap.appendChild(foot);
-      return wrap;
-    }
-
     function mountBadge(root) {
       if (root.id !== 'voice-gptlive-root') return;
       var box = document.createElement('div');
@@ -1189,71 +1118,9 @@
         if (voiceLiveInstance) voiceLiveInstance.refreshStage();
       });
       }
-      // Pending review sits beside the debrief at the top right; context stays at the top left.
-      // The compact context bar (Kris 2026-10-14) keeps the existing review
-      // panel at the bottom, while showing only a slim red usage line here.
-      // A tap opens the panel; a 1 s press-and-hold still clears context.
-      var ctxChip = document.createElement('button');
-      ctxChip.type = 'button';
-      ctxChip.className = 'cz-context-chip';
-      ctxChip.setAttribute('aria-label', 'Conversation context — tap to review what the Concierge will see; press and hold for one second to clear it');
-      ctxChip.setAttribute('aria-controls', 'cz-context-details');
-      ctxChip.setAttribute('aria-expanded', 'false');
-      var ctxHold = document.createElement('span');
-      ctxHold.className = 'cz-ctx-hold';
-      var ctxLabel = document.createElement('span');
-      ctxLabel.className = 'cz-ctx-label';
-      ctxLabel.textContent = 'Context';
-      ctxLabel.setAttribute('aria-hidden', 'true');
-      ctxChip.appendChild(ctxHold);
-      ctxChip.appendChild(ctxLabel);
-      var HOLD_MS = 1000, holdTimer = 0, held = false;
-      function holdStart(e) {
-        if (e.button !== undefined && e.button !== 0) return;
-        held = false;
-        ctxHold.style.transition = 'width ' + HOLD_MS + 'ms linear';
-        ctxHold.style.width = '100%';
-        clearTimeout(holdTimer);
-        holdTimer = setTimeout(function () {
-          held = true;
-          ctxHold.style.transition = 'none';
-          ctxHold.style.width = '0';
-          newTask();
-          if (navigator.vibrate) { try { navigator.vibrate(30); } catch (err) {} }
-        }, HOLD_MS);
-      }
-      function holdEnd() {
-        clearTimeout(holdTimer);
-        ctxHold.style.transition = 'width 150ms ease-out';
-        ctxHold.style.width = '0';
-      }
-      ctxChip.addEventListener('pointerdown', holdStart);
-      ctxChip.addEventListener('pointerup', holdEnd);
-      ctxChip.addEventListener('pointerleave', holdEnd);
-      ctxChip.addEventListener('pointercancel', holdEnd);
-      ctxChip.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-      ctxChip.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (held) { held = false; return; }   // the hold cleared it: not a tap too
-        contextOpen = !contextOpen;
-        waitingOpen = false;
-        doneOpen = false;
-        stageForList();
-        paintBadge();
-        paintDoneBadge();
-        ctxChip.classList.toggle('is-open', contextOpen);
-        ctxChip.setAttribute('aria-expanded', String(contextOpen));
-        if (contextOpen) loadContextNote();
-        if (voiceLiveInstance) voiceLiveInstance.refreshStage();
-      });
-      contextChips.push(ctxChip);
-      contextChip = ctxChip;
-      paintContextBar();
-      if (!contextBarTimer) contextBarTimer = setInterval(paintContextBar, 1000);
       box.appendChild(waitBadge);
       if (root.id !== 'voice-gptlive-root') box.appendChild(doneBadge);
       root.appendChild(box);
-      root.appendChild(ctxChip);
       paintBadge();
       paintDoneBadge();
       loadDone();
@@ -2232,8 +2099,6 @@
       } else if (doneOpen) {
         var drow = doneRow();
         if (drow) { drow.id = 'cz-done-list'; box.appendChild(drow); }
-      } else if (contextOpen) {
-        box.appendChild(contextView());
       }
       if (!box.children.length) return { node: null, fresh: false };
       var fresh = voiceStage.fresh;
@@ -2445,11 +2310,8 @@
           onClose: function (closing) {
             activeVoiceVisitId = '';
             activeVoiceMode = '';
-            nativeContextHistory = [];
-            nativeContextReady = false;
-            waitingOpen = false; doneOpen = false; contextOpen = false; clearVoiceCard(); scrollDown();
+            waitingOpen = false; doneOpen = false; clearVoiceCard(); scrollDown();
             paintBadge(); paintDoneBadge();
-            contextChips.forEach(function (chip) { chip.classList.remove('is-open'); chip.setAttribute('aria-expanded', 'false'); });
             var lifecycle=++historyLifecycle;
             Promise.resolve(closing).then(function(){
               refreshHistory({pinNewest:true});
@@ -2459,12 +2321,6 @@
           onMount: mountBadge,
           onSessionStart: function (sessionId) { activeVoiceVisitId = sessionId || ''; activeVoiceMode = requestedMode; },
           contextFrom: function () { var cutoff = contextFrom(); return cutoff ? new Date(cutoff).toISOString() : null; },
-          onNativeContext: function (turns) {
-            nativeContextHistory = Array.isArray(turns) ? turns.slice(-CONTEXT_TURNS) : [];
-            nativeContextReady = true;
-            paintContextBar();
-            if (contextOpen && voiceLiveInstance) voiceLiveInstance.refreshStage();
-          },
           canStart: function () { return { ok: true }; },
         });
         voiceInstances[requestedMode] = voiceLiveInstance;

@@ -404,9 +404,13 @@ def test_the_corners_and_the_cross():
     js = open("src/app/static/concierge_panel.js", encoding="utf-8").read()
     tpl = open("src/app/templates/app/_concierge_panel.html", encoding="utf-8").read()
     voice = open("src/app/static/voice-gptlive.js", encoding="utf-8").read()
+    standard_voice = open("src/app/static/voice-live.js", encoding="utf-8").read()
     assert "#voice-live-root .cz-voice-settings, #voice-gptlive-root .cz-voice-settings {\n      position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 1rem;" in tpl
-    assert "#voice-live-root .cz-context-chip, #voice-gptlive-root .cz-context-chip { position: absolute; top: calc(max(0.9rem, env(safe-area-inset-top)) + 3.25rem); left: 1rem;" in tpl
-    assert "Conversation context" not in tpl and "cz-context-chip::before" not in tpl and ".cz-ctx-fill" not in tpl
+    assert 'viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14' in voice
+    assert 'viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14' in standard_voice
+    assert "M12 8.25a3.75" not in voice and "M12 8.25a3.75" not in standard_voice
+    assert "cz-context-chip" not in js and "contextView()" not in js
+    assert "cz-context-chip" not in tpl and ".cz-ctx-fill" not in tpl and ".cz-ctx-hold" not in tpl
     assert "waitBadge.textContent = waitingOpen && n ? '✕' : String(n);" in js
     assert "doneBadge.textContent = doneOpen && n ? '✕' : String(n);" in js
     assert "activeVoiceMode === 'gptlive' && voiceLiveInstance.clearScreen" in js

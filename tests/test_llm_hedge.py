@@ -149,9 +149,8 @@ def test_new_task_sets_the_earlier_chat_aside():
     nt = js[js.index("function newTask() {"):][:700]
     assert "history.length = 0;" in nt and "localStorage.setItem(CONTEXT_FROM_KEY, String(Date.now()))" in nt
     assert "var cutoff = Math.max(Date.now() - HISTORY_RECENT_MS, contextFrom());" in js
-    # cleared by holding Context for a second (Kris 2026-09-24)
-    hold = js[js.index("function holdStart(e) {"):][:700]
-    assert "var HOLD_MS = 1000" in js and "newTask();" in hold
+    # The Context button and its hold-to-clear handler were removed from the voice screen.
+    assert "cz-context-chip" not in js and "function holdStart(e) {" not in js
 
 
 # ── test run section 2 (24 Sep) ──────────────────────────────────────────────
@@ -297,18 +296,15 @@ def test_only_the_email_box_scrolls_on_the_voice_screen():
 
 
 # ── Context and invented speech (24 Sep) ────────────────────────────────────
-def test_the_context_view_shows_what_goes_with_the_next_question(monkeypatch):
-    import asyncio as _a
+def test_voice_context_api_remains_separate_from_removed_context_button(monkeypatch):
     from app import concierge_routes
     monkeypatch.setattr(concierge_routes, "_voice_note", lambda ctx, clipped, member=None: "[for reference only — …]")
     out = concierge_routes.voice_context(SimpleNamespace(tenant_id="t1", client=None))
     assert out == {"note": "[for reference only — …]"}
     js = open("src/app/static/concierge_panel.js", encoding="utf-8").read()
-    view = js[js.index("function contextView() {"):][:2600]
-    assert "(native ? nativeContextHistory : history).slice(-CONTEXT_TURNS)" in view
-    assert "cz-context-clear" not in js                                  # clearing is the 1 s hold now
-    assert "ctxLabel.textContent = 'Context';" in js
-    assert "fresh.className = 'cz-new-task';" not in js         # Context replaced New task
+    tpl = open("src/app/templates/app/_concierge_panel.html", encoding="utf-8").read()
+    assert "cz-context-chip" not in js and "contextView()" not in js
+    assert "cz-context-chip" not in tpl and "cz-context-details" not in js
 
 
 def test_a_long_sentence_from_a_blip_is_held_not_sent():
@@ -339,21 +335,14 @@ def test_an_action_carries_only_the_fields_it_uses():
 
 
 
-def test_the_context_chip_counts_rounds_without_a_progress_bar_and_clears_on_a_hold():
-    # Context remains inspectable and clearable, but the red usage meter is gone.
+def test_voice_context_has_no_button_or_progress_meter():
     js = open("src/app/static/concierge_panel.js", encoding="utf-8").read()
     tpl = open("src/app/templates/app/_concierge_panel.html", encoding="utf-8").read()
-    # Counted in rounds (yours + hers): 8 rounds = 16 messages, which is all the
-    # server keeps (routes.MAX_HISTORY_TURNS, checked in test_concierge_ledger.py).
-    assert "var CONTEXT_ROUNDS = 8, CONTEXT_TURNS = CONTEXT_ROUNDS * 2;" in js and "HISTORY_SEED_TURNS = CONTEXT_TURNS;" in js
-    assert "return m.role === 'user'; }).length" in js
+    # Context length remains part of the voice request; only its redundant UI control is removed.
+    assert "CONTEXT_TURNS" in js and "HISTORY_SEED_TURNS = CONTEXT_TURNS;" in js
     assert "turns.slice(0, -1).slice(-CONTEXT_TURNS)" in js           # what's sent = what context counts
-    bar = js[js.index("function paintContextBar() {"):][:700]
-    assert "chip.setAttribute('data-rounds', n + '/' + CONTEXT_ROUNDS);" in bar
-    assert "is-red" not in bar and "is-amber" not in bar and "style.width" not in bar
-    assert "if (held) { held = false; return; }" in js                 # a hold isn't also a tap
-    assert ".cz-ctx-fill" not in tpl and "cz-context-chip::before" not in tpl
-    assert "#voice-live-root .cz-ctx-hold, #voice-gptlive-root .cz-ctx-hold" in tpl
+    assert "cz-context-chip" not in js and "contextView()" not in js
+    assert "cz-context-chip" not in tpl and "cz-ctx-fill" not in tpl and "cz-ctx-hold" not in tpl
 
 
 # ── test run 5.1 (24 Sep) ────────────────────────────────────────────────────

@@ -332,7 +332,7 @@ export function createVoiceLive(deps) {
     root.id = "voice-live-root";
     root.innerHTML = `
       <div class="vl-stage">
-        <button type="button" class="cz-voice-settings" aria-label="Concierge settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5ZM19.5 13.5a7.9 7.9 0 0 0 0-3l1.3-1-1.5-2.6-1.6.6a7.4 7.4 0 0 0-2.6-1.5L14.8 4h-3l-.3 2a7.4 7.4 0 0 0-2.6 1.5l-1.6-.6-1.5 2.6 1.3 1a7.9 7.9 0 0 0 0 3l-1.3 1 1.5 2.6 1.6-.6a7.4 7.4 0 0 0 2.6 1.5l.3 2h3l.3-2a7.4 7.4 0 0 0 2.6-1.5l1.6.6 1.5-2.6-1.3-1Z"/></svg></button>
+        <button type="button" class="cz-voice-settings" aria-label="Concierge settings" title="Settings"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.28 7.28 0 0 0-1.63-.95l-.36-2.54A.49.49 0 0 0 13.88 2h-3.76a.49.49 0 0 0-.49.42L9.27 4.96c-.6.23-1.15.55-1.63.95l-2.39-.96a.5.5 0 0 0-.61.22L2.72 8.49a.5.5 0 0 0 .12.64l2.03 1.58a7.28 7.28 0 0 0-.06 1.88L2.78 14.17a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .61.22l2.39-.96c.48.4 1.03.72 1.63.95l.36 2.54a.49.49 0 0 0 .49.42h3.76a.49.49 0 0 0 .49-.42l.36-2.54c.6-.23 1.15-.55 1.63-.95l2.39.96a.5.5 0 0 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg></button>
         <div class="vl-toasts" aria-live="polite"></div>
         <!-- The Tour starts from the Concierge's settings cog (Kris 2026-09-23). -->
         <div class="vl-tour" role="dialog" aria-live="polite" hidden></div>
