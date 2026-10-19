@@ -118,8 +118,11 @@ def validate(card, evidence, raw):
                 raise setup_cards.Invalid('Choose a complete supplied source passage, not a fragment.')
             passage = knowledge_source_evidence.resolve(evidence, insertion['reference'])
             quote = passage['quote'].strip()
-            if not quote or quote in line['content'] or any(p['reference'] == insertion['reference'] for p in passages):
+            if not quote or any(p['reference'] == insertion['reference'] for p in passages):
                 raise setup_cards.Invalid('Do not duplicate a passage already present in this card.')
+            if quote in line['content']:
+                unchanged += 1
+                continue
             (before if insertion['position'] == 'before' else after).append(quote)
             passages.append({**insertion, **passage})
         content = '\n\n'.join(before + [line['content']] + after)

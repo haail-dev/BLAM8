@@ -19,6 +19,22 @@ def needs_model(question):
     return question.strip().casefold() not in SHOW | SHORTCUTS.keys()
 
 
+def _owner_excerpt(candidate, message):
+    """Return the exact owner-authored span despite typographic quote substitutions."""
+    parts=[]; whitespace=False
+    for char in candidate.strip():
+        if char.isspace():
+            if not whitespace: parts.append(r'\s+')
+            whitespace=True
+        else:
+            whitespace=False
+            if char in "'\u2018\u2019\u02bc": parts.append("['\u2018\u2019\u02bc]")
+            elif char in '"\u201c\u201d': parts.append('["\u201c\u201d]')
+            else: parts.append(re.escape(char))
+    match=re.search(''.join(parts),message,re.IGNORECASE) if parts else None
+    return match.group(0) if match else None
+
+
 SCHEMA = {'type': 'object', 'properties': {
     'intent': {'type': 'string', 'enum': INTENTS},
     'reason': {'type': 'string'}, 'answer': {'type': 'string'},
@@ -284,6 +300,9 @@ async def turn(tenant_id, context, row, form, question, focus_hash):
     if isinstance(raw,dict):
         for field in ('answer','reason'):
             value = raw.get(field)
-            if isinstance(value,str) and value.strip() and knowledge_fidelity.normal(value).casefold() not in knowledge_fidelity.normal(question).casefold():
-                raise HTTPException(422, 'Please give that answer or reason in your own words. No review choice changed.')
+            if isinstance(value,str) and value.strip():
+                excerpt=_owner_excerpt(value,question)
+                if not excerpt:
+                    raise HTTPException(422, 'Please give that answer or reason in your own words. No review choice changed.')
+                raw[field]=excerpt
     return apply(context, row, form, focus_hash, raw)

@@ -1,5 +1,6 @@
 """Source corrections are draft mutations; existing admission remains the writer."""
 import json
+import logging
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -8,6 +9,8 @@ from app.auth import TenantCtx, require_tenant
 from app.config import settings
 from app.security import rate_limit, require_csrf_header
 from app.setup_card_routes import _error
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix='/onboarding/knowledge/review', dependencies=[
     Depends(rate_limit('knowledge_source_review', limit=20, window_s=60))])
@@ -26,6 +29,23 @@ def require_source_review(ctx: TenantCtx = Depends(require_tenant)):
     if not settings.knowledge_source_review_enabled:
         raise HTTPException(404, 'Source corrections are not enabled.')
     return require_source_writer(ctx)
+
+
+def _review_error(exc):
+    if isinstance(exc, HTTPException):
+        raise exc
+    name = type(exc).__name__
+    detail = str(exc).casefold()
+    provider_errors = {'AuthenticationError', 'PermissionDeniedError', 'RateLimitError',
+                       'InternalServerError', 'APIConnectionError', 'APITimeoutError',
+                       'APIStatusError', 'OverloadedError', 'BadRequestError'}
+    if name in provider_errors or any(term in detail for term in
+            ('credit balance', 'insufficient credit', 'billing', 'api key', 'overloaded', 'rate limit')):
+        log.warning('Knowledge review model service unavailable (%s)', name)
+        if 'credit balance' in detail or 'insufficient credit' in detail:
+            raise HTTPException(503, 'The Knowledge review AI service has no available API credit. The service account owner must restore its balance. Your review choices remain on this page; you can still review the current note manually.') from None
+        raise HTTPException(503, 'The Knowledge review AI service is unavailable right now. Your review choices remain on this page; you can still review the current note manually.') from None
+    _error(exc)
 
 
 class DraftRequest(BaseModel):
@@ -64,7 +84,10 @@ async def guide(review_id: UUID, body: GuideRequest, ctx: TenantCtx = Depends(re
         raise HTTPException(404, 'Review not found.')
     if knowledge_guidance.needs_model(body.question) and not fairuse.onboarding_allowed(ctx.tenant_id, 'concierge_onboard', client=ctx.client):
         raise HTTPException(429, 'Today\'s setup review allowance is used. Your review choices remain on the page.')
-    return await knowledge_guidance.turn(ctx.tenant_id, context, row, body.form, body.question, body.focus_hash)
+    try:
+        return await knowledge_guidance.turn(ctx.tenant_id, context, row, body.form, body.question, body.focus_hash)
+    except Exception as exc:
+        _review_error(exc)
 
 
 def state(ctx, review_id, version):
@@ -112,7 +135,7 @@ async def preview(review_id: UUID, body: ReviewRequest, ctx: TenantCtx = Depends
         card['knowledge_local_review'] = local_review(row,body)
         return await knowledge_source_review.answer(ctx.tenant_id, body.question, card, evidence)
     except Exception as exc:
-        _error(exc)
+        _review_error(exc)
 
 
 @router.post('/{review_id}/corrections/apply', dependencies=[Depends(require_csrf_header)])

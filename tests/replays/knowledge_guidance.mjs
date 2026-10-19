@@ -54,13 +54,37 @@ guide.save();assert.equal(submitted,0); // Not offered until the planner is read
 const final=guide.ask('Show the current note');finish(5,{...result({},'ready'),save_ready:true});await final;
 guide.save();assert.equal(submitted,1); // Only separate explicit Save action.
 
-const correction=guide.ask('Please correct the source');finish(6,{correction_requested:true});
+const outage=guide.ask('Leave that heading out because it is only navigation.');
+requests[6].resolve({ok:false,json:async()=>({detail:'The Knowledge review AI service has no available API credit. Your review choices remain on this page.'})});
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(requests.length,8); // One read-only recovery; no retry of the failed choice.
+assert.equal(JSON.parse(requests[7].options.body).question,'Show the current note');
+assert.equal(JSON.parse(requests[7].options.body).focus_hash,'');
+finish(7,result({},'recovered'));
+const recovered=await outage;
+assert(recovered.recovered_after_error);
+assert.match(recovered.reply,/API credit/);
+assert.match(recovered.reply,/Review this actual note/);
+assert.equal(fields.action_one.value,'keep');
+assert(guide.isCurrent('recovered'));
+
+const malformed=guide.ask('Leave it out because it is only navigation.');
+requests[8].resolve({ok:false,json:async()=>{throw new SyntaxError('Unexpected token I in JSON');}});
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(requests.length,10);
+finish(9,result({},'after-malformed'));
+const malformedRecovery=await malformed;
+assert(malformedRecovery.recovered_after_error);
+assert.doesNotMatch(malformedRecovery.reply,/Unexpected token/);
+assert.match(malformedRecovery.reply,/unreadable response/);
+
+const correction=guide.ask('Please correct the source');finish(10,{correction_requested:true});
 assert.match((await correction).reply,/preview/);
 assert(!guide.isCurrent('h5'));
 assert(!window.blam8KnowledgeImportBusy);
 
 const replacement=guide.ask('Show the current note');activeForm={...form};
-finish(7,result({action_one:'discard'}));
+finish(11,result({action_one:'discard'}));
 await assert.rejects(replacement,/changed/);
 assert.equal(fields.action_one.value,'keep');
 console.log('Knowledge guidance: form choices, stale actions, concurrent edits, correction routing and explicit save verified.');
