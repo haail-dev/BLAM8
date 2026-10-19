@@ -43,6 +43,10 @@ start empty and never approve anything automatically. Guided unknown/expanded
 markers survive a preview refresh. This presentation depends on the note-by-note
 guide; deploy the compatible guide and UI together. Existing server admission
 checks, retained source records and exclusion-reason requirements are unchanged.
+Manual note entry opens from the keyboard-accessible **Add a note** disclosure.
+It starts collapsed when empty and opens when a returned form contains a label
+or note text, keeping unsaved/error-recovery content visible. Review note and
+the form-associated Continue actions retain their existing submission behaviour.
 Exact sentence/block repetitions are checked across complete
 note text and shown once per pair. They may be intentional: the owner decides
 whether to retain both or merge. This is not a complete semantic duplicate or
