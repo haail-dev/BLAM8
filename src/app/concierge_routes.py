@@ -77,6 +77,14 @@ class _BoundedPublicAskRoute(APIRoute):
 
 
 router = APIRouter(prefix="/concierge", tags=["concierge"], route_class=_BoundedPublicAskRoute)
+
+
+@router.get("/live")
+def concierge_live_link():
+    """Shortcut to the existing authenticated voice launch flow."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/app/concierge#talk", status_code=303)
+
 router.include_router(setup_card_router)
 
 
