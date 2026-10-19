@@ -20,9 +20,8 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
     'docs/operations/founder-outreach.md',
     'db/migrations/20261018_admin_outreach_egress.sql',
     'db/migrations/20261018_admin_outreach_egress_rollback.sql')}
-# Runtime sources that affect setup workflows without changing the public
-# capability catalogue. Keep these out of product_inventory: its rows feed the
-# versioned help bundle, so evidence bookkeeping must not change model context.
+# Additional runtime sources associated with feature evidence but excluded from
+# the product catalogue so review metadata cannot change its serialized content.
 SOURCE_CAPABILITIES = {
     'src/app/booking_policy.py': 'scheduling',
     'src/app/setup_handoff.py': 'scheduling',
