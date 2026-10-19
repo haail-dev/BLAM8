@@ -5,6 +5,7 @@ the real panel code); this pins the rules that make it so.
 Run: python -m pytest tests/test_concierge_card_polish.py -q
 """
 import pathlib
+import re
 
 from app import concierge_actions
 
@@ -61,7 +62,8 @@ def test_the_state_of_a_card_just_dealt_with_shows_beside_open_now_not_inside_th
     assert "var note = el('span', 'cz-side-note');" in SIDE
     assert "head.appendChild(el('span', 'cz-side-title', title)); head.appendChild(note); head.appendChild(count);" in SIDE
     assert ".cz-side-title{flex:0 1 auto;" in SIDE and ".cz-side-note{flex:1;min-width:0;margin-left:.5rem;" in SIDE
-    assert "return { node: b, body: body, count: count, note: note };" in SIDE
+    # Preserve the four header/body bindings while allowing additional box methods.
+    assert re.search(r"return \{\s*node: b,\s*body: body,\s*count: count,\s*note: note\s*[,}]", SIDE)
     assert "openBox.note.textContent = said(open);" in SIDE and "waitBox.note.textContent = said(focused);" in SIDE   # the Waiting box has its own
     assert "it.node.getAttribute('data-state') !== 'sent'" in SIDE
     # and inside the column the card's own state line is not shown for a done card (a card that did not run keeps its reason)
