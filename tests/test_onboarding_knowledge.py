@@ -9,6 +9,7 @@ is separate from both actions.
 
 Run: python -m pytest tests/test_onboarding_knowledge.py -q
 """
+from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
@@ -62,6 +63,22 @@ def _app_page_env(monkeypatch):
     monkeypatch.setattr(dashboard.db, "list_email_log", lambda *a, **k: [])
     monkeypatch.setattr(dashboard.db, "active_modules", lambda *a, **k: set())
     monkeypatch.setattr(dashboard.db, "is_enterprise", lambda *a, **k: False)
+
+
+def test_manual_note_and_file_inputs_share_a_top_level_section():
+    template=(Path(__file__).resolve().parents[1]/'src/app/templates/onboarding/knowledge.html').read_text(encoding='utf-8')
+    label=template.index('Manually add knowledge')
+    section_start=template.rfind('<details',0,label)
+    reviews=template.index('id="knowledge-pending-reviews"')
+    section_end=template.rfind('</details>',label,reviews)+len('</details>')
+    section=template[section_start:section_end]
+    assert 'action="/onboarding/knowledge/text"' in section
+    assert 'action="/onboarding/knowledge/upload"' in section
+    assert 'Or review a file' in section
+    assert section_start < reviews
+    assert section_start < template.index('id="site-box"')
+    assert template.count('action="/onboarding/knowledge/text"') == 1
+    assert template.count('action="/onboarding/knowledge/upload"') == 1
 
 
 # ── Continue preserves typed notes without silently staging them ────────────
