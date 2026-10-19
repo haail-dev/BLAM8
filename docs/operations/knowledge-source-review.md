@@ -91,6 +91,27 @@ Those navigation safeguards apply with source corrections disabled too. Loading
 the review controller does not enable source capture or its correction routes;
 the feature flag, permissions and retained evidence still gate those controls.
 
+During a website read, Next and Leave drafts for later are disabled and labelled
+as waiting for the read. The existing capture-phase navigation and submit guards
+also block keyboard/programmatic submission. Success, failure and an unconfirmed
+response restore the controls' prior state; pending-draft decisions still apply.
+
+Website drafting retains complete inventory statements intersecting a verified
+cited excerpt on the same page, alongside any abbreviated model wording. This
+preserves procedure endings and named-party scope in source limitations. Notes
+may therefore repeat wording; the owner can edit them before approval. If this
+expansion exceeds the 4,000-character correction-note limit, the batch reports
+an incomplete draft rather than cutting source clauses. Uncited statements still
+need the existing source-coverage review; citations do not certify entailment.
+
+Source-correction questions are advisory: previews display at most three nonblank
+questions of at most 500 characters each. Extra/long/blank annotations produce an
+explicit warning instead of discarding independently verified corrections. The
+original annotation list remains in the proposal revalidated on apply. This does
+not settle missing-evidence or coverage decisions, weaken revision/source checks,
+or admit Knowledge. Applying still changes only pending drafts, and final
+admission still requires the owner's explicit Save reviewed decisions action.
+
 The Assistant uses this source-review path when exactly one eligible draft
 batch is present. Multiple batches can be reviewed using their individual
 controls. Older drafts without retained evidence remain manually reviewable.

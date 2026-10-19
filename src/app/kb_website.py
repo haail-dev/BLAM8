@@ -101,6 +101,11 @@ SYSTEM += ("\nFor every note, identify relevant topic keys and cite page URLs wi
            "For each distinct clause in the note, supply its exact note wording as claim and one or more "
            "separate contiguous source excerpts. Never join nonadjacent passages into one quotation. "
            "Cite every contributing page when a note combines facts from multiple pages. "
+           "Keep the complete sequence of actions, including the final next step, and every named "
+           "party or channel in a limitation. A product/platform name in a limitation is source fact, "
+           "not an alternative business name to remove. Check the home page as well as topic pages "
+           "for additional clauses. Quote complete supporting statements; first-person voice must "
+           "not narrow their scope. "
            "The source is supplied as location-labelled blocks: keep material limitations and qualifications "
            "even in a footer, header, aside or navigation region; omit pure menu labels from notes. "
            "Preserve scope, uncertainty and source caveats, including fictional/test facts. Do not generalise a "
@@ -117,6 +122,32 @@ class DistilledEntries(list):
 
 class CrawledPages(list):
     manifest: list
+
+
+def _retain_cited_statements(entry, pages, units):
+    """Keep complete source wording when a generated claim abbreviates its proof.
+
+    Citation presence alone cannot establish that every clause survived a model
+    summary. Only expand verified contiguous excerpts to the existing inventory's
+    intersecting statements, on that same page. Uncited facts remain in the
+    separate source-coverage review; this is not an entailment/coverage verdict.
+    """
+    from app.knowledge_fidelity import normal
+    for citation in list(entry['provenance']):
+        page = next(p for p in pages if p['url'] == citation['source'])
+        match = re.search(r'\s+'.join(re.escape(t) for t in citation['excerpt'].split()), page['text'])
+        if not match:
+            continue
+        for unit in units:
+            if not any(s['url'] == page['url'] and s['start'] < match.end() and s['end'] > match.start()
+                       for s in unit['spans']):
+                continue
+            if unit['text'] in normal(entry['content']):
+                continue
+            entry['content'] += '\n\n' + unit['text']
+            proof = {'source': page['url'], 'excerpt': unit['text'], 'claim': unit['text']}
+            if proof not in entry['provenance'] and unit['text'] != normal(citation['excerpt']):
+                entry['provenance'].append(proof)
 
 
 def normalize_url(url: str) -> str:
@@ -311,7 +342,13 @@ async def distill(tenant_id: str, site: str, pages: list[dict], *,
     ])
     from app.knowledge_review import clean_questions
     result.questions = clean_questions(data.get("questions"))
+    from app.knowledge_fidelity import inventory
+    units = inventory(pages)
     for entry in result:
+        original = entry['content']
+        _retain_cited_statements(entry, pages, units)
+        if entry['content'] != original and len(entry['content']) > 4000:
+            return incomplete('Complete cited source wording exceeds a review note limit. No drafts were staged; try a smaller source section. No source clauses were silently dropped.')
         if not entry["provenance"]:
             entry["provenance"] = [{"source":p["url"],"excerpt":"Page read; no exact supporting quotation was supplied. Check this source before approving."} for p in pages]
     return result
