@@ -136,8 +136,8 @@
     </section>
     <section class="cz-set-sec" data-cz-voices="both" aria-labelledby="cz-mode-heading">
       <p id="cz-mode-heading" class="cz-set-h">Conversation mode</p>
-      <div class="cz-set-row"><label><input type="radio" name="cz-voice-mode" value="standard" checked> Standard</label></div>
-      <div class="cz-set-row"><label><input type="radio" name="cz-voice-mode" value="gptlive"> GPT-Live</label></div>
+      <div class="cz-set-row"><label><input type="radio" name="cz-voice-mode" value="standard"{% if not gptlive_on %} checked{% endif %}> Standard</label></div>
+      <div class="cz-set-row"><label><input type="radio" name="cz-voice-mode" value="gptlive"{% if gptlive_on %} checked{% endif %}> GPT-Live</label></div>
       <p class="cz-set-hint">Switching ends the current conversation. GPT-Live uses native audio and the same business agent. Business results and confirmations remain in chat.</p>
       {% if not gptlive_on %}<p class="cz-set-hint">GPT-Live is unavailable on this server.</p>{% endif %}
     </section>

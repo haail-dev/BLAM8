@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
   {# PWA: installability (manifest + icons) and the Web Push public key the
      subscribe call needs (src/app/static/push.js). Key absent = push off, no banner. #}
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="{{ "/static/concierge-manifest.json" if request.url.path == "/concierge/live" else "/manifest.json" }}">
   <meta name="theme-color" content="#0B1220">
   {# black-translucent: the app draws under the phone's reserved bar, and the
      header pads itself with the safe-area inset painted the SAME navy — no
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-glass.png?v={{ asset_rev }}">
-  <meta name="apple-mobile-web-app-title" content="BLAM8">
+  <meta name="apple-mobile-web-app-title" content="{{ "BLAM8 Concierge" if request.url.path == "/concierge/live" else "BLAM8" }}">
   <meta name="mobile-web-app-capable" content="yes">
   {% if vapid_public_key %}<meta name="blam8-vapid-key" content="{{ vapid_public_key }}">{% endif %}
   {# First paint must not wait on a third-party stylesheet (it blocked every page, and every

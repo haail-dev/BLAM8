@@ -311,6 +311,7 @@ EXCLUDED = {
     "/app/knowledge/note": "one note's text for the in-place editor",
     "/app/quotes/deals": "the quote form's deal picker",
     "/app/search": "the masthead search's suggestions, JSON",
+    "/concierge/live": "dedicated installable live Concierge entry, same protected panel",
     "/app/concierge/panel": "the Concierge modal's panel, an HTML fragment",
     "/app/practice/patients/{contact_id}/notes": "decrypted notes as JSON",
     "/concierge/business/history": "the Concierge transcript, JSON",
