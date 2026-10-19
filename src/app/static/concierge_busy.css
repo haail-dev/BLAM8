@@ -1,6 +1,6 @@
-/* Use only while an application operation is active. The text remains readable
-   at every point in the sweep; motion never implies measured progress. */
-.bc-busy {
+/* Shared Assistant notices. The wording describes the actual state; a shine
+   draws attention without implying work or measured progress. */
+.bc-notice {
   --bc-busy-base: #5c6b7d;
   --bc-busy-blue: #1d4fd7;
   --bc-busy-pink: #a82993;
@@ -11,13 +11,13 @@
   line-height: 1.5;
   text-align: center;
 }
-[data-theme="dark"] .bc-busy {
+[data-theme="dark"] .bc-notice {
   --bc-busy-base: #aebac9;
   --bc-busy-blue: #93baff;
   --bc-busy-pink: #f0a0df;
 }
 @supports (background-clip: text) {
-  .bc-busy-text {
+  .bc-notice-text {
     color: transparent;
     background: linear-gradient(125deg, var(--bc-busy-base) 39%, var(--bc-busy-blue) 45%, var(--bc-busy-pink) 51%, var(--bc-busy-blue) 57%, var(--bc-busy-base) 63%);
     background-size: 300% 100%;
@@ -30,5 +30,5 @@
   to { background-position: 0% 50%; }
 }
 @media (prefers-reduced-motion: reduce), (forced-colors: active) {
-  .bc-busy-text { animation: none; background: none; color: inherit; }
+  .bc-notice-text { animation: none; background: none; color: inherit; }
 }
