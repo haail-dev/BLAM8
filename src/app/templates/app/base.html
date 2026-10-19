@@ -146,6 +146,28 @@
       pointer-events: none;
     }
 
+    /* The dedicated Concierge entry is its own app surface. Keep the
+       shared authenticated page and its existing PWA identity, while taking
+       the platform chrome out of this one entry. */
+    body.concierge-dedicated { overflow: hidden; }
+    body.concierge-dedicated #app-bar,
+    body.concierge-dedicated [data-preview-banner],
+    body.concierge-dedicated [data-viewing-as],
+    body.concierge-dedicated [data-setup-strip],
+    body.concierge-dedicated nav[aria-label="Primary"],
+    body.concierge-dedicated .dockbar,
+    body.concierge-dedicated #blam8-concierge,
+    body.concierge-dedicated #bc-panel,
+    body.concierge-dedicated #blam8-push-banner { display: none !important; }
+    body.concierge-dedicated main.app-sky { overflow: hidden; }
+    body.concierge-dedicated #cz-pager { height: 100%; }
+    body.concierge-dedicated #cz-root {
+      padding-top: max(1rem, env(safe-area-inset-top, 0px));
+      padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+    }
+    body.concierge-dedicated::before,
+    body.concierge-dedicated::after { background: rgb(var(--c-bg-slate-50)); }
+
     /* The dock rail: one thin frosted shelf pinned above the strip — each page
        fills it with its own slice of the diary (Kris 2026-08-31). */
     .dockbar {
@@ -251,14 +273,14 @@
   </script>
   {% endif %}
 </head>
-<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased{% if request.url.path == '/concierge/live' %} concierge-dedicated{% endif %}">
 <div class="h-full flex flex-col" data-pull-root>
 
   {# OS preview banner — the founding-partner look-inside. preview_names comes
      from _ctx (subscriptions rows with status='preview'): surfaces are open,
      the agent is off until they're approved + subscribed. #}
-  {% if preview_names %}
-  <div class="flex-none bg-navy text-white text-sm px-4 md:px-6 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+  {% if preview_names and request.url.path != '/concierge/live' %}
+  <div data-preview-banner class="flex-none bg-navy text-white text-sm px-4 md:px-6 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
     <span class="font-semibold">You're previewing {{ preview_names | join(' + ') }}.</span>
     <span class="text-slate-300">Look around, fill things in — the agent only runs it once you're a founding partner.</span>
     <a href="/billing/plans" class="ml-auto flex-none rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition">Request founding access &rarr;</a>
@@ -266,6 +288,7 @@
   {% endif %}
 
 
+  {% if request.url.path != '/concierge/live' %}
   {% set _va = request.state.viewing_as if request and request.state and request.state.viewing_as is defined else None %}
   <!-- Top bar with burger menu -->
   <header id="app-bar" class="h-9 bg-navy flex items-center gap-3 px-4 md:px-6 flex-none relative z-30" data-pull-bar>
@@ -532,11 +555,12 @@
       <p class="px-4 pt-2 text-xs text-slate-400">Replies wait for your approval unless full-auto is on</p>
     </nav>
   </header>
+  {% endif %}
   {# View as (src/app/viewas.py): the owner is looking at BLAM8 as one of their
      people — say so on every page, with the way out. Under the top bar, not
      above it: above, the installed iPhone app put it under the clock and the
      notch, and there was no way out (Kris 2026-09-24). #}
-  {% if _va %}
+  {% if request.url.path != '/concierge/live' and _va %}
   <div class="flex-none bg-amber-400 text-navy text-sm px-4 md:px-6 py-2 flex flex-wrap items-center gap-x-3 gap-y-1" data-viewing-as>
     <span class="font-semibold">Viewing as {{ _va.name }}</span>
     <span class="text-navy/70">— what they'd see. Nothing can be changed.</span>
@@ -551,7 +575,7 @@
      tuning steps are one setup. This strip rides every app page until every
      step is done — where they are, what is next, no dismiss for a fresh
      sign-up (app/setup_handoff.strip). #}
-  {% set setup_strip = setup_strip_fn(setup_strip_raw.steps, request.url.path, setup_strip_raw.onboarded_at, setup_strip_raw.dismissed_at) if setup_strip_raw and setup_strip_fn else none %}
+  {% set setup_strip = setup_strip_fn(setup_strip_raw.steps, request.url.path, setup_strip_raw.onboarded_at, setup_strip_raw.dismissed_at) if request.url.path != '/concierge/live' and setup_strip_raw and setup_strip_fn else none %}
   {% if setup_strip %}
   <div class="flex-none border-b border-brand/20 bg-brand-50 px-4 py-2 text-sm" data-setup-strip>
     <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-1">
@@ -701,6 +725,7 @@
   {% set strip_link = "flex-1 flex flex-col items-center gap-1 py-2 text-[11px] leading-[15px] font-medium" %}
   {# z-index 70: the buttons now live inside the inset zone the body::after
      cap (z 60) paints over — the strip must sit above it or labels vanish. #}
+  {% if request.url.path != '/concierge/live' %}
   <nav class="md:hidden flex-none flex items-stretch bg-navy text-white/70 border-t strip-pinstripe px-1"
        style="padding-bottom: var(--strip-inset, 0px); position: relative; z-index: 70;" aria-label="Primary" data-pull-refresh="off">
     <a href="/app/" class="{{ strip_link }} {% if active=='home' %}text-white{% endif %}">
@@ -744,6 +769,7 @@
     </a>
     {% endif %}
   </nav>
+  {% endif %}
 
 </div>
 <script>
@@ -1148,6 +1174,10 @@
     /* The /app/concierge page: the fixed navy strip (body::after) already owns the home-indicator inset
        under the page, so the panel's own py-4 foot (1rem) was pure extra space under the links. */
     #cz-root { padding-bottom: 0; }
+    body.concierge-dedicated #cz-root {
+      padding-top: max(1rem, env(safe-area-inset-top, 0px));
+      padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+    }
     /* Keyboard up: the home-indicator inset is under the keyboard, not the
        composer — no clearance owed. */
     #cz-modal.cz-kb #cz-root { padding-bottom: 0; }
