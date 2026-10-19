@@ -96,7 +96,7 @@ def test_on_a_phone_the_voice_screen_and_the_column_are_one_canvas_with_the_wate
     assert "var VOICE_ROOTS = ['#voice-live-root.is-open', '#voice-gptlive-root.is-open'];" in SIDE  # both voice screens
     # GPT-Live's water (canvas.vl-pond, and the glow .vl-ambient) is NOT excluded from the pan: it is made two screens wide and pans with the canvas.
     # Only the first screen's water (.vl-ripples) stays put behind both halves.
-    assert "r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)'" in SIDE and ":not(.vl-ambient)" not in SIDE
+    assert "r + ' .vl-stage>:not(.vl-ripples):not(.vl-live):not(.vl-side-mark)'" in SIDE and ":not(.vl-ambient)" not in SIDE
     assert "var VOICE_WATER = ['#voice-gptlive-root.is-open .vl-stage>.vl-pond', '#voice-gptlive-root.is-open .vl-stage>.vl-ambient'];" in SIDE
     assert "{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}" in SIDE        # !important: the canvas carries inline sizes
     assert "z-index:93;background:none;pointer-events:none;touch-action:pan-y;" in SIDE             # empty overlay space lets the water receive taps
