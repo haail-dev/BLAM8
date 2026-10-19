@@ -1355,6 +1355,24 @@
   // for you" explainer rides the first receipt of the thread only (Kris,
   // re-run 2026-09-13: identical lines under two replies read as a repeat).
   var heldExplained = false;
+  var pendingKnowledgeChoice = null;
+  function settleKnowledgeChoice(success) {
+    var pending = pendingKnowledgeChoice;
+    if (!pending) return;
+    if (success) {
+      pending.buttons.forEach(function (button) {
+        button.disabled = true;
+        var selected = button === pending.selected;
+        button.setAttribute("aria-pressed", selected ? "true" : "false");
+        button.className = selected
+          ? "rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm text-white"
+          : "rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-400 cursor-not-allowed";
+      });
+    } else {
+      pending.group.querySelectorAll("button").forEach(function (button) { button.disabled = false; });
+    }
+    pendingKnowledgeChoice = null;
+  }
   function appendHeldLine(receipts) {
     if (!receipts || !receipts.length) return;
     var wrap = document.createElement("div");
@@ -1396,8 +1414,12 @@
             ? "The items listed as kept for later below were recorded as suggestions, not applied settings or saved Knowledge."
             : "No new items were recorded as kept for later in this turn.");
       }
+      if (knowledgeGuide && pendingKnowledgeChoice && pendingKnowledgeChoice.message === text) {
+        settleKnowledgeChoice(Object.keys(data.patches || {}).some(function (key) { return key.indexOf("action_") === 0; }));
+      }
     } catch (e) {
       spoke = false;
+      if (pendingKnowledgeChoice && pendingKnowledgeChoice.message === text) settleKnowledgeChoice(false);
       reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
@@ -1410,12 +1432,16 @@
       choices.className = "flex flex-wrap gap-2 px-1 py-2";
       (data.guide_actions || []).forEach(function (choice) {
         var button = document.createElement("button"); button.type = "button";
+        button.setAttribute("data-knowledge-guide-choice", "");
         button.className = "rounded-lg border border-brand px-3 py-2 text-sm text-brand";
         button.textContent = choice.label;
         button.addEventListener("click", function () {
           if (sending) return;
-          if (!knowledgeGuide.isCurrent(data.focus_hash)) { input.value = "Show the current note"; send(); return; }
-          input.value = choice.message; send();
+          if (!knowledgeGuide.isCurrent(data.focus_hash)) { input.value = "Show the current note"; send({ silentUser: true }); return; }
+          var group = choices;
+          pendingKnowledgeChoice = {group:group,selected:button,message:choice.message,
+            buttons:Array.from(group.querySelectorAll('[data-knowledge-guide-choice]'))};
+          input.value = choice.message; send({ silentUser: true });
         });
         choices.appendChild(button);
       });
@@ -2082,22 +2108,29 @@
     } catch (e) { /* the page keeps its old state; the notes are saved regardless */ }
   }
 
-  async function send() {
+  async function send(options) {
+    options = options || {};
+    var silentUser = !!options.silentUser;
     var text = input.value.trim();
     if (!text || sending) return;
     if (!AUTHED && !SCENARIO && questionsRemaining !== null && questionsRemaining <= 0) {
       applyQuestionAllowance();
+      settleKnowledgeChoice(false);
       return;
     }
     sending = true; sendBtn.disabled = true; input.value = ""; autosize();
 
-    log.push({ role: "user", content: text }); saveLog(log); touch();
-    refreshTitle();
+    if (!silentUser) {
+      log.push({ role: "user", content: text }); saveLog(log);
+      refreshTitle();
+      msgs.appendChild(bubbleEl("user", text));
+    }
+    touch();
     clearPin();
     unpinCaveat();
-    msgs.appendChild(bubbleEl("user", text)); scrollDown(); showTyping();
+    scrollDown(); showTyping();
 
-    var history = log.slice(0, -1).slice(-MAX_TURNS);
+    var history = (silentUser ? log : log.slice(0, -1)).slice(-MAX_TURNS);
     if (FIX_LOG_ID) { await fixTurn(text, history); }
     else if (ONB_MODE) { await onboardTurn(text, history); }
     else if (HELP_MODE) { await helpTurn(text, history); }
