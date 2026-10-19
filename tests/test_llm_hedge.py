@@ -339,21 +339,21 @@ def test_an_action_carries_only_the_fields_it_uses():
 
 
 
-def test_the_context_chip_is_a_bar_that_fills_and_clears_on_a_hold():
-    # Kris 2026-09-24: "turn the chip into a progress bar … Green until 6/12,
-    # red at 9/12 … clear context as a press & hold for 1s".
+def test_the_context_chip_counts_rounds_without_a_progress_bar_and_clears_on_a_hold():
+    # Context remains inspectable and clearable, but the red usage meter is gone.
     js = open("src/app/static/concierge_panel.js", encoding="utf-8").read()
     tpl = open("src/app/templates/app/_concierge_panel.html", encoding="utf-8").read()
-    # counted in rounds (yours + hers): 8 rounds = 16 messages, which is all the
-    # server keeps (routes.MAX_HISTORY_TURNS, checked in test_concierge_ledger.py); the chip said 12 before 16 Oct 2026
+    # Counted in rounds (yours + hers): 8 rounds = 16 messages, which is all the
+    # server keeps (routes.MAX_HISTORY_TURNS, checked in test_concierge_ledger.py).
     assert "var CONTEXT_ROUNDS = 8, CONTEXT_TURNS = CONTEXT_ROUNDS * 2;" in js and "HISTORY_SEED_TURNS = CONTEXT_TURNS;" in js
     assert "return m.role === 'user'; }).length" in js
-    assert "turns.slice(0, -1).slice(-CONTEXT_TURNS)" in js           # what's sent = what the bar counts
+    assert "turns.slice(0, -1).slice(-CONTEXT_TURNS)" in js           # what's sent = what context counts
     bar = js[js.index("function paintContextBar() {"):][:700]
-    assert "(n >= 6 ? 'is-red' : n > 4 ? 'is-amber' : 'is-green')" in bar   # red at 6/8, amber past 4/8 (was 9/12, 6/12)
+    assert "chip.setAttribute('data-rounds', n + '/' + CONTEXT_ROUNDS);" in bar
+    assert "is-red" not in bar and "is-amber" not in bar and "style.width" not in bar
     assert "if (held) { held = false; return; }" in js                 # a hold isn't also a tap
-    for cls in (".cz-ctx-fill.is-green", ".cz-ctx-fill.is-amber", ".cz-ctx-fill.is-red", ".cz-ctx-hold"):
-        assert cls in tpl
+    assert ".cz-ctx-fill" not in tpl and "cz-context-chip::before" not in tpl
+    assert "#voice-live-root .cz-ctx-hold, #voice-gptlive-root .cz-ctx-hold" in tpl
 
 
 # ── test run 5.1 (24 Sep) ────────────────────────────────────────────────────

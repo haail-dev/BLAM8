@@ -21,6 +21,12 @@ def test_column_behaviour_in_a_fake_dom():
     assert "ok" in result.stdout
 
 
+def test_mobile_side_page_respects_ios_safe_areas_and_passes_empty_space_taps_through():
+    assert "padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left))" in SIDE
+    assert "background:none;pointer-events:none;touch-action:pan-y" in SIDE
+    assert "'.cz-side-over>*{pointer-events:auto}'" in SIDE
+
+
 def test_column_is_only_built_for_the_page_frame_on_a_computer():
     page = JS[JS.index("var pageApi = mount(pageRoot);"):]
     page = page[:page.index("return;")]

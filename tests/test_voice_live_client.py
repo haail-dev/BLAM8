@@ -1109,10 +1109,11 @@ def test_live_screen_buttons_hug_their_text_and_keep_a_44px_hit_area():
     assert "font-size" not in block
     assert all(line.strip().startswith(("#voice-gptlive-root", "/*")) for line in block.splitlines() if line.strip())
     # unchanged on purpose: the waiting chips (their wrapper clips a bigger hit area), the Confirm/Cancel
-    # circles, the count badges, Debrief and the context bar, and the Standard overlay's own buttons
+    # circles, the count badges, Debrief and the plain Context control, and the Standard overlay's own buttons
     assert "padding: 0.35rem 0.4rem 0.35rem 0.75rem;" in TEMPLATE and "padding: 0.35rem 0.6rem 0.35rem 0.3rem;" in TEMPLATE
     assert ".cz-draft-btn { width: 2.25rem; height: 2.25rem;" in TEMPLATE
-    assert "#voice-gptlive-root .cz-context-chip { min-height: 44px; }" in TEMPLATE
+    assert "#voice-live-root .cz-context-chip, #voice-gptlive-root .cz-context-chip { position: absolute; top: calc(max(0.9rem, env(safe-area-inset-top)) + 3.25rem);" in TEMPLATE
+    assert "cz-context-chip::before" not in TEMPLATE and ".cz-ctx-fill" not in TEMPLATE
     # on short viewports End's hit area would reach up over Retry audio's face, so End steps clear
     # of it (after the base End margin so the later rule wins), and the scroll box leaves End its band
     end_base = "#voice-gptlive-root .vl-end { margin:0 auto max(.5rem, env(safe-area-inset-bottom)); }"

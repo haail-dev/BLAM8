@@ -99,7 +99,8 @@ def test_on_a_phone_the_voice_screen_and_the_column_are_one_canvas_with_the_wate
     assert "r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)'" in SIDE and ":not(.vl-ambient)" not in SIDE
     assert "var VOICE_WATER = ['#voice-gptlive-root.is-open .vl-stage>.vl-pond', '#voice-gptlive-root.is-open .vl-stage>.vl-ambient'];" in SIDE
     assert "{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}" in SIDE        # !important: the canvas carries inline sizes
-    assert "z-index:93;background:none;touch-action:pan-y;" in SIDE                                # the column has no backdrop of its own
+    assert "z-index:93;background:none;pointer-events:none;touch-action:pan-y;" in SIDE             # empty overlay space lets the water receive taps
+    assert ".cz-side-over>*{pointer-events:auto}" in SIDE                                         # the column controls remain interactive
     assert "radial-gradient" not in SIDE and "#0b1220" not in SIDE                                 # no backdrop anywhere: the water shows through
     assert "doc.addEventListener('touchmove', function (e) {" in SIDE and "doc.addEventListener('touchcancel', function (e) { settle(e, true); }, { passive: true });" in SIDE
     assert "(d.p > 0.3 || v < -0.45)" in SIDE and "(d.p < 0.7 || v > 0.45)" in SIDE                # settles on the nearer half, or the way it was flicked

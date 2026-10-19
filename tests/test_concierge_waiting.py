@@ -404,7 +404,9 @@ def test_the_corners_and_the_cross():
     js = open("src/app/static/concierge_panel.js", encoding="utf-8").read()
     tpl = open("src/app/templates/app/_concierge_panel.html", encoding="utf-8").read()
     voice = open("src/app/static/voice-gptlive.js", encoding="utf-8").read()
-    assert "#voice-live-root .cz-context-chip, #voice-gptlive-root .cz-context-chip { position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 1rem;" in tpl
+    assert "#voice-live-root .cz-voice-settings, #voice-gptlive-root .cz-voice-settings {\n      position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 1rem;" in tpl
+    assert "#voice-live-root .cz-context-chip, #voice-gptlive-root .cz-context-chip { position: absolute; top: calc(max(0.9rem, env(safe-area-inset-top)) + 3.25rem); left: 1rem;" in tpl
+    assert "Conversation context" not in tpl and "cz-context-chip::before" not in tpl and ".cz-ctx-fill" not in tpl
     assert "waitBadge.textContent = waitingOpen && n ? '✕' : String(n);" in js
     assert "doneBadge.textContent = doneOpen && n ? '✕' : String(n);" in js
     assert "activeVoiceMode === 'gptlive' && voiceLiveInstance.clearScreen" in js

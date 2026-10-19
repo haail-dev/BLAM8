@@ -21,6 +21,13 @@ It has a transparent fill and a slowly moving amber hazard border. Tapping it
 reveals and expands Waiting for you. It disappears when there is nothing waiting.
 Wide layouts retain their existing waiting shortcut and side-by-side column.
 
+When the voice screen opens the mobile side page, the page content clears the
+iPhone safe areas on all four edges. Empty space in its transparent overlay
+passes taps through to the voice background; the panel controls keep their own
+touch targets. Settings sits at the top-left, with a plain Context control
+below it. Context still opens the review and clears on a press-and-hold; its
+red round-count meter has been removed.
+
 The public/onboarding Assistant's notice shine is broader, more angled and
 slightly faster. It remains a text effect. Reduced motion stops the shine,
 stepping dots and hazard border. Forced colours retain static readable tool text.
