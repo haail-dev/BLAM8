@@ -240,3 +240,24 @@ Knowledge source-correction model uses its own strict schema/contract tests.
 `platform-help` again changes only the two catalogue version fields after the
 reviewed guide and source associations change. Full request comparisons retain
 the same selected articles, permissions and actions. No detector/debt changes.
+
+## Diary and People settings ownership — 19 October 2026
+
+The Diary settings ownership move changes the six platform onboarding caller records
+(interview, industry, voice, mailbox, knowledge and data): the shared setup recipe now
+locates booking mode on Diary settings. The in-app Help caller also changes because its
+page map now includes People settings. The complete exports in
+`.cache/diary-settings-agnostic-review` were reviewed before refreshing these seven hashes.
+The review reported no new or stale business-word occurrences. The lexical detector and
+exemptions are unchanged.
+
+
+### Final evidence-map signature check — 19 October 2026
+
+After the product inventory added `settings_recommend.py` and the Diary intake
+template to their reviewed capability rows, the final source-bound signature
+refresh changed the embedded Help catalogue's `content_version` and
+`definition_version`. The complete Help request was compared with the already
+reviewed ownership-move export; those two version fields are the only changed
+values. The platform-help render fingerprint now records that final request.
+Selected articles, prompt text, permissions, actions and schema are unchanged.

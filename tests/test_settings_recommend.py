@@ -105,10 +105,25 @@ def test_parse_help_extracts_valid_recommendations():
                                {"name": "open_time", "value": "08:00"}]},
                        ]})
     reply, nav, submit, recs = concierge._parse_help(text)
-    assert [r["page"] for r in recs] == ["booking_details", "diary_settings"]
-    rec = recs[0]
-    assert rec["href"] == "/app/diary/intake" and rec["label"] == "Booking details"
-    assert [v["name"] for v in rec["values"]] == ["field", "stay_mode"]
+    assert [r["page"] for r in recs] == ["diary_settings", "booking_details"]
+    mode_rec, details_rec = recs
+    assert mode_rec["href"] == "/app/diary/settings" and mode_rec["label"] == "Diary settings"
+    assert [v["name"] for v in mode_rec["values"]] == ["stay_mode", "open_time"]
+    assert details_rec["href"] == "/app/diary/intake" and details_rec["label"] == "Booking details"
+    assert [v["name"] for v in details_rec["values"]] == ["field"]
+
+
+def test_legacy_stay_recommendation_still_suppresses_duplicate_departure_question():
+    text = json.dumps({"reply": "Here you go.", "nav": "", "submit": {"kind": "", "summary": ""},
+                       "recommend": [{"page": "booking_details", "values": [
+                           {"name": "stay_mode", "value": "1"},
+                           {"name": "field", "value": "Departure / collection time | required | when leaving"},
+                           {"name": "field", "value": "Pet name | required | e.g. Bella"},
+                       ]}]})
+    *_, recs = concierge._parse_help(text)
+    assert [r["page"] for r in recs] == ["diary_settings", "booking_details"]
+    assert [v["name"] for v in recs[0]["values"]] == ["stay_mode"]
+    assert [v["value"].split("|")[0].strip() for v in recs[1]["values"]] == ["Pet name"]
 
 
 def test_parse_help_tolerates_the_old_single_object_shape():

@@ -1,4 +1,1 @@
-{
-  "sha256": "09b1d666bbfb27c40609be58b762b50b73d66d43c4924c959d9fd7bba5549188",
-  "excerpt": "[{\"messages\":[{\"content\":\"Help with setup\",\"role\":\"user\"}],\"operation\":\"concierge_onboard\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":false,\"pr"
-}
+{"sha256":"1c28735a885accd8660647be1364ada6f785ceab750d42ca2f41200d11db2d7c","excerpt":"[{\"messages\":[{\"content\":\"Help with setup\",\"role\":\"user\"}],\"operation\":\"concierge_onboard\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":false,\"pr"}

@@ -94,7 +94,7 @@ def _intake(selected, snapshot):
         if not isinstance(label, str) or not label.strip():
             raise Invalid("Supply a booking detail label.")
         if intake._is_stay_label(label):
-            raise Invalid("Change the stay mode on the booking details page.")
+            raise Invalid("Change the booking mode in Diary settings.")
         identity = intake._norm(label)
         if identity in seen:
             raise Invalid("This booking detail appears more than once.")

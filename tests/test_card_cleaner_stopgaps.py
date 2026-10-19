@@ -81,9 +81,9 @@ def test_extra_page_value_over_limit_is_dropped_not_cut(caplog):
 
 
 def test_stay_mode_in_words():
-    assert sr.display("booking_details", "stay_mode", "0") == "Overnight stays: no"
-    assert sr.display("booking_details", "stay_mode", "1") == "Overnight stays: yes"
-    assert sr.display("booking_details", "stay_mode", "maybe") is None
+    assert sr.display("diary_settings", "stay_mode", "0") == "Booking type: no"
+    assert sr.display("diary_settings", "stay_mode", "1") == "Booking type: yes"
+    assert sr.display("diary_settings", "stay_mode", "maybe") is None
 
 
 def test_prose_fields_have_room_for_a_paragraph():

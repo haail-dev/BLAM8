@@ -38,12 +38,15 @@ def controls():
 
 
 def scalar_specs():
+    diary = deepcopy(setup_card_scalars.SPECS)
+    # Booking mode is presented and accepted on Diary settings. Keep the old
+    # booking_details adapter only to accept proposals that were already saved.
+    diary.update(deepcopy(setup_card_mode.SPECS))
     return {
-        'diary_settings': deepcopy(setup_card_scalars.SPECS),
+        'diary_settings': diary,
         'invoice_settings': deepcopy(setup_card_invoices.specs('invoice_settings')),
         'packages': deepcopy(setup_card_invoices.specs('packages')),
         'crm_settings': deepcopy(setup_card_crm.SPECS),
-        'booking_details': deepcopy(setup_card_mode.SPECS),
     }
 
 

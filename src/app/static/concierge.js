@@ -2502,6 +2502,11 @@
       var gates = {};
       values.forEach(function (v) {
         if (v.name === "service" || v.name === "resource") return;
+        if (v.name === "stay_mode") {
+          var modeForm = document.querySelector('form[action="/app/diary/settings/booking-mode"]');
+          if (modeForm) pfSetField(modeForm, "booking_mode", /^(1|true|yes)$/i.test(String(v.value)) ? "stay" : "appointment");
+          return;
+        }
         // blackout_dates is one-per-line; accept a comma-separated value too.
         var wrote = pfSetField(form, v.name, v.name === "blackout_dates" ? v.value.replace(/,\s*/g, "\n") : v.value);
         if (wrote && PF_GATES[v.name]) gates[PF_GATES[v.name]] = true;
@@ -2524,7 +2529,11 @@
       form = document.querySelector('form[action="/app/diary/intake"]');
       if (!form) return;
       values.forEach(function (v) {
-        if (v.name === "stay_mode") pfSetField(form, "stay_mode", v.value);
+        // Old prefill cards can still be opened after the control moved.
+        if (v.name === "stay_mode") {
+          var modeForm = document.querySelector('form[action="/app/diary/settings/booking-mode"]');
+          if (modeForm) pfSetField(modeForm, "booking_mode", /^(1|true|yes)$/i.test(String(v.value)) ? "stay" : "appointment");
+        }
       });
       pfFillNamedRows("rows", "row-template", values, "field", {
         label: "label", required: "required", hint: "hint", services: "services", remember: "remember", kind: "doc"

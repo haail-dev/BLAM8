@@ -60,9 +60,9 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
   <input type="hidden" name="return_to" value="{{ sched_return }}">
   <input type="hidden" name="booking_revision" value="{{ scheduling_cfg.get('booking_revision', 0) }}">
-  <fieldset class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <legend class="px-5 pt-5 text-sm font-semibold text-navy">Booking availability</legend>
-    <p class="px-5 pb-3 text-xs text-slate-500">These choices decide whether the agent may book. Set the actual diary hours, days and capacity in Scheduling below.</p>
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden" aria-labelledby="booking-availability-heading">
+    <div class="px-5 py-4"><h2 id="booking-availability-heading" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Booking availability</h2>
+    <p class="text-sm text-slate-400">These choices decide whether the agent may book. Set hours, days and capacity in Diary calendar below.</p></div>
     {% set review = scheduling_cfg.get('booking_setting_review') or {} %}
     {% for key, label, value in [('capacity', 'Capacity', scheduling_cfg.capacity_per_window),
                                 ('working_days', 'Working days', scheduling_cfg.working_days),
@@ -70,14 +70,12 @@
                                 ('timezone', 'Timezone', scheduling_cfg.get('timezone'))] %}
       {% set meta = review.get(key, {}) %}
       {% set state = meta.get('state', 'set' if value is not none and value is defined else 'unset') %}
-      <div class="grid gap-2 border-t border-slate-200 px-5 py-3 sm:grid-cols-[minmax(9rem,1fr)_minmax(15rem,2fr)] sm:items-center">
-        <div>
-          <p class="text-sm font-semibold text-navy">{{ 'Booking timezone' if key == 'timezone' else label }}</p>
-          <p class="text-xs text-slate-500">{{ 'In use: carried over, please confirm' if meta.get('review_status') == 'carried_over_review' else ('Confirmed' if meta.get('review_status') == 'confirmed' else 'Not yet confirmed') }}</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <label class="block text-xs text-slate-500">Booking status
-            <select id="{{ key }}_state" name="{{ key }}_state" class="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800">
+      {% set status = {'unset': 'Not set yet', 'set': 'Apply configured value', 'off': 'Off · booking unavailable', 'not_applicable': 'Not applicable'}.get(state, 'Not set yet') %}
+      <details class="group/row border-t border-slate-200" data-booking-setting="{{ key }}">
+        {{ sface('Booking timezone' if key == 'timezone' else label, status ~ (' · confirmed' if meta.get('review_status') == 'confirmed' else ' · needs confirmation')) }}
+        <div class="px-5 pb-5 pt-1 space-y-4 min-w-0">
+          <label class="block min-w-0 text-xs text-slate-500">Booking status
+            <select id="{{ key }}_state" name="{{ key }}_state" class="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800">
               {% for option, text in [('unset', 'Not set yet: booking unavailable'), ('set', 'Apply value'),
                                       ('off', 'Explicitly off: booking unavailable'), ('not_applicable', 'Not applicable')] %}
               <option value="{{ option }}" {{ 'selected' if state == option }}>{{ text }}</option>
@@ -85,8 +83,8 @@
             </select>
           </label>
           {% if key == 'timezone' %}
-          <label class="block text-xs text-slate-500">Business timezone
-            <select id="timezone" name="timezone" class="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800">
+          <label class="block min-w-0 text-xs text-slate-500">Business timezone
+            <select id="timezone" name="timezone" class="mt-1 block w-full min-w-0 max-w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800">
               <option value="" {{ 'selected' if not scheduling_cfg.get('timezone') }}>Choose timezone</option>
               <option value="Europe/London" {{ 'selected' if scheduling_cfg.get('timezone') == 'Europe/London' }}>Europe/London</option>
             </select>
@@ -94,10 +92,10 @@
           {% endif %}
           <label class="inline-flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" name="confirm_booking_setting" value="{{ key }}"> Confirm {{ label|lower }}</label>
         </div>
-      </div>
+      </details>
     {% endfor %}
     <p class="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">Other timezones are not supported yet. Not applicable capacity requires configured resource pools.</p>
-  </fieldset>
+  </section>
   {# `sched_fold` (set only by settings.html, where this is one card among a
      dozen) turns the header into a one-line closed face, matching the fold the
      rest of that page grew. On /app/diary/settings this partial IS the page, so
@@ -157,6 +155,24 @@
     <div class="px-5 pb-4">
     <div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Diary settings saved — they apply from the next availability check.</div>
     </div>
+    {% endif %}
+
+    {% if practice_on %}
+    <details class="group/row border-t border-slate-200" data-reminder-settings>
+      {{ sface('Appointment reminders', reminder_cycle.leads_hours|join(', ') ~ ' hours before') }}
+      <div class="px-5 pb-5 pt-1 space-y-4">
+        <p class="text-xs text-slate-500">Choose when reminders are sent before an appointment. Keep at least one time.</p>
+        <input type="hidden" name="reminder_cycle_present" value="1">
+        <div class="space-y-2">
+        {% for i in range(6) %}
+          <label class="block text-xs text-slate-500">Reminder {{ i + 1 }} (hours before)
+            <input name="reminder_lead_hours" type="number" min="1" max="720" step="1" value="{{ reminder_cycle.leads_hours[i] if i < reminder_cycle.leads_hours|length else '' }}" class="mt-1 block w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm">
+          </label>
+        {% endfor %}
+        </div>
+        <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="reminder_ask_confirm" value="1" {{ 'checked' if reminder_cycle.ask_confirm }}>Ask the customer to confirm</label>
+      </div>
+    </details>
     {% endif %}
 
     {# ── BASE — the time grid every business needs ───────────────────────────── #}

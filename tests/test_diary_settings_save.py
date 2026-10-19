@@ -2,6 +2,7 @@
 db.upsert_scheduling_config as cleaned config. Route-level via TestClient with auth + CSRF
 overridden and db monkeypatched (in-process, no network)."""
 from tests.booking_fixtures import carried_config
+import json
 import pytest
 from fastapi.testclient import TestClient
 
@@ -80,6 +81,29 @@ def test_save_persists_all_depth_sections(saved):
     assert d["party_size"] == {"enabled": True, "max_people": 40}
     assert d["recurring"]["enabled"] and d["recurring"]["frequencies"] == ["weekly"]
     assert d["delivery"] == {"offered": True, "fee": 15.0, "radius_miles": 20}
+
+
+def test_mode_only_save_preserves_booking_requirements_without_completing_them(saved, monkeypatch):
+    client, _ = saved
+    expected = {"page": "booking_details", "config": {
+        "booking_mode": "appointment", "intake_fields": [
+            {"label": "Pet name", "required": True, "hint": ""}],
+    }, "definitions": []}
+    writes = []
+    monkeypatch.setattr(dashboard.db, "visible_modules", lambda *a, **k: {"email"})
+    monkeypatch.setattr(dashboard.setup_forms, "save",
+                        lambda ctx, page, snap, ops: writes.append((page, snap, ops)))
+    response = client.post("/app/diary/settings/booking-mode", data={
+        "booking_mode": "stay", "settings_snapshot": json.dumps(expected)}, follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == "/app/diary/settings?mode=saved"
+    page, snapshot, operations = writes[0]
+    assert page == "booking_details" and snapshot == expected
+    patch = operations[0]["fields"]
+    assert patch["booking_mode"] == "stay"
+    assert patch["intake_fields"] == expected["config"]["intake_fields"] + [
+        {"label": "Departure / collection date & time", "required": True,
+         "hint": "When the booking ends — pick-up / check-out / drop-back."}]
+    assert "intake_configured_at" not in patch
 
 
 def test_unchecked_toggles_save_off(saved):

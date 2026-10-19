@@ -85,7 +85,7 @@ PROFILES = [
                      "dog daycare", "animal boarding"),
         "recipe": (
             "Kennels / cattery / boarding:\n"
-            "- Booking requirements: turn ON 'Overnight stays' — a booking then runs from a "
+            "- Diary settings: choose arrival-to-departure booking mode — a booking then runs from a "
             "drop-off to a collection and can span days.\n"
             "- Resource types: one per kennel/pen size (e.g. Small kennel, Large kennel) with a "
             "count each, so a dog can only take a dog space and large dogs need a large pen.\n"
@@ -105,7 +105,7 @@ PROFILES = [
             "Equipment / plant hire:\n"
             "- Resource types: one per item you hire (e.g. Excavator, Dumper, Generator), count "
             "= how many you own, rate per day or week — capacity is tracked per item.\n"
-            "- Booking requirements: turn ON 'Overnight stays' so an item goes out from one date "
+            "- Diary settings: choose arrival-to-departure booking mode so an item goes out from one date "
             "to another.\n"
             "- Quantity: hiring several of the same item = quantity N.\n"
             "- Delivery & collection: turn on if you deliver, set the fee/radius — the agent "
@@ -121,7 +121,7 @@ PROFILES = [
                      "holiday let", "airbnb", "rooms", "lodge", "campsite", "glamping"),
         "recipe": (
             "Hotel / B&B / holiday let:\n"
-            "- Booking requirements: turn ON 'Overnight stays'.\n"
+            "- Diary settings: choose arrival-to-departure booking mode.\n"
             "- Resource types: one per room type (e.g. Single, Double, Suite) with a count and a "
             "per-night rate — each type is its own availability.\n"
             "- Stays pricing & rules: deposit, minimum nights, and check-in-after / "
@@ -139,7 +139,7 @@ PROFILES = [
             "Car / van hire:\n"
             "- Resource types: one per vehicle class (e.g. Economy, SUV, Van) with a count and a "
             "per-day rate.\n"
-            "- Booking requirements: turn ON 'Overnight stays' (vehicle out date→date).\n"
+            "- Diary settings: choose arrival-to-departure booking mode (vehicle out date→date).\n"
             "- Stays pricing & rules: deposit and minimum hire.\n"
             "- Delivery & collection: turn on if you deliver/collect or have depot pickup.\n"
             "- Booking requirements: driver name, licence, contact."),
@@ -153,7 +153,7 @@ PROFILES = [
             "Self-storage:\n"
             "- Resource types: one per unit size (e.g. 25 sq ft, 50 sq ft, 100 sq ft) with a "
             "count and a weekly rate.\n"
-            "- Booking requirements: turn ON 'Overnight stays' for the occupied period.\n"
+            "- Diary settings: choose arrival-to-departure booking mode for the occupied period.\n"
             "- Stays pricing & rules: deposit and a minimum term.\n"
             "- Note: open-ended 'until cancelled' isn't supported yet — book a long end date and "
             "extend when needed."),
@@ -168,7 +168,7 @@ PROFILES = [
             "Venue / function-room hire:\n"
             "- Resource types: one per space/room you let, with a count and an hourly or daily "
             "rate.\n"
-            "- Booking unit: 'Booked times' for hourly/half-day; turn on 'Overnight stays' for "
+            "- Booking unit: 'Booked times' for hourly/half-day; choose arrival-to-departure mode in Diary settings for "
             "multi-day events.\n"
             "- Book by party size: capture guest numbers and set the max per space.\n"
             "- Stays pricing & rules: deposit; Gap between bookings for set-up/tear-down.\n"
@@ -386,7 +386,7 @@ def config_status(cfg: dict | None) -> str:
     set_, todo = [], []
     (set_ if services.configured(cfg.get("service_types")) else todo).append("Services & durations")
     (set_ if diary_config.resources_configured(cfg.get("resource_types")) else todo).append("Resource types")
-    (set_ if intake.stay_mode(cfg) else todo).append("Overnight stays")
+    (set_ if intake.stay_mode(cfg) else todo).append("Booking mode: arrival to departure")
     (set_ if diary_config.stay_pricing_configured(cfg.get("stay_pricing")) else todo).append("Stay pricing")
     (set_ if diary_config.day_hours_configured(cfg.get("day_hours")) else todo).append("Per-day hours / check-in-out")
     (set_ if diary_config.party_size_enabled(cfg.get("party_size")) else todo).append("Party size")

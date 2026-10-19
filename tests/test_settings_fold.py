@@ -62,11 +62,14 @@ def _env(monkeypatch, cfg=None, connected=True, modules=()):
         "portal_slug": "acme"})
     monkeypatch.setattr(dashboard.db, "get_connection_status",
                         lambda *a, **k: {"sub_expires": None} if connected else None)
+    monkeypatch.setattr(dashboard.db, "calendar_connected", lambda *a, **k: bool(connected))
     monkeypatch.setattr(dashboard.db, "visible_modules", lambda *a, **k: set(modules))
     monkeypatch.setattr(dashboard.db, "active_modules", lambda *a, **k: set(modules))
     monkeypatch.setattr(dashboard.db, "list_mailboxes", lambda *a, **k: [])
     monkeypatch.setattr(dashboard.db, "list_email_log", lambda *a, **k: [])
     monkeypatch.setattr(dashboard.db, "get_scheduling_config", lambda *a, **k: carried_config({}))
+    monkeypatch.setattr(dashboard.setup_forms, "load", lambda ctx, page: {
+        "page": page, "config": dashboard.db.get_scheduling_config(ctx.tenant_id) or {}, "definitions": []})
     monkeypatch.setattr(dashboard.db, "is_enterprise", lambda *a, **k: False)
     monkeypatch.setattr(dashboard.billing, "has_active_subscription", lambda *a, **k: False)
     monkeypatch.setattr(dashboard.portal, "ensure_portal_slug", lambda *a, **k: "acme")

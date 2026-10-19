@@ -233,7 +233,7 @@ def parse(page, name, value):
                     raise ValueError('Supply a note label and content.')
                 value = {'label': label.strip(), 'content': content.strip()}
             return {"fields": setup_card_knowledge.parse(value), "problems": [], "provided": sorted(value)}
-        if (page, name) == ("booking_details", "setting"):
+        if (page, name) in {("booking_details", "setting"), ("diary_settings", "setting")} and isinstance(value, dict) and value.get("key") == "stay_mode":
             from app import setup_card_mode
             return {"fields": setup_card_mode.parse(value), "problems": [], "provided": sorted(value)}
         if page == "crm_fields":
@@ -472,7 +472,7 @@ def describe(page, name, fields, provided=None):
         from app import setup_card_packages
         return setup_card_packages.describe(fields)
     if name == "setting":
-        if page == "booking_details":
+        if (page, name) == ("booking_details", "setting") or (page, name) == ("diary_settings", "setting") and fields.get("key") == "stay_mode":
             from app import setup_card_mode
             return setup_card_mode.describe(fields)
         if page in {"invoice_settings", "packages"}:

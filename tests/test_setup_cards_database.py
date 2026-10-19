@@ -8,6 +8,8 @@ from tests.test_booking_capacity_database import ROOT, cluster as base_cluster
 
 FORWARD = ROOT / "db/migrations/20261004_setup_cards.sql"
 ROLLBACK = ROOT / "db/migrations/20261004_setup_cards.rollback.sql"
+DIARY_MODE_FORWARD = ROOT / "db/migrations/20261019_diary_booking_mode_setup_cards.sql"
+DIARY_MODE_ROLLBACK = ROOT / "db/migrations/20261019_diary_booking_mode_setup_cards.rollback.sql"
 
 
 @pytest.fixture
@@ -231,6 +233,43 @@ def test_booking_mode_atomic_receipt_late_history_and_migration_cycle(cluster):
         conn.execute(ROLLBACK.read_text(encoding='utf-8'))
         conn.execute(FORWARD.read_text(encoding='utf-8'))
         assert snapshot(True) == retained
+
+
+def test_diary_owned_booking_mode_migration_keeps_requirements_step_open(cluster):
+    from app import setup_card_mode
+    driver, dsn = cluster
+    tenant = uuid.uuid4()
+    with driver.connect(dsn, autocommit=True) as conn:
+        initialise(conn)
+        conn.execute(DIARY_MODE_FORWARD.read_text(encoding="utf-8"))
+        conn.execute("insert into tenants values(%s)", (tenant,))
+        conn.execute("insert into scheduling_config(tenant_id) values(%s)", (tenant,))
+        save(conn, tenant, 0, page="diary_settings")
+        before = conn.execute("select to_jsonb(s) from scheduling_config s where tenant_id=%s", (tenant,)).fetchone()[0]
+        expected = before | {"_setup_has_bookings": False}
+        patch, _ = setup_card_mode.prepare(
+            {"id": "mode", "fields": {"key": "stay_mode", "value": True}},
+            {"config": before, "has_bookings": False})
+        save(conn, tenant, 1, page="diary_settings", expected=expected, patch=patch)
+        after = conn.execute("select to_jsonb(s) from scheduling_config s where tenant_id=%s", (tenant,)).fetchone()[0]
+        assert after["booking_mode"] == "stay"
+        assert after["intake_fields"] == [{"label": "Departure / collection date & time", "required": True,
+                                            "hint": "When the booking ends — pick-up / check-out / drop-back."}]
+        assert after["intake_configured_at"] is None
+
+        conn.execute("insert into bookings(tenant_id,booking_date,status) values(%s,current_date,'completed')", (tenant,))
+        with pytest.raises(driver.errors.RaiseException, match="booking history"):
+            save(conn, tenant, 2, page="diary_settings",
+                 expected=after | {"_setup_has_bookings": False},
+                 patch={"booking_mode": "appointment", "intake_fields": []})
+        current = conn.execute("select to_jsonb(s) from scheduling_config s where tenant_id=%s", (tenant,)).fetchone()[0]
+        assert current == after
+        conn.execute(DIARY_MODE_ROLLBACK.read_text(encoding="utf-8"))
+        with pytest.raises(driver.errors.RaiseException, match="BLAM8_SETUP_INVALID"):
+            save(conn, tenant, 2, page="diary_settings",
+                 expected=after | {"_setup_has_bookings": False},
+                 patch={"booking_mode": "appointment", "intake_fields": []})
+        conn.execute(DIARY_MODE_FORWARD.read_text(encoding="utf-8"))
 
 
 def test_customer_fields_atomic_identity_saved_values_and_migration_cycle(cluster):

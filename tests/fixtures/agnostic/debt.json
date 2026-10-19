@@ -9705,10 +9705,10 @@
       "path": "src/app/settings_guide.py",
       "line": 142,
       "kind": "string",
-      "fingerprint": "8cbe55c7b32de730e52c8a16b18008ce8db2ed46b926cf20172a710e20a37480",
+      "fingerprint": "e597f0052352af797e07cedb14bd6c8f37103655dc02e2fc08290fa1574a4540",
       "scope": "<module>",
       "occurrence": 0,
-      "excerpt": "\"- Booking requirements: turn ON 'Overnight stays' (vehicle out date→date).\\n\"",
+      "excerpt": "\"- Diary settings: choose arrival-to-departure booking mode (vehicle out date→date).\\n\"",
       "owner": "U20",
       "closure_step": "S4a",
       "reason": 0

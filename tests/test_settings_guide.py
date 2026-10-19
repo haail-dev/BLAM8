@@ -60,7 +60,7 @@ def test_config_status_reads_what_is_set():
 def test_guide_for_kennels_includes_recipe_base_and_status():
     g = sg.guide_for("other", "boarding kennels", {"service_types": []})
     assert "Foundation (every business" in g          # base
-    assert "Overnight stays" in g and "kennel" in g.lower()  # kennels recipe
+    assert "arrival-to-departure" in g and "kennel" in g.lower()  # kennels recipe
     assert "Their current diary setup:" in g          # status
 
 

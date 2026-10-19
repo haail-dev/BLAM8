@@ -90,7 +90,8 @@ def test_mode_acceptance_rechecks_booking_history_and_allows_email_only(client, 
     from tests.test_setup_card_mode import mode
     c, state = client
     history = {'exists': False}
-    state['card'] = start(mode(True), page='booking_details')
+    state['card'] = start(mode(True), page='diary_settings')
+    state['card']['page'] = 'booking_details'  # a pending card saved before the move
     monkeypatch.setattr(db, 'visible_modules', lambda *a, **kw: {'email'})
     monkeypatch.setattr(db, 'crm_list_field_definitions', lambda *a, **kw: [])
     monkeypatch.setattr(db, 'setup_has_booking_history', lambda *a, **kw: history['exists'])
@@ -104,6 +105,28 @@ def test_mode_acceptance_rechecks_booking_history_and_allows_email_only(client, 
     history['exists'] = False
     assert c.post(base + '/accept', json=body | {'settings_version': preview['settings_version']}).status_code == 200
     assert state['saves'][0]['settings_patch']['booking_mode'] == 'stay'
+
+
+def test_diary_mode_card_uses_diary_ownership_and_does_not_complete_requirements(client, monkeypatch):
+    from tests.test_setup_card_mode import mode
+    c, state = client
+    state['card'] = start(mode(True), page='diary_settings')
+    state['cfg'] = {"booking_mode": "appointment", "intake_fields": [
+        {"label": "Pet name", "required": True, "hint": ""}],
+        "service_types": [], "resource_types": []}
+    monkeypatch.setattr(db, 'setup_has_booking_history', lambda *a, **kw: False)
+    body = selection(state)
+    base = '/concierge/setup-cards/diary_settings'
+    preview = c.post(base + '/preview', json=body)
+    assert preview.status_code == 200
+    body['settings_version'] = preview.json()['settings_version']
+    accepted = c.post(base + '/accept', json=body)
+    assert accepted.status_code == 200
+    patch = state['saves'][0]['settings_patch']
+    assert patch['booking_mode'] == 'stay'
+    assert patch['intake_fields'][0]['label'] == 'Pet name'
+    assert patch['intake_fields'][1]['label'] == 'Departure / collection date & time'
+    assert 'intake_configured_at' not in patch
 
 
 def test_customer_field_acceptance_rechecks_definitions_and_edit_permission(client, monkeypatch):
