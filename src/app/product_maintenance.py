@@ -25,6 +25,12 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
 SOURCE_CAPABILITIES = {
     'src/app/booking_policy.py': 'scheduling',
     'src/app/setup_handoff.py': 'scheduling',
+    'src/app/static/concierge_panel.js': 'owner.assistant',
+    'src/app/static/concierge_sidebar.js': 'owner.assistant',
+    'src/app/static/concierge_discovery.css': 'owner.assistant',
+    'src/app/templates/app/_concierge_panel.html': 'owner.assistant',
+    'src/app/templates/app/_concierge_history.html': 'owner.assistant',
+    'src/app/static/concierge_busy.css': 'product.help',
 }
 
 
@@ -50,6 +56,8 @@ def validate_operator_reviews(receipt, root=ROOT):
 
 def source_files(row, root=ROOT):
     files=set(row['implementation']+row['documentation'])
+    files.update(name for name, capability in SOURCE_CAPABILITIES.items()
+                 if capability == row.get('id') and (root/name).is_file())
     files.update(p for p in SHARED if (root/p).is_file())
     files.update(p.relative_to(root).as_posix() for p in (root/'src/app').glob('setup_card_*.py'))
     # These templates consume shared values; they must be reviewed when their

@@ -271,11 +271,11 @@
       if (role === 'user') {
         wrap.className = 'flex flex-col items-end';
         var b = document.createElement('div');
-        b.className = 'cz-message-bubble cz-message-user rounded-2xl bg-brand text-white px-4 py-2.5 text-sm max-w-[85%] whitespace-pre-wrap';
+        b.className = 'cz-message-bubble cz-message-user rounded-2xl bg-brand text-white px-4 py-2.5 text-sm max-w-[95%] whitespace-pre-wrap';
         b.textContent = text;
         wrap.appendChild(b);
       } else {
-        wrap.className = 'cz-message-bubble cz-message-assistant rounded-2xl bg-white border border-slate-200 px-4 pt-3 pb-4 text-sm text-slate-700 max-w-[85%] whitespace-pre-wrap';
+        wrap.className = 'cz-message-bubble cz-message-assistant rounded-2xl bg-white border border-slate-200 px-4 pt-3 pb-4 text-sm text-slate-700 max-w-[95%] whitespace-pre-wrap';
         setRich(wrap, text);
       }
       markOrigin(wrap,origin,turnId,role);
@@ -430,10 +430,10 @@
 
     function trailStrip(origin, turnId) {
       var wrap = document.createElement('div');
-      wrap.className = 'max-w-[85%] space-y-1';
+      wrap.className = 'max-w-[95%] space-y-1';
       wrap.setAttribute('data-cz-trail', '');
       var row = document.createElement('div');
-      row.className = 'flex flex-wrap items-center gap-1';
+      row.className = 'cz-tool-trail';
       var detail = document.createElement('p');
       detail.className = 'hidden text-[11px] text-slate-400 italic px-1 break-words';
       detail.setAttribute('data-cz-trail-detail', '');
@@ -441,29 +441,35 @@
       wrap.appendChild(detail);
       if (origin) markOrigin(wrap, origin, turnId, 'assistant');
       messages.appendChild(wrap);
+      paintModeBlocks();
       scrollDown();
       return { wrap: wrap, row: row };
     }
     function trailPill(strip, item, active) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600 transition' +
-                    (active ? ' animate-pulse' : '') +
-                    (item.detail ? ' hover:bg-indigo-100' : ' cursor-default');
-      b.textContent = active ? (item.hint || 'Searching your data…')
+      b.className = 'cz-tool-chip' + (item.detail ? '' : ' cursor-default');
+      if (active) b.setAttribute('data-cz-tool-active', '');
+      b.textContent = active ? (item.hint || 'Searching your data').replace(/[.\u2026\s]+$/, '')
                              : (item.label || 'Searched');
       if (item.detail) {
         b.setAttribute('data-cz-pill', '');
         b.setAttribute('data-cz-detail', item.detail);
       }
+      if (strip.row.childElementCount) strip.row.appendChild(document.createTextNode(', '));
       strip.row.appendChild(b);
       scrollDown();
       return b;
     }
     function settlePill(pill, item) {
       if (!pill) return;
-      pill.classList.remove('animate-pulse');
+      pill.removeAttribute('data-cz-tool-active');
       pill.textContent = (item && item.label) || 'Searched';
+    }
+    function finishTrail(strip) {
+      if (!strip || strip.row.hasAttribute('data-cz-tools-finished')) return;
+      strip.row.setAttribute('data-cz-tools-finished', '');
+      strip.row.appendChild(document.createTextNode('.'));
     }
     // One delegated handler covers server-rendered history pills AND live ones.
     messages.addEventListener('click', function (e) {
@@ -479,8 +485,12 @@
     });
     function statusBubble(origin, turnId) {
       var el = document.createElement('div');
-      el.className = 'cz-message-bubble cz-message-assistant rounded-2xl bg-white border border-slate-200 px-4 pt-3 pb-4 text-sm text-slate-400 max-w-[85%] italic';
-      el.textContent = 'Searching your data…';
+      el.className = 'cz-tool-trail max-w-[95%]';
+      var words = document.createElement('span');
+      words.className = 'cz-tool-chip';
+      words.setAttribute('data-cz-tool-active', '');
+      words.textContent = 'Looking at your request';
+      el.appendChild(words);
       el.setAttribute('data-cz-pending', '');
       markOrigin(el, origin, turnId, 'assistant');
       messages.appendChild(el);
@@ -857,6 +867,7 @@
     // re-checks it and it becomes the one live card); ✕ lets it go. The card
     // just shown is not "waiting" for its first five minutes.
     var waitingBox = root.querySelector('#cz-waiting');
+    var waitingShortcut = root.querySelector('#cz-waiting-shortcut');
     var waitingItems = [];
     var justShown = {};          // proposal_id → when this screen showed it
     var waitTimer = null;
@@ -1340,6 +1351,12 @@
     // message is being answered and reappears with the answer. Tapped, the same list opens
     // centred above the composer; a line brings its card back, a tap outside closes it.
     var waitDot = null, waitDotRow = null, waitDotMo = null, dotOpen = false;
+    function openWaitingItems(e) {
+      e.stopPropagation();
+      if (sideHost && sideHost.focusable()) { sideHost.revealWaiting(); return; }
+      dotOpen = !dotOpen;
+      paintWaiting();
+    }
     function mountWaitDot() {
       if (waitDot || !messages) return;
       waitDotRow = document.createElement('div');
@@ -1353,6 +1370,7 @@
         dotOpen = !dotOpen;
         paintWaiting();
       });
+      if (waitingShortcut) waitingShortcut.addEventListener('click', openWaitingItems);
       waitDotRow.appendChild(waitDot);
       messages.appendChild(waitDotRow);
       // Every bubble, card and task list is appended to the thread: follow the newest.
@@ -1411,6 +1429,11 @@
         waitDot.setAttribute('aria-label', dotOpen ? 'Close the waiting list' : waitingCounts());
         waitDot.setAttribute('aria-expanded', dotOpen ? 'true' : 'false');
         waitDot.classList.toggle('is-open', dotOpen && n > 0);
+      }
+      if (waitingShortcut) {
+        waitingShortcut.hidden = !n;
+        waitingShortcut.textContent = 'Waiting · ' + n;
+        waitingShortcut.setAttribute('aria-label', 'Waiting: ' + waitingCounts());
       }
       if (waitDotRow) waitDotRow.classList.toggle('is-empty', !n);
       placeWaitDot();
@@ -1822,6 +1845,7 @@
         }
         clearTimeout(slow);
         settlePill(livePill, liveItem);
+        finishTrail(strip);
         if (liveItem && liveItem.label) agentNow.ran.push(liveItem.label);
         agentNow.busy = false; agentNow.step = ''; agentNow.links = (done && done.links) || [];
         sideChanged();
@@ -1839,12 +1863,14 @@
       } catch (e) {
         clearTimeout(slow);
         settlePill(livePill, liveItem);
+        finishTrail(strip);
         agentNow.busy = false; agentNow.step = ''; sideChanged();
         if (!strip) status.remove();
         bubble('assistant', 'I had trouble processing that. Could you try asking differently?', 'typed', displayTurnId);
       }
       busy = false; setComposerBusy(false);
-      input.focus();
+      // Returning focus must not pull the phone strip back from the action just presented.
+      input.focus({ preventScroll: true });
     }
 
     // ── live voice (moved from the widget's business tab) ────────────────────
@@ -2164,7 +2190,7 @@
         voiceStage.cardAnchor = replyEl;
       }
       if(voiceStage.cardNode && (payload.turn_id || payload.display_turn_id))voiceStage.cardNode.setAttribute('data-cz-owner-turn',payload.turn_id || payload.display_turn_id);
-      if(payload.trail && payload.trail.length){var strip=trailStrip(payload.origin || (savedVoiceMode()==='gptlive'?'live':'voice'),payload.turn_id || payload.display_turn_id);payload.trail.forEach(function(item){trailPill(strip,item,false);});replyEl.parentNode.insertBefore(strip.wrap,replyEl);}
+      if(payload.trail && payload.trail.length){var strip=trailStrip(payload.origin || (savedVoiceMode()==='gptlive'?'live':'voice'),payload.turn_id || payload.display_turn_id);payload.trail.forEach(function(item){trailPill(strip,item,false);});finishTrail(strip);replyEl.parentNode.insertBefore(strip.wrap,replyEl);}
       voiceStage.fresh = !!(voiceStage.links.length || (payload.proposal && payload.proposal.proposal_id)
                             || (payload.draft && payload.draft.log_id)
                             || (payload.tasks && payload.tasks.batch_id));
@@ -3030,11 +3056,12 @@
     var TASK_POLL = { queued: 1, working: 1, waiting: 1 };
     function pollTasks() {
       var ids = [];
-      Array.prototype.slice.call(root.querySelectorAll('[data-cz-tasks]')).forEach(function (box) {
-        var open = Array.prototype.some.call(box.querySelectorAll('[data-task]'), function (r) {
-          return TASK_POLL[r.getAttribute('data-status')];
-        });
-        if (open) ids.push(box.getAttribute('data-cz-tasks'));
+      Object.keys(taskRows).forEach(function (id) {
+        var row = taskRows[id];
+        if (!row.isConnected || !TASK_POLL[row.getAttribute('data-status')]) return;
+        var box = row.closest('[data-cz-tasks]');
+        var batch = box && box.getAttribute('data-cz-tasks');
+        if (batch && ids.indexOf(batch) < 0) ids.push(batch);
       });
       if (!ids.length) return;
       fetch('/concierge/business/tasks?batch=' + encodeURIComponent(ids.join(',')), { credentials: 'same-origin' })
@@ -3047,7 +3074,10 @@
         .catch(function () {});
     }
     function anyTaskRunning() {
-      return !!root.querySelector('[data-cz-tasks] [data-status="queued"], [data-cz-tasks] [data-status="working"]');
+      return Object.keys(taskRows).some(function (id) {
+        var row = taskRows[id], status = row.getAttribute('data-status');
+        return row.isConnected && (status === 'queued' || status === 'working');
+      });
     }
     setInterval(function () { if (document.visibilityState === 'visible' && anyTaskRunning()) pollTasks(); }, 3000);
     document.addEventListener('visibilitychange', function () {
@@ -3145,7 +3175,15 @@
           return { from: contextFrom(), sources: seen, found: found };
         },
         onChange: function (fn) { root.addEventListener('cz:side', fn); },
-        host: function (h) { sideHost = h; },
+        host: function (h) {
+          sideHost = h;
+          // A fast reply or a restored task list can arrive before the sidebar import finishes.
+          if (sideHost && sideHost.active()) {
+            Array.prototype.slice.call(messages.querySelectorAll('.cz-draft, [data-cz-tasks]')).forEach(function (node) {
+              addCard(node, 'Your prepared item is shown on the right.');
+            });
+          }
+        },
       },
       // Opened from a launch button (#talk). Landing is the same as #voice: the voice screen paused on
       // "tap the mic". Only with the per-device setting On, and only if the page may make sound without

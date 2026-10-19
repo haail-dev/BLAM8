@@ -1,4 +1,4 @@
-"""Kris, 16 Oct 2026: on a phone the right-hand column is the right half of a two-page strip: swipe (or tap the edge tab) and it
+"""Kris, 16 Oct 2026: on a phone the right-hand column is the right half of a two-page strip: swipe (or tap a task or Waiting) and it
 snaps to one half, never resting between. The layout needs a browser (checked by hand at phone width on the real page code);
 this pins the rules. Run: python -m pytest tests/test_column_on_phones.py -q
 """
@@ -30,13 +30,14 @@ def test_a_phone_gets_a_snapping_two_page_strip_and_the_column_is_its_second_hal
 
 
 def test_two_ways_across_and_the_strip_slides_when_something_opens_in_the_column():
-    assert "var tab = el('button', 'cz-pager-tab', '\\u203a');" in SIDE and "tab.addEventListener('click', reveal);" in SIDE
+    assert "cz-pager-tab" not in SIDE and "cz-voice-tab" not in SIDE
+    assert "sideHost.revealWaiting();" in PANEL
     assert "var home = el('button', 'cz-side-home', '\\u2039 Concierge');" in SIDE
     assert "slideTo(Math.max(0, pager.scrollWidth - pager.clientWidth));" in SIDE
     assert "if (pager.scrollLeft === from && Math.abs(from - left) > 2) pager.scrollLeft = left;" in SIDE   # a dropped smooth scroll still goes there
     assert "      reveal();\n" in SIDE                                       # host.show slides across
     assert "focusable: function () { return pagerOn || !mq || mq.matches; }," in SIDE
-    assert "active: function () { return !mq || mq.matches; }," in SIDE        # new cards still go to the chat on a phone
+    assert "active: function () { return pagerOn || !mq || mq.matches; }," in SIDE  # offered cards use the right-hand page on phones too
 
 
 def test_the_columns_reads_wait_until_it_is_on_screen():
@@ -65,10 +66,9 @@ def test_the_pop_up_a_phone_opens_gets_the_strip_and_the_column_too():
     assert PANEL.count("import('/static/concierge_sidebar.js')") == 2
 
 
-def test_over_the_live_voice_screen_the_column_is_a_panel_on_top_with_an_edge_tab_and_a_swipe():
+def test_over_the_live_voice_screen_the_column_is_a_panel_on_top_with_a_swipe():
     assert "body.voice-live-open .cz-pager.cz-pager-on>.cz-side{position:fixed;" in SIDE
     assert "transform:translateX(100%);visibility:hidden" in SIDE and "body.voice-live-open.cz-voice-side .cz-pager.cz-pager-on>.cz-side{transform:none;visibility:visible" in SIDE
-    assert "body.voice-live-open.cz-pager-body .cz-voice-tab{display:flex;position:fixed;" in SIDE
     assert "if (voiceUp()) { floatSide(true); sideOverVoice(true); return; }" in SIDE   # reveal() brings the panel in, it does not slide the strip under the voice screen
     assert "if (Math.abs(dx) < Math.abs(dy) * 1.2) { drag = null; return; }" in SIDE   # mostly vertical is a scroll, never a pan
     assert "target = dx < 0 ? 1 : 0;" in SIDE and "if (target === 1) reveal(); else sideOverVoice(false);" in SIDE
@@ -101,7 +101,6 @@ def test_on_a_phone_the_voice_screen_and_the_column_are_one_canvas_with_the_wate
     assert "{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}" in SIDE        # !important: the canvas carries inline sizes
     assert "z-index:93;background:none;touch-action:pan-y;" in SIDE                                # the column has no backdrop of its own
     assert "radial-gradient" not in SIDE and "#0b1220" not in SIDE                                 # no backdrop anywhere: the water shows through
-    assert "body.voice-live-open.cz-pager-body.cz-voice-side .cz-voice-tab,body.voice-live-open.cz-pager-body.cz-panning .cz-voice-tab{display:none}" in SIDE
     assert "doc.addEventListener('touchmove', function (e) {" in SIDE and "doc.addEventListener('touchcancel', function (e) { settle(e, true); }, { passive: true });" in SIDE
     assert "(d.p > 0.3 || v < -0.45)" in SIDE and "(d.p < 0.7 || v > 0.45)" in SIDE                # settles on the nearer half, or the way it was flicked
     assert "function glide(to) {" in SIDE and "paintPan(from + (to - from) * e);" in SIDE         # one clock for everything that moves

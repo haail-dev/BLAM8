@@ -269,13 +269,17 @@ t.rows(wb)[1].click(); assert.deepEqual(t.state.reviewed.map((x) => x.proposal_i
   assert.ok(classes.has('cz-pager-on'));
   assert.ok(pagerEl.children.includes(sb.node) && !root.children.includes(sb.node));   // the column is the strip's second half
   assert.equal(fetched.length, before);                                                  // not shown yet: no reads
-  const tabEl = root.children.find((c) => c.className === 'cz-pager-tab');
-  assert.ok(tabEl && tabEl.getAttribute('data-n') === '1');                              // one thing waiting: the edge tab says so
-  assert.equal(st.host.active(), false);                                                 // new cards stay in the chat on a phone
+  assert.ok(!root.children.some((c) => /cz-(pager|voice)-tab/.test(c.className)));
+  assert.equal(st.host.active(), true);                                                  // newly offered cards go to the right-hand page
   assert.equal(st.host.focusable(), true);                                               // a tapped waiting item can open in the column
   st.fns.forEach((f) => f()); assert.equal(fetched.length, before);                       // events alone read nothing while it is off screen
-  tabEl.click();
-  assert.deepEqual(scrolled, [400]);                                                     // the tab slides to the column
+  const waitingSection = sb.node.all((c) => c.className === 'cz-side-box').find((c) => /Waiting for you/.test(c.textContent));
+  waitingSection.children[0].click();
+  assert.equal(waitingSection.getAttribute('data-open'), 'false');
+  st.host.revealWaiting();
+  assert.equal(waitingSection.getAttribute('data-open'), 'true');
+  assert.equal(waitingSection.children[0].getAttribute('aria-expanded'), 'true');
+  assert.deepEqual(scrolled, [400]);                                                     // Waiting opens its section and slides across
   await new Promise((r) => setTimeout(r, 420));
   assert.equal(pagerEl.scrollLeft, 400);                                                 // and if the smooth scroll never starts, it goes there at once
   await new Promise((r) => setTimeout(r, 20));
@@ -307,7 +311,7 @@ t.rows(wb)[1].click(); assert.deepEqual(t.state.reviewed.map((x) => x.proposal_i
   const rootV = new El('div'), host = { h: null };
   const apiV = { tasks: () => [], waiting: () => [], refused: () => ({}), onChange() {}, host: (h) => { host.h = h; }, focusTask() {}, review() {} };
   const sbV = mountSidebar(rootV, apiV, phoneV);
-  assert.ok(bodyOn.has('cz-pager-body'));                                                // the voice screen's edge tab shows
+  assert.ok(bodyOn.has('cz-pager-body'));                                                // voice swipe navigation is enabled
   const swipe = (x1, y1, x2, y2) => { handlers.touchstart({ touches: [{ clientX: x1, clientY: y1 }] }); handlers.touchend({ changedTouches: [{ clientX: x2, clientY: y2 }] }); };
   swipe(300, 400, 120, 410);                                                             // a swipe left
   assert.ok(bodyOn.has('cz-voice-side')); assert.deepEqual(slid, []);                    // a panel over the voice screen, not a slide of the strip

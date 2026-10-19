@@ -87,7 +87,7 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   + '.cz-side-xmore{padding:0 .8rem .55rem 2.2rem}.cz-side-xmore[hidden]{display:none}'
   + '.cz-side-hint{margin:0 0 .4rem;font-size:.7rem;color:rgb(var(--c-tx-slate-500,100 116 139))}'
   + '.cz-side-back{display:block;width:100%;margin:0 0 .35rem;padding:0;border:0;background:none;text-align:left;font:inherit;font-size:.7rem;font-weight:600;cursor:pointer;color:rgb(var(--c-tx-brand,37 99 235))}'
-  // On a phone the column is the right half of one strip twice the phone's width (Kris 2026-10-16): swipe, or tap the edge tab; the strip
+  // On a phone the column is the right half of one strip twice the phone's width (Kris 2026-10-16): swipe, or open an item from the chat; the strip
   // snaps to a half and never rests between. concierge.html's #cz-pager is the strip; it only scrolls sideways.
   + '.cz-pager.cz-pager-on{display:flex;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}'
   + '.cz-pager.cz-pager-on::-webkit-scrollbar{display:none}'
@@ -111,13 +111,8 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   + VOICE_FOREGROUND.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{translate:calc(var(--cz-pan,0) * -1 * var(--cz-w,100vw)) 0}'
   + VOICE_ROOTS.map(function (r) { return PHONE_VOICE + r; }).join(',') + '{touch-action:pan-y}'
   + VOICE_WATER.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}'
-  + 'body.voice-live-open.cz-pager-body.cz-voice-side .cz-voice-tab,body.voice-live-open.cz-pager-body.cz-panning .cz-voice-tab{display:none}'
   + '.cz-side-over>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}'
-  + '.cz-voice-tab{display:none}'
-  + 'body.voice-live-open.cz-pager-body .cz-voice-tab{display:flex;position:fixed;right:0;top:38%;z-index:92;width:16px;height:3rem;align-items:center;justify-content:center;padding:0;border:0;border-radius:10px 0 0 10px;background:rgba(148,163,184,.35);color:#fff;font-size:.95rem;line-height:1;cursor:pointer}'
-  + '.cz-pager-tab,.cz-side-home{display:none}'
-  + '.cz-pager-on #cz-root .cz-pager-tab{display:flex;position:absolute;right:0;top:38%;z-index:4;width:16px;height:3rem;align-items:center;justify-content:center;padding:0;border:0;border-radius:10px 0 0 10px;background:rgba(100,116,139,.32);color:#fff;font-size:.95rem;line-height:1;cursor:pointer}'
-  + '.cz-pager-on #cz-root .cz-pager-tab:not([data-n="0"])::after{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:#f59e0b}'
+  + '.cz-side-home{display:none}'
   + '.cz-pager-on>.cz-side>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}';
 
 export function ageOf(then, now) {
@@ -174,7 +169,7 @@ export function mountSidebar(root, api, doc) {
     });
     paintOpen(readOpen(name, !opts.closed));
     b.appendChild(head); b.appendChild(body);
-    return { node: b, body: body, count: count, note: note };
+    return { node: b, body: body, count: count, note: note, open: function () { paintOpen(true); saveOpen(name, true); } };
   }
   var openBox = box('open', 'Open now'), tasksBox = box('tasks', 'Tasks'), waitBox = box('waiting', 'Waiting for you');
   openBox.body.className += ' cz-side-open'; openBox.node.setAttribute('data-empty', 'true');
@@ -192,8 +187,6 @@ export function mountSidebar(root, api, doc) {
   var pager = (doc.getElementById && doc.getElementById('cz-pager')) || null;
   var pmq = pager && view && view.matchMedia ? view.matchMedia('(max-width:' + PAGER_PX + 'px)') : null;
   var pagerOn = false, revealed = false, loaded = false;
-  var tab = el('button', 'cz-pager-tab', '\u203a'); tab.type = 'button'; tab.setAttribute('data-n', '0');
-  tab.setAttribute('aria-label', 'Open items, waiting for you and tasks'); root.appendChild(tab);
   // The column is on screen: wide window, or the strip's right half has been shown. Its reads wait until then.
   function visible() { return pagerOn ? revealed : (!mq || mq.matches); }
   function ensureLoaded() { if (loaded || !visible()) return; loaded = true; status.load(); }
@@ -205,7 +198,7 @@ export function mountSidebar(root, api, doc) {
     // A smooth scroll that never starts (some browsers drop it while snapping is on) would leave the tap doing nothing: if it has not moved, go there.
     setTimeout(function () { if (pager.scrollLeft === from && Math.abs(from - left) > 2) pager.scrollLeft = left; }, 350);
   }
-  // Slide to the column (a tap on a link, a card opened there, the edge tab); the strip then rests on that half.
+  // Slide to the column (a tap on a link, a card opened there, or the Waiting chip); the strip then rests on that half.
   function reveal() {
     if (!pagerOn || !pager) return;
     revealed = true; ensureLoaded();
@@ -216,7 +209,7 @@ export function mountSidebar(root, api, doc) {
     if (!pager || on === pagerOn) return;
     pagerOn = on;
     pager.classList.toggle('cz-pager-on', on);
-    if (body && body.classList && body.classList.toggle) body.classList.toggle('cz-pager-body', on);   // the voice screen's edge tab shows only then
+    if (body && body.classList && body.classList.toggle) body.classList.toggle('cz-pager-body', on);
     if (!on) sideOverVoice(false, true);
     floatSide(false);
     (on ? pager : root).appendChild(col);
@@ -274,10 +267,6 @@ export function mountSidebar(root, api, doc) {
       (pagerOn && pager ? pager : root).appendChild(col);
     }
   }
-  var vtab = el('button', 'cz-voice-tab', '\u203a'); vtab.type = 'button'; vtab.setAttribute('aria-label', 'Open items, waiting for you and tasks');
-  if (body && body.appendChild) body.appendChild(vtab);
-  vtab.addEventListener('click', function () { reveal(); });
-  tab.addEventListener('click', reveal);
   home.addEventListener('click', function () { if (voiceUp()) sideOverVoice(false); else slideTo(0); });
   // The voice screen and the column are one canvas twice the phone's width: a finger drags it, it follows, and on release it settles on whichever half
   // is nearer (or the way it was flicked). Mostly-vertical movement is a scroll and is left alone; a tap or a press never gets this far.
@@ -360,7 +349,7 @@ export function mountSidebar(root, api, doc) {
     return wrap;
   }
   // "Open now": the panel hands over the card it built (the same node, so Confirm and Cancel keep their own
-  // checks) plus the one-line note it left in the thread. Below the column's width the cards go back to the chat.
+  // checks) plus the one-line note it left in the thread. A narrow screen presents the same cards on its right-hand page.
   var items = [];
   function toChat(it) {
     if (it.stub && it.stub.parentNode) { it.stub.parentNode.insertBefore(it.node, it.stub.nextSibling); it.stub.hidden = true; }
@@ -414,10 +403,15 @@ export function mountSidebar(root, api, doc) {
   }
   markBody(!mq || mq.matches);
   var host = {
-    active: function () { return !mq || mq.matches; },
+    active: function () { return pagerOn || !mq || mq.matches; },
     // A column is there to hold a card the owner tapped open: a wide window, or the phone strip.
     focusable: function () { return pagerOn || !mq || mq.matches; },
     reveal: reveal,
+    revealWaiting: function () {
+      waitBox.open();
+      reveal();
+      if (waitBox.node.scrollIntoView) waitBox.node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    },
     // opts.focus: a waiting item that was tapped takes the Waiting box instead of joining "Open now". The stub may be
     // null (the voice screen keeps no thread note); showing the same card again does nothing.
     show: function (node, stub, note, opts) {
@@ -439,7 +433,7 @@ export function mountSidebar(root, api, doc) {
       (focus ? waitFocus : openBox.body).appendChild(wrap);
       items.push(it);
       while (shownOpen().length > OPEN_CAP) { var oldest = shownOpen()[0]; items.splice(items.indexOf(oldest), 1); toChat(oldest); }
-      (focus ? waitBox : openBox).node.setAttribute('data-open', 'true'); paintOpen();
+      (focus ? waitBox : openBox).open(); paintOpen();
       if (wrap.scrollIntoView) wrap.scrollIntoView({ block: 'nearest' });
       reveal();
     }
@@ -483,7 +477,6 @@ export function mountSidebar(root, api, doc) {
       var l = ledgerLine(it);
       waitList.appendChild(expandRow('?', l.line, [l.meta, l.detail]));
     });
-    tab.setAttribute('data-n', String(waiting.length + items.length));   // an amber dot on the edge tab while anything is open or waiting
     status.paint();
   }
   api.onChange(function () { paint(); if (visible()) status.schedule(); });

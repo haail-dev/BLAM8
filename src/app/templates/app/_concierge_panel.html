@@ -11,6 +11,20 @@
 #cz-root [data-cz-mode] .rounded-2xl, #cz-root [data-cz-mode] > .rounded-2xl, #cz-root [data-cz-mode] > .flex > .rounded-2xl {border-inline-start:3px solid var(--cz-source);}
 #cz-root [data-cz-origin] [data-cz-pill] {border-color:var(--cz-source);color:var(--cz-source);}
 #cz-root [data-cz-role="user"] > .cz-origin-label {text-align:right;}
+#cz-root .cz-tool-trail {--cz-tool-tone:color-mix(in srgb,var(--cz-source) 50%,#64748b);color:var(--cz-tool-tone);font-size:12px;line-height:1.4;overflow-wrap:anywhere;}
+#cz-root .cz-tool-chip {display:inline;border:0;border-radius:0;padding:0;background:none;color:var(--cz-tool-tone);font:inherit;font-weight:500;text-align:left;vertical-align:baseline;}
+#cz-root .cz-tool-chip[data-cz-pill] {cursor:pointer;color:var(--cz-tool-tone);}
+#cz-root .cz-tool-chip:focus-visible {outline:2px solid var(--cz-source);outline-offset:3px;}
+#cz-root .cz-tool-chip[data-cz-tool-active]::after {content:"...";display:inline-block;width:1em;color:var(--cz-tool-tone);clip-path:inset(0 100% 0 0);animation:cz-tool-dots 1.5s steps(4,end) infinite;}
+@supports (background-clip:text) {
+  #cz-root .cz-tool-chip[data-cz-tool-active] {color:transparent;background:linear-gradient(145deg,var(--cz-source) 32%,#1d4fd7 42%,#a82993 52%,#1d4fd7 63%,var(--cz-source) 73%);background-size:300% 100%;background-clip:text;animation:cz-tool-shine 3.1s linear infinite;}
+}
+@keyframes cz-tool-shine {from {background-position:100% 50%;} to {background-position:0% 50%;}}
+@keyframes cz-tool-dots {to {clip-path:inset(0 -33% 0 0);}}
+@media (prefers-reduced-motion:reduce), (forced-colors:active) {
+  #cz-root .cz-tool-chip[data-cz-tool-active] {animation:none;background:none;color:var(--cz-tool-tone);}
+  #cz-root .cz-tool-chip[data-cz-tool-active]::after {animation:none;clip-path:none;}
+}
 </style>
 <style>
 #cz-root .cz-message-user {padding:6px 12px;}
@@ -24,8 +38,11 @@
 #cz-root .cz-mode-section > .cz-mode-opening:not(.cz-message-assistant) {padding-top:.65rem;}
 #cz-root .cz-mode-section .cz-origin-label:not([hidden]) {display:block;}
 #cz-root .cz-mode-section .cz-origin-label[hidden] {display:none;}
-#cz-root .cz-mode-section .cz-message-bubble {width:fit-content;max-width:85%;min-width:0;overflow-wrap:anywhere;}
-#cz-root .cz-mode-section .cz-message-assistant {margin-inline-start:8px;max-width:min(85%,calc(100% - 8px));background:linear-gradient(255deg,var(--cz-mode-wash),transparent 88%);border:1px solid rgb(var(--c-bd-slate-200));}
+#cz-root .cz-mode-section .cz-message-bubble {width:fit-content;max-width:95%;min-width:0;margin-inline:0;overflow-wrap:anywhere;}
+#cz-root .cz-mode-section [data-cz-trail].cz-mode-item {padding-block:2px;margin-block:2px;}
+#cz-root .cz-history-row > [data-cz-trail] + .cz-message-assistant {margin-top:4px;}
+#cz-root .cz-mode-section .cz-message-user {margin-inline-start:auto;}
+#cz-root .cz-mode-section .cz-message-assistant {margin-inline-start:8px;background:linear-gradient(255deg,var(--cz-mode-wash),transparent 88%);border:1px solid rgb(var(--c-bd-slate-200));}
 #cz-root .cz-mode-section .cz-message-assistant:not([data-cz-pending]) {box-shadow:0 2px 5px rgba(15,23,42,.06);}
 /* The chat scrolls right up to the bar above it (Kris 2026-10-16): the panel's 1rem top padding moves into the scroller, so text that scrolls
    up no longer vanishes under a fixed pale strip. The first tinted section then sits about 0.2rem under the bar (it was about 1.8rem, then 0.5rem): the
@@ -502,6 +519,7 @@
   </style>
   <div class="cz-conversation-actions">
     <button id="cz-explore" type="button">Explore actions</button>
+    <button id="cz-waiting-shortcut" type="button" hidden>Waiting</button>
     <button id="cz-clear" type="button" class="text-xs text-slate-400 hover:text-slate-600 transition">Clear history</button>
   </div>
 </div>
