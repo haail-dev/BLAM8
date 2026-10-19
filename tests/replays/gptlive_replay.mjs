@@ -142,18 +142,22 @@ function panelRig() {
   const r=panelRig(),a=r.c.openVoiceLiveInner();r.c.voiceModeGeneration++;
   r.module.resolve({createVoiceLive:r.c.create});await a;assert.equal(r.created,0);
 }
-// Preference is per authenticated user/device and defaults/invalid values are Standard.
+// Preference is per authenticated user/device and defaults to GPT-Live when available.
 const preference='function savedVoiceMode() {'+panel.split('    function savedVoiceMode() {')[1].split('    root.querySelectorAll')[0];
 const values=new Map();
 for(const user of ['one','two']) {
-  const c=vm.createContext({VOICE_MODE_KEY:'blam8.voiceMode:'+user,voiceModeChoice:null,localStorage:{getItem:k=>values.get(k)}});
-  vm.runInContext(preference,c);assert.equal(c.savedVoiceMode(),'standard');
+  const c=vm.createContext({VOICE_MODE_KEY:'blam8.voiceMode:'+user,voiceModeChoice:null,GPTLIVE_ON:true,localStorage:{getItem:k=>values.get(k)}});
+  vm.runInContext(preference,c);assert.equal(c.savedVoiceMode(),'gptlive');
   if(user==='one'){values.set('blam8.voiceMode:one','gptlive');assert.equal(c.savedVoiceMode(),'gptlive');}
-  else {values.set('blam8.voiceMode:two','invalid');assert.equal(c.savedVoiceMode(),'standard');}
+  else {values.set('blam8.voiceMode:two','standard');assert.equal(c.savedVoiceMode(),'standard');values.set('blam8.voiceMode:two','invalid');assert.equal(c.savedVoiceMode(),'gptlive');}
 }
 {
-  const c=vm.createContext({VOICE_MODE_KEY:'user',voiceModeChoice:'gptlive',localStorage:{getItem(){throw Error('blocked');}}});
+  const c=vm.createContext({VOICE_MODE_KEY:'user',voiceModeChoice:'gptlive',GPTLIVE_ON:true,localStorage:{getItem(){throw Error('blocked');}}});
   vm.runInContext(preference,c);assert.equal(c.savedVoiceMode(),'gptlive');
+}
+{
+  const c=vm.createContext({VOICE_MODE_KEY:'user',voiceModeChoice:null,GPTLIVE_ON:false,localStorage:{getItem(){return null;}}});
+  vm.runInContext(preference,c);assert.equal(c.savedVoiceMode(),'standard');
 }
 console.log('Native acquisition/close/data-channel, discard ownership and mode import/preference replays passed.');
 

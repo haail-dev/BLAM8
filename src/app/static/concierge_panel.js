@@ -1858,10 +1858,15 @@
     var voiceModeGeneration = 0;
     var voiceModeChoice = null;
     var VOICE_MODE_KEY = 'blam8.voiceMode:' + (root.getAttribute('data-voice-user') || 'anonymous');
+    var GPTLIVE_ON = root.getAttribute('data-gptlive') === 'on';
     function savedVoiceMode() {
       if (voiceModeChoice) return voiceModeChoice;
-      try { return localStorage.getItem(VOICE_MODE_KEY) === 'gptlive' ? 'gptlive' : 'standard'; }
-      catch (e) { return 'standard'; }
+      try {
+        var saved = localStorage.getItem(VOICE_MODE_KEY);
+        if (saved === 'standard') return 'standard';
+        if (saved === 'gptlive') return GPTLIVE_ON ? 'gptlive' : 'standard';
+        return GPTLIVE_ON ? 'gptlive' : 'standard';
+      } catch (e) { return GPTLIVE_ON ? 'gptlive' : 'standard'; }
     }
     root.querySelectorAll('[name="cz-voice-mode"]').forEach(function (radio) {
       radio.checked = radio.value === savedVoiceMode();
