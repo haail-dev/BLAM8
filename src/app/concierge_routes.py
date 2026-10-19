@@ -34,7 +34,7 @@ from app import concierge, concierge_actions, concierge_data, concierge_intake, 
 from app import knowledge as kb
 from app import settings_recommend, setup_handoff
 from app import debrief_walk
-from app.auth import require_concierge, require_onboarded, require_tenant, TenantCtx
+from app.auth import require_concierge, require_onboarded, require_subscription, require_tenant, TenantCtx
 from app.config import settings
 from app.security import rate_limit, require_csrf_header
 from app.setup_card_routes import router as setup_card_router
@@ -80,10 +80,10 @@ router = APIRouter(prefix="/concierge", tags=["concierge"], route_class=_Bounded
 
 
 @router.get("/live")
-def concierge_live_link():
-    """Shortcut to the existing authenticated voice launch flow."""
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse("/app/concierge#talk", status_code=303)
+def concierge_live_link(request: Request, ctx: TenantCtx = Depends(require_subscription)):
+    """Installable voice entry; keep this URL through cold starts and refresh."""
+    from app.dashboard import concierge_page
+    return concierge_page(request, ctx)
 
 router.include_router(setup_card_router)
 
