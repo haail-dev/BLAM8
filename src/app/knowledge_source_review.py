@@ -26,7 +26,7 @@ SCHEMA = obj({
         'citations': {'type': 'array', 'items': obj({'claim': {'type': 'string'}, 'reference': {'type': 'string'}})},
     })},
     'overlaps': {'type': 'array', 'items': {'type': 'array', 'items': {'type': 'string'}}},
-    'questions': {'type': 'array', 'items': {'type': 'string'}},
+    'questions': {'type': 'array', 'description': 'Only missing evidence for this owner request: at most three questions, each at most 500 characters. Empty when the retained source answers the request.', 'items': {'type': 'string'}},
 })
 
 SYSTEM = (
@@ -40,7 +40,9 @@ SYSTEM = (
     'Never replace an external booking route. Never treat a business description as evidence of policy. '
     'Reuse known prices, hours and area by leaving their original text intact. Flag overlaps using '
     'the existing line IDs only; do not merge them. Questions are only for genuinely missing evidence, '
-    'at most three; do not ask for an operational route when the sources explicitly say none exists. '
+    'at most three, each at most 500 characters, about this request only; do not review unrelated '
+    'notes for missing details. Use an empty list when the retained evidence answers the request. '
+    'Do not ask for an operational route when the sources explicitly say none exists. '
     'Return the supplied revision and content hashes unchanged. Return no narrative reply or new notes. '
     'If the requested correction cannot be made by sourced additions, ask about it instead.'
     ' You may also propose citation-only corrections: name an exact existing note clause as claim '
@@ -153,17 +155,24 @@ def validate(card, evidence, raw):
         if not isinstance(ids, list) or not 2 <= len(ids) <= 30 or any(not isinstance(i, str) or i not in available for i in ids) or len(set(ids)) != len(ids):
             raise setup_cards.Invalid('Overlap annotations must name distinct existing cards.')
     questions = raw['questions']
-    if not isinstance(questions, list) or len(questions) > 3 or any(not isinstance(q, str) or not q.strip() or len(q) > 500 for q in questions):
-        raise setup_cards.Invalid('Supply at most three short unanswered questions.')
+    if not isinstance(questions, list) or any(not isinstance(q, str) for q in questions):
+        raise setup_cards.Invalid('Unanswered questions must be a list of text.')
+    # These are advisory annotations, never source proof or an admission gate.
+    # Model verbosity must not discard independently verified corrections. Do not
+    # truncate a question mid-sentence or silently conceal omitted annotations.
+    shown_questions = [q.strip() for q in questions if q.strip() and len(q.strip()) <= 500][:3]
+    omitted_questions = len(questions) - len(shown_questions)
     summary = (f"Review ready: {len(changes)} note(s) with proposed text or citation changes; {len(overlaps)} possible overlap(s). Drafts and Knowledge are unchanged."
                if changes else 'No new draft corrections were proposed. Nothing changed. You can undo added website wording in the review form, or request a specific sourced addition.')
     if changes and not any(c['passages'] for c in changes):
         summary += ' These are citation changes only; no note wording is changed.'
     if unchanged:
         summary += f' {unchanged} unchanged or already-recorded item(s) need no draft update.'
+    if omitted_questions:
+        summary += f' {omitted_questions} follow-up annotation(s) exceeded the question display limits or were blank and are not shown. Ask separately about any remaining evidence gaps; this does not confirm source coverage.'
     return {'revision': card['revision'], 'review': deepcopy(raw), 'changes': changes,
             'overlaps': [[{'id': i, 'label': available[i]['label']} for i in ids] for ids in overlaps],
-            'questions': questions,
+            'questions': shown_questions,
             'summary': summary}
 
 

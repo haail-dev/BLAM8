@@ -8,13 +8,19 @@ const fields={version:{name:'version',value:'v1'},csrf_token:{name:'csrf_token',
   source_unit:{name:'source_unit',value:''}};
 for(const field of Object.values(fields))field.dispatchEvent=()=>{};
 let submitted=0;
+let focused=0,scrolled=0,closed=0;
+const disclosure={open:false};
+const section={dataset:{draft:'one'},scrollIntoView(){scrolled++;},querySelector(){return disclosure;}};
+fields.content_one.focus=()=>{focused++;};
 const form={dataset:{knowledgeReview:'batch'},elements:fields,action:'/review/batch',
-  appendChild(el){fields[el.name]=el;},querySelector(selector){return selector.includes('operation') ? {disabled:false} : null;},
+  appendChild(el){fields[el.name]=el;},querySelector(selector){return selector.includes('operation') ? {disabled:false} : selector.startsWith('[data-draft=') ? section : null;},
+  querySelectorAll(){return [section];},
   requestSubmit(){submitted++;}};
 let activeForm=form;
 const document={querySelectorAll(){return [activeForm];},
   addEventListener(name,cb){events[name]=cb;},createElement(){return {dispatchEvent(){}};}};
 const window={addEventListener(name,cb){windowEvents[name]=cb;},dispatchEvent(){},
+  blam8ConciergeClose(){closed++;},
   Blam8KnowledgeSourceReview:{working(){return false;},ask:async()=>({reply:'Correction preview; not saved.'})}};
 class FormData {constructor(f){this.form=f;}forEach(cb){for(const field of Object.values(this.form.elements))cb(field.value,field.name);}}
 const fetch=(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}));
@@ -25,6 +31,7 @@ const guide=window.Blam8KnowledgeGuide;
 const finish=(index,data)=>requests[index].resolve({ok:true,json:async()=>data});
 const result=(patches={},hash='h1')=>({reply:'Review this actual note.',patches,focus_hash:hash,focus:{kind:'note',id:'one'},actions:[],shared_caveats:[]});
 
+assert.equal(disclosure.open,false); // Pending cards start collapsed.
 const first=guide.ask('');
 assert(window.blam8KnowledgeImportBusy && window.Blam8KnowledgeSourceReview.working());
 await assert.rejects(guide.ask('second'),/wait/);
@@ -32,12 +39,16 @@ assert.equal(requests.length,1);
 assert.equal(JSON.parse(requests[0].options.body).form.csrf_token,undefined);
 assert.equal(requests[0].options.headers['X-CSRF-Token'],'secret');
 finish(0,result());await first;
+assert(disclosure.open); // The note under active review opens automatically.
 assert(guide.isCurrent('h1'));
 assert(!window.blam8KnowledgeImportBusy);
 
 const keep=guide.ask('Keep this note');finish(1,result({action_one:'keep'},'h2'));await keep;
 assert.equal(fields.action_one.value,'keep');
 assert(!guide.isCurrent('h1') && guide.isCurrent('h2'));
+assert.equal(guide.edit('stale','one'),false);
+assert.equal(guide.edit('h2','one'),true);
+assert(disclosure.open);assert.equal(focused,1);assert.equal(scrolled,1);assert.equal(closed,1);
 
 const racing=guide.ask('Keep the wording');fields.content_one.value='Manual edit during request.';
 finish(2,result({source_unit:'note:one'},'h3'));

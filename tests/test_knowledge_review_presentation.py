@@ -30,6 +30,8 @@ def test_note_content_decisions_and_optional_evidence_without_audit_inventory():
     cards = re.findall(r'<section[^>]*data-draft="[^"]+".*?</section>', html, re.S)
     assert len(cards) == 2
     for card in cards:
+        assert '<details data-note-details>' in card
+        assert '<details data-note-details open>' not in card
         assert '<textarea' in card and '<select name="action_' in card
         assert 'Source and evidence</summary>' in card
         assert 'Fictional test facts.' in card

@@ -60,10 +60,64 @@ def test_invented_stale_or_unstructured_corrections_are_rejected(tamper):
     elif tamper == 'foreign_evidence': raw['changes'][0]['insertions'][0]['reference'] = 'foreign/0/0/1'
     elif tamper == 'merge': raw['changes'][0]['op'] = 'merge'
     elif tamper == 'duplicate': raw['changes'].append(deepcopy(raw['changes'][0]))
-    elif tamper == 'questions': raw['questions'] = ['Missing?']*4
+    elif tamper == 'questions': raw['questions'] = [None]
     elif tamper == 'fragment': raw['changes'][0]['insertions'][0]['reference'] = evidence.reference(saved, 0, 'Fictional')
     else: raw = {'reply': 'I fixed it and changed your fee to 10%.', 'notes': []}
     with pytest.raises(setup_cards.Invalid): review.validate(card, saved, raw)
+
+
+@pytest.mark.parametrize('questions', [
+    ['Missing detail?'] * 4,
+    ['Explain the next step? ' * 30],
+    ['', '  ', 'Which detail is missing?'],
+])
+def test_advisory_question_overflow_does_not_discard_verified_pending_corrections(questions):
+    row, saved = seeded(); before = deepcopy(row)
+    card = review.draft_card(row, saved); raw = corrections(card, saved)
+    raw['questions'] = questions
+    checked = review.validate(card, saved, raw)
+    assert len(checked['changes']) == 9
+    assert checked['review']['questions'] == questions  # no silent deletion in the proposal
+    assert len(checked['questions']) <= 3
+    assert all(q.strip() and len(q) <= 500 for q in checked['questions'])
+    assert 'not shown' in checked['summary'] and 'does not confirm source coverage' in checked['summary']
+    payload = review.corrected_payload(row, saved, checked['review'])
+    assert payload['draft_revision'] == 2 and row == before and row['state'] == 'pending'
+    # Overflow cannot bypass the strict proof/hash checks during apply.
+    raw['changes'][0]['content_hash'] = 'stale'
+    with pytest.raises(setup_cards.Stale): review.corrected_payload(row, saved, raw)
+
+
+def test_model_correction_restores_source_endings_and_scope_without_saving(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    from app import concierge, llm, usage
+    process = 'We acknowledge a report, gather the issue and access availability, then explain the next step.'
+    scope = 'This sample business does not provide emergency dispatch through this website or ReplyDesk.'
+    row, _ = seeded()
+    saved = evidence.build([{'url':'https://example.invalid', 'text':process + '\n' + scope}])
+    row['payload']['source_snapshot'] = saved['id']
+    row['payload']['entries'] = row['payload']['entries'][:2]
+    for entry, label, content in zip(row['payload']['entries'], ['Report rules','Service limits'],
+            [process.split(', then')[0] + '.', scope.replace(' or ReplyDesk','')]):
+        entry.update(label=label, content=content)
+    before = deepcopy(row); card = review.draft_card(row, saved)
+    async def model(**kw):
+        supplied = json.loads(kw['messages'][0]['content'])['drafts_and_evidence']
+        assert {p['quote'] for p in supplied['passages']} == {process, scope}
+        raw = {'revision':1, 'overlaps':[], 'questions':['Unrelated evidence question?'] * 4,
+            'changes':[{'id':line['id'], 'content_hash':line['content_hash'], 'citations':[],
+                'insertions':[{'position':'after', 'reference':evidence.reference(saved,0,quote)}]}
+                for line, quote in zip(supplied['lines'], [process,scope])]}
+        return SimpleNamespace(model='fake', usage={}, content=[SimpleNamespace(type='text',text=json.dumps(raw))])
+    monkeypatch.setattr(concierge, 'client', lambda: SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage, 'record_anthropic', lambda *a, **kw:None)
+    monkeypatch.setattr(llm, 'create', model)
+    preview = asyncio.run(review.answer('synthetic','Restore the final process step and named channel.',card,saved))
+    assert row == before and len(preview['changes']) == 2
+    pending = review.corrected_payload(row,saved,preview['review'])
+    assert process in pending['entries'][0]['content'] and scope in pending['entries'][1]['content']
+    assert pending['draft_revision'] == 2 and row == before and row['state'] == 'pending'
 
 
 def test_mixed_owner_and_source_authorship_survives_repeated_corrections_and_admission_edits():

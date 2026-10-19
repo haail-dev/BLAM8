@@ -66,6 +66,13 @@ note.elements.content.value='';
 const pending=event(target('[data-onb-continue]'));events.click(pending);assert(pending.prevented);
 window.blam8KnowledgeImportBusy=true;
 await assert.rejects(window.Blam8KnowledgeSourceReview.ask('During website read'),/Wait/);
+const navigateDuringRead=event(target('[data-onb-continue]'));events.click(navigateDuringRead);
+assert(navigateDuringRead.prevented && navigateDuringRead.stopped);
+assert.match(navigation.textContent,/Wait/);
+const leaveDuringRead=event(target('[data-leave-knowledge]'));events.click(leaveDuringRead);
+assert(leaveDuringRead.prevented && leaveDuringRead.stopped);
+const submitDuringRead=event(form);events.submit(submitDuringRead);assert(submitDuringRead.prevented);
+const manualDuringRead=event({matches:s=>s.includes('#kb-note')});events.submit(manualDuringRead);assert(manualDuringRead.prevented);
 
 window.blam8KnowledgeImportBusy=false;
 const third=window.Blam8KnowledgeSourceReview.ask('Check a citation after refresh.');finish(3,preview);await third;
