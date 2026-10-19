@@ -1087,17 +1087,12 @@
       if (voiceStage.cardNode) clearVoiceCard();
     }
     // ── Context: what the Concierge will be given with the next question ──
-    var contextOpen = false, contextChip = null, contextNote = '', contextFills = [], contextChips = [], contextBarTimer = 0;
-    // How full the context is: the turns that will go with the next question.
+    var contextOpen = false, contextChip = null, contextNote = '', contextChips = [], contextBarTimer = 0;
+    // Keep the accessible context count current without drawing a usage meter.
     function paintContextBar() {
-      if (!contextFills.length) return;
       var source = activeVoiceMode === 'gptlive' ? nativeContextHistory : history;
       var n = Math.min(source.slice(-CONTEXT_TURNS).filter(function (m) { return m.role === 'user'; }).length,
                        CONTEXT_ROUNDS);
-      contextFills.forEach(function (fill) {
-        fill.style.width = Math.round(100 * n / CONTEXT_ROUNDS) + '%';
-        fill.className = 'cz-ctx-fill ' + (n >= 6 ? 'is-red' : n > 4 ? 'is-amber' : 'is-green');
-      });
       contextChips.forEach(function (chip) {
         chip.setAttribute('data-rounds', n + '/' + CONTEXT_ROUNDS);
         chip.setAttribute('aria-label', 'Conversation context: ' + n + ' of ' + CONTEXT_ROUNDS + ' rounds in use. Tap to review; press and hold for one second to clear it.');
@@ -1204,18 +1199,14 @@
       ctxChip.setAttribute('aria-label', 'Conversation context — tap to review what the Concierge will see; press and hold for one second to clear it');
       ctxChip.setAttribute('aria-controls', 'cz-context-details');
       ctxChip.setAttribute('aria-expanded', 'false');
-      var ctxFill = document.createElement('span');
-      ctxFill.className = 'cz-ctx-fill';
       var ctxHold = document.createElement('span');
       ctxHold.className = 'cz-ctx-hold';
       var ctxLabel = document.createElement('span');
       ctxLabel.className = 'cz-ctx-label';
       ctxLabel.textContent = 'Context';
       ctxLabel.setAttribute('aria-hidden', 'true');
-      ctxChip.appendChild(ctxFill);
       ctxChip.appendChild(ctxHold);
       ctxChip.appendChild(ctxLabel);
-      contextFills.push(ctxFill);
       var HOLD_MS = 1000, holdTimer = 0, held = false;
       function holdStart(e) {
         if (e.button !== undefined && e.button !== 0) return;

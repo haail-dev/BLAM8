@@ -92,7 +92,7 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   + '.cz-pager.cz-pager-on{display:flex;width:100%;height:100%;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}'
   + '.cz-pager.cz-pager-on::-webkit-scrollbar{display:none}'
   + '.cz-pager.cz-pager-on>#cz-root{flex:0 0 100%;width:100%;max-width:none;margin:0;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}'
-  + '.cz-pager.cz-pager-on>.cz-side{display:flex;position:static;flex:0 0 100%;width:100%;min-width:0;height:100%;box-sizing:border-box;padding:1rem 1rem max(1rem,env(safe-area-inset-bottom));scroll-snap-align:start;scroll-snap-stop:always}'
+  + '.cz-pager.cz-pager-on>.cz-side{display:flex;position:static;flex:0 0 100%;width:100%;min-width:0;height:100%;box-sizing:border-box;padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));scroll-snap-align:start;scroll-snap-stop:always}'
   // The live voice screen is a fixed layer over the whole page, so the strip under it cannot be swiped to while it is up. On a phone the view
   // therefore pans (see the canvas rules below): the column comes in from the right while the voice screen's foreground slides off to the left.
   // The column has no backdrop of its own anywhere: it sits over the voice screen's water.
@@ -106,7 +106,8 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   // moves, the water included, moves by the same number, in step, with the individual `translate` property so an element's own transform and transitions
   // (the orb's) are untouched. The first voice screen's water stays where it is instead (see VOICE_FOREGROUND).
   // concierge_sidebar.js sets the number: a finger sets it while dragging and a release glides it to 0 or 1. Phones only (.cz-pager-body).
-  + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:1rem 1rem max(1rem,env(safe-area-inset-bottom));z-index:93;background:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
+  + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));z-index:93;background:none;pointer-events:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
+  + '.cz-side-over>*{pointer-events:auto}'
   + 'body.cz-voice-side>.cz-side.cz-side-over,body.cz-panning>.cz-side.cz-side-over{visibility:visible}'
   + VOICE_FOREGROUND.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{translate:calc(var(--cz-pan,0) * -1 * var(--cz-w,100vw)) 0}'
   + VOICE_ROOTS.map(function (r) { return PHONE_VOICE + r; }).join(',') + '{touch-action:pan-y}'
