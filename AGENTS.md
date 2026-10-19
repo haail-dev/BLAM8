@@ -20,3 +20,13 @@ under .cache; use a separate directory for reports that need to be retained.
 
 For the initial migration, docs/baseline-provenance.json identifies the source
 commit. Unfinished work in the historical workspace has not been imported wholesale.
+
+Keep configuration with the area that owns it. Diary, calendar, scheduling,
+availability and capacity share Diary settings. Team assignment configuration
+belongs in People settings and is not a Diary onboarding requirement. Use the
+existing compact expandable settings rows and business-neutral labels.
+
+Keep Diary settings and Booking requirements as separate onboarding steps.
+Diary settings owns booking mode, availability, timing and capacity; Booking
+requirements owns customer answers, documents and their collection rules.
+Saving the checklist must preserve the configured booking mode.

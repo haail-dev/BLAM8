@@ -275,6 +275,9 @@ class SurfaceEnv:
                             lambda *a, **k: {"planner_auto_apply": False})
         monkeypatch.setattr(dashboard.db, "list_plans", lambda *a, **k: [])
         monkeypatch.setattr(dashboard.db, "get_scheduling_config", lambda *a, **k: carried_config(None))
+        monkeypatch.setattr(dashboard.db, "calendar_connected", lambda *a, **k: True)
+        monkeypatch.setattr(dashboard.setup_forms, "load", lambda ctx, page: {
+            "page": page, "config": dashboard.db.get_scheduling_config(ctx.tenant_id) or {}, "definitions": []})
         monkeypatch.setattr(dashboard.db, "list_bookings", lambda *a, **k: [])
         monkeypatch.setattr(dashboard.db, "list_branches", lambda *a, **k: [])
         monkeypatch.setattr(dashboard.db, "list_vehicles", lambda *a, **k: [dict(VAN)])
@@ -398,6 +401,23 @@ def test_diary_settings_shows_windows_fields_for_dual(client, monkeypatch):
     SurfaceEnv(monkeypatch, {"tms"})
     r2 = client.get("/app/diary/settings")
     assert 'name="capacity_per_window"' not in r2.text   # fleet-only hides them
+
+
+def test_email_only_can_change_booking_mode_without_scheduling_controls(client, monkeypatch):
+    SurfaceEnv(monkeypatch, {"email"})
+    monkeypatch.setattr(dashboard.db, "visible_modules", lambda *a, **k: {"email"})
+    monkeypatch.setattr(dashboard.setup_forms, "load", lambda *a, **k: {
+        "page": "booking_details", "config": {"booking_mode": "appointment", "intake_fields": []},
+        "definitions": []})
+    monkeypatch.setattr(dashboard, "_setup_prefill", lambda *a, **k: None)
+    response = client.get("/app/diary/settings")
+    assert response.status_code == 200
+    assert 'action="/app/diary/settings/booking-mode"' in response.text
+    assert "this does not enable automatic booking" in response.text
+    assert 'name="capacity_per_window"' not in response.text
+    assert 'action="/app/settings/scheduling"' not in response.text
+    assert 'action="/app/diary/cancel-all"' not in response.text
+    assert "Calendar connection" not in response.text
 
 
 def test_settings_planner_block_gated_on_tms(client, monkeypatch):

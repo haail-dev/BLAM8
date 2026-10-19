@@ -164,6 +164,7 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
                  _p("/app/mailboxes/{mailbox_id}/settings", "One mailbox", "its labels, its role, its persona", via="/app/mailboxes"),
                  _p("/app/knowledge", "Knowledge", "the prices, policies and rules the agent answers from"),
                  _p("/app/people", "People", "everyone on this business, roles and invitations"),
+                 _p("/app/people/settings", "People settings", "one person or several people per job"),
                  _p("/app/people/{user_id}", "One person", "their doors, abilities and calendar", via="/app/people"),
                  _p("/app/people/team/{person_id}", "Someone who doesn't sign in", "what they do, how to reach them, give them a login", via="/app/people"),
                  _p("/app/view-as", "View as", "the owner sees BLAM8 as one of their people — read-only"),

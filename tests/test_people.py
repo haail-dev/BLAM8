@@ -237,6 +237,29 @@ def test_the_people_page_lists_everyone_and_offers_an_invitation(as_owner):
     assert "{{ people_face }}" in settings
 
 
+def test_people_assignment_settings_are_owned_and_saved_on_the_people_page(as_owner, monkeypatch):
+    client, _ = as_owner
+    monkeypatch.setattr(db, "get_scheduling_config", lambda *a, **k: {"people_per_job": "several"})
+    writes = []
+    monkeypatch.setattr(db, "upsert_scheduling_config", lambda tid, fields, **k: writes.append((tid, fields)))
+    page = client.get("/app/people/settings")
+    assert page.status_code == 200
+    assert 'name="value" value="several" checked' in page.text
+    assert 'action="/app/people/settings"' in page.text
+    assert "data-flash" not in page.text
+
+    saved = client.post("/app/people/settings", data={"value": "one"})
+    assert saved.status_code == 303 and saved.headers["location"] == "/app/people/settings?saved=1"
+    assert writes == [("t1", {"people_per_job": "one"})]
+    assert client.post("/app/people/settings", data={"value": "unexpected"}).status_code == 422
+    assert writes == [("t1", {"people_per_job": "one"})]
+
+
+def test_staff_cannot_open_people_assignment_settings(as_staff):
+    response = as_staff.get("/app/people/settings", follow_redirects=False)
+    assert response.status_code == 303 and response.headers["location"] == "/app/"
+
+
 def test_an_invitation_is_minted_with_the_role_and_its_doors(as_owner):
     client, made = as_owner
     r = client.post("/app/people/invite",

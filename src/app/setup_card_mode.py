@@ -2,7 +2,7 @@
 from copy import deepcopy
 from app import intake, services, setup_card_scalars, setup_rows
 
-SPECS = {'stay_mode': dict(type='boolean', nullable=False, label='Bookings span arrival to departure')}
+SPECS = {'stay_mode': dict(type='boolean', nullable=False, label='Booking type')}
 
 
 def pending(card):

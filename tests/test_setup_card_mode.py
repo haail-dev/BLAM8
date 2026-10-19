@@ -23,7 +23,10 @@ def test_history_read_is_tenant_scoped_and_fails_closed():
 
 
 def apply(on, cfg=None, history=False, *rows):
-    card = start(mode(on), *rows, page='booking_details')
+    # Build a supported current proposal, then present the serialized legacy
+    # page shape to exercise acceptance of cards saved before ownership moved.
+    card = start(mode(on), *rows, page='diary_settings')
+    card['page'] = 'booking_details'
     return cards.accept(card, 1, 'accept', [r['id'] for r in card['lines']],
         {'config': cfg or {}, 'definitions': [], 'has_bookings': history})
 
@@ -83,7 +86,8 @@ def test_scoped_fields_change_with_mode_in_the_same_acceptance():
         {'label': 'Reference', 'required': False, 'services': ['Stays'], 'hint': '', 'doc': False}]}
     with pytest.raises(cards.Invalid, match='Stays-only'):
         apply(False, cfg)
-    _, patch = apply(False, cfg, False, append('field', label='Reference', services=[]))
+    cfg['intake_fields'][1]['services'] = []
+    _, patch = apply(False, cfg)
     assert patch['booking_mode'] == 'appointment'
     assert patch['intake_fields'][0]['services'] == []
 

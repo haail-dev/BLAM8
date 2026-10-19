@@ -1,0 +1,33 @@
+{% extends "app/base.html" %}
+{% block title %}People settings · BLAM8{% endblock %}
+{% block heading %}People settings{% endblock %}
+{% set back = ('/app/people', 'People') %}
+{% block content %}
+<div class="max-w-3xl mx-auto p-4 sm:p-6 space-y-5">
+  {% if settings_saved %}
+  <p data-flash role="status" class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">People settings saved.</p>
+  {% endif %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-4">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Work assignments</h2>
+      <p class="text-sm text-slate-400">Choose how people are assigned to each job.</p>
+    </div>
+    <details class="group/row border-t border-slate-200">
+      <summary class="flex items-baseline gap-3 px-5 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+        <span class="text-sm font-semibold text-navy flex-none">People on a job</span>
+        <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open/row:invisible">{{ 'Several people' if people_per_job == 'several' else 'One person' }}</span>
+        <span class="flex-none text-slate-300 transition group-open/row:rotate-90">&rsaquo;</span>
+      </summary>
+      <form method="post" action="/app/people/settings" class="px-5 pb-5 space-y-4" data-people-per-job>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <fieldset class="space-y-3" {{ 'disabled' if not can_change_people_settings }}>
+          <legend class="sr-only">People on a job</legend>
+          <label class="flex items-start gap-2.5"><input type="radio" name="value" value="one" {{ 'checked' if people_per_job != 'several' }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none"><span><span class="block text-sm text-navy">One person per job</span><span class="block text-xs text-slate-500">Assigning someone replaces the person previously assigned.</span></span></label>
+          <label class="flex items-start gap-2.5"><input type="radio" name="value" value="several" {{ 'checked' if people_per_job == 'several' }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none"><span><span class="block text-sm text-navy">Several people</span><span class="block text-xs text-slate-500">Assign multiple people, each with their own part.</span></span></label>
+          <div data-save-row><button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save</button></div>
+        </fieldset>
+      </form>
+    </details>
+  </section>
+</div>
+{% endblock %}

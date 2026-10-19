@@ -82,10 +82,13 @@ def _snapshot(page, cfg, ctx, groups=None, card=None):
             return {**row, "_setup_scheduling": cfg}
         return row
     if page == "diary_settings":
+        snapshot = dict(cfg or {})
         if setup_card_scalars.needs_stages(card):
             stages = db.crm_list_stages(ctx.tenant_id, client=ctx.client)
-            return {**(cfg or {}), "_setup_stages": sorted(stages, key=lambda r: r["id"])}
-        return cfg
+            snapshot["_setup_stages"] = sorted(stages, key=lambda r: r["id"])
+        if setup_card_mode.pending(card):
+            snapshot["_setup_has_bookings"] = db.setup_has_booking_history(ctx.tenant_id, client=ctx.client)
+        return snapshot
     if page == "booking_details":
         definitions = db.crm_list_field_definitions(ctx.tenant_id, entity="contact", client=ctx.client)
         snapshot = {"config": cfg or {}, "definitions": sorted(definitions, key=lambda r: r["id"])}

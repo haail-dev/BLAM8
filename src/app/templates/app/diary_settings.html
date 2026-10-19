@@ -1,25 +1,60 @@
 {% extends "app/base.html" %}
 {% block title %}Diary settings · BLAM8{% endblock %}
 {% block heading %}Diary settings{% endblock %}
-{% set back = ('/app/diary', 'Diary') %}
+{% set back = ('/app/diary/intake', 'Booking requirements') if mode_only else ('/app/diary', 'Diary') %}
 {% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto p-6 space-y-5">
+  {% if not fleet_mode %}
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden" id="booking-mode">
+    <div class="px-5 py-4">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Booking mode</h2>
+      <p class="text-sm text-slate-400">Choose how bookings use the diary. Customer answers and documents belong in Booking requirements.</p>
+    </div>
+    {% if booking_mode_saved %}<p class="px-5 pb-3 text-sm text-emerald-700" role="status">Booking mode saved.</p>{% endif %}
+    <details class="group/row border-t border-slate-200">
+      <summary class="flex items-baseline gap-3 px-5 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+        <span class="text-sm font-semibold text-navy flex-none">Booking type</span>
+        <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open/row:invisible">{{ 'Arrival to departure' if diary_stay_mode else 'Appointments' }}</span>
+        <span class="flex-none text-slate-300 transition group-open/row:rotate-90">&rsaquo;</span>
+      </summary>
+      <form method="post" action="/app/diary/settings/booking-mode" class="px-5 pb-5 space-y-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+        <input type="hidden" name="settings_snapshot" value="{{ booking_mode_snapshot|tojson|forceescape }}">
+        <label class="block text-sm text-slate-500">How bookings use time
+          <select name="booking_mode" class="mt-1 block w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+            <option value="appointment" {{ 'selected' if not diary_stay_mode }}>Appointments</option>
+            <option value="stay" {{ 'selected' if diary_stay_mode }}>Arrival to departure (including overnight stays)</option>
+          </select>
+        </label>
+        <p class="text-xs text-slate-500">Arrival-to-departure bookings capture both times. {% if mode_only %}The agent collects the request for you to confirm; this does not enable automatic booking.{% else %}Configure rates and timing in Stays below.{% endif %} Changing mode with saved bookings requires a migration.</p>
+        <div data-save-row><button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">Save booking mode</button></div>
+      </form>
+    </details>
+  </section>
+  {% endif %}
+  {% if not mode_only %}
   {% set sched_return = '/app/diary/settings' %}
   {% include "app/_scheduling_settings.html" %}
 
-  {# People per job (src/app/job_people.py; Kris 2026-09-24: "configurable —
-     agnostic"). Its own small form: the big one above has its own handler. #}
-  <form method="post" action="/app/diary/people-per-job" class="rounded-xl border border-slate-200 bg-white p-5" data-people-per-job>
-    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-    <p class="text-sm font-semibold text-navy">People on a job</p>
-    <p class="mt-1 text-xs text-slate-500">Who does the work on each booking — set on the booking, or by asking the Concierge.</p>
-    <div class="mt-3 space-y-1.5">
-      <label class="flex items-start gap-2.5"><input type="radio" name="value" value="one" {{ 'checked' if scheduling_cfg.people_per_job != 'several' }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none"><span><span class="block text-sm text-navy">One person per job</span><span class="block text-xs text-slate-400">Putting someone on a job takes whoever was on it off.</span></span></label>
-      <label class="flex items-start gap-2.5"><input type="radio" name="value" value="several" {{ 'checked' if scheduling_cfg.people_per_job == 'several' }} class="mt-0.5 accent-blue-600 h-4 w-4 flex-none"><span><span class="block text-sm text-navy">Several people</span><span class="block text-xs text-slate-400">Each with their own part — say one on the drop-off, another on the collection.</span></span></label>
-    </div>
-    <div data-save-row class="mt-3"><button class="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Save</button></div>
-  </form>
+  <section class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div class="px-5 py-4"><h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Calendar connection</h2></div>
+    <details class="group/row border-t border-slate-200">
+      <summary class="flex items-baseline gap-3 px-5 py-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-slate-50 transition">
+        <span class="text-sm font-semibold text-navy flex-none">Business calendar</span>
+        <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open/row:invisible">{{ 'Connected' if calendar_connected else 'Not connected' }}</span>
+        <span class="flex-none text-slate-300 transition group-open/row:rotate-90">&rsaquo;</span>
+      </summary>
+      <div class="px-5 pb-5 space-y-3">
+        <p class="text-sm text-slate-500">Your business calendar syncs confirmed bookings and supplies existing busy time to the diary.</p>
+        {% if calendar_connected %}
+        <a href="/app/mailboxes" class="text-sm text-brand hover:underline">Manage connected accounts</a>
+        {% else %}
+        <a href="/oauth/connect?provider={{ provider }}" class="inline-block rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white">Connect calendar</a>
+        {% endif %}
+      </div>
+    </details>
+  </section>
 
   {# Clear the whole diary in one go — every offered / proposed / confirmed
      row, past dates too, each calendar event removed first. A real control
@@ -36,5 +71,6 @@
       <button class="flex-none rounded-lg border border-rose-200 px-3 py-1.5 font-semibold text-rose-600 hover:bg-rose-50 transition">Cancel every live booking</button>
     </form>
   </details>
+  {% endif %}
 </div>
 {% endblock %}

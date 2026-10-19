@@ -8,6 +8,8 @@ def test_all_durable_fields_have_one_catalogue_entry_and_matching_controls():
     assert len({e['id'] for e in entries}) == len(entries)
     for page, name in setup_rows.SUPPORTED:
         if name == 'setting':
+            if page == 'booking_details':  # compatibility adapter for existing cards
+                continue
             for key in catalogue.scalar_specs()[page]:
                 assert catalogue.lookup(page+'/'+key)['card_can_set'] is True
         else:
@@ -17,6 +19,8 @@ def test_all_durable_fields_have_one_catalogue_entry_and_matching_controls():
         assert all(key in entry for key in ('controls', 'options', 'unset_means', 'ask_when', 'question', 'card_can_set', 'where_on_page'))
         assert entry['unset_scope'] == 'proposal'
     with pytest.raises(ValueError): catalogue.lookup('unknown/unknown')
+    assert catalogue.lookup('diary_settings/stay_mode')['card_can_set'] is True
+    with pytest.raises(ValueError): catalogue.lookup('booking_details/stay_mode')
 
 
 def test_catalogue_values_are_independent_copies_and_neutral():

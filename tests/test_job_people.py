@@ -132,8 +132,10 @@ def test_the_team_is_told_to_the_concierge(rig):
 def test_the_job_page_and_the_setting_are_wired():
     job = open("src/app/templates/app/diary_job.html", encoding="utf-8").read()
     assert "data-whos-on-it" in job and 'action="/app/diary/{{ b.id }}/people"' in job
-    settings = open("src/app/templates/app/diary_settings.html", encoding="utf-8").read()
-    assert 'action="/app/diary/people-per-job"' in settings and 'value="several"' in settings
+    diary = open("src/app/templates/app/diary_settings.html", encoding="utf-8").read()
+    people_settings = open("src/app/templates/app/people_settings.html", encoding="utf-8").read()
+    assert 'action="/app/diary/people-per-job"' not in diary
+    assert 'action="/app/people/settings"' in people_settings and 'value="several"' in people_settings
 
 
 def test_a_name_heard_as_a_letter_or_under_another_key_still_finds_em(rig):

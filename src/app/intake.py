@@ -169,7 +169,7 @@ PROFILE_INTAKE = {
 # The reserved field that turns a tenant's bookings into STAYS (multi-day visits,
 # equipment hire or storage): a booking captures a departure/collection time as well as an
 # arrival, so it can span multiple days (app/slotgrid stay_* — the continuous timeline).
-# It's toggled on the booking-requirements page, not edited in the field grid, so it never
+# It's controlled from Diary settings, not edited in the field grid, so it never
 # appears as a normal row; its presence in intake_fields IS the stay-mode flag (no schema
 # change needed). Capacity (spaces/rooms/units) is the existing capacity_per_window.
 STAY_FIELD = {"label": "Departure / collection date & time", "required": True,

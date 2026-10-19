@@ -1428,8 +1428,37 @@ def _parse_help(text: str) -> tuple[str, str, dict | None, list[dict] | None]:
         rec_raw = data.get("recommend") or []
         if isinstance(rec_raw, dict):        # tolerate the pre-list shape
             rec_raw = [rec_raw]
-        recommend, seen_pages = [], set()
+        # Old assistant turns placed booking mode on Booking requirements. Route
+        # that one legacy value to Diary settings while keeping customer fields
+        # on their original page.
+        normalized = []
+        by_page = {}
+        def add_page(page, values, template=None):
+            if page not in by_page:
+                by_page[page] = {**(template or {}), "page": page, "values": []}
+                normalized.append(by_page[page])
+            by_page[page]["values"].extend(values)
         for entry in rec_raw if isinstance(rec_raw, list) else []:
+            if not isinstance(entry, dict) or not isinstance(entry.get("page"), str):
+                continue
+            if entry.get("page") != "booking_details":
+                values = entry.get("values") if isinstance(entry.get("values"), list) else []
+                add_page(entry["page"], values, entry)
+                continue
+            values = entry.get("values") if isinstance(entry.get("values"), list) else []
+            # Apply the legacy cross-row rule while mode and intake rows still
+            # share a page: a stay recommendation owns departure capture, so
+            # an old assistant response must not also add a departure question.
+            from app import setup_rows
+            values = setup_rows.recommendations("booking_details", values)
+            mode = [v for v in values if isinstance(v, dict) and v.get("name") == "stay_mode"]
+            details = [v for v in values if not (isinstance(v, dict) and v.get("name") == "stay_mode")]
+            if mode:
+                add_page("diary_settings", mode)
+            if details:
+                add_page("booking_details", details, entry)
+        recommend, seen_pages = [], set()
+        for entry in normalized:
             if not isinstance(entry, dict):
                 continue
             page = (entry.get("page") or "").strip()

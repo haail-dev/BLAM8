@@ -174,6 +174,26 @@ def _people_ctx(ctx: TenantCtx, request: Request, **extra) -> dict:
                 mailboxes=_mailboxes(ctx), **extra)
 
 
+@router.get("/settings", response_class=HTMLResponse)
+def people_settings(request: Request, ctx: TenantCtx = Depends(require_admin)):
+    from app.dashboard import _ctx
+    cfg = db.get_scheduling_config(ctx.tenant_id, client=ctx.client) or {}
+    return templates.TemplateResponse(request, "app/people_settings.html", _ctx(
+        "people", ctx, people_per_job=cfg.get("people_per_job", "one"),
+        settings_saved=request.query_params.get("saved") == "1",
+        can_change_people_settings=people.can_do(me(ctx), "settings", "change")))
+
+
+@router.post("/settings", dependencies=[Depends(require_csrf)])
+def save_people_settings(value: str = Form(...), ctx: TenantCtx = Depends(require_admin)):
+    if not people.can_do(me(ctx), "settings", "change"):
+        raise HTTPException(status_code=403, detail="You cannot change these settings.")
+    if value not in ("one", "several"):
+        raise HTTPException(status_code=422, detail="Choose one person or several people.")
+    db.upsert_scheduling_config(ctx.tenant_id, {"people_per_job": value}, client=ctx.client)
+    return RedirectResponse("/app/people/settings?saved=1", status_code=303)
+
+
 @router.get("", response_class=HTMLResponse)
 def people_page(request: Request, ctx: TenantCtx = Depends(require_admin)):
     """Everyone on this business, and the invitations out. A token just minted

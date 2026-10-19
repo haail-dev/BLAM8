@@ -55,6 +55,12 @@ PAGES = {
                 "reads as not open yet"
             ),
             "capacity_per_window": "bookings that can share one slot, 1-99",
+            "stay_mode": (
+                "1 when one booking can span days so a departure/collection time is captured "
+                "(arrival-to-departure bookings), else 0. stay_mode 1 CAPTURES the departure/collection time "
+                "itself — never ALSO write a booking_details field row for a collection, departure, pick-up or "
+                "return time, or the agent asks the customer for it twice"
+            ),
             "windows": "booking unit when no services are set — slots, ampm or day",
             "buffer_minutes": "gap between bookings in minutes; 0 means no gap",
             "service": (
@@ -199,12 +205,6 @@ PAGES = {
         "repeat": {"field"},
         "fields": {
             "field": "REPEATABLE, one per detail the AI collects for a booking — \"Label | required or optional | hint for the AI | only for: Service A; Service B | remember: once, confirm or expires\" (hint optional; the 'only for' part optional — give it when the detail matters for SOME of the business's services only, e.g. a detail for Service A but not Service B; service names exactly as listed; leave it as 'only for:' with nothing after when a remember part follows). The REMEMBER part is the row's durability — give it for a fact about the CUSTOMER that holds between visits, so it is kept on their record (it appears under Customer fields) and read back on their next booking, and a repeat customer is asked only what changed: 'remember: once' for a fact that does not change — a licence number, a date of birth, an allergy, a membership number, the address the business travels to when a customer has ONE; 'remember: confirm' for one that usually holds but is worth checking each visit in one line — a contact preference or access arrangement; 'remember: expires' for a DATED certificate or licence that lapses (the date is kept and re-asked once it has). Leave the remember part OUT for what changes every visit — the address for THIS job when a customer has several properties, an inscription, a headcount, a preferred time — and say plainly in the reply which rows are remembered and which are asked each visit. Never a payment or deposit question (invoicing handles money), never a fact that belongs to a dependant the business tracks per named subject (its type, category or other details — those live on the Dependants page), never a count of dependants (the booking names them). A row is a QUESTION the customer answers when booking: a rule about how the business works (who must approve something, what happens after the visit) is never a row, it is a knowledge note. A detail that applies to SOME customers only is OPTIONAL, with a hint saying who it is for. REQUIRED only for what the agent cannot book without (where, when, what); a fact the owner settles at an initial appointment (preferences or other non-blocking details) is OPTIONAL — required means the agent refuses to book until it is answered. Never a row that asks for an alarm code, key-safe number or password — those never travel by email; the hint may say the customer will give access details in person. A document row (a certificate the customer attaches) is never remembered — it is attached per booking. To request one, add the named part 'kind: document' to its row; 'kind: answer' is a question the customer answers.",
-            "stay_mode": (
-                "1 when one booking can span days so a departure/collection time is captured "
-                "(arrival-to-departure bookings), else 0. stay_mode 1 CAPTURES the departure/collection time "
-                "itself — never ALSO write a field row for a collection, departure, pick-up or return time, or "
-                "the agent asks the customer for it twice"
-            ),
         },
     },
     "knowledge": {
@@ -395,10 +395,11 @@ _LABELS = {
     ("invoice_settings", "show_vat"): "VAT on invoices",
     ("invoice_settings", "prices_include_vat"): "Prices include VAT",
     ("invoice_settings", "deposit_on_confirm"): "Deposit on every confirmed booking",
-    ("booking_details", "stay_mode"): "Overnight stays",
+    ("diary_settings", "stay_mode"): "Booking type",
 }
 _BOOLS = {("diary_settings", "recurring_enabled"), ("diary_settings", "party_enabled"),
-          ("diary_settings", "makeups_on"), ("invoice_settings", "show_payment_terms"),
+          ("diary_settings", "makeups_on"), ("diary_settings", "stay_mode"),
+          ("invoice_settings", "show_payment_terms"),
           ("invoice_settings", "show_vat"), ("invoice_settings", "deposit_on_confirm"),
           ("invoice_settings", "prices_include_vat")}
 _NOUNS = {("diary_settings", "noun_booking"), ("diary_settings", "noun_participant")}
@@ -441,7 +442,7 @@ def words(page: str, name: str, value: str) -> str | None:
     v = str(value).strip()
     if key in _BOOLS:
         return {"1": "yes", "true": "yes", "0": "no", "false": "no"}.get(v.lower())
-    if key == ("booking_details", "stay_mode"):
+    if key == ("diary_settings", "stay_mode"):
         return {"1": "yes", "0": "no"}.get(v)
     if key in _NOUNS:
         return f"“{v}”" if v else None
@@ -615,6 +616,10 @@ def catalogue_block(today: date | None = None) -> str:
 
 
 def _valid_name(page: str, name: str) -> bool:
+    # Read compatibility for old recommendations only. The current catalogue
+    # exposes stay_mode under diary_settings, never booking_details.
+    if page == "booking_details" and name == "stay_mode":
+        return True
     if name in PAGES[page]["fields"]:
         return True
     return page == "diary_settings" and bool(_DAYHOURS_RE.match(name))

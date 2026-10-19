@@ -4285,16 +4285,51 @@ def diary_settings(request: Request, ctx: TenantCtx = Depends(require_onboarded)
     blackouts apply to each). The windows-capacity fields hide only for a
     fleet-ONLY tenant (the fleet resource pool is their whole capacity model); a dual
     tenant's windows fields shape the office diary, so they show."""
-    _office_diary(ctx)   # 404 unless a diary module is on
+    # Request collection also needs booking mode on accounts without a diary.
+    mode_only = not ({"scheduling", "tms"} & _diary_modules(ctx))
     fleet_mode = _fleet_only(ctx)
-    row = db.get_scheduling_config(ctx.tenant_id, client=ctx.client) or {}
+    mode_snapshot = setup_forms.load(ctx, "booking_details") if not fleet_mode else None
+    row = mode_snapshot["config"] if mode_snapshot else (db.get_scheduling_config(ctx.tenant_id, client=ctx.client) or {})
     cfg = scheduling._merged(row)
     return templates.TemplateResponse(request, "app/diary_settings.html", _ctx(
-        "diary" if not fleet_mode else "board", ctx, scheduling_cfg=cfg, fleet_mode=fleet_mode,
+        "inbox" if mode_only else ("diary" if not fleet_mode else "board"), ctx,
+        scheduling_cfg=cfg, fleet_mode=fleet_mode, mode_only=mode_only,
+        calendar_connected=db.calendar_connected(ctx.tenant_id, client=ctx.client) if not mode_only else False,
+        booking_mode_snapshot=mode_snapshot,
+        booking_mode_saved=request.query_params.get("mode") == "saved",
         sched_saved=request.query_params.get("sched") == "saved", **_depth_ctx(cfg),
         crm_stages=_crm_stage_names(ctx),
         setup_prefill=_setup_prefill(ctx, "diary_settings", fresh=not row),
     ))
+
+
+@router.post("/diary/settings/booking-mode", dependencies=[Depends(require_csrf)])
+def save_diary_booking_mode(booking_mode: str = Form(...),
+                           settings_snapshot: str = Form(""),
+                           ctx: TenantCtx = Depends(require_onboarded)):
+    """Save booking mode with departure capture and booking-history protection."""
+    if _fleet_only(ctx):
+        raise HTTPException(404, "Booking mode is unavailable for this diary.")
+    if booking_mode not in {"appointment", "stay"}:
+        raise HTTPException(422, "Choose appointments or arrival-to-departure bookings.")
+    from app import setup_card_mode, setup_cards
+    expected = setup_forms.parse(settings_snapshot, "booking_details")
+    try:
+        patch, _ = setup_card_mode.prepare(
+            {"id": "form", "fields": {"key": "stay_mode", "value": booking_mode == "stay"}},
+            {"config": expected["config"], "has_bookings": False})
+    except setup_cards.Invalid as exc:
+        raise HTTPException(400, str(exc)) from None
+    if booking_mode == "appointment" and any(
+        intake._norm(scope) == intake._norm(intake.STAYS_SCOPE)
+        for row in patch["intake_fields"] for scope in row.get("services", [])
+    ):
+        raise HTTPException(400, "Remove Stays-only field scopes in Booking requirements before switching to appointments.")
+    # The existing atomic transaction verifies the snapshot and booking history
+    # under lock. A mode-only save does not complete Booking requirements.
+    setup_forms.save(ctx, "booking_details", expected,
+                     [setup_forms.operation("scheduling_config", patch, ctx.tenant_id)])
+    return RedirectResponse("/app/diary/settings?mode=saved", status_code=303)
 
 
 def _crm_stage_names(ctx) -> list[str]:
@@ -4381,6 +4416,7 @@ async def save_scheduling_settings(
     practitioner_name: list[str] = Form([]), practitioner_resource: list[str] = Form([]),
     practitioner_capacity: list[str] = Form([]),
     reminder_lead_hours: list[str] = Form([]), reminder_ask_confirm: str = Form(""),
+    reminder_cycle_present: str = Form(""),
     resource_name: list[str] = Form([]), resource_count: list[str] = Form([]),
     resource_rate: list[str] = Form([]), resource_rate_unit: list[str] = Form([]),
     resource_skills: list[str] = Form([]),
@@ -4601,6 +4637,8 @@ async def save_scheduling_settings(
                 depth["practitioners"] = practice_config.parse_practitioner_form(
                     practitioner_name, practitioner_resource, practitioner_capacity)
             leads = practice_config.clean_lead_hours(reminder_lead_hours)
+            if reminder_cycle_present == "1" and not leads:
+                raise HTTPException(status_code=422, detail="Keep at least one reminder time.")
             if leads:
                 depth["reminder_cycle"] = {"leads_hours": leads,
                                            "ask_confirm": reminder_ask_confirm == "1"}
@@ -4654,8 +4692,8 @@ def scheduling_intake(request: Request, ctx: TenantCtx = Depends(require_onboard
     fields = intake.clean_fields(cfg.get("intake_fields") or [])
     if not fields and not configured:
         fields = intake.suggest_for()
-    # The reserved departure/collection field is surfaced as the Overnight-stays toggle, not
-    # as an editable row, so split it out of the grid.
+    # Diary settings owns booking mode and its reserved departure field.
+    # Keep that field outside the customer checklist editor.
     sched_on = "scheduling" in _diary_modules(ctx)
     # A services diary can scope a detail to some services (Kris 2026-09-04) —
     # the editor offers the tenant's own service names as tick-boxes.
@@ -4683,7 +4721,7 @@ def scheduling_intake(request: Request, ctx: TenantCtx = Depends(require_onboard
         dep_kind = ""
     return templates.TemplateResponse(request, "app/diary_intake.html", _ctx(
         "diary" if sched_on else "inbox", ctx, fields=intake.editable_fields(fields), settings_snapshot=snapshot,
-        stay=intake.is_stay(fields), configured=configured, sched_on=sched_on,
+        stay=intake.stay_mode(cfg), configured=configured, sched_on=sched_on,
         booking_ready=__import__("app.booking_policy", fromlist=["compile_policy"]).compile_policy(cfg)["ready"],
         service_names=service_names, dep_kind=dep_kind,
         saved=request.query_params.get("intake") == "saved",
@@ -4699,13 +4737,11 @@ def save_scheduling_intake(label: list[str] = Form([]), required: list[str] = Fo
                            hint: list[str] = Form([]), doc: list[str] = Form([]),
                            services: list[str] = Form([]),
                            remember: list[str] = Form([]), crm_key: list[str] = Form([]),
-                           stay_mode: str = Form(""),
                            settings_snapshot: str = Form(""),
                            ctx: TenantCtx = Depends(require_onboarded)):
     """Persist the intake schema and stamp it configured — which unblocks the office
     diary. Fields are reassembled from the form's positionally-aligned arrays and cleaned
-    (blanks/dupes dropped) by app/intake.parse_form. The Overnight-stays toggle adds or
-    removes the reserved departure/collection field (intake.apply_stay). Available on
+    (blanks/dupes dropped) by app/intake.parse_form. The saved booking mode and its reserved departure field are preserved. Available on
     email-only too (gather-don't-book) — after save, scheduling plans land on the diary,
     email-only lands back on this page.
 
@@ -4716,8 +4752,10 @@ def save_scheduling_intake(label: list[str] = Form([]), required: list[str] = Fo
     a fact is kept when it is not."""
     expected = setup_forms.parse(settings_snapshot, "booking_details")
     fields = intake.parse_form(label, required, hint, doc, services, remember, crm_key)
-    fields = intake.apply_stay(fields, str(stay_mode).strip() in ("1", "on", "true"))
-    operations, config, problems = setup_forms.intake_plan(expected, fields, str(stay_mode).strip() in ("1", "on", "true"))
+    stay = intake.stay_mode(expected["config"])
+    fields = intake.apply_stay(fields, stay)
+    operations, config, problems = setup_forms.intake_plan(expected, fields, stay)
+    config.pop("booking_mode", None)
     operations.append(setup_forms.operation("scheduling_config", config, ctx.tenant_id))
     setup_forms.save(ctx, "booking_details", expected, operations)
     dest = "/app/diary" if "scheduling" in _diary_modules(ctx) else "/app/diary/intake"

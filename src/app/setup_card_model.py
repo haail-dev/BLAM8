@@ -14,7 +14,6 @@ MODEL_SUPPORTED = {("diary_settings", "service"), ("diary_settings", "resource")
                    ("packages", "package"),
                    ("crm_settings", "setting"), ("crm_settings", "stage"),
                    ("crm_fields", "contact_field"),
-                   ("booking_details", "setting"),
                    ("booking_details", "field"), ("dependants", "group"), ("dependants", "field")}
 MODEL_PAGES = {page for page, _ in MODEL_SUPPORTED}
 
@@ -98,8 +97,10 @@ array for dropdowns; extraction_hint is optional text. Expiring date fields need
 explicit recall_days (1-365) and valid_months (0-600; zero means the date is expiry).
 Never infer these choices, remove saved options, change existing types/durability,
 or create a duplicate of a progress ladder. Corrections include only changed fields.
-booking_details also supports setting key stay_mode with a native boolean value.
-This keeps departure capture and booking mode together. A real mode change needs
+diary_settings supports setting key stay_mode with a native boolean value.
+This keeps departure capture and booking mode together. Existing pending
+booking_details stay_mode cards are legacy and may be accepted as saved, but never
+create or revise that setting on booking_details. A real mode change needs
 an empty booking history and compatible service capacity; never claim to migrate
 existing bookings. Stays-only scopes must be removed in the same acceptance when
 switching to appointments.
@@ -251,6 +252,7 @@ def without_legacy_rows(entries):
     for entry in entries or []:
         values = [v for v in entry.get("values", []) if (entry.get("page"), v.get("name")) not in MODEL_SUPPORTED
                   and not (entry.get("page") == "booking_details" and v.get("name") == "stay_mode")
+                  and not (entry.get("page") == "diary_settings" and v.get("name") == "stay_mode")
                   and not (entry.get("page") == "crm_settings" and v.get("name") in setup_card_crm.SPECS)
                   and not (entry.get("page") == "diary_settings" and v.get("name") in setup_card_scalars.SPECS)
                   and not (entry.get("page") in {"invoice_settings", "packages"} and v.get("name") in setup_card_invoices.specs(entry["page"]))]

@@ -270,9 +270,9 @@ def test_knowledge_deltas_preserve_prose_and_suppress_legacy_note(route_client):
 def test_booking_mode_native_false_suppresses_legacy_choice(route_client):
     c, state = route_client
     state['changes'] = delta(fields=[assignment('key', 'stay_mode'), assignment('value', False)])
-    state['changes'][0]['page'] = 'booking_details'
+    state['changes'][0]['page'] = 'diary_settings'
     state['changes'][0]['changes'][0]['name'] = 'setting'
-    state['recommend'] = [{'page': 'booking_details', 'values': [{'name': 'stay_mode', 'value': '1'}]}]
+    state['recommend'] = [{'page': 'diary_settings', 'values': [{'name': 'stay_mode', 'value': '1'}]}]
     reply = ask(c).json()
     assert reply['recommend'] is None
     assert reply['setup_cards'][0]['lines'][0]['fields'] == {'key': 'stay_mode', 'value': False}

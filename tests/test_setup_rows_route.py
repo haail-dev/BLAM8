@@ -82,8 +82,11 @@ def test_new_help_boundary_keeps_existing_cross_row_rules():
             {"name": "field", "value": "Collection date and time | required"},
             {"name": "field", "value": "Contact number | required"}]}]}))[3]
     assert recs[0]["values"][1]["value"] == "minutes"
-    assert len(recs[1]["values"]) == 2
-    assert recs[1]["values"][1]["fields"]["label"] == "Contact number"
+    assert recs[0]["page"] == "diary_settings"
+    assert recs[0]["values"][2]["name"] == "stay_mode"
+    assert recs[1]["page"] == "booking_details"
+    assert len(recs[1]["values"]) == 1
+    assert recs[1]["values"][0]["fields"]["label"] == "Contact number"
 
 
 def test_nullable_legacy_lists_are_a_successful_empty_read(client, monkeypatch):

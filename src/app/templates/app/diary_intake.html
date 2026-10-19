@@ -66,21 +66,10 @@
     <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 
-    {# Overnight stays — a fold like the rest, its face saying which way it is
-       set rather than making you read a paragraph to find out. #}
-    <details class="group glass-card overflow-hidden">
-      <summary class="flex items-baseline gap-3 px-4 py-3.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-white/30 transition">
-        <span class="text-sm font-semibold text-navy flex-none">Overnight stays</span>
-        <span class="flex-1 min-w-0 truncate text-xs text-slate-400 group-open:invisible">{% if stay %}On — bookings can run across days{% else %}Off — every booking is a single visit{% endif %}</span>
-        <span class="flex-none text-slate-300 transition group-open:rotate-90">&rsaquo;</span>
-      </summary>
-      <div class="border-t border-slate-200/70 p-4">
-        <label class="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" name="stay_mode" value="1" {{ 'checked' if stay }} class="mt-0.5 h-4 w-4 flex-none rounded border-slate-300 text-brand focus:ring-2 focus:ring-brand/20">
-          <span class="text-sm text-slate-500 leading-relaxed">One booking can run across days. The agent then captures a <span class="font-medium text-navy">departure / collection</span> time as well as an arrival.{% if sched_on %} Your number of spaces is <a href="/app/diary/settings" class="text-brand hover:underline">Bookings per slot</a> under Diary capacity.{% endif %}</span>
-        </label>
-      </div>
-    </details>
+    <p class="px-1 text-xs text-slate-400">Booking mode: {{ 'Arrival to departure — both times are collected' if stay else 'Appointments' }}.
+      Change booking mode{% if sched_on %}, availability and capacity{% endif %} in <a href="/app/diary/settings#booking-mode" class="text-brand font-medium">Diary settings</a>.
+      This page controls the answers and documents collected for a booking.
+    </p>
 
     {# The checklist itself. #}
     <section class="glass-card overflow-hidden">
@@ -259,7 +248,6 @@
   (function () {
     var rows = document.getElementById('rows');
     var tpl = document.getElementById('row-template');
-    var stayBox = document.querySelector('input[name="stay_mode"]');
     var pvList = document.getElementById('preview-fields');
     var pvIntro = document.getElementById('preview-intro');
     var pvEmpty = document.getElementById('preview-empty');
@@ -310,7 +298,7 @@
         var docSel = r.querySelector('select[name="doc"]');
         if (label && req) labels.push(label + (docSel && docSel.value === '1' ? ' — attached to your reply' : ''));
       });
-      if (stayBox && stayBox.checked) labels.push(STAY_LABEL);
+      if ({{ 'true' if stay else 'false' }}) labels.push(STAY_LABEL);
       pvList.innerHTML = '';
       labels.forEach(function (l) {
         var li = document.createElement('li');
@@ -358,7 +346,6 @@
       sync();
     });
     rows.querySelectorAll('.intake-row').forEach(boxesFromScope);
-    if (stayBox) stayBox.addEventListener('change', preview);
     sync();
   })();
 </script>

@@ -77,7 +77,7 @@ def test_stay_mode_drops_a_second_collection_row():
     # Off, nothing is dropped — a day-visit diary really does need both rows.
     out = settings_recommend.clean("booking_details", [{"name": "stay_mode", "value": "0"}] + vals[1:])
     assert len([v for v in out if v["name"] == "field"]) == 3
-    assert "never ALSO write a field row for a" in settings_recommend.PAGES["booking_details"]["fields"]["stay_mode"]
+    assert "never ALSO write a booking_details field row" in settings_recommend.PAGES["diary_settings"]["fields"]["stay_mode"]
 
 
 # ── (ccc) no door out of the step you are standing on ──────────────────────

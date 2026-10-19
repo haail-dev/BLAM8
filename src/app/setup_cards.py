@@ -68,6 +68,8 @@ def change(page, current, revision, turn, changes, considered=None):
         op = patch.get("op")
         if not isinstance(op, str):
             raise Invalid("Choose append, set or remove.")
+        if page == "booking_details" and patch.get("name") == "setting" and op == "append":
+            raise Invalid("Booking mode proposals belong on Diary settings.")
         if op == "append":
             if patch.get("id") is not None or not isinstance(patch.get("name"), str) or (page, patch["name"]) not in setup_rows.SUPPORTED:
                 raise Invalid("Append requires a supported row name and no existing ID.")
@@ -82,6 +84,8 @@ def change(page, current, revision, turn, changes, considered=None):
                 raise Invalid("Change each line only once per revision.")
             if "name" in patch:
                 raise Invalid("An existing line's row type cannot change.")
+            if page == "booking_details" and line.get("name") == "setting" and op == "set":
+                raise Invalid("Existing booking-mode proposals can be accepted as saved, but edits belong on Diary settings.")
         else:
             raise Invalid("Choose append, set or remove.")
         touched.add(line["id"])
@@ -296,7 +300,7 @@ def acceptance_patch(card, ids, snapshot, *, actor=None):
         return setup_card_invoices.patch(card, ids, snapshot)
     if card["page"] == "diary_settings":
         if any(v["name"] not in {'service', 'resource'} and v["id"] in ids for v in card["lines"]):
-            from app import setup_card_scalars, setup_card_service_rules
+            from app import setup_card_scalars, setup_card_service_rules, setup_card_mode, intake
             if not ids or len(set(ids)) != len(ids):
                 raise Invalid("Choose distinct pending lines.")
             selected = [v for v in card["lines"] if v["id"] in ids and v["status"] in PENDING]
@@ -306,9 +310,27 @@ def acceptance_patch(card, ids, snapshot, *, actor=None):
             patch, changes = diary_patch(card, rows, snapshot) if rows else ({}, [])
             scalar_rows = [v for v in selected if v['name'] == 'setting']
             if scalar_rows:
-                scalar_patch, scalar_changes = setup_card_scalars.patch(scalar_rows, (snapshot or {}) | patch, actor)
-                patch.update(scalar_patch)
-                changes.extend(scalar_changes)
+                mode_rows = [v for v in scalar_rows if v.get('fields', {}).get('key') == 'stay_mode']
+                ordinary_rows = [v for v in scalar_rows if v not in mode_rows]
+                if mode_rows:
+                    if len(mode_rows) != 1:
+                        raise Invalid("Choose one booking-mode proposal.")
+                    candidate = (snapshot or {}) | patch
+                    mode_patch, receipt = setup_card_mode.prepare(mode_rows[0], {
+                        'config': candidate,
+                        'has_bookings': (snapshot or {}).get('_setup_has_bookings'),
+                    })
+                    if mode_patch['booking_mode'] == 'appointment' and any(
+                        intake._norm(scope) == intake._norm(intake.STAYS_SCOPE)
+                        for row in mode_patch['intake_fields'] for scope in row.get('services', [])
+                    ):
+                        raise Invalid('Remove Stays-only field scopes in Booking requirements before switching to appointments.')
+                    patch.update(mode_patch)
+                    changes.append(receipt)
+                if ordinary_rows:
+                    scalar_patch, scalar_changes = setup_card_scalars.patch(ordinary_rows, (snapshot or {}) | patch, actor)
+                    patch.update(scalar_patch)
+                    changes.extend(scalar_changes)
             rule_rows = [v for v in selected if v['name'] in setup_card_service_rules.FIELDS]
             if rule_rows:
                 rule_patch, rule_changes = setup_card_service_rules.patch(rule_rows, (snapshot or {}) | patch)
