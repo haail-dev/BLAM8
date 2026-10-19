@@ -423,7 +423,7 @@ def test_an_extra_night_draft_invoice_waits_and_opens(monkeypatch):
     out = concierge_routes.business_waiting(_ctx())
     assert out["waiting"][0]["type"] == "link"
     js = open("src/app/static/concierge_panel.js", encoding="utf-8").read()
-    assert "if (w.type === 'link') { if (w.href && w.href.charAt(0) === '/') window.location.href = w.href; return; }" in js
+    assert "if (w.type === 'link') { if (w.href && w.href.charAt(0) === '/') openPlatformRecord(w.href); return; }" in js
     assert "if (w.type !== 'link' && w.type !== 'recovery') chip.appendChild(x);" in js
 
 

@@ -77,3 +77,10 @@ def test_operator_job_has_separate_bound_evidence_without_public_capability():
     assert any('Stale operator' in e for e in maintenance.check_change([source], changed))
     changed['operator_sources'].clear()
     assert maintenance.validate_operator_reviews(changed)
+
+
+def test_associated_presentation_sources_are_included_in_source_signatures():
+    row = next(row for row in product_inventory.entries() if row['id'] == 'owner.assistant')
+    assert {'src/app/templates/app/_concierge_panel.html',
+            'src/app/templates/app/_concierge_history.html',
+            'src/app/static/concierge_panel.js'} <= set(maintenance.source_files(row))

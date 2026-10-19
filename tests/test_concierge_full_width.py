@@ -113,3 +113,21 @@ def test_the_chat_fades_into_the_background_where_it_meets_the_composer():
     assert "messages.addEventListener('scroll', fitEdge, { passive: true });" in JS
     assert "new ResizeObserver(fitEdge).observe(messages);" in JS
     assert "setTail(flush ? newestSection : null);\n      fitEdge();" in JS
+
+
+def test_both_bubbles_fit_content_and_share_a_95_percent_limit():
+    history = (ROOT / "src/app/templates/app/_concierge_history.html").read_text(encoding="utf-8")
+    assert ".cz-message-bubble {width:fit-content;max-width:95%;min-width:0;margin-inline:0;" in PANEL
+    for source in (history, JS):
+        assistant_lines = [line for line in source.splitlines() if "cz-message-assistant" in line and "max-w-[" in line]
+        assert assistant_lines and all("max-w-[95%]" in line for line in assistant_lines)
+        assert any("max-w-[95%]" in line for line in source.splitlines() if "cz-message-user" in line)
+
+
+def test_mobile_waiting_chip_is_between_footer_links_and_replaces_the_circle():
+    assert PANEL.index('id="cz-explore"') < PANEL.index('id="cz-waiting-shortcut"') < PANEL.index('id="cz-clear"')
+    assert 'id="cz-waiting-shortcut" type="button" hidden' in PANEL
+    assert re.search(r"\.cz-pager-on \.cz-waitdot-row \{\s*display:none !important;", CSS)
+    assert re.search(r"#cz-root \.cz-waitdot-row \{\s*display:none !important;", CSS)
+    assert "waitingShortcut.hidden = !n;" in JS
+    assert "waitingShortcut.textContent = 'Waiting · ' + n;" in JS

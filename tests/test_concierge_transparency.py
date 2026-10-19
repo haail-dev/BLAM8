@@ -314,3 +314,10 @@ def test_thread_template_wires_the_recall_viewer():
     assert "What the search recalled" in html
     # the honest no-grounding line survives, in the ghost
     assert "No knowledge matches recorded." in html
+
+
+def test_compact_activity_lifecycle_and_mobile_sidebar_task_polling():
+    import subprocess
+    result = subprocess.run(["node", "tests/replays/concierge_activity_replay.mjs"],
+                            cwd=ROOT, capture_output=True, text=True)
+    assert result.returncode == 0, result.stdout + result.stderr

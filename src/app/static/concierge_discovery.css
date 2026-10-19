@@ -19,7 +19,7 @@
 .cz-discovery-foot { flex-shrink:0; }
 .cz-conversation-actions { display:flex; flex:none; align-items:center; gap:12px; padding-top:0; padding-inline:max(12px,env(safe-area-inset-left,0px)) max(12px,env(safe-area-inset-right,0px)); }   /* clear of the phone's rounded corners */
 .cz-conversation-actions button { padding:0; line-height:16px; }
-.cz-conversation-actions #cz-clear { margin-left:auto; min-height:24px; }
+.cz-conversation-actions #cz-clear { margin-left:auto; min-height:24px; grid-column:3; justify-self:end; }
 #cz-explore { margin:0; border:0; background:transparent; color:rgb(var(--c-tx-brand)); font-size:.75rem; min-height:24px; cursor:pointer; }
 @media (max-width:480px) { .cz-conversation-actions #cz-explore, .cz-conversation-actions #cz-clear { min-height:28px; padding-top:6px; } .cz-discovery-status { font-size:.7rem; } }   /* same 28px tap height, text low in it: 3px under the words, not 6 */
 @media (prefers-reduced-motion:reduce) { .cz-discovery * { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
@@ -27,3 +27,32 @@
   .cz-discovery { gap:4px; padding-bottom:4px; }
   .cz-discovery-status { margin:0; }
 }
+
+/* The narrow/page and mobile/modal task link shares the composer footer. */
+.cz-conversation-actions #cz-waiting-shortcut { display:none; flex:none; align-items:center; justify-content:center; border:2px solid transparent; border-radius:9999px; padding:0 6px; min-height:20px; position:relative; background:transparent; color:rgb(var(--c-tx-slate-700)); font-size:.75rem; cursor:pointer; white-space:nowrap; justify-self:center; grid-column:2; }
+.cz-conversation-actions #cz-waiting-shortcut[hidden] { display:none !important; }
+.cz-pager-on .cz-conversation-actions { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); }
+.cz-pager-on #cz-waiting-shortcut { display:inline-flex; }
+.cz-pager-on .cz-waitdot-row { display:none !important; }
+@media (max-width:767px) {
+  .cz-conversation-actions #cz-waiting-shortcut { display:inline-flex; }
+  #cz-root .cz-waitdot-row { display:none !important; }
+  .cz-conversation-actions { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:8px; }
+}
+.cz-conversation-actions #cz-waiting-shortcut:focus-visible { outline:2px solid rgb(var(--c-tx-brand)); outline-offset:3px; }
+/* Mask out the centre so the animated hazard border has a transparent fill. */
+.cz-conversation-actions #cz-waiting-shortcut::before {
+  content:""; position:absolute; inset:-2px; padding:2px; border-radius:inherit; pointer-events:none;
+  background:repeating-linear-gradient(135deg,#f59e0b 0 3px,transparent 3px 6px);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:cz-waiting-hazard 24s linear infinite;
+}
+@keyframes cz-waiting-hazard { to { background-position:33.941125px 0; } }
+@media (prefers-reduced-motion:reduce) {
+  .cz-conversation-actions #cz-waiting-shortcut::before { animation:none; }
+}
+
+.cz-pager-on #cz-explore { justify-self:start; }
+@media (max-width:767px) { .cz-conversation-actions #cz-explore { justify-self:start; } }
