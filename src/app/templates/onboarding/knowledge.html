@@ -89,7 +89,7 @@
     <input id="site-url" inputmode="url" autocomplete="url" class="w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" placeholder="www.yourcompany.co.uk" value="{{ site_url or '' }}">
     <button id="site-go" type="button" class="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50">{{ 'Read again' if site_state.state in ['pending','saved'] else 'Read my site' }}</button>
   </div>
-  <p id="site-status" hidden class="mt-2 text-xs text-slate-500"></p>
+  <p id="site-status" role="status" hidden class="mt-2 text-xs text-slate-500"></p>
   <input type="hidden" id="knowledge-review-csrf" value="{{ csrf_token(request) }}">
   <div id="site-review" hidden></div>
 </div>
@@ -104,7 +104,7 @@
      the five tuning steps inside the app — not "Finish setup" (Kris 2026-09-13:
      "we've shown/done four steps… the user can just ignore the next 5"). #}
   <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue
-          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">{{ next_label or 'Finish setup' }}</button>
+          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait">{{ next_label or 'Finish setup' }}</button>
 </div>
 <div data-knowledge-later hidden class="mt-3 text-sm"><p>Drafts are still pending. You can return to review them later.</p><button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-leave-knowledge class="mt-2 rounded border border-slate-300 px-3 py-2">Leave drafts for later and continue</button><p data-knowledge-navigation-status role="status"></p></div>
 {% endblock %}

@@ -51,6 +51,26 @@ def test_preview_is_read_only_and_apply_uses_draft_rpc_not_admission(source_clie
     assert row['payload']['draft_revision'] == 1
 
 
+def test_question_overflow_preview_and_apply_never_admit_knowledge(source_client, monkeypatch):
+    client, row, evidence, context, calls, _ = source_client
+    before = deepcopy(row)
+    async def answer(tenant, question, card, source):
+        raw = corrections(card, source)
+        raw['questions'] = ['Unrelated question?'] * 4 + ['Long annotation. ' * 40]
+        return review.validate(card, source, raw)
+    monkeypatch.setattr(review, 'answer', answer)
+    monkeypatch.setattr(knowledge_review, 'admit', lambda *a, **k: pytest.fail('Correction must not admit Knowledge'))
+    preview = client.post(url(row), json={'version':'v1','question':'Restore the complete source wording.'})
+    assert preview.status_code == 200 and calls == []
+    assert len(preview.json()['questions']) == 3 and 'not shown' in preview.json()['summary']
+    applied = client.post(url(row)+'/apply', json={'version':'v1','review':preview.json()['review']})
+    assert applied.status_code == 200
+    assert 'Nothing saved to Knowledge' in applied.json()['summary']
+    assert [name for name, _ in calls] == ['revise_knowledge_review_sources']
+    assert calls[0][1]['p_payload']['draft_revision'] == 2
+    assert row == before and row['state'] == 'pending'
+
+
 @pytest.mark.parametrize('case,expected', [('flag',404),('permission',403),('viewing',403),('stale',409),('saved',409),('missing',404)])
 def test_gates_reject_before_model_or_mutation(source_client, monkeypatch, case, expected):
     client, row, evidence, context, calls, ctx = source_client

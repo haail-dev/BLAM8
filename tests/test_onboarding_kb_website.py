@@ -128,6 +128,52 @@ def test_distill_preserves_caveats_questions_and_only_verified_page_citations(mo
     assert result.questions==[{'topic':'prices','question':'Does the rate vary with request size?'}]
 
 
+@pytest.mark.parametrize('excerpt_is_partial', [False, True])
+def test_drafts_retain_complete_cited_process_and_named_channel_scope(monkeypatch, excerpt_is_partial):
+    import asyncio, json
+    process = 'We acknowledge a report, gather the issue and access availability, then explain the next step.'
+    limitation = 'This sample business does not provide diagnosis or emergency dispatch through this website or ReplyDesk.'
+    abbreviated = [process.split(', then')[0] + '.', limitation.replace(' or ReplyDesk', '')]
+    statements = [process, limitation]
+    pages = [{'url':'https://example.invalid/home', 'text':process + '\nAn unrelated opening offer.'},
+             {'url':'https://example.invalid/safety', 'text':limitation + '\nFictional sample facts only.'}]
+    captured = []
+    async def model(**kw):
+        captured.append(kw)
+        return _Msg(json.dumps({'entries':[
+            {'label':label, 'content':short, 'topics':['process'], 'sources':[
+                {'url':page['url'], 'excerpt':whole.split(', then')[0] if excerpt_is_partial and i == 0 else whole,
+                 'claim':short}]}
+            for i, (label, short, whole, page) in enumerate(zip(
+                ['Report rules', 'Service limits'], abbreviated, statements, pages))], 'questions':[]}))
+    monkeypatch.setattr(kb_website.llm, 'create', model)
+    monkeypatch.setattr(kb_website.agent, 'client', lambda: None)
+    monkeypatch.setattr(kb_website.usage, 'record_anthropic', lambda *a, **k: None)
+    entries = asyncio.run(kb_website.distill('synthetic', 'https://example.invalid', pages))
+    assert len(entries) == 2
+    for entry, short, whole in zip(entries, abbreviated, statements):
+        assert short in entry['content'] and whole in entry['content']
+        assert 'unrelated opening offer' not in entry['content']
+        assert any(whole == p['excerpt'] for p in entry['provenance'])
+    assert 'then explain the next step' in entries[0]['content']
+    assert 'or ReplyDesk' in entries[1]['content']
+    assert len(captured) == 1  # no provider retry or writer
+
+
+def test_cited_statement_expansion_does_not_silently_cut_at_note_limit(monkeypatch):
+    import asyncio, json
+    statement = 'We receive reports ' + 'with supporting information ' * 160 + 'then explain the next step.'
+    async def model(**kw):
+        return _Msg(json.dumps({'entries':[{'content':'We receive reports.', 'sources':[
+            {'url':'https://example.invalid', 'excerpt':'We receive reports', 'claim':'We receive reports.'}]}]}))
+    monkeypatch.setattr(kb_website.llm, 'create', model)
+    monkeypatch.setattr(kb_website.agent, 'client', lambda: None)
+    monkeypatch.setattr(kb_website.usage, 'record_anthropic', lambda *a, **k: None)
+    entries = asyncio.run(kb_website.distill('synthetic', 'https://example.invalid', [
+        {'url':'https://example.invalid', 'text':statement}]))
+    assert entries == [] and 'No source clauses were silently dropped' in entries.failure
+
+
 # ── propose endpoint ─────────────────────────────────────────────────────────
 
 def _tenant_env(monkeypatch):

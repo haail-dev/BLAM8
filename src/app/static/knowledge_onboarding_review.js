@@ -4,6 +4,19 @@
   var go=document.getElementById('site-go'), input=document.getElementById('site-url');
   var lifecycle=document.getElementById('site-lifecycle'), busy=false;
   var knownSite={pending_notes:lifecycle ? Number(lifecycle.dataset.pendingNotes || 0) : 0,review_href:lifecycle && lifecycle.dataset.reviewHref};
+  var navigation=[];
+  function reading(on){
+    busy=on;window.blam8KnowledgeImportBusy=on;
+    if(on){
+      navigation=Array.from(document.querySelectorAll('[data-onb-continue],[data-leave-knowledge]')).map(function(el){
+        var previous={el:el,disabled:el.disabled,text:el.textContent};
+        el.disabled=true;el.textContent='Reading website… Please wait';return previous;
+      });
+    }else{
+      navigation.forEach(function(previous){previous.el.disabled=previous.disabled;previous.el.textContent=previous.text;});navigation=[];
+    }
+    ready();
+  }
   function ready(){window.dispatchEvent(new Event('blam8:onboarding-readiness'));}
   function notice(form,text){if(!form)return;var el=form.querySelector('[data-review-status]');if(el)el.textContent=text;}
   function signature(form){return ['contentVersion','evidenceVersion','contextVersion'].map(function(k){return form.dataset[k] || '';}).join('/');}
@@ -110,8 +123,9 @@
     }
     if(busy || window.blam8KnowledgeImportBusy || (window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working()))return;
     if(!input.value.trim()){say('Paste your website address first.');return;}
-    busy=true;window.blam8KnowledgeImportBusy=true;
+    reading(true);
     present({state:'reading',message:'Reading key pages and preparing pending drafts. Existing edits are preserved.'});ready();
+    say('Reading website… Please wait before continuing. No facts are being saved.');
     var ok=false,received=false;
     try{
       var fd=new FormData();fd.append('url',input.value.trim());fd.append('csrf_token',document.getElementById('knowledge-review-csrf').value);
@@ -122,7 +136,7 @@
     }catch(e){
       present({state:received?'error':'unconfirmed',message:received?e.message+' No new drafts were confirmed. Existing drafts remain.':'The response was not confirmed. Reload to check stored drafts before starting another read; preserve local edits first.'});
       say('Your existing review edits remain on this page.');
-    }finally{busy=false;window.blam8KnowledgeImportBusy=false;announce(ok);}
+    }finally{reading(false);announce(ok);}
   }
   go.addEventListener('click',read);
   input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();read();}});
