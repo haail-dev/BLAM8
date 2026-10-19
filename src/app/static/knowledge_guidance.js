@@ -73,6 +73,17 @@
   }
   window.Blam8KnowledgeGuide={ask:ask,working:function(){return busy;},available:function(){return !!form();},
     isCurrent:function(hash){var f=form();return !!(f && focus && focus.form===f && focus.hash===hash && focus.key===f.dataset.knowledgeReview && focus.signature===JSON.stringify(values(f)));},
+    edit:function(hash,id){
+      var f=form();
+      if(!f || !id || !window.Blam8KnowledgeGuide.isCurrent(hash))return false;
+      var section=Array.from(f.querySelectorAll('[data-draft]')).find(function(node){return node.dataset.draft===id;});
+      var field=f.elements['content_'+id];
+      if(!section || !field)return false;
+      if(window.blam8ConciergeClose)window.blam8ConciergeClose();
+      if(section.scrollIntoView)section.scrollIntoView({behavior:'smooth',block:'center'});
+      field.focus();
+      return true;
+    },
     save:function(){var f=form();if(!f || busy || !focus || !focus.saveReady || !window.Blam8KnowledgeGuide.isCurrent(focus.hash))return;
       var button=f.querySelector('button[name="operation"][value="save"]');if(button && !button.disabled)f.requestSubmit(button);},
     start:maybeStart};

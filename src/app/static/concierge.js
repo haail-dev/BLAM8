@@ -1430,6 +1430,17 @@
         });
         choices.appendChild(save);
       }
+      if (data.focus && data.focus.kind === "note" && knowledgeGuide) {
+        var edit = document.createElement("button"); edit.type = "button";
+        edit.className = "ml-auto inline-flex items-center gap-1 rounded-lg border border-brand px-3 py-2 text-sm text-brand hover:bg-brand-50";
+        edit.setAttribute("aria-label", "Edit this note before saving");
+        edit.textContent = "✎ Edit note";
+        edit.addEventListener("click", function () {
+          if (sending) return;
+          if (!knowledgeGuide.edit(data.focus_hash, data.focus.id)) { input.value = "Show the current note"; send(); }
+        });
+        choices.appendChild(edit);
+      }
       msgs.appendChild(choices);
     }
     appendHeldLine(heldFor);

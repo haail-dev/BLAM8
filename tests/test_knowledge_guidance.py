@@ -143,6 +143,14 @@ def test_browser_controller_replays_owner_decisions_and_races():
     assert result.returncode==0,result.stdout+result.stderr
 
 
+def test_note_preview_has_an_accessible_edit_action_aligned_after_review_choices():
+    js=(Path(__file__).resolve().parents[1]/'src/app/static/concierge.js').read_text(encoding='utf-8')
+    assert 'data.focus.kind === "note"' in js
+    assert 'ml-auto inline-flex items-center gap-1 rounded-lg border border-brand' in js
+    assert 'Edit this note before saving' in js
+    assert 'knowledgeGuide.edit(data.focus_hash, data.focus.id)' in js
+
+
 def test_guide_route_reads_tenant_notes_and_prepares_only_local_choices(source_client):
     client,row,evidence,ctx,calls,owner=source_client
     url='/onboarding/knowledge/review/'+row['id']+'/guide'
