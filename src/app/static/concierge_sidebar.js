@@ -24,7 +24,7 @@ var PHONE_VOICE = 'body.voice-live-open.cz-pager-body ';
 // What pans with the column: everything on the voice screen except .vl-ripples, the first screen's water, which stays where it is behind both halves.
 // GPT-Live's water is NOT excluded: it is made as wide as the whole canvas (below) and pans with it, so the water runs all the way across.
 var VOICE_FOREGROUND = [].concat.apply([], VOICE_ROOTS.map(function (r) {
-  return [r + '>:not(.vl-stage)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)', r + ' .vl-live>:not(.vl-ripples)'];
+  return [r + '>:not(.vl-stage)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-live):not(.vl-side-mark)', r + ' .vl-live>:not(.vl-ripples)'];
 }));
 // GPT-Live's lake and its glow are laid out two screens wide (the engine sizes the lake from its canvas: water-core.js lakeFromCanvas), so ripples
 // run on past the voice screen's right edge into the column's half instead of bouncing back off it. !important: the canvas carries inline sizes.

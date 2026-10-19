@@ -35,11 +35,12 @@ export function installHoldAction(button, action, {armed} = {}) {
 // installed service worker caches /static URLs by exact URL, including imports.
 // An unversioned module would otherwise keep its old renderer across refreshes.
 const revision = new URL(import.meta.url).search;
-const [{ OVERLAY_CSS }, { createVoiceMeter }, { createGlassCore }, { createTalkController, installTalkGestures, savedTalkMode },
+const [{ OVERLAY_CSS }, { createVoiceMeter }, { createGlassCore }, { BLAM8_MOTION_MARK }, { createTalkController, installTalkGestures, savedTalkMode },
   { createLineGate, savedLiveLine, LINE_BROKEN_REASONS, LINE_BROKEN_MS, LINE_BELOW_MS, LINE_PRESS_OPEN_MS }, { createPond }] = await Promise.all([
   import('./voice-overlay-css.js' + revision),
   import('./voice-meter.js' + revision),
   import('./glass-core.js' + revision),
+  import('./blam8-mark-motion.js' + revision),
   import('./voice-talk.js' + revision),
   import('./voice-line.js' + revision),
   import('./voice-pond.js' + revision),
@@ -1036,7 +1037,18 @@ export function createVoiceLive(deps) {
       @keyframes vl-mist-glow-drift { 0% { transform:translate3d(2%,-1.5%,0) rotate(8deg) scale(.88,1.05); opacity:.48; } 29% { transform:translate3d(-2.5%,1.5%,0) rotate(-11deg) scale(1.18,.82); opacity:.68; } 63% { transform:translate3d(1.75%,2.25%,0) rotate(6deg) scale(.82,1.2); opacity:.5; } 100% { transform:translate3d(-2%,-1.25%,0) rotate(-7deg) scale(1.16,.84); opacity:.7; } }
       #voice-gptlive-root .vl-ghost-mark { position:absolute; z-index:1; width:62%; height:62%; left:19%; top:19%; color:#7182a2; opacity:.16; transition:opacity .65s ease; overflow:visible; pointer-events:none; }
       #voice-gptlive-root .vl-orb[data-mist-mode="user"] .vl-ghost-mark,
-      #voice-gptlive-root .vl-orb[data-mist-mode="thinking"] .vl-ghost-mark { opacity:0; }
+      #voice-gptlive-root .vl-orb[data-mist-mode="thinking"] .vl-ghost-mark { opacity:.3; }
+      #voice-gptlive-root .vl-orb[data-mist-mode="user"] .vl-ghost-mark,
+      #voice-gptlive-root .vl-orb[data-mist-mode="agent"] .vl-ghost-mark { opacity:.92; color:#b8f5e5; }
+      #voice-gptlive-root .vl-orb[data-mist-mode="thinking"] .vl-ghost-mark { color:#c4b5fd; }
+      #voice-gptlive-root .vl-orb[data-mist-mode="agent"] .vl-ghost-mark { color:#fde68a; }
+      #voice-gptlive-root .vl-side-mark { position:absolute; z-index:2; width:min(34vw,22rem); height:min(34vw,22rem); left:150%; top:50%; transform:translate(-50%,-50%); color:#7182a2; opacity:.52; transition:opacity .45s ease,color .45s ease,filter .45s ease; overflow:visible; pointer-events:none; }
+      #voice-gptlive-root:has(.vl-orb[data-mist-mode="user"]) .vl-side-mark { opacity:.96; color:#b8f5e5; filter:drop-shadow(0 0 1.2rem rgba(52,211,153,.38)); }
+      #voice-gptlive-root:has(.vl-orb[data-mist-mode="thinking"]) .vl-side-mark { opacity:.72; color:#c4b5fd; filter:drop-shadow(0 0 1.2rem rgba(167,139,250,.35)); }
+      #voice-gptlive-root:has(.vl-orb[data-mist-mode="agent"]) .vl-side-mark { opacity:.98; color:#fde68a; filter:drop-shadow(0 0 1.2rem rgba(251,191,36,.35)); }
+      #voice-gptlive-root[data-native-ready="false"] .vl-side-mark { opacity:.28; }
+      #voice-gptlive-root[data-paused="true"] .vl-side-mark { opacity:.18; }
+      #voice-gptlive-root.is-muted .vl-side-mark { color:#fca5a5; }
       #voice-gptlive-root .vl-gear { transform-box:view-box; }
       #voice-gptlive-root .vl-gear-top { transform-origin:63.45px 33.8px; animation:vl-gear-top-turn 14s linear infinite; }
       #voice-gptlive-root .vl-gear-lower { transform-origin:56.8px 64.4px; animation:vl-gear-lower-turn 18s linear infinite; }
@@ -1046,8 +1058,8 @@ export function createVoiceLive(deps) {
       @keyframes vl-gear-top-turn { to { transform:rotate(360deg); } }
       @keyframes vl-gear-lower-turn { to { transform:rotate(-360deg); } }
       @keyframes vl-stroke-reveal { 0%,100% { transform:scaleX(1); } 50% { transform:scaleX(1.12); } }
-      #voice-gptlive-root .vl-ghost-mark .vl-gear, #voice-gptlive-root .vl-ghost-mark .vl-speed-stroke { animation-play-state:paused; }
-      #voice-gptlive-root.visual-active .vl-ghost-mark .vl-gear, #voice-gptlive-root.visual-active .vl-ghost-mark .vl-speed-stroke { animation-play-state:running; }
+      #voice-gptlive-root .vl-ghost-mark .vl-gear, #voice-gptlive-root .vl-ghost-mark .vl-speed-stroke, #voice-gptlive-root .vl-side-mark .vl-gear, #voice-gptlive-root .vl-side-mark .vl-speed-stroke { animation-play-state:paused; }
+      #voice-gptlive-root.visual-active .vl-ghost-mark .vl-gear, #voice-gptlive-root.visual-active .vl-ghost-mark .vl-speed-stroke, #voice-gptlive-root.visual-active .vl-side-mark .vl-gear, #voice-gptlive-root.visual-active .vl-side-mark .vl-speed-stroke { animation-play-state:running; }
       #voice-gptlive-root .vl-stage { isolation:isolate; }
       #voice-gptlive-root .vl-ambient { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
       #voice-gptlive-root .vl-ambient span { position:absolute; width:48%; height:39%; border-radius:50%; filter:blur(25px); opacity:.36; animation:vl-ambient-drift 31s ease-in-out infinite alternate; animation-play-state:paused; }
@@ -1059,6 +1071,7 @@ export function createVoiceLive(deps) {
       #voice-gptlive-root .vl-ambient span:nth-of-type(5) { left:25%; top:-27%; background:radial-gradient(ellipse,rgba(150,206,238,.13),transparent 72%); animation-duration:47s; animation-delay:-28s; }
       @keyframes vl-ambient-drift { 0% { transform:translate(-5%,2%) scale(.92,1.03); opacity:.25; } 47% { transform:translate(6%,-5%) scale(1.12,.88); opacity:.42; } 100% { transform:translate(-2%,7%) scale(.96,1.13); opacity:.28; } }
       #voice-gptlive-root .vl-stage > :not(.vl-ambient) { position:relative; z-index:1; }
+      #voice-gptlive-root .vl-stage > .vl-side-mark { position:absolute; z-index:2; }
       #voice-gptlive-root .vl-stage > .vl-allowance { position:absolute; z-index:6; }
       #voice-gptlive-root .vl-mic-copy { position:relative; flex:0 0 1.1rem; width:100%; height:1.1rem; }
       #voice-gptlive-root .vl-mic-copy p { position:absolute; inset:0; text-align:center; line-height:1.1rem; }
@@ -1120,9 +1133,9 @@ export function createVoiceLive(deps) {
       #voice-gptlive-root .vl-controls:has(button[hidden]) { display:none; }
       #voice-gptlive-root .vl-end { margin:0 auto max(.5rem, env(safe-area-inset-bottom)); }
       @media(max-height:500px) { #voice-gptlive-root .vl-end { margin-top:1rem; } }
-      #voice-gptlive-root .vl-glass-layer canvas, #voice-gptlive-root .vl-ghost-mark { filter:grayscale(1); transition:filter .7s ease; }
-      #voice-gptlive-root[data-native-ready="true"] .vl-glass-layer canvas, #voice-gptlive-root[data-native-ready="true"] .vl-ghost-mark { filter:grayscale(0); }
-      @media(prefers-reduced-motion:reduce) { #voice-gptlive-root .vl-glass-layer, #voice-gptlive-root .vl-ghost-mark, #voice-gptlive-root .vl-notice { transition:none; } #voice-gptlive-root .vl-orb::before, #voice-gptlive-root .vl-orb::after, #voice-gptlive-root .vl-ambient span, #voice-gptlive-root .vl-ghost-mark .vl-gear, #voice-gptlive-root .vl-ghost-mark .vl-speed-stroke { animation:none; } }
+      #voice-gptlive-root .vl-glass-layer canvas, #voice-gptlive-root .vl-ghost-mark, #voice-gptlive-root .vl-side-mark { filter:grayscale(1); transition:filter .7s ease; }
+      #voice-gptlive-root[data-native-ready="true"] .vl-glass-layer canvas, #voice-gptlive-root[data-native-ready="true"] .vl-ghost-mark, #voice-gptlive-root[data-native-ready="true"] .vl-side-mark { filter:grayscale(0); }
+      @media(prefers-reduced-motion:reduce) { #voice-gptlive-root .vl-glass-layer, #voice-gptlive-root .vl-ghost-mark, #voice-gptlive-root .vl-side-mark, #voice-gptlive-root .vl-notice { transition:none; } #voice-gptlive-root .vl-orb::before, #voice-gptlive-root .vl-orb::after, #voice-gptlive-root .vl-ambient span, #voice-gptlive-root .vl-ghost-mark .vl-gear, #voice-gptlive-root .vl-ghost-mark .vl-speed-stroke, #voice-gptlive-root .vl-side-mark .vl-gear, #voice-gptlive-root .vl-side-mark .vl-speed-stroke { animation:none; } }
       #voice-gptlive-root .vl-controls button { width:auto; border:1px solid rgba(148,163,184,.4); border-radius:9999px; background:transparent; color:#cbd5e1; font-size:.85rem; }
       #voice-gptlive-root .vl-controls button:focus-visible, #voice-gptlive-root .vl-orb:focus-visible, #voice-gptlive-root .vl-notice:focus-visible { outline:2px solid #7dd3fc; outline-offset:2px; }
       #voice-gptlive-root .vl-controls button[aria-pressed="true"] { border-color:#86efac; color:#86efac; }
@@ -1148,6 +1161,7 @@ export function createVoiceLive(deps) {
       <div class="vl-mic-copy"><p class="vl-mic-hint" hidden>Tap to mute</p><p class="vl-mic-state" hidden></p><p class="vl-mic-mode" hidden></p></div><div class="vl-links"></div><div class="vl-controls"><button type="button" data-native="retry-audio" hidden>Retry audio</button></div></div>
       <div class="vl-stage-scroll"><button type="button" class="vl-task-heading" aria-expanded="false" hidden></button><p class="vl-task-note" role="status"></p><div class="vl-tasks"></div><div class="vl-cards"></div></div>
       <button type="button" class="vl-end">End conversation</button></div>`;
+    root.querySelector('.vl-stage').insertAdjacentHTML('afterbegin', BLAM8_MOTION_MARK.replace('vl-ghost-mark','vl-side-mark').replaceAll('vl-motion-gear-mask','vl-motion-gear-mask-side'));
     document.body.appendChild(root);root.querySelector('.cz-voice-settings').addEventListener('click',event=>{event.stopPropagation();deps.onSettings?.();});els={hint:root.querySelector('.vl-mic-hint'),micState:root.querySelector('.vl-mic-state'),mode:root.querySelector('.vl-mic-mode'),status:root.querySelector('.vl-status'),transcript:root.querySelector('.vl-transcript'),reply:root.querySelector('.vl-reply'),stage:root.querySelector('.vl-cards'),activity:root.querySelector('.vl-activity'),notice:root.querySelector('.vl-notice'),noticeDetail:root.querySelector('.vl-notice-detail'),allowance:root.querySelector('.vl-allowance'),allowanceText:root.querySelector('[data-allowance-text]'),allowanceProgress:root.querySelector('.vl-allowance-track'),allowanceFill:root.querySelector('.vl-allowance-fill'),tasks:root.querySelector('.vl-tasks'),taskHeading:root.querySelector('.vl-task-heading'),taskNote:root.querySelector('.vl-task-note'),links:root.querySelector('.vl-links')};
     els.allowance.addEventListener('click',()=>{const expanded=els.allowance.classList.toggle('is-expanded');els.allowance.setAttribute('aria-expanded',String(expanded));if(expanded)els.allowance.removeAttribute('aria-label');else els.allowance.setAttribute('aria-label','Live voice allowance today. Tap to expand remaining time');if(allowanceSnapshot)paintAllowance();});
     els.taskHeading.addEventListener('click',()=>{tasksOpen=!tasksOpen;paintTasks();});

@@ -43,6 +43,23 @@ def test_the_voice_reaches_the_pond_through_the_signals_the_mist_already_reads()
     assert "AudioContext" not in POND and "getUserMedia" not in POND and "setInterval" not in POND
 
 
+def test_right_pager_page_uses_perimeter_sources_while_the_voice_page_keeps_the_orb_source():
+    assert "classList.contains('cz-pager-body')" in POND
+    assert "getPropertyValue('--cz-pan')" in POND and "> 0.5" in POND
+    assert "const cx = mic.x + host.clientWidth, radius = host.clientWidth * 0.43" in POND
+    assert "CFG.perimeterPoints" in POND and "water.addStone(cx + Math.cos(angle) * radius" in POND
+    assert "water.addStone(mic.x, mic.y," in POND
+
+
+def test_the_right_page_has_the_centered_stateful_blam8_mark():
+    assert "BLAM8_MOTION_MARK" in SCREEN and "blam8-mark-motion.js" in SCREEN
+    assert "replace('vl-ghost-mark','vl-side-mark')" in SCREEN
+    assert "replaceAll('vl-motion-gear-mask','vl-motion-gear-mask-side')" in SCREEN
+    assert "left:150%; top:50%" in SCREEN and ".vl-side-mark .vl-gear" in SCREEN
+    for mode in ("user", "thinking", "agent"):
+        assert f'data-mist-mode="{mode}"' in SCREEN
+
+
 def test_the_engine_sleeps_stops_when_hidden_and_respects_reduced_motion():
     assert "prefers-reduced-motion: reduce" in CORE
     assert "doc.hidden" in CORE and "visibilitychange" in CORE

@@ -1,7 +1,8 @@
 // Pond: ripples on the GPT-Live screen. The whole screen is a calm lake. A tap or click drops a stone where it lands,
 // a mouse (or a finger) moving across it leaves small ripples sized by its speed, and while the person is speaking
-// the orb sends rings out of its centre, bigger and quicker the louder the voice. Rings spread, bounce back off the
-// screen edges and run into one another; the crests glow in BLAM8's colours, and warm ones while the microphone is muted.
+// the orb sends rings out of its centre on the voice page. On the right page, a circle of sources at the perimeter sends
+// rings inward. Rings spread, bounce back off the screen edges and run into one another; the crests glow in BLAM8's colours,
+// and warm ones while the microphone is muted.
 //
 // The water itself is water-core.js (shared with every other place that has ripples). This file is what is particular to
 // this screen: where the canvas sits (under everything else on the stage), the voice (the same speech gate as the Mist, a
@@ -20,6 +21,7 @@ const CFG = {
   micOnset: 0.07, micOnsetSecs: 0.12, micRelease: 0.035, micReleaseSecs: 0.6,   // the same gate as the Mist's speech detection
   micFloor: 0.04, micCurve: 0.8,
   ringAmp: [0.28, 0.65], ringSigmaPx: 9, ringCount: 3,   // a stone from the orb's centre: size at a quiet and at a full voice
+  perimeterPoints: 18, perimeterAmp: [0.035, 0.075],
   ringEverySecs: [0.4, 0.1],                            // gap between stones: quiet voice, loud voice
   // the screen
   orbKeep: 0.3, textKeep: 0.3, boxKeep: 0.5,
@@ -76,13 +78,24 @@ export function createPond(host, orb, options = {}) {
     onFrame(dt) {
       mic.env += (mic.target - mic.env) * (1 - Math.exp(-dt * (mic.target > mic.env ? 24 : 9)));
       if (mic.env < 0.004 && mic.target === 0) mic.env = 0;
-      // while the voice is on, the orb's centre drops a stone, bigger and more often the louder it is
+      // The phone's right page has the inverse layout: sound starts around its edge and travels into its centre.
       if (mic.env > 0.05) {
         mic.timer -= dt;
         if (mic.timer <= 0 && water.queued() < 72) {
           const e = clamp(mic.env, 0, 1);
-          water.addStone(mic.x, mic.y, CFG.ringAmp[0] + (CFG.ringAmp[1] - CFG.ringAmp[0]) * e, CFG.ringSigmaPx, CFG.ringCount);
-          mic.timer = CFG.ringEverySecs[0] + (CFG.ringEverySecs[1] - CFG.ringEverySecs[0]) * e;
+          const body = host.ownerDocument.body, rightPage = body?.classList.contains('cz-pager-body') && parseFloat(body.style.getPropertyValue('--cz-pan') || '0') > 0.5;
+          if (rightPage) {
+            const cx = mic.x + host.clientWidth, radius = host.clientWidth * 0.43;
+            const amp = CFG.perimeterAmp[0] + (CFG.perimeterAmp[1] - CFG.perimeterAmp[0]) * e;
+            for (let n = 0; n < CFG.perimeterPoints; n++) {
+              const angle = (Math.PI * 2 * n) / CFG.perimeterPoints;
+              water.addStone(cx + Math.cos(angle) * radius, mic.y + Math.sin(angle) * radius, amp, CFG.ringSigmaPx, 1);
+            }
+          } else {
+            water.addStone(mic.x, mic.y, CFG.ringAmp[0] + (CFG.ringAmp[1] - CFG.ringAmp[0]) * e, CFG.ringSigmaPx, CFG.ringCount);
+          }
+          const gap = CFG.ringEverySecs[0] + (CFG.ringEverySecs[1] - CFG.ringEverySecs[0]) * e;
+          mic.timer = rightPage ? gap * 1.5 : gap;
         }
       } else mic.timer = 0;
     },
