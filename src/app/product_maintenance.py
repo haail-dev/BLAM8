@@ -20,6 +20,13 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
     'docs/operations/founder-outreach.md',
     'db/migrations/20261018_admin_outreach_egress.sql',
     'db/migrations/20261018_admin_outreach_egress_rollback.sql')}
+# Runtime sources that affect setup workflows without changing the public
+# capability catalogue. Keep these out of product_inventory: its rows feed the
+# versioned help bundle, so evidence bookkeeping must not change model context.
+SOURCE_CAPABILITIES = {
+    'src/app/booking_policy.py': 'scheduling',
+    'src/app/setup_handoff.py': 'scheduling',
+}
 
 
 def operator_signature(source, root=ROOT):
@@ -120,6 +127,7 @@ def validate_receipts(receipt, root=ROOT):
 def check_change(paths, receipt, root=ROOT):
     errors=validate_receipts(receipt,root) + validate_operator_reviews(receipt,root)
     owned={name for row in product_inventory.entries() for name in source_files(row,root)}
+    owned.update(SOURCE_CAPABILITIES)
     for name in paths:
         if name.startswith('src/app/') and name.endswith(('.py','.html','.json')) and name not in owned and name not in OPERATOR_SOURCES:
             errors.append('Map changed runtime source to a capability: '+name)

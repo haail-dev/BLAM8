@@ -27,6 +27,7 @@ def test_missing_stale_or_unexplained_surface_review_fails():
 def test_new_unmapped_runtime_source_and_changed_definition_require_accounting(monkeypatch):
     assert maintenance.check_change(['src/app/concierge_routes.py','src/app/platform_kb_content.py'],receipt())==[]
     assert any('Map changed runtime' in e for e in maintenance.check_change(['src/app/new_capability.py'],receipt()))
+    assert maintenance.check_change(['src/app/booking_policy.py','src/app/setup_handoff.py'],receipt())==[]
     monkeypatch.setitem(product_guides.GUIDES,'packages','Different package behaviour requires review.')
     assert any('Stale source review: packages' in e for e in maintenance.validate_receipts(receipt()))
 
