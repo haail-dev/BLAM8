@@ -10,6 +10,9 @@ function between(start, end) {
   return source.slice(at, source.indexOf(end, at));
 }
 const turn = between('async function onboardTurn(', '// Node builder + appender');
+// The real turn reads this closure state even on a failed non-Knowledge turn.
+// Include the shipped declaration/helper rather than stubbing out its behaviour.
+const choices = between('var pendingKnowledgeChoice = null;', 'function appendHeldLine(');
 const fill = between('function applyFill(', '// The step\'s own advance button');
 for (const [step, held, fails] of [
   ['interview', [], false], ['interview', ['Knowledge notes: Work limits'], false],
@@ -36,9 +39,10 @@ for (const [step, held, fails] of [
     showContinueHint: () => events.push(['continue']), pinToTop() {},
     // Unexpected navigation, record creation or submission has no fake implementation.
   });
-  vm.runInContext(fill + '\n' + turn, context);
+  vm.runInContext(fill + '\n' + choices + '\n' + turn, context);
   const spoke = await context.onboardTurn("I'll check it here first.", []);
   assert.equal(spoke, !fails);
+  assert.equal(context.pendingKnowledgeChoice, null);
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url, '/concierge/onboard');
   assert(events.some(e => e[0] === 'continue')); // availability refresh is independent of model advance=false
