@@ -46,7 +46,13 @@ SYSTEM = (
     ' You may also propose citation-only corrections: name an exact existing note clause as claim '
     'and a complete retained source reference. Use multiple references for nonadjacent passages '
     'or different contributing pages. This does not rewrite the clause or certify entailment. '
-    'Use empty insertions for citation-only changes. Do not duplicate existing exact citations.'
+    'Use empty insertions for citation-only changes. Do not duplicate existing exact citations. '
+    'Omit unchanged notes from changes; use questions to explain an unfulfilled wording request. '
+    'local_review, when present, shows the effective unsaved source-retention choices separately '
+    'from each stored/editable note body. Those choices are not stored text edits. To undo those '
+    'passages, tell the owner to use Undo added website wording for that note; do not pretend to '
+    'remove them with an append-only correction. State plainly when only citations, not wording, '
+    'are proposed.'
 )
 
 
@@ -65,9 +71,12 @@ def context(card, evidence):
             if quote:
                 ref = knowledge_source_evidence.reference(evidence, i, quote)
                 passages.append({'reference': ref, **knowledge_source_evidence.resolve(evidence, ref)})
-    return {'revision': card['revision'], 'snapshot_id': evidence['id'],
+    result = {'revision': card['revision'], 'snapshot_id': evidence['id'],
             'lines': [{'id': l['id'], **l['fields'], 'citations': l.get('provenance', []), 'content_hash': knowledge_source_evidence.digest(l['fields']['content'])} for l in lines],
             'passages': passages}
+    if card.get('knowledge_local_review'):
+        result['local_review'] = deepcopy(card['knowledge_local_review'])
+    return result
 
 
 def validate(card, evidence, raw):
@@ -81,7 +90,7 @@ def validate(card, evidence, raw):
     allowed_refs = {p['reference'] for p in supplied['passages']}
     if not isinstance(raw['changes'], list) or len(raw['changes']) > 30:
         raise setup_cards.Invalid('Too many review changes.')
-    changes, seen = [], set()
+    changes, seen, unchanged = [], set(), 0
     for change in raw['changes']:
         if not isinstance(change, dict) or set(change) - {'id', 'content_hash', 'insertions', 'citations'} or not {'id', 'content_hash', 'insertions'} <= set(change):
             raise setup_cards.Invalid('Supply existing card IDs and source insertions only.')
@@ -94,8 +103,13 @@ def validate(card, evidence, raw):
             raise setup_cards.Stale('The card text changed after this review.')
         insertions = change['insertions']
         citations = change.get('citations', [])
-        if not isinstance(insertions, list) or len(insertions) > 12 or not isinstance(citations,list) or len(citations)>12 or not (insertions or citations):
-            raise setup_cards.Invalid('Supply at most twelve additions and twelve citations per note.')
+        if not isinstance(insertions, list) or not isinstance(citations,list):
+            raise setup_cards.Invalid('The correction did not contain verifiable additions or citations. Nothing changed.')
+        if len(insertions) > 12 or len(citations)>12:
+            raise setup_cards.Invalid('That proposal changes too much at once. Review one note or a few source passages, then try again. Nothing changed.')
+        if not (insertions or citations):
+            unchanged += 1
+            continue
         before, after, passages = [], [], []
         for insertion in insertions:
             if not isinstance(insertion, dict) or set(insertion) != {'position', 'reference'} or insertion['position'] not in ('before', 'after'):
@@ -120,10 +134,13 @@ def validate(card, evidence, raw):
                 raise setup_cards.Invalid('Cite exact existing note wording; do not invent a replacement claim.')
             checked={**citation, **knowledge_source_evidence.resolve(evidence,citation['reference'])}
             if {'source':checked['url'],'excerpt':checked['quote'],'claim':claim} in line.get('citations',[]):
-                raise setup_cards.Invalid('That exact citation is already recorded. Nothing changed.')
+                unchanged += 1
+                continue
             if checked in checked_citations:
                 raise setup_cards.Invalid('Do not repeat a citation.')
             checked_citations.append(checked)
+        if not passages and not checked_citations:
+            continue
         changes.append({'id': identity, 'label': line['label'], 'before': line['content'],
                         'after': content, 'passages': passages, 'citations': checked_citations})
     overlaps = raw['overlaps']
@@ -135,10 +152,16 @@ def validate(card, evidence, raw):
     questions = raw['questions']
     if not isinstance(questions, list) or len(questions) > 3 or any(not isinstance(q, str) or not q.strip() or len(q) > 500 for q in questions):
         raise setup_cards.Invalid('Supply at most three short unanswered questions.')
+    summary = (f"Review ready: {len(changes)} note(s) with proposed text or citation changes; {len(overlaps)} possible overlap(s). Drafts and Knowledge are unchanged."
+               if changes else 'No new draft corrections were proposed. Nothing changed. You can undo added website wording in the review form, or request a specific sourced addition.')
+    if changes and not any(c['passages'] for c in changes):
+        summary += ' These are citation changes only; no note wording is changed.'
+    if unchanged:
+        summary += f' {unchanged} unchanged or already-recorded item(s) need no draft update.'
     return {'revision': card['revision'], 'review': deepcopy(raw), 'changes': changes,
             'overlaps': [[{'id': i, 'label': available[i]['label']} for i in ids] for ids in overlaps],
             'questions': questions,
-            'summary': f"Review ready: {len(changes)} note(s) with proposed text or citation changes; {len(overlaps)} possible overlap(s). Drafts and Knowledge are unchanged."}
+            'summary': summary}
 
 
 def content_segments(card, line):

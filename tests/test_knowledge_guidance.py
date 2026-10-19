@@ -12,7 +12,7 @@ from tests.test_knowledge_source_routes import source_client
 
 
 def fixture():
-    ctx,row=context([entry()],brief='')
+    ctx,row=context([entry(content='We charge £50 per service. Payment is due by agreement after the first visit.')],brief='')
     row['payload']['source_units']=knowledge_fidelity.inventory([{'url':'https://example.test/prices',
         'text':'Fictional test facts only.\nPayment is due within 14 days.\nReturn to home.'}])
     return ctx,row,{'version':ctx['version']}
@@ -37,7 +37,12 @@ def test_guided_review_reaches_existing_admission_without_touching_stored_drafts
     kept=act(ctx,row,form,'keep')
     assert form['action_one']=='keep' and kept['focus']['kind']=='support'
     supported=act(ctx,row,form,'retain_support')
-    assert all(form['source_'+u['id']]=='note:one' for u in row['payload']['source_units'] if u['kind']!='qualification')
+    payment = next(u for u in row['payload']['source_units'] if '14 days' in u['text'])
+    navigation = next(u for u in row['payload']['source_units'] if u['text']=='Return to home.')
+    assert form['source_'+payment['id']]=='note:one'
+    assert not form.get('source_'+navigation['id'])
+    assert supported['focus']['kind']=='passage' and supported['focus']['target']==''
+    supported=act(ctx,row,form,'exclude',reason='This is a navigation link, not wording I want in my note.')
     assert 'Fictional test facts only.' in supported['shared_caveats']
     for _ in range(40):
         if supported['focus']['kind']=='ready':break
@@ -85,10 +90,10 @@ def test_overlap_is_shown_and_never_silently_merged_or_approved():
 
 
 def test_owner_can_reopen_a_named_note_without_changing_its_wording():
-    ctx,row,form=fixture(); act(ctx,row,form,'keep')
+    ctx,row,form=fixture(); original=row['payload']['entries'][0]['content']; act(ctx,row,form,'keep')
     response=act(ctx,row,form,'revisit',target='one')
     assert response['focus']['kind']=='note' and form['action_one']==''
-    assert row['payload']['entries'][0]['content']==entry()['content']
+    assert row['payload']['entries'][0]['content']==original
 
 
 @pytest.mark.asyncio

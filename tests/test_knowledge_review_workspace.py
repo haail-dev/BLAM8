@@ -70,7 +70,9 @@ def test_citation_only_proposal_preserves_wording_and_records_owner_scoped_audit
     assert audit['reviewer']=='owner' and audit['revision']==2 and audit['owner_request'] and audit['at']
     assert row==before
     next_row={**row,'payload':payload};next_card,next_raw=citation_review(next_row,saved)
-    with pytest.raises(setup_cards.Invalid,match='already recorded'):source.validate(next_card,saved,next_raw)
+    repeated=source.validate(next_card,saved,next_raw)
+    assert repeated['changes']==[] and 'already-recorded' in repeated['summary']
+    with pytest.raises(setup_cards.Invalid,match='no corrections'):source.apply(next_card,saved,next_raw,turn='repeat')
     with pytest.raises(setup_cards.Stale):source.validate(next_card,saved,raw)
 
 
