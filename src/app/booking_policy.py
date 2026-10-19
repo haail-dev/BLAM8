@@ -49,6 +49,21 @@ class BookingProfile:
     appointments: bool
 
     @property
+    def setup_complete(self) -> bool:
+        """Whether the owner resolved this setup step, not whether booking works.
+
+        An explicit, confirmed off choice is a complete decision for the setup
+        walk, while ``ready`` deliberately stays false so no booking is offered.
+        One off prerequisite is enough to make the whole booking capability
+        unavailable; the remaining prerequisites need not be guessed.
+        """
+        return (self.read_state == "read" and
+                (self.ready or any(
+                    getattr(self, key).state == "off"
+                    and getattr(self, key).review_status == "confirmed"
+                    for key in FIELDS)))
+
+    @property
     def ready(self) -> bool:
         return self.read_state == "read" and not self.unresolved_settings
 
@@ -196,6 +211,17 @@ def apply_settings(existing, submitted, states, confirmed, actor, revision):
             raise ValueError("This setting is required for booking and cannot be not applicable.")
         if state == "set":
             values = validate(setting, values)
+        elif state == "off" and setting == "timezone":
+            # Timezone is also the business timezone used to interpret existing
+            # diary records. Turning booking off must not erase that context.
+            # Keep the current timezone when the form has no selection, and
+            # validate any explicit replacement before storing it.
+            current_timezone = existing.get("timezone")
+            selected_timezone = values[0]
+            if selected_timezone in (None, ""):
+                values = (current_timezone,)
+            elif selected_timezone != current_timezone:
+                values = validate(setting, values)
         else:
             values = tuple(None for _ in keys)
         old_values = tuple(existing.get(k) for k in keys)

@@ -124,6 +124,35 @@ def test_load_steps_never_raises(monkeypatch):
     assert setup_handoff.first_open([]) is None
 
 
+def test_explicitly_disabled_bookings_complete_diary_setup_but_remain_unbookable():
+    from app import booking_policy
+    review = {key: {"state": "off", "review_status": "confirmed"}
+              for key in booking_policy.FIELDS}
+    cfg = {"booking_setting_review": review}
+
+    policy = booking_policy.compile_policy(cfg)
+    assert policy["ready"] is False
+    assert policy["unresolved_settings"] == list(booking_policy.FIELDS)
+
+    steps = setup_handoff.steps({"scheduling"}, cfg, [], 14, {})
+    assert steps[0]["done"] is True
+    assert steps[0]["status"] == "Bookings explicitly disabled"
+
+
+def test_one_confirmed_off_requirement_resolves_setup_without_enabling_booking():
+    from app import booking_policy
+    cfg = {"booking_setting_review": {
+        "capacity": {"state": "off", "review_status": "confirmed"},
+    }}
+
+    policy = booking_policy.compile_policy(cfg)
+    assert policy["ready"] is False
+
+    steps = setup_handoff.steps({"scheduling"}, cfg, [], 14, {})
+    assert steps[0]["done"] is True
+    assert steps[0]["status"] == "Bookings explicitly disabled"
+
+
 def test_the_widget_counts_nine_and_has_no_dismiss():
     js = _read("src/app/static/concierge.js")
     assert "var WIZARD_STEPS = 4;" in js

@@ -87,6 +87,25 @@ def test_not_applicable_needs_a_real_resource_pool():
     assert policy.compile_policy(cfg)["ready"]
 
 
+def test_turning_bookings_off_preserves_the_business_timezone():
+    cfg = configured(booking_revision=2)
+    changed = policy.apply_settings(
+        cfg, {"timezone": "Europe/London"}, {"timezone": "off"}, [], "owner", 2)
+
+    assert changed["timezone"] == "Europe/London"
+    assert changed["booking_setting_review"]["timezone"]["state"] == "off"
+    assert policy.compile_policy({**cfg, **changed})["ready"] is False
+
+
+def test_off_timezone_without_a_new_value_keeps_the_existing_timezone():
+    cfg = configured(booking_revision=2)
+    changed = policy.apply_settings(
+        cfg, {"timezone": ""}, {"timezone": "off"}, [], "owner", 2)
+
+    assert changed["timezone"] == "Europe/London"
+    assert policy.compile_policy({**cfg, **changed})["ready"] is False
+
+
 def test_stale_confirmation_is_refused():
     with pytest.raises(ValueError, match="Reload"):
         policy.apply_settings(configured(booking_revision=2), {}, {}, ["capacity"], "owner", 1)
@@ -151,6 +170,12 @@ def test_settings_apply_reload_and_confirmation(monkeypatch):
         assert stored["booking_setting_review"]["capacity"]["state"] == "unset"
         assert client.post("/app/settings/scheduling", data={"booking_revision": 3, "capacity_per_window": "0"}, follow_redirects=False).status_code == 303
         assert stored["capacity_per_window"] == 0
+        assert client.post("/app/settings/scheduling", data={
+            "booking_revision": 4, "timezone": "Europe/London", "timezone_state": "off",
+        }, follow_redirects=False).status_code == 303
+        assert stored["timezone"] == "Europe/London"
+        assert stored["booking_setting_review"]["timezone"]["state"] == "off"
+        assert not policy.compile_policy(stored)["ready"]
     finally:
         app.dependency_overrides.clear()
 

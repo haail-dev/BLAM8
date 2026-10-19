@@ -126,6 +126,18 @@ def test_every_group_is_a_row_that_states_its_value(client, monkeypatch, path):
         assert named[row], f"{row} states no value"
 
 
+def test_booking_readiness_matches_the_diary_settings_layout(client, monkeypatch):
+    _env(monkeypatch, modules=("scheduling",))
+    form = _form(client, "/app/diary/settings")
+
+    assert "Booking availability" in form
+    assert "These choices decide whether the agent may book." in form
+    assert "Diary calendar" in form
+    assert 'name="timezone_state"' in form
+    assert len(re.findall(r'<select[^>]*name="timezone"', form)) == 1
+    assert "<legend>Booking settings</legend>" not in form
+
+
 def test_a_rows_value_hides_only_when_that_row_opens():
     """The bug this caught: `group-open:` compiles to `.group[open] &`, which
     matches ANY open .group ancestor. Unnamed, every row's value went invisible

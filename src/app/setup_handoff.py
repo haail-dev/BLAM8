@@ -81,16 +81,20 @@ def steps(modules: set, scheduling_cfg: dict | None, crm_stages: list | None,
           dependant_groups: list | None = None) -> list[dict]:
     """The tenant's walk-through, in order, with per-step done flags. Steps
     whose module isn't on are omitted entirely (invoicing is core — always
-    present). A scheduling_config row only exists once a diary page's form (or
-    the recommend prefill's Save) has been submitted, so row-exists IS the
-    diary's done signal."""
+    present). Diary setup is done when booking is ready OR the owner explicitly
+    disabled it; a confirmed off choice is complete setup, but never grants
+    booking permission."""
     out = []
     if DIARY_MODULES & modules:
-        from app.booking_policy import compile_policy
-        booking_ready = compile_policy(scheduling_cfg)["ready"]
+        from app.booking_policy import compile_profile
+        booking_profile = compile_profile(scheduling_cfg)
+        booking_ready = booking_profile.ready
+        booking_setup_complete = booking_profile.setup_complete
         out.append({"key": "diary", "label": "Diary & scheduling settings",
-                    "done": booking_ready, "href": "/app/diary/settings",
-                    "status": "" if booking_ready else "Not set yet: booking unavailable"})
+                    "done": booking_setup_complete, "href": "/app/diary/settings",
+                    "status": ("" if booking_ready else
+                               ("Bookings explicitly disabled" if booking_setup_complete else
+                                "Not set yet: booking unavailable"))})
         # Step 1.5 (Julius, live e2e 2026-09-02): the booking requirements are
         # the heart of the booking promise and were not in the walk-through at
         # all — they follow the diary (they describe what the diary's bookings
