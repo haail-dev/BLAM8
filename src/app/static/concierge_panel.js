@@ -3245,7 +3245,7 @@
     if (location.hash === '#voice') {   // the voice screen's pull-to-refresh landing
       try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
       pageApi.afterVoiceRefresh();
-    } else if (location.hash === '#talk') {   // a launch button (manifest shortcut, Shortcuts app)
+    } else if (location.hash === '#talk' || location.pathname === '/concierge/live') {   // a launch button (manifest shortcut, Shortcuts app)
       try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
       pageApi.afterTalkLaunch();
     }
