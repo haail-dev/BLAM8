@@ -36,18 +36,26 @@ transparent. The upper cog is slightly right of the lower cog. The existing
 supplies a soft shadow. Animation loads when idle and pauses when the launcher
 or document is hidden. Reduced motion, data saver and no JavaScript use
 `static/img/blam8-assistant-glass.png`. The chat header and onboarding page header
-use the existing compact brand mark. Other public launchers and the
+also use that coloured glass still, without a monochrome filter. Other public launchers and the
 live Concierge/Pond effects are unchanged. Route rendering is covered by
 `tests/test_assistant_glass_logo.py`; live browser verification belongs in the
 external QA workspace.
 
-While the application reports an active onboarding operation, its waiting line
-uses the reusable `bc-busy` / `bc-busy-text` presentation: a plain grey text line
+The Assistant's footer notices use the reusable `bc-notice` / `bc-notice-text`
+presentation: a plain grey text line
 with a slow pink-and-blue shine across the letters. There is no surrounding box.
-Text remains readable throughout; there is no progress
-estimate. Completing the operation removes that presentation. Reduced motion
-and forced colours use static readable text. Pending review decisions alone do
-not activate the shine.
+Text remains readable throughout; there is no progress estimate. This includes
+waiting, validation, pending-note and form-review notices. Their wording retains
+the actual state; only an active operation has the `bc-busy` marker. Completing
+the operation removes that marker and restores the current notice or Continue
+action. Reduced motion and forced colours use static readable text.
+
+The installable app uses a static glass B on navy at 192px and 512px, with a
+padded 512px maskable variant, a 96px shortcut icon and a 180px Apple touch icon.
+These are rendered from the existing glass-logo renderer at its native 600px
+source resolution. Distinct glass-icon filenames and versioned manifest URLs
+avoid reusing the old flat-logo cache entries. Public, app and onboarding Apple
+touch links use the same glass icon. The notification badge is unchanged.
 
 A single corner widget that does two jobs across the public→tenant boundary:
 

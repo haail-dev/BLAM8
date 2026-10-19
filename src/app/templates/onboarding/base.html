@@ -6,6 +6,7 @@
   <title>{% block title %}Set up BLAM8{% endblock %}</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-glass.png?v={{ asset_rev }}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   {% set water_page = true %}
   {% include "_theme_head.html" %}
@@ -47,8 +48,8 @@
   <header class="relative bg-navy flex-none" data-pull-bar data-bc-full-width>
     <div class="flex h-full w-full items-center justify-between gap-3">
       <span class="flex items-center gap-2 font-bold text-white text-lg tracking-tight">
-        <img src="/static/img/blam8-mark-small.svg?v={{ asset_rev }}" alt="" aria-hidden="true"
-             width="28" height="28" class="h-7 w-7 flex-none" style="filter: brightness(0) invert(1);">
+        <img src="/static/img/blam8-assistant-glass.png?v={{ asset_rev }}" alt="" aria-hidden="true"
+             width="28" height="28" class="h-7 w-7 flex-none">
         BLAM8
       </span>
       {# The login may differ from the connected inbox. Keep it at the far
