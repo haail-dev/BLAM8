@@ -42,15 +42,21 @@ def test_overlap_checkbox_roundtrip_in_native_chromium(tmp_path):
     form = {'version': ctx['version']}
     initial = {**guide.present(ctx, row, form), 'patches': {}}
     responses = [initial]
+    for message in ('I’d like to edit this note before saving it.',
+                    'Keep this note after I remove the repeated sentence.'):
+        responses.append(guide.apply(ctx, row, form, initial['focus_hash'], dict(
+            intent='keep', reason=message, answer='', target='', explanation='Recorded as a keep.')))
+    first_confirmation = len(responses)
     for intent in ('keep', 'keep_both', 'keep'):
         shown = guide.present(ctx, row, form)
         result = guide.apply(ctx, row, form, shown['focus_hash'], dict(
-            intent=intent, reason='', answer='', target='', explanation=''))
+            intent=intent, reason='', answer='', target='', explanation=''), confirmed_note_decision=True)
         form.update(result['patches'])
         responses.append(result)
-    overlap = responses[1]['focus']
-    assert overlap['kind'] == 'overlap' and responses[2]['focus']['id'] == 'two'
+    overlap = responses[first_confirmation]['focus']
+    assert overlap['kind'] == 'overlap' and responses[first_confirmation + 1]['focus']['id'] == 'two'
     match_name = 'match_' + overlap['id']
+    confirmation_request = len(responses) - 1
     env = Environment(loader=FileSystemLoader(ROOT / 'src/app/templates'), autoescape=True)
     markup = env.get_template('_knowledge_review.html').render(
         review=knowledge_review.review_view(ctx, row, {'version': ctx['version']}),
@@ -62,7 +68,8 @@ def test_overlap_checkbox_roundtrip_in_native_chromium(tmp_path):
         '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
         'script-src \'unsafe-inline\'; connect-src \'none\'">'
         '</head><body>' + markup + '<pre id="native-result">PENDING</pre><script>'
-        + 'window.nativeFixture=' + json.dumps({'responses': responses, 'matchName': match_name})
+        + 'window.nativeFixture=' + json.dumps({'responses': responses, 'matchName': match_name,
+                                               'confirmationRequest': confirmation_request})
         + ';</script><script>' + controller + '</script><script>' + assertions
         + '</script></body></html>', encoding='utf-8')
     result = subprocess.run([
@@ -78,7 +85,7 @@ def test_overlap_checkbox_roundtrip_in_native_chromium(tmp_path):
     assert report and 'data-status="PASS"' in report.group(0), report.group(1) if report else result.stdout[-2000:]
     captured = json.loads(unescape(report.group(1)))['requests']
     # Replay the browser's actual serialized form/hash through the real backend.
-    request = captured[3]
+    request = captured[confirmation_request]
     _, current = guide.current(ctx, row, request['form'])
     assert current['kind'] == 'note' and current['id'] == 'two'
     assert request['focus_hash'] == guide.identity(current)

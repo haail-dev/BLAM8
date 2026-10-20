@@ -19,6 +19,15 @@ tenant-scoped, versioned review used by admission. It returns a bounded patch to
 the existing review form, not a database mutation. Model interpretation is used
 for natural messages; Show and explicit action buttons do not call a model.
 The action is restricted to the displayed item, with exact existing note targets.
+Model-inferred keep/discard responses never change a note decision. Natural
+approval asks for confirmation using the current note's explicit Keep or Leave
+out control (the exact action text also works in chat). The edit intent and
+model-inferred note decisions preserve prior note choices, do not advance the
+review and do not enable Save. This also protects mixed or conditional requests
+misclassified as keep/discard. The edit intent points to the existing manual editor;
+it neither rewrites a note nor turns an edit request into approval. Stale-item
+validation also applies to explicit confirmations. Source exclusions and overlap
+acknowledgments retain their existing separate review paths.
 Owner answers and exclusion reasons must occur in the owner's message.
 For messages up to 1,000 characters, the structured reason is constrained to
 empty or the complete verbatim owner message; it is nonempty only when the owner

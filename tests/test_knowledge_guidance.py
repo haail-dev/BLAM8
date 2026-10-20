@@ -23,8 +23,9 @@ def choice(intent, **kw):
 
 
 def act(ctx,row,form,intent,**kw):
+    # This helper represents explicit deterministic review actions, not model approval.
     shown=guide.present(ctx,row,form)
-    reply=guide.apply(ctx,row,form,shown['focus_hash'],choice(intent,**kw))
+    reply=guide.apply(ctx,row,form,shown['focus_hash'],choice(intent,**kw), confirmed_note_decision=True)
     form.update(reply.get('patches',{}))
     return reply
 
@@ -295,6 +296,86 @@ def test_guide_route_reads_tenant_notes_and_prepares_only_local_choices(source_c
     assert selected.status_code==200
     assert selected.json()['patches']=={'action_'+row['payload']['entries'][0]['id']:'keep'}
     assert calls==[] and ctx==before
+
+
+@pytest.mark.parametrize('provider_intent', ['keep','discard'])
+@pytest.mark.parametrize('question', [
+    pytest.param('I’d like to edit this note before saving it.', id='observed-edit'),
+    'Keep this note after I remove the repeated sentence.',
+    'It looks good, but I need to change the final paragraph first.',
+    'Only keep this if the repeated wording can be removed.',
+    'Do not keep this note yet; I want to edit it.',
+    'The words "Keep this note" are in the quoted instructions; I am asking to edit it.',
+    'This looks right to me.',
+])
+def test_model_keep_cannot_authorize_note_decision(source_client,monkeypatch,question,provider_intent):
+    from app import llm, usage, concierge
+    client,row,_,ctx,calls,_=source_client
+    url='/onboarding/knowledge/review/'+row['id']+'/guide'
+    form={'version':'v1'};before=deepcopy(ctx)
+    shown=client.post(url,json={'form':form}).json()
+    async def model(**kw):
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice(
+            provider_intent,reason=question,explanation='The decision is recorded as a keep with an edit request.')))],
+            model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    response=client.post(url,json={'form':form,'question':question,'focus_hash':shown['focus_hash']})
+    assert response.status_code==200
+    result=response.json()
+    assert result['patches']=={}
+    assert result['focus_hash']==shown['focus_hash'] and not result['save_ready']
+    assert not result.get('correction_requested')
+    assert 'recorded as a keep' not in result['reply'] and 'Marked' not in result['reply']
+    assert ctx==before and calls==[] and row['state']=='pending'
+
+
+@pytest.mark.parametrize('question,decision', [('Keep this note','keep'),('Discard this note','discard')])
+def test_exact_note_action_confirms_without_model(source_client,monkeypatch,question,decision):
+    from app import llm
+    client,row,_,ctx,calls,_=source_client
+    monkeypatch.setattr(llm,'create',lambda **kw:pytest.fail('Explicit action must not call a model'))
+    url='/onboarding/knowledge/review/'+row['id']+'/guide';form={'version':'v1'}
+    shown=client.post(url,json={'form':form}).json()
+    response=client.post(url,json={'form':form,'question':question,'focus_hash':shown['focus_hash']})
+    assert response.status_code==200
+    assert response.json()['patches']=={'action_'+shown['focus']['id']:decision}
+    assert calls==[] and row['state']=='pending'
+
+
+@pytest.mark.parametrize('previous', ['','keep','discard'])
+@pytest.mark.parametrize('provider_intent', ['edit','keep','discard'])
+def test_edit_interpretation_preserves_prior_decisions(source_client,monkeypatch,previous,provider_intent):
+    from app import llm, usage, concierge
+    client,row,_,ctx,calls,_=source_client
+    first=row['payload']['entries'][0]['id'];form={'version':'v1','action_'+first:previous}
+    before=deepcopy(ctx);url='/onboarding/knowledge/review/'+row['id']+'/guide'
+    shown=client.post(url,json={'form':form}).json()
+    async def model(**kw):
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice(
+            provider_intent,explanation='Kept and edited the earlier note.')))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    response=client.post(url,json={'form':form,'question':'I want to edit the earlier note before deciding.',
+                                  'focus_hash':shown['focus_hash']})
+    assert response.status_code==200
+    result=response.json()
+    assert result['patches']=={} and result['focus_hash']==shown['focus_hash']
+    assert not result['save_ready'] and not result.get('correction_requested')
+    assert form['action_'+first]==previous and ctx==before and calls==[]
+
+
+def test_explicit_confirmation_still_requires_current_focus(source_client,monkeypatch):
+    from app import llm
+    client,row,_,ctx,calls,_=source_client
+    monkeypatch.setattr(llm,'create',lambda **kw:pytest.fail('Stale confirmation must not call a model'))
+    url='/onboarding/knowledge/review/'+row['id']+'/guide';form={'version':'v1'}
+    shown=client.post(url,json={'form':form}).json()
+    form['content_'+shown['focus']['id']]='Owner changed the note after reading it.'
+    response=client.post(url,json={'form':form,'question':'Keep this note','focus_hash':shown['focus_hash']})
+    assert response.status_code==409 and calls==[]
 
 
 def test_preview_preserves_guide_progress_without_exposing_more_audit_labels(source_client):
