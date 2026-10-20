@@ -142,3 +142,43 @@ def test_final_approval_and_source_correction_cannot_both_win(source_case):
         state, stored = c.execute('select state,payload from knowledge_reviews where id=%s',(row['id'],)).fetchone()
         assert state == ('pending' if winners[0] == 'correct' else 'saved')
         assert stored == (payload if winners[0] == 'correct' else row['payload'])
+
+
+
+def test_applied_paragraph_removal_recovers_explicit_choices_after_lost_response(source_db):
+    from app import knowledge_note_edits, knowledge_source_evidence, knowledge_fidelity, knowledge_review
+    driver, dsn = source_db
+    tenant = uuid.uuid4(); row, _ = seeded()
+    text = 'We review incoming requests.\n\nMention the earlier reference for a repeated request.'
+    evidence = knowledge_source_evidence.build([{'url':'https://example.test/advice','text':text}])
+    row['payload']['entries'] = [dict(row['payload']['entries'][0],content=text)]
+    row['payload'].update(source_snapshot=evidence['id'],source_units=knowledge_fidelity.inventory(evidence['pages']))
+    identity = row['payload']['entries'][0]['id']
+    request = 'Please remove the final repeated paragraph and keep the rest.'
+    with driver.connect(dsn,autocommit=True) as c:
+        c.execute('insert into tenants values(%s)', (tenant,))
+        c.execute("insert into tenant_config values(%s,'Owner brief')", (tenant,))
+        capture(c,tenant,row,evidence)
+        version=c.execute('select knowledge_review_context(%s)',(tenant,)).fetchone()[0]['version']
+        context={'version':version,'reviews':[row],'sources':[],'brief':'Owner brief'}
+        form={'version':version}
+        card=knowledge_note_edits.scope(review.draft_card(row,evidence),context,row,form,identity,request)
+        raw={'revision':1,'changes':[{'id':identity,'content_hash':knowledge_source_evidence.digest(text),
+             'insertions':[],'citations':[],'removals':[card['knowledge_edit_scope']['paragraphs'][-1]['reference']]}],
+             'overlaps':[],'questions':[],'edit_scope':knowledge_note_edits.binding(card)}
+        payload=review.corrected_payload(row,evidence,raw,card=card,owner_request=request,reviewer='owner')
+        assert c.execute('select revise_knowledge_review_sources(%s,%s,%s,%s)',(tenant,row['id'],version,json.dumps(payload))).fetchone()[0] is True
+        # Simulate losing the HTTP acknowledgement: only committed SQL is read.
+        state,stored=c.execute('select state,payload from knowledge_reviews where id=%s',(row['id'],)).fetchone()
+        fresh=c.execute('select knowledge_review_context(%s)',(tenant,)).fetchone()[0]['version']
+        assert fresh!=version and state=='pending'
+        recovered=knowledge_review.review_view({**context,'version':fresh},{**row,'payload':stored})
+        unit=row['payload']['source_units'][-1]
+        assert recovered['form']['source_'+unit['id']]=='exclude'
+        assert recovered['form']['source_reason_'+unit['id']]==request
+        assert recovered['form']['action_'+identity]==''
+        assert stored['source_units']==row['payload']['source_units']
+        assert c.execute('select evidence from knowledge_review_sources where tenant_id=%s',(tenant,)).fetchone()[0]==evidence
+        assert c.execute('select count(*) from knowledge_chunks where tenant_id=%s',(tenant,)).fetchone()[0]==0
+        with pytest.raises(driver.errors.RaiseException,match='STALE'):
+            c.execute("select admit_knowledge_review(%s,%s,%s,%s,'[]')",(tenant,row['id'],version,json.dumps(payload)))

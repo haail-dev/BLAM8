@@ -40,7 +40,8 @@ def test_shared_stepper_has_one_visible_current_name_and_safe_disclosures(step):
     assert 'Step 9: Getting paid, upcoming' in html
     assert 'data-step-line' not in html
     assert 'inside the app)' not in html
-    assert f'width: {(onboarding._step_ctx(step)["step_index"]+1)*100//9}%' in html
+    assert 'class="onboarding-progress"' in html
+    assert "--label-start" in html and "--label-end" in html
 
 
 def test_stepper_disclosure_controller_click_keyboard_and_reset_replay():

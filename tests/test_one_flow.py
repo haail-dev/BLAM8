@@ -177,7 +177,9 @@ def test_the_wizard_stepper_draws_all_nine():
     assert 'data-stepper-total="{{ total }}"' in html
     assert 'data-tuning-step="{{ key }}"' in html and 'key=t.key' in html
     assert "step_circle(step_count + loop.index, t.label" in html                  # numbered 5..9
-    assert "width: {{ (step_index + 1) * 100 // total }}%" in html
+    assert 'class="onboarding-progress"' in html
+    assert "--label-start" in html and "--label-end" in html
+    assert "label.offsetWidth" in html and "getBoundingClientRect()" in html
     assert "data-step-line" not in html and "aria-controls=\"onboarding-step-label-{{ number }}\"" in html
 
 

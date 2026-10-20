@@ -246,6 +246,11 @@ def topic_view(context):
             "pending_count": sum(bool(t["pending"]) for t in result)}
 
 
+def review_form(row, form=None):
+    """Recover explicitly applied draft review choices, never inferred approvals."""
+    return {**row['payload'].get('draft_review_choices', {}), **dict(form or {})}
+
+
 def edited_entries(row, form, *, validate=True):
     entries = deepcopy(row["payload"]["entries"])
     for n in entries:
@@ -302,7 +307,7 @@ def resolve_source_statements(row, entries, form, *, complete=False):
 
 def review_view(context, row, form=None):
     row = deepcopy(row)
-    form = dict(form or {})
+    form = review_form(row, form)
     entries = edited_entries(row,form,validate=False)
     try: effective = effective_entries(context,row,entries,form)
     except HTTPException: effective = entries  # Preserve edits while the reviewer fixes an invalid choice.
@@ -339,6 +344,7 @@ def review_view(context, row, form=None):
 
 def plan(context, row, form):
     """Recompute candidates from edited drafts; every current match needs a choice."""
+    form = review_form(row, form)
     if row["state"] != "pending" or form.get("version") != context["version"]:
         raise HTTPException(409, "Knowledge or pending drafts changed. Reload and review the latest evidence.")
     entries = edited_entries(row,form)

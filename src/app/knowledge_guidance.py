@@ -126,6 +126,7 @@ def source_targets(unit, entries):
 
 def current(context, row, form):
     """The next unresolved business note, passage, overlap or optional question."""
+    form = knowledge_review.review_form(row, form)
     review = view(context, row, form)
     entries = review['entries']
     retained = [n for n in entries if form.get('action_'+n['id']) == 'keep']
@@ -310,7 +311,9 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
         patches['answer_'+item['id']] = ''
         receipt = 'Left this detail unknown.'
     elif intent == 'correct':
+        target = item.get('id') if kind in {'note','support'} else item.get('note_id') if kind=='overlap' else item.get('target')
         return {'correction_requested': True,
+                'correction_note': {'note_id':target, 'focus_hash':focus_hash} if kind=='note' and target else {},
                 'correction_focus': decision(context, row, item, 'edit', 'preview')}
     elif intent not in {'show', 'explain'}:
         receipt = 'I have not changed that choice. Please say what you want to keep or leave out, and give a reason for leaving out website wording.'

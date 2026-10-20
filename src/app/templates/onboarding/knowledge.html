@@ -3,6 +3,21 @@
 {% block heading %}{{ "Review Knowledge" if pending_reviews else "Give it your facts" }}{% endblock %}
 {% block subheading %}{% if not pending_reviews %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endif %}{% endblock %}
 {% block content %}
+<style>
+  .knowledge-review, #site-box { container-type:inline-size; }
+  #site-box > .flex { display:grid;grid-template-columns:minmax(0,1fr) auto; }
+  @container (max-width:36rem) { .kr-batch-actions { display:grid;grid-template-columns:minmax(0,1fr); } .kr-batch-actions button { width:100%; } }
+  @container (max-width:24rem) { #site-box > .flex { grid-template-columns:minmax(0,1fr); } }
+  #site-url { flex:1 1 14rem;min-width:0; }
+  #site-go { min-height:46px; }
+  #site-done { flex-wrap:wrap;overflow-wrap:anywhere; }
+  #site-lifecycle p + p { margin-top:.25rem; }
+  #knowledge-manual-controls input[type=file] { min-width:0;max-width:100%; }
+  [data-knowledge-navigation] { display:flex;align-items:center;justify-content:space-between;gap:1rem;border-top:1px solid #e2e8f0;margin-top:1.25rem;padding-top:1.25rem; }
+  [data-knowledge-navigation] button { min-width:0;white-space:normal; }
+  [data-knowledge-later] { border:1px solid #e2e8f0;border-radius:.75rem;padding:.875rem;background:#f8fafc; }
+  @media(max-width:480px) { [data-knowledge-navigation] { align-items:stretch;flex-direction:column-reverse; } [data-knowledge-navigation] a { align-self:flex-start; } [data-leave-knowledge] { width:100%; } }
+</style>
 <script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script><span hidden data-knowledge-source-mode></span>
 {% if knowledge_source_review_enabled %}<script src="/static/knowledge_guidance.js?v={{ asset_rev }}" defer></script>{% endif %}
 {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
@@ -104,7 +119,7 @@
 <script src="/static/knowledge_onboarding_review.js?v={{ asset_rev }}" defer></script>
 {% endif %}
 
-<div class="flex items-center justify-between pt-5">
+<div data-knowledge-navigation>
   <a href="/onboarding/voice" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
   {# The wizard's last step: the button submits the note form (formnovalidate →
      an empty box just moves on): as a bare link it silently discarded a
