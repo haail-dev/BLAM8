@@ -78,7 +78,21 @@ cannot lose it. Restored checkbox state retains the control's configured value.
 A poll that finishes during an active guide turn waits for the next refresh;
 it cannot replace that turn's native form snapshot.
 
+Initial review hydration completes before readiness becomes available. A fresh
+Knowledge page rederives its current pending decision once from the restored
+form, including source reasons and overlap choices; persisted focus does not
+replay an approval. Automatic guide-view identities include a canonical form
+fingerprint, so changed review choices cannot replay the original first card.
+Unchanged forms still share replay protection. Revision conflicts remain terminal
+until reconciliation: settled readiness promises never schedule an automatic
+retry or a repeated microtask loop. Later normal polls do not restart the guide.
+
 The two-document native test runs the sync and guide clients with a small
 transcript display adapter, actual guide decisions and disposable SQL. It does
 not run the complete Concierge renderer. The separate choice-history replay
 executes the actual Concierge card, send and transcript rendering functions.
+The startup/conflict native test additionally runs the full Concierge renderer,
+guide and sync clients on the rendered Knowledge page with isolated response
+fixtures. It verifies complete hydration, real checkbox/FormData retention,
+one current-note derivation and event-loop liveness after HTTP409; separate
+HTTP/disposable-SQL tests cover actual automatic-operation replay identities.

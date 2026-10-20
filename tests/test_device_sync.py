@@ -1,6 +1,7 @@
 """Real HTTP handlers with a PostgreSQL-backed PostgREST adapter and two browsers."""
 
 import json
+import re
 from pathlib import Path
 from uuid import uuid4
 
@@ -279,6 +280,40 @@ def test_two_devices_share_one_automatic_greeting(sync_app):
     assert len(sync_app[1]) == 1
     messages = c.get("/device-sync/flow").json()["payload"]["messages"]
     assert [m["role"] for m in messages] == ["assistant"]
+
+
+def test_automatic_guide_rederives_changed_review_without_replaying_approval(sync_app, monkeypatch):
+    from app import llm
+    async def no_model(**_kwargs):
+        raise AssertionError('Read-only current-note reconciliation must not call a model')
+    monkeypatch.setattr(llm,'create',no_model)
+    c=client(sync_app)
+    version=re.search(r'name="version"[^>]*value="([^"]+)"',c.get('/onboarding/knowledge').text)[1]
+    form={'version':version}
+    url='/onboarding/knowledge/review/review-one/guide'
+    def turn(question='',focus='',automatic=True,revision=None):
+        current=c.get('/device-sync/flow').json()['revision']
+        response=c.post(url,json={'form':form,'question':question,'focus_hash':focus},headers={
+            'X-CSRF-Token':'test-csrf','X-Blam8-Operation':str(uuid4()),
+            'X-Blam8-Revision':str(current if revision is None else revision),
+            'X-Blam8-Automatic':'1' if automatic else '0'})
+        return response
+    first=turn();assert first.status_code==200
+    shown=first.json();assert shown['focus']['kind']=='note'
+    confirmed=turn('Keep this note',shown['focus_hash'],False).json()
+    form.update(confirmed['patches']);assert confirmed['focus']['kind']=='overlap'
+    overlap=turn('Keep both notes',confirmed['focus_hash'],False).json()
+    form.update(overlap['patches']);assert overlap['focus']['id']=='two'
+    resumed=turn();assert resumed.status_code==200
+    assert resumed.json()['focus']['id']=='two' and resumed.json()['patches']=={}
+    count=len(sync_app[1]);form=dict(reversed(list(form.items())))
+    assert turn().json()==resumed.json() and len(sync_app[1])==count
+    # A new automatic snapshot still needs the current revision; no decision is inferred.
+    form['content_two']='Locally revised wording.'
+    assert turn(revision=0).status_code==409
+    assert len(sync_app[1])==count
+    refreshed=turn();assert refreshed.status_code==200
+    assert refreshed.json()['focus']['id']=='two' and refreshed.json()['patches']=={}
 
 
 def test_sync_requires_csrf_and_never_accepts_external_navigation(sync_app):
