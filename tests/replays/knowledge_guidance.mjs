@@ -20,9 +20,10 @@ let activeForm=form, availableForms=null;
 const document={querySelectorAll(){return availableForms || [activeForm];},
   addEventListener(name,cb){events[name]=cb;},createElement(){return {dispatchEvent(){}};}};
 let sourceReply={reply:'Correction preview; not saved.'};
+let correctionScope=null;
 const window={addEventListener(name,cb){windowEvents[name]=cb;},dispatchEvent(){},
   blam8ConciergeClose(){closed++;},
-  Blam8KnowledgeSourceReview:{working(){return false;},ask:async()=>sourceReply}};
+  Blam8KnowledgeSourceReview:{working(){return false;},ask:async(question,form,scope)=>{correctionScope=scope;return sourceReply;}}};
 class FormData {constructor(f){this.form=f;}forEach(cb){for(const field of Object.values(this.form.elements))cb(field.value,field.name);}}
 const fetch=(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}));
 const context={document,window,FormData,fetch,Event:class{},console};
@@ -120,8 +121,10 @@ assert.equal(fields.action_one.value,'keep'); // Existing choice remains unchang
 const correctionFocus={batch_id:'batch',version:'v1',focus_hash:'edit-hash',kind:'note',id:'one',action:'edit',state:'preview'};
 sourceReply={reply:'Other note correction preview.',correction_preview_ids:['other']};
 index=requests.length;loading=guide.ask('Correct the other note');
-finish(index,{correction_requested:true,correction_focus:correctionFocus});
+finish(index,{correction_requested:true,correction_focus:correctionFocus,correction_note:{note_id:'one',focus_hash:'edit-hash'}});
 assert.equal((await loading).review_decision,undefined);
+assert.equal(correctionScope.note_id,'one');assert.equal(correctionScope.focus_hash,'edit-hash');
+assert(guide.isCurrent('edit-hash','batch','v1')); // Read-only/no-op correction does not invalidate a valid focus.
 index=requests.length;loading=guide.ask('Show the current note');finish(index,result({},'edit-hash'));await loading;
 sourceReply={reply:'This note correction preview.',correction_preview_ids:['one']};
 index=requests.length;loading=guide.ask('Add the sourced wording to this note');

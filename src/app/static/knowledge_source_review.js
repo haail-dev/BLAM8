@@ -49,7 +49,7 @@
     return data;
   }
   function clear(form) { preview = null; form.querySelector('[data-source-preview]').replaceChildren(); }
-  async function ask(form, question) {
+  async function ask(form, question, scope) {
     if (!form) throw new Error('Choose the pending batch with Use this batch with Assistant first.');
     if (busy || submitting || window.blam8KnowledgeImportBusy) throw new Error('Wait for the current review operation.');
     if (!question.trim()) throw new Error('Say what to check against the source.');
@@ -57,22 +57,36 @@
     var base = snapshot(form), box = form.querySelector('[data-source-preview]');
     lock(true); say(form, 'Checking the retained source and these exact drafts…');
     try {
-      var data = await request(form, '', Object.assign({question: question}, base));
-      preview = {key:form.dataset.knowledgeReview, base: base, review: data.review, question: question};
+      var data = await request(form, '', Object.assign({question: question}, base, scope || {}));
+      preview = {key:form.dataset.knowledgeReview, base: base, review: data.review, question: question, scope: scope || {}};
       data.changes.forEach(function (change) {
         var detail = node('details', ''); detail.open = true;
         detail.appendChild(node('summary', change.label));
         detail.appendChild(node('p', 'Original: ' + change.before));
         detail.appendChild(node('p', 'Proposed: ' + change.after));
+        (change.removals || []).forEach(function(p){detail.appendChild(node('blockquote','Remove this exact paragraph: '+p.quote));});
+        (change.source_choices || []).forEach(function(choice){
+          detail.appendChild(node('p','Source passage: '+choice.text));
+          detail.appendChild(node('p','Source: '+choice.sources.join(', ')));
+          detail.appendChild(node('p',choice.action==='excluded'?'Proposed source choice: leave out of all retained notes.':'Retained in: '+choice.destinations.join(', ')));
+          if(choice.reason)detail.appendChild(node('p','Your exact reason: '+choice.reason));
+        });
         change.passages.forEach(function (p) { detail.appendChild(node('blockquote', p.quote)); detail.appendChild(node('p', p.url)); });
         (change.citations || []).forEach(function(p){detail.appendChild(node('p','Citation for existing wording: '+p.claim));detail.appendChild(node('blockquote',p.quote));detail.appendChild(node('p',p.url));});
         box.appendChild(detail);
       });
       data.overlaps.forEach(function (group) { box.appendChild(node('p', 'Possible overlap; kept separate: ' + group.map(function (n) { return n.label; }).join(', '))); });
       data.questions.forEach(function (q) { box.appendChild(node('p', 'Needs your answer: ' + q)); });
-      if (data.changes.length) { var apply = node('button', 'Apply corrections to drafts'); apply.type = 'button'; apply.dataset.sourceApply = '1'; box.appendChild(apply); }
+      if (data.changes.length) { var apply = node('button', data.changes.some(function(c){return (c.removals || []).length;}) ? 'Apply listed wording and source choices to draft' : 'Apply corrections to drafts'); apply.type = 'button'; apply.dataset.sourceApply = '1'; box.appendChild(apply); }
+      if(data.changes.length){
+        var disclosure=form.querySelector('[data-source-corrections]');if(disclosure)disclosure.open=true;
+        if(window.blam8ConciergeClose)window.blam8ConciergeClose();
+        box.tabIndex=-1;
+        if(box.scrollIntoView)box.scrollIntoView({behavior:'smooth',block:'center'});
+        if(box.focus)box.focus({preventScroll:true});
+      }
       say(form, data.summary);
-      return {reply: data.summary, correction_preview_ids: data.changes.map(function(change){return change.id;}), form_fill: {}, ready_to_advance: false, notes: [], held_for: []};
+      return {reply: data.summary+(data.changes.length?' Review the opened correction preview for the exact before/after wording and listed source choices, then choose Apply. This has not kept or saved the note.':''), correction_preview_ids: data.changes.map(function(change){return change.id;}), form_fill: {}, ready_to_advance: false, notes: [], held_for: []};
     } catch (err) { say(form, err.message); throw err; }
     finally { lock(false); }
   }
@@ -88,13 +102,20 @@
     if (JSON.stringify(snapshot(form)) !== JSON.stringify(preview.base)) {
       clear(form); say(form, 'The draft text changed. Review it again before applying.'); return;
     }
-    var body = Object.assign({review: preview.review, owner_request: preview.question}, preview.base);
+    var body = Object.assign({review: preview.review, owner_request: preview.question}, preview.base, preview.scope);
     lock(true);
     try {
       var data = await request(form, '/apply', body);
       data.entries.forEach(function (entry) {
         form.elements['label_' + entry.id].value = entry.label;
         form.elements['content_' + entry.id].value = entry.content;
+      });
+      Object.keys(data.patches || {}).forEach(function(name){
+        var field=form.elements[name];
+        if(!field){field=document.createElement('input');field.type='hidden';field.name=name;form.appendChild(field);}
+        if(field.type==='checkbox')field.checked=data.patches[name]===field.value;
+        else field.value=data.patches[name];
+        if(field.dispatchEvent)field.dispatchEvent(new Event('change',{bubbles:true}));
       });
       form.dataset.reviewDirty = '1';
       // Keep the old version until Check changes and overlaps renders a fresh
@@ -133,9 +154,9 @@
   window.Blam8KnowledgeSourceReview = {
     working: function () { return !!(busy || submitting); },
     available: function () { return !!targetForm(); },
-    ask: function (question, reviewForm) {
+    ask: function (question, reviewForm, scope) {
       if(reviewForm){if(!forms().includes(reviewForm))throw new Error('That review batch is no longer available.');selected=reviewForm.dataset.knowledgeReview;}
-      return ask(reviewForm || targetForm(), question);
+      return ask(reviewForm || targetForm(), question, scope);
     }
   };
 })();

@@ -39,10 +39,12 @@
         <p id="bc-title" class="text-sm font-semibold leading-tight">BLAM8 assistant</p>
       </div>
       <div class="ml-auto -mr-1 flex items-center gap-0.5">
+        {% if not concierge_onboarding_step and not setup_strip %}
         <button id="bc-clear" type="button" aria-label="Clear conversation" title="Clear conversation"
                 class="rounded-lg p-1.5 text-white/80 hover:bg-white/10 transition">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M3.985 19.644v-4.992h4.992M19.5 9.348a7.5 7.5 0 0 0-13.137-3.036L3.985 8.66m0 0V4.356m16.03 10.992a7.5 7.5 0 0 1-13.136 3.036L4.5 15.34"/></svg>
         </button>
+        {% endif %}
         <button id="bc-close" type="button" aria-label="Close assistant"
                 class="rounded-lg p-1.5 text-white/80 hover:bg-white/10 transition">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -99,6 +101,11 @@
 </div>
 
 <style>
+  {% if concierge_onboarding_step or setup_strip %}
+  #bc-cta { padding:.75rem; }
+  #bc-cta > * + * { margin-top:.5rem !important; }
+  #bc-cta > p { margin-bottom:0; }
+  {% endif %}
   /* The animated BLAM8 launcher stays visible at the bottom-right edge. */
   #bc-bubble {
     transform: translateX(0);

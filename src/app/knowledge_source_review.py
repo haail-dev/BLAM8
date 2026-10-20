@@ -1,14 +1,15 @@
 """Extractive, review-only corrections over exact durable Knowledge line IDs.
 
-V1 inserts exact retained passages; existing facts cannot be rewritten or lost.
-The owner still judges whether those passages support the intended correction.
+Default source review inserts exact retained passages. A scoped current-note
+edit may propose bounded paragraph removals for a separate owner Apply; source
+evidence, caveats and admission authority remain intact.
 """
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
 import re
 
-from app import setup_cards, knowledge_source_evidence
+from app import setup_cards, knowledge_source_evidence, knowledge_note_edits
 
 
 def obj(properties):
@@ -76,6 +77,11 @@ def context(card, evidence):
     result = {'revision': card['revision'], 'snapshot_id': evidence['id'],
             'lines': [{'id': l['id'], **l['fields'], 'citations': l.get('provenance', []), 'content_hash': knowledge_source_evidence.digest(l['fields']['content'])} for l in lines],
             'passages': passages}
+    if card.get('knowledge_edit_scope'):
+        result['current_note_edit'] = {**knowledge_note_edits.binding(card),
+            'paragraphs': card['knowledge_edit_scope']['paragraphs'],
+            'displayed_body': card['knowledge_edit_scope']['displayed_body'],
+            'retention_context_only': card['knowledge_edit_scope']['effective_content']}
     if card.get('knowledge_local_review'):
         result['local_review'] = deepcopy(card['knowledge_local_review'])
     return result
@@ -83,8 +89,12 @@ def context(card, evidence):
 
 def validate(card, evidence, raw):
     """No writes. Unknown fields and prose-only model output are rejected."""
-    if not isinstance(raw, dict) or set(raw) != {'revision', 'changes', 'overlaps', 'questions'}:
+    expected = {'revision', 'changes', 'overlaps', 'questions'}
+    if card.get('knowledge_edit_scope'): expected.add('edit_scope')
+    if not isinstance(raw, dict) or set(raw) != expected:
         raise setup_cards.Invalid('The review did not return verifiable corrections. Nothing changed.')
+    if card.get('knowledge_edit_scope') and raw['edit_scope'] != knowledge_note_edits.binding(card):
+        raise setup_cards.Stale('The exact wording, owner request or review choices changed. Review this edit again.')
     if type(raw['revision']) is not int or raw['revision'] != card['revision']:
         raise setup_cards.Stale('The drafts changed. Review the current revision.')
     supplied = context(card, evidence)
@@ -94,7 +104,7 @@ def validate(card, evidence, raw):
         raise setup_cards.Invalid('Too many review changes.')
     changes, seen, unchanged = [], set(), 0
     for change in raw['changes']:
-        if not isinstance(change, dict) or set(change) - {'id', 'content_hash', 'insertions', 'citations'} or not {'id', 'content_hash', 'insertions'} <= set(change):
+        if not isinstance(change, dict) or set(change) - {'id', 'content_hash', 'insertions', 'citations', 'removals'} or not {'id', 'content_hash', 'insertions'} <= set(change):
             raise setup_cards.Invalid('Supply existing card IDs and source insertions only.')
         identity = change['id']
         if not isinstance(identity, str) or identity not in available or identity in seen:
@@ -109,7 +119,11 @@ def validate(card, evidence, raw):
             raise setup_cards.Invalid('The correction did not contain verifiable additions or citations. Nothing changed.')
         if len(insertions) > 12 or len(citations)>12:
             raise setup_cards.Invalid('That proposal changes too much at once. Review one note or a few source passages, then try again. Nothing changed.')
-        if not (insertions or citations):
+        removals = change.get('removals', [])
+        if not isinstance(removals, list):
+            raise setup_cards.Invalid('Choose exact paragraph references for removals.')
+        remaining, removed, source_choices, patches = knowledge_note_edits.removal(card, identity, line['content'], removals)
+        if not (insertions or citations or removed):
             unchanged += 1
             continue
         before, after, passages = [], [], []
@@ -127,7 +141,7 @@ def validate(card, evidence, raw):
                 continue
             (before if insertion['position'] == 'before' else after).append(quote)
             passages.append({**insertion, **passage})
-        content = '\n\n'.join(before + [line['content']] + after)
+        content = '\n\n'.join(before + [remaining] + after)
         if len(content) > 4000:
             raise setup_cards.Invalid('The corrected note is too long; review it manually.')
         checked_citations=[]
@@ -135,8 +149,8 @@ def validate(card, evidence, raw):
             if not isinstance(citation,dict) or set(citation)!={'claim','reference'} or not isinstance(citation.get('reference'),str) or citation['reference'] not in allowed_refs:
                 raise setup_cards.Invalid('Citations must name a complete retained source passage.')
             claim = citation['claim']
-            if not isinstance(claim,str) or not claim.strip() or claim not in line['content']:
-                raise setup_cards.Invalid('Cite exact existing note wording; do not invent a replacement claim.')
+            if not isinstance(claim,str) or not claim.strip() or claim not in content:
+                raise setup_cards.Invalid('Cite exact existing note wording from the surviving text; a removed clause cannot receive a current citation.')
             checked={**citation, **knowledge_source_evidence.resolve(evidence,citation['reference'])}
             if {'source':checked['url'],'excerpt':checked['quote'],'claim':claim} in line.get('citations',[]):
                 unchanged += 1
@@ -144,10 +158,11 @@ def validate(card, evidence, raw):
             if checked in checked_citations:
                 raise setup_cards.Invalid('Do not repeat a citation.')
             checked_citations.append(checked)
-        if not passages and not checked_citations:
+        if not passages and not checked_citations and not removed:
             continue
         changes.append({'id': identity, 'label': line['label'], 'before': line['content'],
-                        'after': content, 'passages': passages, 'citations': checked_citations})
+                        'after': content, 'passages': passages, 'citations': checked_citations,
+                        **({'remaining':remaining,'removals':removed,'source_choices':source_choices,'patches':patches} if removed else {})})
     overlaps = raw['overlaps']
     if not isinstance(overlaps, list) or len(overlaps) > 30:
         raise setup_cards.Invalid('Too many overlap annotations.')
@@ -164,7 +179,9 @@ def validate(card, evidence, raw):
     omitted_questions = len(questions) - len(shown_questions)
     summary = (f"Review ready: {len(changes)} note(s) with proposed text or citation changes; {len(overlaps)} possible overlap(s). Drafts and Knowledge are unchanged."
                if changes else 'No new draft corrections were proposed. Nothing changed. You can undo added website wording in the review form, or request a specific sourced addition.')
-    if changes and not any(c['passages'] for c in changes):
+    if any(c.get('removals') for c in changes):
+        summary += ' Exact paragraph removals and any listed source-review choices are a preview only. Apply them to the draft separately, then review and confirm Keep before final Save.'
+    if changes and not any(c['passages'] or c.get('removals') for c in changes):
         summary += ' These are citation changes only; no note wording is changed.'
     if unchanged:
         summary += f' {unchanged} unchanged or already-recorded item(s) need no draft update.'
@@ -218,9 +235,12 @@ def apply(card, evidence, raw, *, turn):
         segments, offset = [], 0
         for position in ('before', 'original', 'after'):
             if position == 'original':
+                original_segments = content_segments(card, old)
+                if change.get('removals'):
+                    original_segments = knowledge_note_edits.clip_segments(change['before'], original_segments, change['removals'])
                 segments.extend({**s, 'start': s['start'] + offset, 'end': s['end'] + offset}
-                                for s in content_segments(card, old))
-                offset += len(change['before']) + 2
+                                for s in original_segments)
+                offset += len(change.get('remaining', change['before'])) + 2
             else:
                 for passage in change['passages']:
                     if passage['position'] != position: continue
@@ -246,15 +266,36 @@ async def answer(tenant_id, question, card, evidence):
         raise setup_cards.Invalid('There are no pending cards in this website batch.')
     message = await llm.create(client=concierge.client().with_options(max_retries=0), tenant_id=tenant_id,
         operation='concierge_onboard', module='concierge', model=settings.anthropic_model,
-        max_tokens=2500, system=SYSTEM, cache=False,
+        max_tokens=2500, system=SYSTEM + (
+            ' CURRENT NOTE EDIT: the exact owner request may also ask to remove existing paragraphs. '
+            'Only current_note_edit supplies allowed paragraph references over displayed_body. Relative requests like last paragraph refer to that body, never retention_context_only attachments. Propose removals solely '
+            'for that current note, in removals, without offsets or replacement wording. Preserve all '
+            'other text, caveats and negative limitations. Never infer approval from an edit request. '
+            'A separate owner preview and Apply is required; do not automatically remove duplicates. '
+            'For source additions use the existing insertions contract. If a removal cannot be '
+            'verified, ask a focused question rather than implying it was done.'
+            if card.get('knowledge_edit_scope') else ''), cache=False,
         messages=[{'role': 'user', 'content': json.dumps({'owner_request': question, 'drafts_and_evidence': payload}, ensure_ascii=False)}],
-        output_config={'format': {'type': 'json_schema', 'schema': SCHEMA}})
+        output_config={'format': {'type': 'json_schema', 'schema': edit_schema(card)}})
     usage.record_anthropic(tenant_id, message.model, message.usage, operation='concierge_onboard', module='concierge')
     try:
         raw = json.loads(''.join(b.text for b in message.content if getattr(b, 'type', None) == 'text'))
     except (ValueError, TypeError):
         raise setup_cards.Invalid('The review was incomplete. Nothing changed.') from None
+    if card.get('knowledge_edit_scope'):
+        if not isinstance(raw, dict) or 'edit_scope' in raw:
+            raise setup_cards.Invalid('The wording edit returned unverifiable context.')
+        raw['edit_scope'] = knowledge_note_edits.binding(card)
     return validate(card, evidence, raw)
+
+
+def edit_schema(card):
+    if not card.get('knowledge_edit_scope'): return SCHEMA
+    schema = deepcopy(SCHEMA)
+    change = schema['properties']['changes']['items']
+    change['properties']['removals'] = {'type':'array','items':{'type':'string','enum':[p['reference'] for p in card['knowledge_edit_scope']['paragraphs']]}}
+    change['required'].append('removals')
+    return schema
 
 
 def draft_card(row, evidence, edits=None):
@@ -288,14 +329,20 @@ def draft_card(row, evidence, edits=None):
     return card
 
 
-def corrected_payload(row, evidence, raw, edits=None, *, owner_request='', reviewer=None):
-    card = draft_card(row, evidence, edits)
+def corrected_payload(row, evidence, raw, edits=None, *, owner_request='', reviewer=None, card=None):
+    card = card or draft_card(row, evidence, edits)
     checked = validate(card, evidence, raw)
     result = apply(card, evidence, raw, turn='owner-applied-source-corrections')
     payload = deepcopy(row['payload'])
     by_id = {line['id']: line for line in result['lines']}
+    changed_ids = {c['id'] for c in checked['changes']}
     for entry in payload['entries']:
+        if entry['id'] not in changed_ids: continue
         line = by_id[entry['id']]
+        removed_citations = [p for p in entry['provenance'] if p.get('claim') and p['claim'] not in line['fields']['content']]
+        entry['provenance'] = [p for p in entry['provenance'] if p not in removed_citations]
+        for change in checked['changes']:
+            if change['id']==entry['id'] and removed_citations: change['removed_citations']=deepcopy(removed_citations)
         entry.update(line['fields'])
         entry['content_source'] = deepcopy(line['sources']['content'])
         entry['content_segments'] = [
@@ -313,7 +360,12 @@ def corrected_payload(row, evidence, raw, edits=None, *, owner_request='', revie
                     citation={'source':cite['url'],'excerpt':cite['quote'],'claim':cite['claim']}
                     if citation not in entry['provenance']: entry['provenance'].append(citation)
     payload['draft_revision'] = result['revision']
-    payload['content_provenance'] = result['knowledge_content_provenance']
+    payload['content_provenance'] = deepcopy(row['payload'].get('content_provenance', {}))
+    for identity in changed_ids:
+        payload['content_provenance'][identity] = result['knowledge_content_provenance'][identity]
+    patches = {k:v for change in checked['changes'] for k,v in change.get('patches', {}).items()}
+    if patches:
+        payload['draft_review_choices'] = {**payload.get('draft_review_choices', {}), **patches}
     payload['last_source_review'] = result['knowledge_last_review']
     history=payload.setdefault('source_review_history',[])
     if len(history)>=20:

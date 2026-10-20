@@ -5,11 +5,11 @@ const template=fs.readFileSync('src/app/templates/onboarding/base.html','utf8');
 const start=template.indexOf('// Step names are disclosures');
 const source=template.slice(start,template.indexOf('// Auto-grow wizard textareas',start));
 const buttons=Array.from({length:9},(_,i)=>({attributes:{'aria-expanded':i===3?'true':'false','aria-controls':'label-'+i,...(i===3?{'data-current-step':''}:{})},listeners:{},
-  getAttribute(name){return this.attributes[name];},setAttribute(name,value){this.attributes[name]=value;},hasAttribute(name){return Object.hasOwn(this.attributes,name);},
+  getBoundingClientRect(){return {left:0,width:40};},getAttribute(name){return this.attributes[name];},setAttribute(name,value){this.attributes[name]=value;},hasAttribute(name){return Object.hasOwn(this.attributes,name);},
   addEventListener(name,handler){this.listeners[name]=handler;},focus(){this.focused=true;}}));
-const labels=Object.fromEntries(buttons.map((button,i)=>['label-'+i,{hidden:i!==3}]));
-const stepper={inspecting:false,querySelectorAll(){return buttons;},toggleAttribute(name,value){assert.equal(name,'data-stepper-inspecting');this.inspecting=value;}};
-vm.runInNewContext(source,{document:{querySelectorAll(){return [stepper];},getElementById(id){return labels[id];}}});
+const labels=Object.fromEntries(buttons.map((button,i)=>['label-'+i,{hidden:i!==3,offsetWidth:70,style:{setProperty(){}}}]));
+const stepper={style:{setProperty(){}},getBoundingClientRect(){return {left:0,width:360};},inspecting:false,querySelectorAll(){return buttons;},toggleAttribute(name,value){assert.equal(name,'data-stepper-inspecting');this.inspecting=value;}};
+vm.runInNewContext(source,{window:{addEventListener(){}},document:{querySelectorAll(){return [stepper];},getElementById(id){return labels[id];}}});
 const shown=()=>buttons.map((b,i)=>!labels['label-'+i].hidden?i:null).filter(i=>i!==null);
 assert.deepEqual(shown(),[3]);
 buttons[4].listeners.click();assert.deepEqual(shown(),[3,4]);assert.equal(buttons[4].attributes['aria-expanded'],'true');assert(stepper.inspecting);

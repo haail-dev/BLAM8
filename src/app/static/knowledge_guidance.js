@@ -36,8 +36,7 @@
       if(data.correction_requested) {
         // Release this read-only turn before the existing source correction tool.
         busy=false; window.blam8KnowledgeImportBusy=false; ready();
-        focus=null;
-        var correction=await window.Blam8KnowledgeGuide.sourceAsk(question,f);
+        var correction=await window.Blam8KnowledgeGuide.sourceAsk(question,f,data.correction_note || {});
         if(data.correction_focus && data.correction_focus.kind==='note' &&
             (correction.correction_preview_ids || []).includes(data.correction_focus.id))correction.review_decision=data.correction_focus;
         return correction;

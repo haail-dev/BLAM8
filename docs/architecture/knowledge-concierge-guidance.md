@@ -91,3 +91,21 @@ writer. Apply resolves the batch by ID and compares the complete current snapsho
 allowing an identical form refresh while rejecting changed choices. Busy, missing
 preview and stale snapshot states show recovery instructions rather than returning
 silently. None of these paths admits Knowledge or changes source-release flags.
+
+
+Current-note wording corrections can propose removal of exact displayed-body
+paragraphs using server-generated occurrence references and the full content hash.
+Retained source attachments are separate context, not additional body paragraphs.
+The proposal never approves a note. Its preview shows the exact removed text,
+remaining text and every source choice losing retention, including destinations
+and the owner's exact request as its reason. Separate Apply writes pending drafts
+and those listed choices, resets the edited note/overlap decisions, and leaves
+Keep and final Save separate. Unrelated local edits stay on the page.
+
+Applied source choices and non-approval resets are durable pending draft state,
+so an ordinary reload or lost acknowledgement recovers them without restoring an
+old Keep. Raw evidence remains immutable. Exact duplicate occurrences do not
+exclude facts still retained elsewhere; partial source-unit deletion and unique
+caveat/negative-limitation loss are rejected. Removed clause-specific citations
+move to the edit audit, not current note attribution. This supports bounded
+removal; it does not invent replacement facts or change operational settings.
