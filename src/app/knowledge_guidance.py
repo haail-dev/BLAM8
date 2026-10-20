@@ -35,6 +35,20 @@ def _owner_excerpt(candidate, message):
     return match.group(0) if match else None
 
 
+def _turn_schema(question):
+    """Constrain bounded exclusion reasons to owner text before generation.
+
+    Longer messages retain excerpt extraction so a short rationale within a
+    longer request remains usable. The response still passes the authorship
+    check before any local review choice can change.
+    """
+    owner_text = question.strip()
+    if not owner_text or len(owner_text) > 1000:
+        return SCHEMA
+    return {**SCHEMA, 'properties': {**SCHEMA['properties'],
+        'reason': {'type': 'string', 'enum': ['', owner_text]}}}
+
+
 SCHEMA = {'type': 'object', 'properties': {
     'intent': {'type': 'string', 'enum': INTENTS},
     'reason': {'type': 'string'}, 'answer': {'type': 'string'},
@@ -285,11 +299,14 @@ async def turn(tenant_id, context, row, form, question, focus_hash):
     from app.config import settings
     message = await llm.create(client=concierge.client().with_options(max_retries=0), tenant_id=tenant_id,
         operation='concierge_onboard', module='concierge', model=settings.anthropic_model,
-        max_tokens=1600, system=SYSTEM, cache=False,
+        max_tokens=1600, system=SYSTEM + (
+            '\nWhen reason has enumerated values, use the complete owner message only if '
+            'they explicitly supplied a reason to exclude the passage. Otherwise use the '
+            'empty value. Do not turn a bare exclusion request into a reason.'), cache=False,
         messages=[{'role': 'user', 'content': json.dumps({'owner_message':question,
             'displayed_item':item, 'note_index':[{'id':n['id'],'label':n['label']} for n in row['payload']['entries']],
             'shared_caveats': present(context,row,form)['shared_caveats']}, ensure_ascii=False)}],
-        output_config={'format': {'type':'json_schema', 'schema':SCHEMA}})
+        output_config={'format': {'type':'json_schema', 'schema':_turn_schema(question)}})
     usage.record_anthropic(tenant_id, message.model, message.usage, operation='concierge_onboard', module='concierge')
     try:
         raw = json.loads(''.join(b.text for b in message.content if getattr(b,'type',None)=='text'))

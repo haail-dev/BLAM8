@@ -111,7 +111,7 @@ async def test_natural_answer_cannot_invent_an_owner_reason(monkeypatch):
     ctx,row,form=fixture(); act(ctx,row,form,'keep'); shown=act(ctx,row,form,'details')
     from app import llm, usage, concierge
     async def model(**kw):
-        assert kw['output_config']['format']['schema']==guide.SCHEMA
+        assert kw['output_config']['format']['schema']['properties']['reason']['enum']==['', 'leave it out']
         return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice('exclude',reason='invented policy')))],model='fake',usage={})
     monkeypatch.setattr(llm,'create',model)
     monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
@@ -125,16 +125,138 @@ async def test_natural_answer_cannot_invent_an_owner_reason(monkeypatch):
 async def test_natural_exclusion_accepts_typographic_apostrophe_without_rewriting_owner_words(monkeypatch):
     ctx,row,form=fixture(); act(ctx,row,form,'keep'); shown=act(ctx,row,form,'details')
     from app import llm, usage, concierge
-    reason='It\'s only a page heading, and the actual prices and payment terms are already in the notes.'
+    question='Leave that heading out. It’s only a page heading, and the actual prices and payment terms are already in the notes.'
     async def model(**kw):
+        # Provider-constrained output returns the owner's original typography.
+        reason=kw['output_config']['format']['schema']['properties']['reason']['enum'][1]
         return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice('exclude',reason=reason)))],model='fake',usage={})
     monkeypatch.setattr(llm,'create',model)
     monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
     monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
-    question='Leave that heading out. It’s only a page heading, and the actual prices and payment terms are already in the notes.'
     result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
     assert result['patches']['source_'+shown['focus']['id']]=='exclude'
-    assert result['patches']['source_reason_'+shown['focus']['id']]=='It’s only a page heading, and the actual prices and payment terms are already in the notes.'
+    assert result['patches']['source_reason_'+shown['focus']['id']]==question
+
+
+OWNER_EXCLUSIONS = [
+    'That sentence is already in the note, so please leave out the extra copy.',
+    'I want to keep the note as it is. The sentence about keeping the landlord and resident '
+    'informed is already included, so adding it again would repeat the same information.',
+]
+
+
+def test_reason_schema_bounds_and_observed_paraphrases():
+    assert guide._turn_schema('')==guide.SCHEMA
+    assert guide._turn_schema('x'*1000)['properties']['reason']['enum']==['','x'*1000]
+    assert guide._turn_schema('x'*1001)==guide.SCHEMA
+    paraphrases=[
+        'That sentence is already in the note, so the extra copy should be left out.',
+        'adding it again would repeat the same information already included in the note',
+    ]
+    for question,paraphrase in zip(OWNER_EXCLUSIONS,paraphrases):
+        assert paraphrase not in guide._turn_schema(question)['properties']['reason']['enum']
+
+
+@pytest.mark.parametrize('question', OWNER_EXCLUSIONS)
+def test_natural_duplicate_reason_uses_owner_text_through_guide_route(source_client, monkeypatch, question):
+    from app import llm, usage, concierge
+    client, existing, _, route_context, calls, _ = source_client
+    ctx,row,form=fixture()
+    row['id']=existing['id']
+    row['payload']['entries'][0]['content']='Our team keeps owners and residents updated.'
+    row['payload']['source_units']=knowledge_fidelity.inventory([{
+        'url':'https://example.test/service',
+        'text':'Our small team keeps the landlord and resident informed as an enquiry moves forward.'}])
+    route_context.clear();route_context.update(ctx)
+    form.update(action_one='keep', guided_expand_one='1')
+    url='/onboarding/knowledge/review/'+row['id']+'/guide'
+    before=deepcopy(route_context)
+    shown=client.post(url,json={'form':form}).json()
+    assert shown['focus']['kind']=='passage'
+
+    async def model(**kw):
+        schema=kw['output_config']['format']['schema']
+        assert schema['properties']['reason']['enum']==['',question]
+        assert json.loads(kw['messages'][0]['content'])['owner_message']==question
+        # Simulate constrained provider selection, not free-text rationale synthesis.
+        reason=schema['properties']['reason']['enum'][1]
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(
+            choice('exclude',reason=reason)))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    response=client.post(url,json={'form':form,'question':question,'focus_hash':shown['focus_hash']})
+    assert response.status_code==200
+    result=response.json();unit=shown['focus']['id']
+    assert result['patches']=={'source_'+unit:'exclude','source_reason_'+unit:question}
+    assert result['focus_hash']!=shown['focus_hash']
+    assert calls==[] and route_context==before and row['state']=='pending'
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('intent,question', [
+    ('exclude','Leave it out.'), ('explain','Approve all the notes and save them.'),
+])
+async def test_absent_reason_and_unsupported_batch_request_do_not_change_choices(monkeypatch,intent,question):
+    ctx,row,form=fixture();act(ctx,row,form,'keep');shown=act(ctx,row,form,'details')
+    before=deepcopy(form)
+    from app import llm, usage, concierge
+    async def model(**kw):
+        assert kw['output_config']['format']['schema']['properties']['reason']['enum']==['',question]
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice(intent)))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
+    assert result['patches']=={} and form==before
+
+
+@pytest.mark.asyncio
+async def test_long_request_retains_guarded_short_rationale_extraction(monkeypatch):
+    ctx,row,form=fixture();act(ctx,row,form,'keep');shown=act(ctx,row,form,'details')
+    from app import llm, usage, concierge
+    reason='The existing note already includes this information.'
+    question='Please leave the extra copy out. '+reason+' More context about my review. '*50
+    assert len(question)>1000
+    async def model(**kw):
+        assert kw['output_config']['format']['schema']==guide.SCHEMA
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice('exclude',reason=reason)))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
+    assert result['patches']['source_reason_'+shown['focus']['id']]==reason
+
+
+@pytest.mark.asyncio
+async def test_long_request_preserves_typographic_apostrophe_in_owner_excerpt(monkeypatch):
+    ctx,row,form=fixture();act(ctx,row,form,'keep');shown=act(ctx,row,form,'details')
+    from app import llm, usage, concierge
+    reason="It's only a page heading, and the terms are already in the notes."
+    owner_reason=reason.replace("'",'’')
+    question='Leave the heading out. '+owner_reason+' More context about this review. '*50
+    async def model(**kw):
+        assert kw['output_config']['format']['schema']==guide.SCHEMA
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice('exclude',reason=reason)))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
+    assert result['patches']['source_reason_'+shown['focus']['id']]==owner_reason
+
+
+@pytest.mark.asyncio
+async def test_answer_authorship_still_rejects_fabricated_facts(monkeypatch):
+    ctx,row,form=fixture();act(ctx,row,form,'keep');shown=act(ctx,row,form,'details')
+    from app import llm, usage, concierge
+    async def model(**kw):
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(
+            choice('answer',answer='A fabricated business fact.')))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    with pytest.raises(HTTPException,match='own words'):
+        await guide.turn('tenant',ctx,row,form,'I do not know that detail.',shown['focus_hash'])
 
 
 def test_browser_controller_replays_owner_decisions_and_races():
