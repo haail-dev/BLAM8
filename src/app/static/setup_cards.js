@@ -29,7 +29,7 @@
     return match ? decodeURIComponent(match[1]) : "";
   }
   async function request(url, body) {
-    var response = await fetch(url, { method: body ? "POST" : "GET", cache: "no-store",
+    var response = await (body && window.Blam8DeviceSync ? window.Blam8DeviceSync.request : fetch)(url, { method: body ? "POST" : "GET", cache: "no-store",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf() },
       body: body ? JSON.stringify(body) : undefined });
     var data = await response.json();

@@ -25,6 +25,7 @@ for (const [step, held, fails] of [
     business_brief: 'Fictional/test-only online tuition for adults.',
     goals: 'Collect enquiries for human review; tutor schedules lessons.', website: 'example.test'};
   const context = vm.createContext({
+    window: {},
     ONB_STEP: step, log, String, Object, Array, Event: class {},
     document: {getElementById() { return null; }},
     fieldEls: name => elements[name] ? [elements[name]] : [], flash() {}, readCurrent: () => ({}),

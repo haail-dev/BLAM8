@@ -76,6 +76,7 @@ from app.exit_export import router as exit_export_router
 from app.quote_public import router as quote_public_router
 from app.job_sheet_public import router as job_sheet_public_router
 from app.sse import router as sse_router
+from app.device_sync import router as device_sync_router
 
 app = FastAPI(title="BLAM8 — Business Logistics Automated")
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
@@ -196,6 +197,7 @@ app.include_router(portal_router)
 app.include_router(quote_public_router)
 app.include_router(job_sheet_public_router)
 app.include_router(sse_router)
+app.include_router(device_sync_router)
 # The exit door: /app/export.zip on its own router, WITHOUT the subscription
 # gate — the export must outlive the subscription (src/app/exit_export.py).
 app.include_router(exit_export_router)

@@ -12,7 +12,8 @@ from app.setup_card_routes import _error
 
 log = logging.getLogger(__name__)
 
-router = APIRouter(prefix='/onboarding/knowledge/review', dependencies=[
+from app.device_sync import SyncRoute
+router = APIRouter(prefix='/onboarding/knowledge/review', route_class=SyncRoute, dependencies=[
     Depends(rate_limit('knowledge_source_review', limit=20, window_s=60))])
 
 

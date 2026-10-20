@@ -180,6 +180,9 @@
 
   // ── The stream ─────────────────────────────────────────────────────────────
   var es = new EventSource('/app/stream');
+  ['device_sync', 'concierge_message'].forEach(function(name){
+    es.addEventListener(name,function(){window.dispatchEvent(new Event('blam8:device-sync'));});
+  });
   var firstHello = true;
 
   es.addEventListener('hello', function (e) {

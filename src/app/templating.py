@@ -24,6 +24,10 @@ templates.env.filters["pretty_date"] = pretty_date
 # `{{ e.sent_at | sent_when }}` → "14:32" today, "22nd Sep 26 · 14:32" after.
 templates.env.filters["sent_when"] = sent_when
 
+# Resolved at render time so the rollout switch also applies to existing shells.
+from app.config import settings as _settings
+templates.env.globals['device_sync_enabled'] = lambda: _settings.device_sync_enabled
+
 
 def window_label(window) -> str:
     """Operator-facing words for a booking window code: am/pm/day read as

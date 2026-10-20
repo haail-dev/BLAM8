@@ -10425,12 +10425,18 @@ def add_concierge_message(tenant_id: str, role: str, content: str, *,
         }).execute()
     except Exception:
         log.warning("concierge_messages insert failed (tenant=%s)", tenant_id, exc_info=True)
+    else:
+        from app import events
+        events.publish(tenant_id, {'type':'concierge_message','user_id':user_id})
 
 
 def save_native_transcript(rows: list[dict], *, client=None) -> None:
     """Scoped deterministic segment IDs; lost-response retries cannot append duplicates."""
     if rows:
         (client or db()).table("concierge_messages").upsert(rows, on_conflict="id").execute()
+        from app import events
+        for tenant in {r['tenant_id'] for r in rows}:
+            events.publish(tenant, {'type':'concierge_message'})
 
 
 def latest_concierge_assistant_since(tenant_id: str, since: str,

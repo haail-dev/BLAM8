@@ -282,6 +282,7 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
 # GET routes that are not pages, with the reason. The test refuses an entry here that
 # no longer exists, so this list can't rot either.
 EXCLUDED = {
+    "/device-sync/{channel}": "signed-in device synchronisation state for onboarding and assistant clients, JSON",
     "/concierge/business/status/{proposal_id}": "one confirmed-action receipt, JSON",
     "/admin/": "alias of /admin",
     "/concierge/voice/gptlive/events/{session_id}": "polled JSON events for the GPT-Live screen, signed-in only",

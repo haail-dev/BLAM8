@@ -14,7 +14,8 @@ from app.auth import require_onboarded, TenantCtx
 from app.security import rate_limit, require_csrf_header
 
 log = logging.getLogger(__name__)
-router = APIRouter(prefix="/setup-cards", dependencies=[
+from app.device_sync import SyncRoute
+router = APIRouter(prefix="/setup-cards", route_class=SyncRoute, dependencies=[
     Depends(rate_limit("setup_cards", limit=60, window_s=60))])
 
 

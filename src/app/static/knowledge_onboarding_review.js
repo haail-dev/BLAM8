@@ -195,7 +195,7 @@
     busy=true;window.blam8KnowledgeImportBusy=true;ready();
     controls.forEach(function(el){el.disabled=true;});notice(form,'Checking changes and overlaps… No facts are being saved.');
     try{
-      var response=await fetch(form.action,{method:'POST',headers:{Accept:'application/json'},body:body});
+      var response=await (window.Blam8DeviceSync ? window.Blam8DeviceSync.request : fetch)(form.action,{method:'POST',headers:{Accept:'application/json'},body:body});
       var data=await response.json();if(!response.ok)throw new Error(typeof data.detail==='string'?data.detail:'The check failed. Your edits remain.');
       replace(data,form.dataset.knowledgeReview);
       var updated=document.querySelector('[data-knowledge-review="'+form.dataset.knowledgeReview+'"]');notice(updated,data.summary);
@@ -225,7 +225,7 @@
     var ok=false,received=false;
     try{
       var fd=new FormData();fd.append('url',input.value.trim());fd.append('csrf_token',document.getElementById('knowledge-review-csrf').value);
-      var response=await fetch('/onboarding/knowledge/website',{method:'POST',body:fd});
+      var response=await (window.Blam8DeviceSync ? window.Blam8DeviceSync.request : fetch)('/onboarding/knowledge/website',{method:'POST',body:fd});
       var data=await response.json();received=true;
       if(!response.ok)throw new Error(data.error || data.detail || 'Could not read that site.');
       replace(data);ok=true;say('Read '+data.pages.length+' pages. Drafts are pending. Review capture limits and source gaps; no facts saved.');
