@@ -29,8 +29,25 @@
       p.textContent=next.elements['label_'+id].value+': '+next.elements['content_'+id].value;detail.appendChild(p);
     });
     var button=document.createElement('button');button.type='button';button.textContent='Use stored version and replace my local review edits';
-    button.addEventListener('click',function(){old.replaceWith(next);notice(next,'Stored version loaded by your choice. Review its decisions before saving.');ready();});
+    button.addEventListener('click',function(){old.replaceWith(next);syncNotes(next);compactShell();notice(next,'Stored version loaded by your choice. Review its decisions before saving.');ready();});
     detail.appendChild(button);old.prepend(detail);
+  }
+  function compactShell(){
+    var holder=document.getElementById('knowledge-pending-reviews'),manual=document.getElementById('knowledge-manual-controls');
+    if(!holder || !manual)return;
+    var heading=document.querySelector('[data-onboarding-heading]'),helper=document.querySelector('[data-onboarding-helper]');
+    if(!heading || !Array.from(holder.querySelectorAll('[data-knowledge-review]')).some(function(form){return form.dataset.reviewClosed!=='1';}))return;
+    heading.textContent='Review Knowledge';if(helper)helper.hidden=true;
+    holder.after(manual); // Move the existing controls, preserving unsaved inputs.
+    var coverage=document.getElementById('knowledge-coverage-shell');
+    if(coverage){
+      if(coverage.dataset.compactCoverage!=='1'){
+        var panel=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Knowledge coverage';panel.className='mb-3 text-xs text-slate-600';panel.appendChild(summary);
+        while(coverage.firstChild)panel.appendChild(coverage.firstChild);
+        coverage.appendChild(panel);coverage.dataset.compactCoverage='1';
+      }
+      manual.after(coverage);
+    }
   }
   function replace(data, checkedId) {
     var parser=new DOMParser(), incoming=parser.parseFromString(data.review_html || '', 'text/html');
@@ -41,9 +58,10 @@
       if(old){
         var changed=signature(old)!==signature(next);
         if(checkedId===old.dataset.knowledgeReview){
+          var openNote=Array.from(old.querySelectorAll('[data-draft]')).find(function(section){var detail=section.querySelector('[data-note-details]');return detail && detail.open;});
           var opened=Array.from(old.querySelectorAll('details[open]')).map(function(d){return d.dataset.draft || d.dataset.sourceUnit;}).filter(Boolean);
           next.querySelectorAll('details').forEach(function(d){if(opened.includes(d.dataset.draft || d.dataset.sourceUnit))d.open=true;});
-          old.replaceWith(next);
+          old.replaceWith(next);if(openNote)focusNote(next,openNote.dataset.draft);
         }
         else if(changed && old.dataset.reviewDirty!=='1'){
           old.replaceWith(next);notice(next,'Review updated from the stored drafts. Nothing saved to Knowledge.');
@@ -73,6 +91,7 @@
     var current=document.getElementById('knowledge-review-coverage');
     if(current && coverage)current.replaceWith(coverage);
     if(data.site_state)present(data.site_state);
+    document.querySelectorAll('[data-knowledge-review]').forEach(syncNotes);compactShell();
     ready();
   }
   function present(state){
@@ -86,7 +105,84 @@
     link.hidden=!knownSite.pending_notes;link.textContent='Review '+knownSite.pending_notes+' drafts';link.href=knownSite.review_href || '#knowledge-pending-reviews';
     if(go){go.disabled=state.state==='reading';go.textContent=state.state==='reading'?'Reading…':state.state==='unconfirmed'?'Check stored drafts':state.state==='error'?'Try again':state.state==='idle'?'Read my site':'Read again';}
   }
-  window.Blam8KnowledgeReview={replace:replace,signature:signature};
+  function noteSections(form){return Array.from(form.querySelectorAll('[data-draft]'));}
+  function noteTool(section,tool){
+    section.querySelectorAll('[data-note-tool]').forEach(function(button){button.setAttribute('aria-expanded',button.dataset.noteTool===tool?'true':'false');});
+    section.querySelectorAll('[data-note-panel]').forEach(function(panel){panel.hidden=panel.dataset.notePanel!==tool;});
+  }
+  function focusNote(form,id,tool){
+    if(!form || !id)return false;
+    var found=false;
+    noteSections(form).forEach(function(section){var detail=section.querySelector('[data-note-details]');if(detail){detail.open=section.dataset.draft===id;if(detail.open){found=true;if(tool)noteTool(section,tool);}}});
+    return found;
+  }
+  function syncNotes(form){
+    if(!form.dataset.reviewEnhanced){noteSections(form).forEach(function(section){if(section.querySelector('[data-note-status]'))noteTool(section,null);});form.dataset.reviewEnhanced='1';}
+    noteSections(form).forEach(function(section){
+      var id=section.dataset.draft,status=section.querySelector('[data-note-status]');
+      if(!status)return;
+      var action=form.elements['action_'+id],later=form.elements['review_later_'+id];
+      var value=action && action.value || '';
+      if(value && later)later.value='';
+      status.textContent=value==='keep'?'Reviewed · not saved':value?'Decision selected · not saved':later && later.value?'For later · pending':'Pending';
+      status.style.color=value==='keep'?'#047857':'';
+      var preview=section.querySelector('[data-note-preview]'),content=form.elements['content_'+id];
+      if(preview && content)preview.textContent=content.value;
+      section.querySelectorAll('[data-note-reviewed],[data-note-later]').forEach(function(button){button.setAttribute('aria-pressed',button.hasAttribute('data-note-reviewed')?String(value==='keep'):String(!value && !!(later && later.value)));});
+    });
+  }
+  document.addEventListener('toggle',function(event){
+    var detail=event.target;
+    if(!detail.matches || !detail.matches('[data-note-details]') || !detail.open)return;
+    var section=detail.closest('[data-draft]'),form=detail.closest('[data-knowledge-review]');
+    if(section && form)focusNote(form,section.dataset.draft);
+  },true);
+  function browseNext(form,section,deferred){
+    var matches=Array.from(section.querySelectorAll('[data-duplicate-candidate] input[type="checkbox"]'));
+    if(!deferred && matches.some(function(input){return !input.checked;})){noteTool(section,'more');return;}
+    var all=noteSections(form),index=all.indexOf(section);
+    var ordered=all.slice(index+1).concat(all.slice(0,index));
+    var next=ordered.find(function(candidate){var id=candidate.dataset.draft,later=form.elements['review_later_'+id];return !form.elements['action_'+id].value && !(later && later.value);});
+    if(next)focusNote(form,next.dataset.draft);
+  }
+  document.addEventListener('click',async function(event){
+    var tool=event.target.closest('[data-note-tool]');
+    if(tool){var section=tool.closest('[data-draft]');noteTool(section,tool.getAttribute('aria-expanded')==='true'?null:tool.dataset.noteTool);return;}
+    var button=event.target.closest('[data-note-reviewed],[data-note-later]');
+    if(!button)return;
+    var form=button.closest('[data-knowledge-review]'),section=button.closest('[data-draft]');
+    if(!form || !section || form.dataset.reviewClosed==='1' || busy || window.blam8KnowledgeImportBusy || window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working())return;
+    var id=section.dataset.draft,action=form.elements['action_'+id];
+    if(!action)return;
+    var later=form.elements['review_later_'+id];
+    if(!later){later=document.createElement('input');later.type='hidden';later.name='review_later_'+id;form.appendChild(later);}
+    var deferred=button.hasAttribute('data-note-later');
+    action.value=deferred?'':'keep';later.value=deferred?'1':'';
+    form.dataset.reviewDirty='1';
+    action.dispatchEvent(new Event('change',{bubbles:true}));syncNotes(form);
+    notice(form,deferred?'Left this draft pending for later. It has not been discarded; decide every draft before saving.':'Marked this note reviewed to keep. Source and overlap decisions still apply; nothing saved.');
+    var guide=window.Blam8KnowledgeGuide;
+    if(guide && guide.available(form) && !guide.working()){
+      button.disabled=true;
+      try{
+        var data=await guide.ask('Show the current note',form);
+        var focus=data.focus || {};
+        var next=focus.kind==='note'||focus.kind==='support'?focus.id:focus.note_id || focus.target;
+        if(deferred && next===id){
+          // A deferred note remains unresolved to the planner. Browsing another
+          // draft does not pretend to approve or skip that pending decision.
+          browseNext(form,section,true);
+        }else if(next)focusNote(form,next,focus.kind==='overlap'?'more':focus.kind==='support'||focus.kind==='passage'?'source':null);
+        if(!deferred && focus.kind!=='note' && focus.kind!=='ready')notice(form,'Note reviewed to keep. '+(focus.kind==='overlap'?'Review its possible overlap under More options.':'Source decisions are still pending; review Source and check changes before saving.'));
+      }catch(error){notice(form,error.message || 'Your local choice remains. Show the current note with the Assistant to continue.');}
+      finally{button.disabled=false;}
+    }else browseNext(form,section,deferred);
+    ready();
+  });
+  document.querySelectorAll('[data-knowledge-review]').forEach(syncNotes);compactShell();
+  document.addEventListener('change',function(event){var form=event.target.closest('[data-knowledge-review]');if(form)syncNotes(form);});
+  document.addEventListener('input',function(event){var form=event.target.closest('[data-knowledge-review]');if(form)syncNotes(form);});
+  window.Blam8KnowledgeReview={replace:replace,signature:signature,focusNote:focusNote,syncNotes:syncNotes,noteTool:noteTool};
   document.addEventListener('submit',async function(event){
     var form=event.target, button=event.submitter;
     if(!form.matches('[data-knowledge-review]') || !button || button.value!=='preview')return;

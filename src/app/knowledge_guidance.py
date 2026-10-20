@@ -12,7 +12,9 @@ SHORTCUTS = {'keep this note':'keep', 'discard this note':'discard',
     'retain this passage with the note':'retain', 'keep both notes':'keep_both',
     'leave this unknown':'unknown', 'show me the differences':'details',
     'keep all the original website wording for this note':'retain_support',
-    'undo added website wording for this note':'undo_support'}
+    'undo added website wording for this note':'undo_support',
+    'edit it':'edit', 'edit this note':'edit', 'edit note':'edit',
+    'change this':'edit', 'change this note':'edit'}
 
 
 def needs_model(question):
@@ -62,8 +64,10 @@ only the owner's explicit Keep/Leave out control confirms that decision.
 'exclude' leaves that passage out with the owner's actual reason (never invent a reason);
 'keep_both' acknowledges a displayed overlap; 'answer' uses only the owner's supplied answer
 to the displayed question; 'unknown' leaves it unknown. 'show' makes no changes.
+Use 'edit' for a request to open the displayed note editor before deciding, without
+a specific correction. It opens editing only, never approval.
 Use 'correct' for requests to repair note wording or source references, not for approvals.
-Use 'edit' when the owner wants to edit a note before deciding. Editing, conditional
+Editing, conditional
 approval and mixed edit/keep requests never authorize keeping or discarding a note.
 Use 'explain' for a question, ambiguous request, out-of-scope instruction or a request to
 change a different item. Explain using only the supplied evidence, without deciding for them.
@@ -211,9 +215,17 @@ def present(context, row, form, *, receipt=''):
     if kind not in {'blocked', 'ready'}:
         text += '\n\nThese are review choices in the form; nothing is saved to Knowledge yet.'
     return {'reply': '\n\n'.join(filter(None, [receipt, text])), 'focus': item,
-            'focus_hash': identity(item), 'actions': [{'label': a, 'message': b} for a,b in actions],
+            'focus_hash': identity(item), 'actions': [{'label': a, 'message': b, 'action': SHORTCUTS[b.casefold()]} for a,b in actions],
+            'batch_id': row['id'], 'version': context['version'],
             'save_ready': kind == 'ready', 'form_fill': {}, 'ready_to_advance': False,
             'notes': [], 'held_for': [], 'shared_caveats': [u['text'] for u in review['source_view']['qualifications']]}
+
+
+def decision(context, row, item, action, state):
+    """Identify the item acted on before the planner advances to another item."""
+    return {'batch_id': row['id'], 'version': context['version'],
+            'focus_hash': identity(item), 'kind': item['kind'], 'id': item['id'],
+            'action': action, 'state': state}
 
 
 def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False):
@@ -235,13 +247,17 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
             'patches': {}, 'save_ready': False}
     if intent == 'edit':
         receipt = (
-            'No note decision changed. Use Edit this note before saving to open the '
-            'note editor; decide whether to keep it after reviewing your changes.'
+            'No note decision changed. Review your changes before deciding whether '
+            'to keep this note.'
             if kind == 'note' else
             'No note decision changed. This is not a note-editing step; the note content '
             'editor remains available in the review form.')
-        return {**present(context, row, form, receipt=receipt),
-            'patches': {}, 'save_ready': False}
+        result = {**present(context, row, form, receipt=receipt),
+                  'patches': {}, 'save_ready': False}
+        if kind == 'note':
+            result['edit_requested'] = True
+            result['review_decision'] = decision(context, row, item, 'edit', 'editing')
+        return result
     patches = {}
     receipt = ''
     if intent == 'revisit':
@@ -294,7 +310,8 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
         patches['answer_'+item['id']] = ''
         receipt = 'Left this detail unknown.'
     elif intent == 'correct':
-        return {'correction_requested': True}
+        return {'correction_requested': True,
+                'correction_focus': decision(context, row, item, 'edit', 'preview')}
     elif intent not in {'show', 'explain'}:
         receipt = 'I have not changed that choice. Please say what you want to keep or leave out, and give a reason for leaving out website wording.'
     elif raw['explanation'].strip():
@@ -302,6 +319,8 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
     updated = {**form, **patches}
     result = present(context, row, updated, receipt=receipt)
     result['patches'] = patches
+    if patches:
+        result['review_decision'] = decision(context, row, item, intent, 'prepared')
     return result
 
 

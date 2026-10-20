@@ -16,12 +16,13 @@ const form={dataset:{knowledgeReview:'batch'},elements:fields,action:'/review/ba
   appendChild(el){fields[el.name]=el;},querySelector(selector){return selector.includes('operation') ? {disabled:false} : selector.startsWith('[data-draft=') ? section : null;},
   querySelectorAll(){return [section];},
   requestSubmit(){submitted++;}};
-let activeForm=form;
-const document={querySelectorAll(){return [activeForm];},
+let activeForm=form, availableForms=null;
+const document={querySelectorAll(){return availableForms || [activeForm];},
   addEventListener(name,cb){events[name]=cb;},createElement(){return {dispatchEvent(){}};}};
+let sourceReply={reply:'Correction preview; not saved.'};
 const window={addEventListener(name,cb){windowEvents[name]=cb;},dispatchEvent(){},
   blam8ConciergeClose(){closed++;},
-  Blam8KnowledgeSourceReview:{working(){return false;},ask:async()=>({reply:'Correction preview; not saved.'})}};
+  Blam8KnowledgeSourceReview:{working(){return false;},ask:async()=>sourceReply}};
 class FormData {constructor(f){this.form=f;}forEach(cb){for(const field of Object.values(this.form.elements))cb(field.value,field.name);}}
 const fetch=(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}));
 const context={document,window,FormData,fetch,Event:class{},console};
@@ -99,3 +100,42 @@ finish(11,result({action_one:'discard'}));
 await assert.rejects(replacement,/changed/);
 assert.equal(fields.action_one.value,'keep');
 console.log('Knowledge guidance: form choices, stale actions, concurrent edits, correction routing and explicit save verified.');
+
+// Conversational editor requests open the exact submitted note, without approval.
+activeForm=form;
+let index=requests.length;
+let loading=guide.ask('Show the current note');finish(index,result({},'edit-hash'));await loading;
+assert(guide.isCurrent('edit-hash','batch','v1'));
+assert(!guide.isCurrent('edit-hash','other-batch','v1'));
+assert(!guide.isCurrent('edit-hash','batch','old-version'));
+index=requests.length;
+const beforeFocus=focused;
+loading=guide.ask('edit it');
+finish(index,{...result({},'edit-hash'),edit_requested:true,
+  review_decision:{batch_id:'batch',version:'v1',focus_hash:'edit-hash',kind:'note',id:'one',action:'edit',state:'editing'}});
+const editing=await loading;
+assert.equal(focused,beforeFocus+1);assert.equal(editing.review_decision.state,'editing');
+assert.equal(fields.action_one.value,'keep'); // Existing choice remains unchanged.
+// A correction to another named note must never select this note's Edit action.
+const correctionFocus={batch_id:'batch',version:'v1',focus_hash:'edit-hash',kind:'note',id:'one',action:'edit',state:'preview'};
+sourceReply={reply:'Other note correction preview.',correction_preview_ids:['other']};
+index=requests.length;loading=guide.ask('Correct the other note');
+finish(index,{correction_requested:true,correction_focus:correctionFocus});
+assert.equal((await loading).review_decision,undefined);
+index=requests.length;loading=guide.ask('Show the current note');finish(index,result({},'edit-hash'));await loading;
+sourceReply={reply:'This note correction preview.',correction_preview_ids:['one']};
+index=requests.length;loading=guide.ask('Add the sourced wording to this note');
+finish(index,{correction_requested:true,correction_focus:correctionFocus});
+assert.equal((await loading).review_decision,correctionFocus);
+assert.equal(submitted,1); // Preview/editor did not submit another Save.
+
+// An explicit form selects the submitted batch even when several batches exist.
+const otherForm={...form,dataset:{knowledgeReview:'other-batch'},action:'/review/other-batch'};
+availableForms=[form,otherForm];
+assert(guide.available(otherForm));
+index=requests.length;loading=guide.ask('Show the current note',otherForm);
+assert.equal(requests[index].url,'/review/other-batch/guide');
+await assert.rejects(guide.ask('Show the current note',form),/wait/);
+finish(index,result({},'other-hash'));await loading;
+assert(guide.isCurrent('other-hash','other-batch','v1'));
+assert(!guide.isCurrent('other-hash','batch','v1'));

@@ -24,9 +24,11 @@
       var unchanged=await guide.ask(message);
       assert(JSON.stringify(Array.from(new FormData(f).entries()))===untouched,'model interpretation must not change form');
       assert(!unchanged.save_ready && unchanged.focus.id==='one','edit must not advance or enable Save');
+      assert(!unchanged.review_decision,'unconfirmed model decision must not create choice history');
       assert(!/Recorded as a keep|Marked/.test(unchanged.reply),'model approval claim must not be echoed');
     }
-    await guide.ask('Keep this note');
+    var confirmed=await guide.ask('Keep this note');
+    assert(confirmed.review_decision.state==='prepared' && confirmed.review_decision.action==='keep','only confirmed keep produces prepared history');
     var next=await guide.ask('Keep both notes');
     assert(box.checked,'keep_both patch must check overlap control');
     assert(box.value===initialValue,'configured submission value must be preserved');
