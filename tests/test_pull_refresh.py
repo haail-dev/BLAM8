@@ -30,6 +30,8 @@ import io
 import re
 import glob
 
+from tests.html_markup import markup
+
 SCRIPT = "src/app/static/pull_refresh.js"
 LANDING = "src/app/templates/landing.html"
 APP_BASE = "src/app/templates/app/base.html"
@@ -129,14 +131,18 @@ def test_the_app_shell_says_what_moves_and_what_the_handle_is():
     assert TAG in base
 
 
+def _assert_shell_drag_opt_outs(source):
+    shell = markup(source)
+    for attrs in ({'id': 'menu'}, {'aria-label': 'Diary rail'}, {'aria-label': 'Primary'}):
+        assert shell.one(**attrs).attrs.get('data-pull-refresh') == 'off', attrs
+
+
 def test_what_owns_its_own_drag_or_is_not_the_page_opts_out():
     js = _read(SCRIPT)
     assert """closest('[data-pull-refresh="off"]')""" in js
     off = 'data-pull-refresh="off"'
     base = _read(APP_BASE)
-    for marker in ('<nav id="menu"', 'aria-label="Diary rail"', 'aria-label="Primary"'):
-        tag = base[base.index(marker):]
-        assert off in tag[:tag.index(">")], marker
+    _assert_shell_drag_opt_outs(base)
     stage = _read("src/app/templates/app/_thread.html")
     tag = stage[stage.index('<div id="thread-stage"'):]
     assert off in tag[:tag.index(">")], "the thread's stage pulls history, not the page"

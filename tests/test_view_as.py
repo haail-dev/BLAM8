@@ -1,7 +1,11 @@
 """View as (src/app/viewas.py; Kris 2026-09-24): the owner sees BLAM8 exactly as one
 of their people does — read-only, nothing saved under the person's name."""
 import time
+import re
+
 from types import SimpleNamespace
+
+from tests.html_markup import markup
 
 import pytest
 from fastapi import HTTPException
@@ -109,13 +113,21 @@ def test_the_concierge_talks_to_the_person_and_knows_what_they_may_do():
     assert src.count("asyncio.to_thread(_people_note, ctx, asker, full_qa, scheduling_on)") == 1
 
 
+def _assert_banner_below_bar(shell):
+    assert shell.one('header', id='app-bar').start < shell.one(**{'data-viewing-as': None}).start
+
+
 def test_the_menu_item_is_the_owners():
     base = open("src/app/templates/app/base.html", encoding="utf-8").read()
     assert '{% if view_as_ok %}' in base and 'href="/app/view-as"' in base
     assert "data-viewing-as" in base and 'action="/app/view-as/exit"' in base
     # The way out can't hide under the iPhone's clock (Kris 2026-09-24: "I have
     # no way to leave"): the banner sits under the top bar, and the menu has it.
-    assert base.index('id="app-bar"') < base.index("data-viewing-as")
+    shell = markup(base)
+    _assert_banner_below_bar(shell)
+    owner_block = re.search(r'{% if view_as_ok %}\s*(<a\b.*?</a>)\s*{% endif %}', base, re.S)
+    assert owner_block
+    markup(owner_block.group(1)).one('a', href='/app/view-as')
     assert base.index("{% set _va =") < base.index('id="app-bar"')
     assert "data-menu-leave-view-as" in base and "Leave View as ({{ _va.name }})" in base
 
@@ -143,6 +155,10 @@ def test_a_page_renders_with_the_banner_while_viewing(monkeypatch):
     finally:
         app.dependency_overrides.clear()
     assert res.status_code == 200, res.text[:400]
-    assert "data-viewing-as" in res.text and "Viewing as Em" in res.text
+    shell = markup(res.text)
+    banner = shell.one(**{'data-viewing-as': None})
+    _assert_banner_below_bar(shell)
+    banner.one('form', action='/app/view-as/exit')
+    assert 'Viewing as Em' in banner.text
     assert "Leave View as" in res.text
     assert 'href="/app/view-as"' not in res.text      # no menu item while already viewing
