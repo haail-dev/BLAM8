@@ -2,6 +2,18 @@
 import subprocess
 from pathlib import Path
 
+
+def test_speech_sampling_survives_the_adjacent_page_and_stops_when_hidden():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        ["node", "tests/replays/glass_visibility_replay.mjs"],
+        cwd=root, capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    # This caller feeds the pond from the glass callback: observe the whole stage.
+    caller = (root / "src/app/static/voice-gptlive.js").read_text(encoding="utf-8")
+    assert "{visibilityTarget:root.querySelector('.vl-stage')}" in caller
+
 def test_owned_voice_meter_replay():
     root=Path(__file__).resolve().parents[1]
     result=subprocess.run(["node","tests/replays/voice_meter_replay.mjs"],cwd=root,capture_output=True,text=True,timeout=30)

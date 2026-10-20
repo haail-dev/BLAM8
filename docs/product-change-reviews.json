@@ -688,11 +688,11 @@
       }
     },
     "owner.assistant": {
-      "signature": "e6853a4d659a2e7e23cb94e98abbe47c6f2143b8c1bbe7e091ff272e862266c9",
+      "signature": "1d408317095b2aa8cbb1d67546ed21a9823ddd722f11ac8a7f586fd2df6bc0ab",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim.",
+          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
           "evidence": [
             "src/app/templates/capabilities.html",
             "src/app/product_guides.py",
@@ -706,12 +706,15 @@
             "tests/test_llm_hedge.py",
             "tests/test_voice_live_client.py",
             "tests/test_column_on_phones.py",
-            "tests/test_voice_pond.py"
+            "tests/test_voice_pond.py",
+            "tests/test_glass_core.py",
+            "tests/replays/glass_visibility_replay.mjs",
+            "docs/operations/concierge-live-shortcut.md"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim.",
+          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
@@ -726,12 +729,15 @@
             "tests/test_llm_hedge.py",
             "tests/test_voice_live_client.py",
             "tests/test_column_on_phones.py",
-            "tests/test_voice_pond.py"
+            "tests/test_voice_pond.py",
+            "tests/test_glass_core.py",
+            "tests/replays/glass_visibility_replay.mjs",
+            "docs/operations/concierge-live-shortcut.md"
           ]
         },
         "agent:owner.assistant": {
           "disposition": "reviewed_unchanged",
-          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim.",
+          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
@@ -747,12 +753,15 @@
             "tests/test_llm_hedge.py",
             "tests/test_voice_live_client.py",
             "tests/test_column_on_phones.py",
-            "tests/test_voice_pond.py"
+            "tests/test_voice_pond.py",
+            "tests/test_glass_core.py",
+            "tests/replays/glass_visibility_replay.mjs",
+            "docs/operations/concierge-live-shortcut.md"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim.",
+          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
@@ -768,12 +777,15 @@
             "tests/test_llm_hedge.py",
             "tests/test_voice_live_client.py",
             "tests/test_column_on_phones.py",
-            "tests/test_voice_pond.py"
+            "tests/test_voice_pond.py",
+            "tests/test_glass_core.py",
+            "tests/replays/glass_visibility_replay.mjs",
+            "docs/operations/concierge-live-shortcut.md"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim.",
+          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
           "evidence": [
             "docs/verified-behaviours.md",
             "tests/test_platform_capabilities.py",
@@ -787,7 +799,10 @@
             "tests/test_llm_hedge.py",
             "tests/test_voice_live_client.py",
             "tests/test_column_on_phones.py",
-            "tests/test_voice_pond.py"
+            "tests/test_voice_pond.py",
+            "tests/test_glass_core.py",
+            "tests/replays/glass_visibility_replay.mjs",
+            "docs/operations/concierge-live-shortcut.md"
           ]
         }
       }
