@@ -9,7 +9,7 @@ function between(start, end) {
   assert(at >= 0 && source.indexOf(end, at) > at);
   return source.slice(at, source.indexOf(end, at));
 }
-const turn = between('function appendKnowledgeGuideActions(', '// Node builder + appender');
+const turn = between('async function onboardTurn(', '// Node builder + appender');
 // The real turn reads this closure state even on a failed non-Knowledge turn.
 // Include the shipped declaration/helper rather than stubbing out its behaviour.
 const choices = between('var pendingKnowledgeChoice = null;', 'function appendHeldLine(');
