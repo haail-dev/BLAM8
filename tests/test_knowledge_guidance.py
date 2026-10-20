@@ -265,22 +265,10 @@ def test_browser_controller_replays_owner_decisions_and_races():
     assert result.returncode==0,result.stdout+result.stderr
 
 
-def test_note_preview_has_an_accessible_edit_action_aligned_after_review_choices():
-    js=(Path(__file__).resolve().parents[1]/'src/app/static/concierge.js').read_text(encoding='utf-8')
-    assert 'data.focus.kind === "note"' in js
-    assert 'ml-auto inline-flex items-center gap-1 rounded-lg border border-brand' in js
-    assert 'Edit this note before saving' in js
-    assert 'knowledgeGuide.edit(data.focus_hash, data.focus.id)' in js
-
-
-def test_explicit_note_choice_is_silent_and_marks_selected_and_remaining_buttons():
-    js=(Path(__file__).resolve().parents[1]/'src/app/static/concierge.js').read_text(encoding='utf-8')
-    assert 'input.value = choice.message; send({ silentUser: true });' in js
-    assert 'if (!silentUser)' in js
-    assert 'msgs.appendChild(bubbleEl("user", text));' in js
-    assert 'settleKnowledgeChoice(Object.keys(data.patches || {}).some(function (key) { return key.indexOf("action_") === 0; }))' in js
-    assert 'bg-emerald-600' in js and 'bg-slate-100' in js
-    assert 'button.setAttribute("aria-pressed", selected ? "true" : "false")' in js
+def test_knowledge_card_choice_trace_uses_real_turn_and_transcript_routes():
+    result=subprocess.run([shutil.which('node'),'tests/replays/knowledge_choice_trace.mjs'],
+        cwd=Path(__file__).resolve().parents[1],capture_output=True,text=True,timeout=30)
+    assert result.returncode==0,result.stdout+result.stderr
 
 
 def test_guide_route_reads_tenant_notes_and_prepares_only_local_choices(source_client):
@@ -324,3 +312,57 @@ def test_guide_reuses_tenant_permission_csrf_and_version_gates(source_client,mon
     else:app.dependency_overrides.pop(require_csrf_header)
     response=client.post('/onboarding/knowledge/review/'+row['id']+'/guide',json={'form':{'version':'v1'}})
     assert response.status_code==expected and calls==[]
+
+
+@pytest.mark.parametrize('intent', ['keep', 'discard', 'edit'])
+def test_decision_receipt_identifies_submitted_note_before_advancing(intent):
+    ctx,row,form=fixture(); shown=guide.present(ctx,row,form)
+    result=act(ctx,row,form,intent)
+    assert result['review_decision']==dict(batch_id=row['id'],version=ctx['version'],
+        focus_hash=shown['focus_hash'],kind='note',id='one',action=intent,
+        state='editing' if intent=='edit' else 'prepared')
+    assert result.get('edit_requested',False)==(intent=='edit')
+    if intent=='edit':assert result['patches']=={} and form=={'version':ctx['version']}
+    else:assert result['focus_hash']!=shown['focus_hash']
+
+
+def test_overlap_receipt_does_not_use_the_next_note_identity():
+    note=entry();ctx,row=context([note],sources=[{'source':'Existing prices','content':note['content'],'mailbox_id':None}])
+    form={'version':ctx['version']};shown=act(ctx,row,form,'keep')
+    result=act(ctx,row,form,'keep_both')
+    assert result['review_decision']['focus_hash']==shown['focus_hash']
+    assert result['review_decision']['action']=='keep_both'
+    assert result['review_decision']['kind']=='overlap'
+    assert result['focus_hash']!=shown['focus_hash']
+
+
+@pytest.mark.parametrize('intent',['show','explain','exclude','keep_both'])
+def test_nondecisions_and_inapplicable_intents_have_no_choice_receipt(intent):
+    ctx,row,form=fixture();result=act(ctx,row,form,intent)
+    assert not result['patches'] and 'review_decision' not in result
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('question', ['edit it','change this','Edit this note'])
+async def test_explicit_editor_requests_do_not_call_a_model_or_approve_notes(monkeypatch,question):
+    from app import llm
+    monkeypatch.setattr(llm,'create',lambda **kw:pytest.fail('Editor shortcut needs no model'))
+    ctx,row,form=fixture();shown=guide.present(ctx,row,form)
+    result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
+    assert result['edit_requested'] and result['review_decision']['state']=='editing'
+    assert result['patches']=={}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('question,intent', [('keep that one','keep'),('I want to edit it','edit')])
+async def test_model_classified_natural_decisions_share_confirmed_receipt(monkeypatch,question,intent):
+    from app import llm,usage,concierge
+    async def model(**kwargs):
+        return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(choice(intent)))],model='fake',usage={})
+    monkeypatch.setattr(llm,'create',model)
+    monkeypatch.setattr(concierge,'client',lambda:SimpleNamespace(with_options=lambda **kw:None))
+    monkeypatch.setattr(usage,'record_anthropic',lambda *a,**kw:None)
+    ctx,row,form=fixture();shown=guide.present(ctx,row,form)
+    result=await guide.turn('tenant',ctx,row,form,question,shown['focus_hash'])
+    assert result['review_decision']['action']==intent
+    assert result['review_decision']['focus_hash']==shown['focus_hash']

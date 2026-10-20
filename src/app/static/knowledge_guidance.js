@@ -31,7 +31,10 @@
         // Release this read-only turn before the existing source correction tool.
         busy=false; window.blam8KnowledgeImportBusy=false; ready();
         focus=null;
-        return await window.Blam8KnowledgeGuide.sourceAsk(question);
+        var correction=await window.Blam8KnowledgeGuide.sourceAsk(question);
+        if(data.correction_focus && data.correction_focus.kind==='note' &&
+            (correction.correction_preview_ids || []).includes(data.correction_focus.id))correction.review_decision=data.correction_focus;
+        return correction;
       }
       Object.keys(data.patches || {}).forEach(function(name){
         var field=f.elements[name];
@@ -41,7 +44,8 @@
         else field.value=data.patches[name];
         field.dispatchEvent(new Event('change',{bubbles:true}));
       });
-      focus={key:key,hash:data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!data.save_ready};
+      if(data.edit_requested && !window.Blam8KnowledgeGuide.edit(data.focus_hash,data.focus.id))throw new Error('The note changed before its editor could open. Show the current note.');
+      focus={key:key,version:base.version,hash:data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!data.save_ready};
       if(!question.trim() && data.shared_caveats && data.shared_caveats.length) {
         data.reply='We will review the actual notes together. '+data.shared_caveats[0]+' All '+data.shared_caveats.length+' source caveats stay attached to retained notes; you can inspect the full list with the notes.\n\n'+data.reply;
       }
@@ -74,7 +78,7 @@
     window.blam8KnowledgeGuideStart().then(function(ok){if(!ok)greeted=null;});
   }
   window.Blam8KnowledgeGuide={ask:ask,working:function(){return busy;},available:function(){return !!form();},
-    isCurrent:function(hash){var f=form();return !!(f && focus && focus.form===f && focus.hash===hash && focus.key===f.dataset.knowledgeReview && focus.signature===JSON.stringify(values(f)));},
+    isCurrent:function(hash,batch,version){var f=form();return !!(f && focus && focus.form===f && focus.hash===hash && (batch===undefined || batch===focus.key) && (version===undefined || version===focus.version) && focus.key===f.dataset.knowledgeReview && focus.signature===JSON.stringify(values(f)));},
     edit:function(hash,id){
       var f=form();
       if(!f || !id || !window.Blam8KnowledgeGuide.isCurrent(hash))return false;

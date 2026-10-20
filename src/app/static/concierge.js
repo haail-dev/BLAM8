@@ -451,6 +451,10 @@
       var el = bubbleEl(m.role, m.content);
       msgs.appendChild(el);
       if (m.role === "assistant") lastAssistant = el;
+      if (m.role === "assistant" && m.knowledge_card) {
+        var restoredCard = knowledgeCardNode(m.knowledge_card, !m.knowledge_card.selected && knowledgeCardCurrent(m.knowledge_card));
+        if (restoredCard) msgs.appendChild(restoredCard);
+      }
       if (m.role === "assistant" && m.links) {
         m.links.forEach(function (l) {
           // Same rule as the live reply sites: no chip to the current page.
@@ -1356,22 +1360,93 @@
   // re-run 2026-09-13: identical lines under two replies read as a repeat).
   var heldExplained = false;
   var pendingKnowledgeChoice = null;
-  function settleKnowledgeChoice(success) {
-    var pending = pendingKnowledgeChoice;
-    if (!pending) return;
-    if (success) {
-      pending.buttons.forEach(function (button) {
-        button.disabled = true;
-        var selected = button === pending.selected;
-        button.setAttribute("aria-pressed", selected ? "true" : "false");
-        button.className = selected
-          ? "rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm text-white"
-          : "rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-400 cursor-not-allowed";
-      });
-    } else {
-      pending.group.querySelectorAll("button").forEach(function (button) { button.disabled = false; });
+  function knowledgeCardCurrent(card) {
+    var guide = window.Blam8KnowledgeGuide;
+    var latest = log.slice().reverse().find(function(entry){return entry.knowledge_card;});
+    return !!(latest && latest.knowledge_card === card && guide && guide.isCurrent(card.focus_hash, card.batch_id, card.version));
+  }
+  function paintKnowledgeCard(group, card, live) {
+    group.querySelectorAll('[data-knowledge-guide-choice]').forEach(function (button) {
+      var selected = card.selected === button.getAttribute('data-knowledge-guide-choice');
+      button.disabled = !!card.selected || !live;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      button.className = selected
+        ? 'rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm text-white'
+        : card.selected || !live
+        ? 'rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-400 cursor-not-allowed'
+        : 'rounded-lg border border-brand px-3 py-2 text-sm text-brand';
+      if (button.getAttribute('data-knowledge-guide-choice') === 'edit') button.className += ' ml-auto';
+    });
+    var status = group.querySelector('[data-knowledge-guide-status]');
+    if (status) status.textContent = card.state === 'editing'
+      ? 'Editing this note · not saved'
+      : card.state === 'preview'
+      ? 'Correction preview · not applied or saved'
+      : card.selected
+      ? 'Chosen during review · not saved. Later choices may replace this.'
+      : !live ? 'Earlier card · ask to show the current note to continue.' : '';
+  }
+  function settleKnowledgeChoice(decision) {
+    // A receipt names the submitted item, not the next item returned by the planner.
+    if (decision && ['prepared', 'editing', 'preview'].includes(decision.state)) {
+      for (var i = log.length - 1; i >= 0; i--) {
+        var card = log[i].knowledge_card;
+        if (card && card.batch_id === decision.batch_id && card.version === decision.version &&
+            card.focus_hash === decision.focus_hash && card.focus.kind === decision.kind &&
+            card.focus.id === decision.id) {
+          card.selected = decision.action; card.state = decision.state;
+          break;
+        }
+      }
+      saveLog(log);
     }
+    msgs.querySelectorAll('[data-knowledge-guide-actions]').forEach(function (group) {
+      if (group.knowledgeCard) paintKnowledgeCard(group, group.knowledgeCard, knowledgeCardCurrent(group.knowledgeCard));
+    });
     pendingKnowledgeChoice = null;
+  }
+  function knowledgeCardNode(card, live) {
+    if (!card || !card.focus || !Array.isArray(card.actions) || typeof card.focus_hash !== 'string') return null;
+    var group = document.createElement('div');
+    group.setAttribute('data-knowledge-guide-actions', '');
+    group.className = 'flex flex-wrap gap-2 px-1 py-2';
+    group.knowledgeCard = card;
+    function addChoice(choice) {
+      var button = document.createElement('button'); button.type = 'button';
+      button.setAttribute('data-knowledge-guide-choice', choice.action);
+      button.textContent = choice.label;
+      if (choice.action === 'edit') button.setAttribute('aria-label', 'Edit this note before saving');
+      button.addEventListener('click', function () {
+        if (sending || !live || card.selected) return;
+        if (!knowledgeCardCurrent(card)) { input.value = 'Show the current note'; send({silentUser:true}); return; }
+        var guide = window.Blam8KnowledgeGuide;
+        if (choice.action === 'edit') {
+          if (guide.edit(card.focus_hash, card.focus.id)) settleKnowledgeChoice({batch_id:card.batch_id,
+            version:card.version,focus_hash:card.focus_hash,kind:card.focus.kind,id:card.focus.id,action:'edit',state:'editing'});
+          return;
+        }
+        pendingKnowledgeChoice = {group:group};
+        input.value = choice.message; send({ silentUser: true });
+      });
+      group.appendChild(button);
+    }
+    card.actions.forEach(addChoice);
+    if (card.focus.kind === 'note') addChoice({action:'edit',label:'✎ Edit note'});
+    if (card.save && live) {
+      var save = document.createElement('button'); save.type = 'button';
+      save.className = 'rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white';
+      save.textContent = 'Save reviewed decisions';
+      save.addEventListener('click', function () {
+        if (!sending && knowledgeCardCurrent(card)) window.Blam8KnowledgeGuide.save();
+      });
+      group.appendChild(save);
+    }
+    var status = document.createElement('p');
+    status.setAttribute('data-knowledge-guide-status','');
+    status.className = 'w-full text-xs text-slate-500';
+    group.appendChild(status);
+    paintKnowledgeCard(group,card,live);
+    return group;
   }
   function appendHeldLine(receipts) {
     if (!receipts || !receipts.length) return;
@@ -1414,60 +1489,24 @@
             ? "The items listed as kept for later below were recorded as suggestions, not applied settings or saved Knowledge."
             : "No new items were recorded as kept for later in this turn.");
       }
-      if (knowledgeGuide && pendingKnowledgeChoice && pendingKnowledgeChoice.message === text) {
-        settleKnowledgeChoice(Object.keys(data.patches || {}).some(function (key) { return key.indexOf("action_") === 0; }));
-      }
+      if (knowledgeGuide) settleKnowledgeChoice(data.review_decision);
     } catch (e) {
       spoke = false;
-      if (pendingKnowledgeChoice && pendingKnowledgeChoice.message === text) settleKnowledgeChoice(false);
+      if (knowledgeGuide) settleKnowledgeChoice(null);
       reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
-    log.push({ role: "assistant", content: reply }); saveLog(log);
+    var entry = { role: "assistant", content: reply };
+    if (data && data.focus_hash && knowledgeGuide && data.batch_id && data.version) {
+      entry.knowledge_card = {batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
+        focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || [],save:!!data.guide_save};
+    }
+    log.push(entry); saveLog(log);
     var replyEl = bubbleEl("assistant", reply);
     msgs.appendChild(replyEl);
-    if (data && data.focus_hash && knowledgeGuide) {
-      var choices = document.createElement("div");
-      choices.setAttribute("data-knowledge-guide-actions", "");
-      choices.className = "flex flex-wrap gap-2 px-1 py-2";
-      (data.guide_actions || []).forEach(function (choice) {
-        var button = document.createElement("button"); button.type = "button";
-        button.setAttribute("data-knowledge-guide-choice", "");
-        button.className = "rounded-lg border border-brand px-3 py-2 text-sm text-brand";
-        button.textContent = choice.label;
-        button.addEventListener("click", function () {
-          if (sending) return;
-          if (!knowledgeGuide.isCurrent(data.focus_hash)) { input.value = "Show the current note"; send({ silentUser: true }); return; }
-          var group = choices;
-          pendingKnowledgeChoice = {group:group,selected:button,message:choice.message,
-            buttons:Array.from(group.querySelectorAll('[data-knowledge-guide-choice]'))};
-          input.value = choice.message; send({ silentUser: true });
-        });
-        choices.appendChild(button);
-      });
-      if (data.guide_save) {
-        var save = document.createElement("button"); save.type = "button";
-        save.className = "rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white";
-        save.textContent = "Save reviewed decisions";
-        save.addEventListener("click", function () {
-          if (sending) return;
-          if (knowledgeGuide.isCurrent(data.focus_hash)) knowledgeGuide.save();
-          else { input.value = "Show the current note"; send(); }
-        });
-        choices.appendChild(save);
-      }
-      if (data.focus && data.focus.kind === "note" && knowledgeGuide) {
-        var edit = document.createElement("button"); edit.type = "button";
-        edit.className = "ml-auto inline-flex items-center gap-1 rounded-lg border border-brand px-3 py-2 text-sm text-brand hover:bg-brand-50";
-        edit.setAttribute("aria-label", "Edit this note before saving");
-        edit.textContent = "✎ Edit note";
-        edit.addEventListener("click", function () {
-          if (sending) return;
-          if (!knowledgeGuide.edit(data.focus_hash, data.focus.id)) { input.value = "Show the current note"; send(); }
-        });
-        choices.appendChild(edit);
-      }
-      msgs.appendChild(choices);
+    if (entry.knowledge_card) {
+      msgs.appendChild(knowledgeCardNode(entry.knowledge_card, true));
+      settleKnowledgeChoice(null);
     }
     appendHeldLine(heldFor);
     applyFill(fill);

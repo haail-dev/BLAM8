@@ -6,13 +6,15 @@ from fastapi import HTTPException
 from app import knowledge_review, knowledge_fidelity
 
 INTENTS = ['show', 'keep', 'discard', 'retain', 'exclude', 'keep_both',
-           'answer', 'unknown', 'correct', 'explain', 'retain_support', 'details', 'revisit', 'undo_support']
+           'answer', 'unknown', 'correct', 'explain', 'retain_support', 'details', 'revisit', 'undo_support', 'edit']
 SHOW = {'', 'show the current note', 'start reviewing the notes', 'show the next decision'}
 SHORTCUTS = {'keep this note':'keep', 'discard this note':'discard',
     'retain this passage with the note':'retain', 'keep both notes':'keep_both',
     'leave this unknown':'unknown', 'show me the differences':'details',
     'keep all the original website wording for this note':'retain_support',
-    'undo added website wording for this note':'undo_support'}
+    'undo added website wording for this note':'undo_support',
+    'edit it':'edit', 'edit this note':'edit', 'edit note':'edit',
+    'change this':'edit', 'change this note':'edit'}
 
 
 def needs_model(question):
@@ -61,6 +63,7 @@ Classify the owner's latest message about the displayed item. 'keep'/'discard' s
 'exclude' leaves that passage out with the owner's actual reason (never invent a reason);
 'keep_both' acknowledges a displayed overlap; 'answer' uses only the owner's supplied answer
 to the displayed question; 'unknown' leaves it unknown. 'show' makes no changes.
+Use 'edit' only for a request to open the displayed note editor without a specific correction.
 Use 'correct' for requests to repair note wording or source references, not for approvals.
 Use 'explain' for a question, ambiguous request, out-of-scope instruction or a request to
 change a different item. Explain using only the supplied evidence, without deciding for them.
@@ -208,9 +211,17 @@ def present(context, row, form, *, receipt=''):
     if kind not in {'blocked', 'ready'}:
         text += '\n\nThese are review choices in the form; nothing is saved to Knowledge yet.'
     return {'reply': '\n\n'.join(filter(None, [receipt, text])), 'focus': item,
-            'focus_hash': identity(item), 'actions': [{'label': a, 'message': b} for a,b in actions],
+            'focus_hash': identity(item), 'actions': [{'label': a, 'message': b, 'action': SHORTCUTS[b.casefold()]} for a,b in actions],
+            'batch_id': row['id'], 'version': context['version'],
             'save_ready': kind == 'ready', 'form_fill': {}, 'ready_to_advance': False,
             'notes': [], 'held_for': [], 'shared_caveats': [u['text'] for u in review['source_view']['qualifications']]}
+
+
+def decision(context, row, item, action, state):
+    """Identify the item acted on before the planner advances to another item."""
+    return {'batch_id': row['id'], 'version': context['version'],
+            'focus_hash': identity(item), 'kind': item['kind'], 'id': item['id'],
+            'action': action, 'state': state}
 
 
 def apply(context, row, form, focus_hash, raw):
@@ -274,8 +285,14 @@ def apply(context, row, form, focus_hash, raw):
         patches['question_'+item['id']] = 'unknown'
         patches['answer_'+item['id']] = ''
         receipt = 'Left this detail unknown.'
+    elif intent == 'edit' and kind == 'note':
+        result = present(context, row, form)
+        result.update(edit_requested=True, patches={})
+        result['review_decision'] = decision(context, row, item, 'edit', 'editing')
+        return result
     elif intent == 'correct':
-        return {'correction_requested': True}
+        return {'correction_requested': True,
+                'correction_focus': decision(context, row, item, 'edit', 'preview')}
     elif intent not in {'show', 'explain'}:
         receipt = 'I have not changed that choice. Please say what you want to keep or leave out, and give a reason for leaving out website wording.'
     elif raw['explanation'].strip():
@@ -283,6 +300,8 @@ def apply(context, row, form, focus_hash, raw):
     updated = {**form, **patches}
     result = present(context, row, updated, receipt=receipt)
     result['patches'] = patches
+    if patches:
+        result['review_decision'] = decision(context, row, item, intent, 'prepared')
     return result
 
 
