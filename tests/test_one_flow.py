@@ -175,10 +175,10 @@ def test_the_wizard_stepper_draws_all_nine():
     assert ctx["step_count"] + len(ctx["tuning"]) == setup_handoff.WIZARD_STEPS + 5
     html = _read("src/app/templates/onboarding/base.html")
     assert 'data-stepper-total="{{ total }}"' in html
-    assert 'data-tuning-step="{{ t.key }}"' in html
-    assert "{{ step_count + loop.index }}" in html                  # numbered 5..9
+    assert 'data-tuning-step="{{ key }}"' in html and 'key=t.key' in html
+    assert "step_circle(step_count + loop.index, t.label" in html                  # numbered 5..9
     assert "width: {{ (step_index + 1) * 100 // total }}%" in html
-    assert "then {{ tuning[0].label }} (inside the app)" in html
+    assert "data-step-line" not in html and "aria-controls=\"onboarding-step-label-{{ number }}\"" in html
 
 
 def test_settings_pages_drop_cross_step_links_during_the_walk():

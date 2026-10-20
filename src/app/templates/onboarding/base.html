@@ -11,7 +11,7 @@
   {% set water_page = true %}
   {% include "_theme_head.html" %}
   <style>
-    /* iOS Safari auto-zooms any focused input under 16px — bump form controls to
+    /* iOS Safari auto-zooms any focused input under 16px â€” bump form controls to
        16px on small screens only so tapping the assistant (or any field) never zooms. */
     @media (max-width: 640px) { input, select, textarea { font-size: 16px !important; } }
     /* Clip horizontal overflow at the root so the page is always exactly one
@@ -19,7 +19,7 @@
        scrolls inside its own container instead. */
     html, body { overflow-x: hidden; overflow-x: clip; }
     /* Installed-app fix (same as the app shell): the wizard renders under the
-       phone's status bar in standalone — grow the navy header by the safe-area
+       phone's status bar in standalone â€” grow the navy header by the safe-area
        inset so bar and strip read as one surface. Zero in a normal browser. */
     header[data-bc-full-width] {
       height: calc(3rem + env(safe-area-inset-top, 0px));
@@ -39,6 +39,15 @@
         max-height: calc(100vh - 5rem - env(safe-area-inset-top, 0px)) !important;
       }
     }
+    .onboarding-stepper-row { display: grid; grid-template-columns: repeat(var(--stepper-count), minmax(0, 1fr)); height: 3rem; }
+    [data-stepper-inspecting] .onboarding-stepper-row { height: 4.5rem; }
+    .onboarding-stepper-item { position: relative; min-width: 0; }
+    .onboarding-step-toggle { display: flex; justify-content: center; width: 100%; height: 2rem; border-radius: .375rem; }
+    .onboarding-step-toggle:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+    .onboarding-step-label { position: absolute; top: 2rem; left: 50%; transform: translateX(-50%); width: max-content; max-width: 9rem; text-align: center; font-size: 11px; line-height: 14px; pointer-events: none; }
+    .onboarding-step-label[data-inspected-label] { top: 3.2rem; }
+    .onboarding-stepper-item:first-of-type .onboarding-step-label { left: 0; transform: none; text-align: left; }
+    .onboarding-stepper-item:last-of-type .onboarding-step-label { right: 0; left: auto; transform: none; text-align: right; }
   </style>
 </head>
 <body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
@@ -67,32 +76,33 @@
     <div class="w-full max-w-2xl">
       {% set labels = {'interview':'About you','mailbox':'Customer inbox','voice':'Voice','knowledge':'Knowledge','data':'Live data'} %}
       {# One flow of nine (Kris 2026-09-13): the wizard's four, then the five
-         tuning steps inside the app greyed as upcoming — the same nine the app
+         tuning steps inside the app greyed as upcoming â€” the same nine the app
          shell's strip counts, so "done" never appears after step four. #}
       {% set tuning = tuning or [] %}
       {% set total = step_count + (tuning | length) %}
-      <!-- stepper -->
+      {# Names disclose information only; the existing form owns progression. #}
+      {% macro step_circle(number, label, current=false, completed=false, upcoming=false, key='') %}
+      <div class="onboarding-stepper-item text-xs font-medium {% if current %}text-brand{% elif completed %}text-emerald-600{% else %}text-slate-400{% endif %}"{% if key %} data-tuning-step="{{ key }}"{% endif %}>
+        <button type="button" class="onboarding-step-toggle" data-step-name-toggle{% if current %} data-current-step aria-current="step"{% endif %}
+                aria-label="Step {{ number }}: {{ label }}{% if current %}, current step{% elif completed %}, completed{% else %}, upcoming{% endif %}"
+                aria-expanded="{{ 'true' if current else 'false' }}" aria-controls="onboarding-step-label-{{ number }}">
+          <span aria-hidden="true" class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold {% if current %}bg-brand text-white{% elif completed %}bg-emerald-500 text-white{% elif upcoming %}border border-dashed border-slate-300 text-slate-400{% else %}bg-slate-200 text-slate-500{% endif %}">{% if completed %}&#10003;{% else %}{{ number }}{% endif %}</span>
+        </button>
+        <span id="onboarding-step-label-{{ number }}" class="onboarding-step-label"{% if not current %} data-inspected-label hidden{% endif %}>{{ label }}</span>
+      </div>
+      {% endmacro %}
       <div class="mb-6" data-stepper-total="{{ total }}">
-        <div class="flex items-center justify-between gap-1">
+        <div class="onboarding-stepper-row" style="--stepper-count: {{ total }}">
           {% for s in steps %}
-          <div class="flex items-center gap-1.5 text-xs font-medium {% if s==stepper %}text-brand{% elif loop.index0 < step_index %}text-emerald-600{% else %}text-slate-400{% endif %}">
-            <span class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold {% if s==stepper %}bg-brand text-white{% elif loop.index0 < step_index %}bg-emerald-500 text-white{% else %}bg-slate-200 text-slate-500{% endif %}">{% if loop.index0 < step_index %}&#10003;{% else %}{{ loop.index }}{% endif %}</span>
-          </div>
+          {{ step_circle(loop.index, labels[s], s == stepper, loop.index0 < step_index) }}
           {% endfor %}
           {% for t in tuning %}
-          <div class="flex items-center gap-1.5 text-xs font-medium text-slate-400" data-tuning-step="{{ t.key }}" title="{{ t.label }} — inside the app, after these four">
-            <span class="inline-flex h-6 w-6 flex-none items-center justify-center rounded-full border border-dashed border-slate-300 text-[11px] font-semibold text-slate-400">{{ step_count + loop.index }}</span>
-          </div>
+          {{ step_circle(step_count + loop.index, t.label, upcoming=true, key=t.key) }}
           {% endfor %}
         </div>
-        <div class="mt-3 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+        <div class="mt-1 h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
           <div class="h-full rounded-full bg-brand transition-all" style="width: {{ (step_index + 1) * 100 // total }}%"></div>
         </div>
-        {# Nine circles carry no labels at any width (nine labels never fit
-           beside the chat panel) — this line, always shown, says where they
-           are, what comes next, and that the app's steps follow. #}
-        {% set nxt = steps[step_index + 1] if step_index + 1 < step_count else none %}
-        <p class="mt-2 text-sm text-slate-500" data-step-line>Step {{ step_index + 1 }} of {{ total }} · <span class="font-semibold text-navy">{{ labels[stepper] }}</span>{% if nxt %} · then {{ labels[nxt] }}{% elif tuning %} · then {{ tuning[0].label }} (inside the app){% endif %}</p>
       </div>
 
       <!-- card -->
@@ -110,13 +120,38 @@
 </div>
 
 <script>
+  // Step names are disclosures, never navigation or completion controls.
+  (function () {
+    document.querySelectorAll('[data-stepper-total]').forEach(function (stepper) {
+      var buttons = Array.from(stepper.querySelectorAll('[data-step-name-toggle]'));
+      function disclose(selected) {
+        var expanded = false;
+        buttons.forEach(function (button) {
+          var current = button.hasAttribute('data-current-step');
+          var show = current || button === selected;
+          button.setAttribute('aria-expanded', show ? 'true' : 'false');
+          document.getElementById(button.getAttribute('aria-controls')).hidden = !show;
+          if (!current && show) expanded = true;
+        });
+        stepper.toggleAttribute('data-stepper-inspecting', expanded);
+      }
+      buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+          disclose(button.getAttribute('aria-expanded') === 'true' ? null : button);
+        });
+        button.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') { disclose(null); button.focus(); }
+        });
+      });
+    });
+  })();
   // Auto-grow wizard textareas to fit their content. The assistant fills these
   // fields with more text than their 2 visible rows (applyFill dispatches an
   // "input" event), and a full field that still shows 2 lines reads as
-  // half-done — the review step only works if the text is actually visible.
+  // half-done â€” the review step only works if the text is actually visible.
   (function () {
     function grow(el) {
-      if (!el.scrollHeight) return;   // hidden (display:none) measures 0 — never stamp that
+      if (!el.scrollHeight) return;   // hidden (display:none) measures 0 â€” never stamp that
       el.style.height = "auto";
       el.style.height = el.scrollHeight + "px";
     }

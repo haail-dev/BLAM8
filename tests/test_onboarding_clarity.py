@@ -82,9 +82,9 @@ def test_wizard_header_names_the_signed_in_account_and_the_step_on_phones():
     html = _read("src/app/templates/onboarding/base.html")
     assert "request.state.user_email" in html and "data-signed-in-as" in html
     assert "'mailbox':'Customer inbox'" in html
-    line = html.split("data-step-line")[0][-400:]
-    assert "hidden" not in line                               # the line shows at every width
-    assert "then {{ labels[nxt] }}" in html
+    assert "data-step-line" not in html
+    assert "aria-current=\"step\"" in html and "data-step-name-toggle" in html
+    assert "onboarding-step-label" in html
 
 
 def test_wizard_bar_spans_full_width_beside_the_chat_panel():
