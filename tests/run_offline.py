@@ -28,6 +28,7 @@ keep = {k: v for k, v in os.environ.items() if k.upper() in {
     "NUMBER_OF_PROCESSORS", "PROCESSOR_ARCHITECTURE", "LANG", "LC_ALL",
     "BLAM8_PG_TEST_TMP",
     "OUTREACH_TEST_POSTGRES_BIN",  # local disposable PostgreSQL binary directory
+    "BLAM8_TEST_CHROMIUM_BIN",  # local headless browser executable, no account/profile
 }}
 os.environ.clear()
 os.environ.update(keep)
