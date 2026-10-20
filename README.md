@@ -30,13 +30,16 @@ versioned content catalogue. See [product knowledge](docs/product-knowledge.md)
 for source ownership, availability qualifications and refresh preparation.
 Discovery describes existing behavior; it does not enable features or execute work.
 
-Node.js is required by the JavaScript replay tests. For database integration
+Node.js 22+ is required by the JavaScript replay tests. For database integration
 tests, put PostgreSQL's `initdb`, `pg_ctl`, and `postgres` binaries on `PATH`.
 The tests create their own disposable database clusters.
 
 ```powershell
 # Set this to the same PostgreSQL bin directory used for the other DB tests.
 $env:OUTREACH_TEST_POSTGRES_BIN = 'C:\path\to\postgresql\bin'
+# Required production CSS for native layout checks; outputs remain ignored.
+npm ci --ignore-scripts
+npm run build:css
 python tests/run_offline.py tests -q --tb=short --basetemp=.cache/pytest-full
 ```
 

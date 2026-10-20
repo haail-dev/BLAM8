@@ -56,6 +56,15 @@ jobs:
           assert report.findall(".//testcase"), "No database tests executed"
           assert not report.findall(".//skipped"), "Database tests skipped; PostgreSQL proof is missing"
           PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Build production styles for native layout tests
+        run: |
+          npm ci --ignore-scripts
+          npm run build:css
       # Includes tests/speech (fake models, no downloads). No separate repeat needed.
       - name: Full offline suite
         run: python tests/run_offline.py tests -q --tb=short --disable-warnings --basetemp=.cache/pytest-full

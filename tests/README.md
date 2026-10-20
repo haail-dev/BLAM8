@@ -3,6 +3,8 @@
 Run the suite from the repository root:
 
 ```sh
+npm ci --ignore-scripts
+npm run build:css
 python tests/run_offline.py tests -q --tb=short
 ```
 
@@ -17,7 +19,12 @@ PostgreSQL binaries if they are not on PATH.
 - `speech/`: separate speech worker protocol tests using fake models.
 - `agnostic_*.py` and other fixture helpers: shared test support.
 
-Node.js is needed for the JavaScript replays. The native Knowledge form regression
+Node.js 22+ is needed for the JavaScript replays. From a clean checkout, build
+the three production stylesheets with the commands above before the full suite
+or `test_onboarding_layout_browser.py`. Those generated CSS files are ignored;
+the native layout checks read actual production CSS and fail when it is missing.
+CI installs the lockfile dependencies and builds the same styles before its full
+suite; no generated CSS is committed. The native Knowledge form regression
 also requires Chromium/Chrome (available on the Ubuntu CI image). It discovers
 `google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser` on PATH,
 or a standard Windows Chrome installation. Set `BLAM8_TEST_CHROMIUM_BIN` to an
