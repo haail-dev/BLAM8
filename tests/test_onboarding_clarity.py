@@ -94,8 +94,9 @@ def test_wizard_bar_spans_full_width_beside_the_chat_panel():
     assert 'data-bc-full-width' in bar and 'data-pull-bar' in bar
     assert 'max-w-2xl' not in bar and 'justify-between' in bar
     assert 'data-signed-in-as' in bar and 'href="/logout"' in bar
-    assert 'truncate' in bar and 'flex-none text-sm' in bar
+    assert 'onboarding-email' in bar and 'flex-none text-sm' in bar
     assert 'height: calc(3rem + env(safe-area-inset-top, 0px));' in html
+    assert 'text-overflow:ellipsis' in html
     shared = _read('src/app/templates/_concierge.html')
     assert '[data-bc-full-width]' in shared and 'margin-right: calc(-1 * clamp(' in shared
     assert 'body:has(#bc-panel' not in html  # reserve stays in the shared dock

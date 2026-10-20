@@ -16,8 +16,8 @@ const form={dataset:{knowledgeReview:'batch'},elements:fields,action:'/review/ba
   appendChild(el){fields[el.name]=el;},querySelector(selector){return selector.includes('operation') ? {disabled:false} : selector.startsWith('[data-draft=') ? section : null;},
   querySelectorAll(){return [section];},
   requestSubmit(){submitted++;}};
-let activeForm=form;
-const document={querySelectorAll(){return [activeForm];},
+let activeForm=form, availableForms=null;
+const document={querySelectorAll(){return availableForms || [activeForm];},
   addEventListener(name,cb){events[name]=cb;},createElement(){return {dispatchEvent(){}};}};
 let sourceReply={reply:'Correction preview; not saved.'};
 const window={addEventListener(name,cb){windowEvents[name]=cb;},dispatchEvent(){},
@@ -128,3 +128,14 @@ index=requests.length;loading=guide.ask('Add the sourced wording to this note');
 finish(index,{correction_requested:true,correction_focus:correctionFocus});
 assert.equal((await loading).review_decision,correctionFocus);
 assert.equal(submitted,1); // Preview/editor did not submit another Save.
+
+// An explicit form selects the submitted batch even when several batches exist.
+const otherForm={...form,dataset:{knowledgeReview:'other-batch'},action:'/review/other-batch'};
+availableForms=[form,otherForm];
+assert(guide.available(otherForm));
+index=requests.length;loading=guide.ask('Show the current note',otherForm);
+assert.equal(requests[index].url,'/review/other-batch/guide');
+await assert.rejects(guide.ask('Show the current note',form),/wait/);
+finish(index,result({},'other-hash'));await loading;
+assert(guide.isCurrent('other-hash','other-batch','v1'));
+assert(!guide.isCurrent('other-hash','batch','v1'));

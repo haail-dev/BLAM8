@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const html=fs.readFileSync('src/app/templates/onboarding/base.html','utf8');const start=html.indexOf('// The same slot-drum transition');const script=html.slice(start,html.indexOf('// Step names are disclosures',start));
+function run({mailFaces=2,brandFaces=2,reduced=false}={}){const face=pos=>({attributes:{'data-pos':pos},setAttribute(k,v){this.attributes[k]=v;}}),brand={children:Array.from({length:brandFaces},(_,i)=>face(i?'below':'on'))},email={children:Array.from({length:mailFaces},(_,i)=>face(i?'below':'on'))},timers=[];
+brand.querySelectorAll=()=>brand.children;email.querySelectorAll=()=>email.children;
+vm.runInNewContext(script,{document:{querySelector:s=>s==='[data-onboarding-brand]'?brand:email},window:{matchMedia:()=>({matches:reduced})},setTimeout:(fn,ms)=>timers.push({fn,ms})});return {brand,email,timers};}
+const paired=run();assert.equal(paired.timers[0].ms,4000);paired.timers.shift().fn();for(const drum of [paired.brand,paired.email])assert.deepEqual(drum.children.map(f=>f.attributes['data-pos']),['above','on']);paired.timers.shift().fn();for(const drum of [paired.brand,paired.email])assert.deepEqual(drum.children.map(f=>f.attributes['data-pos']),['below','on']);paired.timers.shift().fn();for(const drum of [paired.brand,paired.email])assert.deepEqual(drum.children.map(f=>f.attributes['data-pos']),['on','above']);
+const equal=run({mailFaces:1});equal.timers.shift().fn();assert.equal(equal.email.children[0].attributes['data-pos'],'on');assert.equal(equal.brand.children[1].attributes['data-pos'],'on');
+assert.equal(run({brandFaces:1,mailFaces:1}).timers.length,0);assert.equal(run({reduced:true}).timers.length,0);
+console.log('Header: paired identities roll synchronously, matching email stays stationary, missing inbox/reduced motion stay static.');

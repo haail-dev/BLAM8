@@ -41,7 +41,7 @@ const data=(kind,id,extra={})=>({reply:'Synthetic '+kind+' '+id,batch_id:'batch'
 const receipt=(shown,action,state='prepared')=>({batch_id:shown.batch_id,version:shown.version,focus_hash:shown.focus_hash,kind:shown.focus.kind,id:shown.focus.id,action,state});
 const cards=()=>msgs.querySelectorAll('[data-knowledge-guide-actions]');
 const buttons=card=>card.querySelectorAll('[data-knowledge-guide-choice]');
-const chosen=(card,action)=>{for(const b of buttons(card)){assert.equal(b.getAttribute('aria-pressed'),String(b.getAttribute('data-knowledge-guide-choice')===action));assert(b.disabled);assert(b.className.includes(b.getAttribute('data-knowledge-guide-choice')===action?'bg-emerald-600':'bg-slate-100'));}};
+const chosen=(card,action)=>{for(const b of buttons(card)){assert.equal(b.getAttribute('aria-pressed'),String(b.getAttribute('data-knowledge-guide-choice')===action));assert(b.disabled);assert(b.className.includes('bg-transparent'));assert(b.className.includes(b.getAttribute('data-knowledge-guide-choice')===action?'text-emerald-700':'text-slate-400'));}};
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function show(d){queued.push(d);await c.onboardTurn('Show the current note',[]);return cards().at(-1);}
 const first=data('note','one');const card=await show(first);

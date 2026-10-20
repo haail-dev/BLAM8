@@ -13,8 +13,14 @@
     return result;
   }
   function ready() { window.dispatchEvent(new Event('blam8:onboarding-readiness')); }
-  async function ask(question) {
-    var f = form();
+  async function ask(question, reviewForm) {
+    if(reviewForm){
+      if(busy || window.blam8KnowledgeImportBusy || sourceWorking())throw new Error('Please wait for the current review to finish.');
+      if(!forms().includes(reviewForm))throw new Error('That review batch is no longer available.');
+      selected=reviewForm.dataset.knowledgeReview;
+      if(focus && focus.key!==selected)focus=null;
+    }
+    var f = reviewForm || form();
     if(!f) throw new Error('Choose the batch of notes you want to review with the Assistant.');
     if(busy || window.blam8KnowledgeImportBusy || sourceWorking())throw new Error('Please wait for the current review to finish.');
     var base=values(f), signature=JSON.stringify(base), key=f.dataset.knowledgeReview;
@@ -31,7 +37,7 @@
         // Release this read-only turn before the existing source correction tool.
         busy=false; window.blam8KnowledgeImportBusy=false; ready();
         focus=null;
-        var correction=await window.Blam8KnowledgeGuide.sourceAsk(question);
+        var correction=await window.Blam8KnowledgeGuide.sourceAsk(question,f);
         if(data.correction_focus && data.correction_focus.kind==='note' &&
             (correction.correction_preview_ids || []).includes(data.correction_focus.id))correction.review_decision=data.correction_focus;
         return correction;
@@ -51,9 +57,14 @@
       }
       data.guide_actions=data.actions || [];
       data.guide_save=!!data.save_ready;
-      var item=data.focus || {}, section=item.kind==='note' ? f.querySelector('[data-draft="'+item.id+'"]') : null;
-      var disclosure=section && (section.tagName==='DETAILS' ? section : section.querySelector('[data-note-details]'));
-      if(disclosure)disclosure.open=true;
+      var item=data.focus || {}, noteId=item.kind==='note'||item.kind==='support'?item.id:item.note_id || item.target;
+      var workspace=window.Blam8KnowledgeReview;
+      if(workspace && workspace.focusNote && noteId)workspace.focusNote(f,noteId,item.kind==='overlap'?'more':item.kind==='support'||item.kind==='passage'?'source':null);
+      else {
+        var section=item.kind==='note' ? f.querySelector('[data-draft="'+item.id+'"]') : null;
+        var disclosure=section && (section.tagName==='DETAILS' ? section : section.querySelector('[data-note-details]'));
+        if(disclosure)disclosure.open=true;
+      }
       return data;
     } catch (err) {
       if(question.trim() && !['', 'show the current note', 'start reviewing the notes', 'show the next decision'].includes(question.trim().toLowerCase()) &&
@@ -77,7 +88,7 @@
     greeted=key;
     window.blam8KnowledgeGuideStart().then(function(ok){if(!ok)greeted=null;});
   }
-  window.Blam8KnowledgeGuide={ask:ask,working:function(){return busy;},available:function(){return !!form();},
+  window.Blam8KnowledgeGuide={ask:ask,working:function(){return busy;},available:function(reviewForm){return reviewForm?forms().includes(reviewForm):!!form();},
     isCurrent:function(hash,batch,version){var f=form();return !!(f && focus && focus.form===f && focus.hash===hash && (batch===undefined || batch===focus.key) && (version===undefined || version===focus.version) && focus.key===f.dataset.knowledgeReview && focus.signature===JSON.stringify(values(f)));},
     edit:function(hash,id){
       var f=form();
@@ -86,7 +97,8 @@
       var field=f.elements['content_'+id];
       if(!section || !field)return false;
       var disclosure=section.tagName==='DETAILS' ? section : section.querySelector('[data-note-details]');
-      if(disclosure)disclosure.open=true;
+      if(window.Blam8KnowledgeReview && window.Blam8KnowledgeReview.focusNote)window.Blam8KnowledgeReview.focusNote(f,id,'edit');
+      else if(disclosure)disclosure.open=true;
       if(window.blam8ConciergeClose)window.blam8ConciergeClose();
       if(section.scrollIntoView)section.scrollIntoView({behavior:'smooth',block:'center'});
       field.focus();

@@ -30,7 +30,7 @@
        right of <main>: that double-count shrinks the form to a narrow strip
        on half-width windows. The remaining body width is the page column and
        the wizard card can size naturally within it. */
-    header[data-bc-full-width] { padding-left: 1rem; padding-right: 1rem; }
+    header[data-bc-full-width] { padding-left: .5rem; padding-right: .5rem; }
     @media (min-width: 768px) {
       /* Match the dock's 1rem outside gutter above it, below the 3rem bar.
          The bottom gutter stays 1rem; include the installed-app safe area. */
@@ -48,6 +48,16 @@
     .onboarding-step-label[data-inspected-label] { top: 3.2rem; }
     .onboarding-stepper-item:first-of-type .onboarding-step-label { left: 0; transform: none; text-align: left; }
     .onboarding-stepper-item:last-of-type .onboarding-step-label { right: 0; left: auto; transform: none; text-align: right; }
+    .onboarding-drum { display:inline-block;position:relative;height:1.5rem;line-height:1.5rem;perspective:320px;white-space:nowrap; }
+    .onboarding-drum > span { position:absolute;left:0;top:0;display:block;transform-origin:50% 50% -.75rem;backface-visibility:hidden;transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .4s ease; }
+    .onboarding-drum > span[data-pos="above"] { transform:rotateX(90deg) translateY(-.75rem);opacity:0; }
+    .onboarding-drum > span[data-pos="on"] { transform:rotateX(0) translateY(0);opacity:1;position:relative; }
+    .onboarding-drum > span[data-pos="below"] { transform:rotateX(-90deg) translateY(.75rem);opacity:0; }
+    [data-onboarding-brand] { width:5.2rem; }
+    .onboarding-email { min-width:0;width:42vw;max-width:42vw;overflow:hidden; }
+    [data-onboarding-email] { display:block;width:100%; }
+    [data-onboarding-email] > span { width:100%;overflow:hidden;text-overflow:ellipsis; }
+    @media(prefers-reduced-motion:reduce) { .onboarding-drum > span { transition:none; } }
   </style>
 </head>
 <body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
@@ -56,23 +66,22 @@
      only the wizard below reserves space when the assistant opens. #}
   <header class="relative bg-navy flex-none" data-pull-bar data-bc-full-width>
     <div class="flex h-full w-full items-center justify-between gap-3">
-      <span class="flex items-center gap-2 font-bold text-white text-lg tracking-tight">
-        <img src="/static/img/blam8-assistant-glass.png?v={{ asset_rev }}" alt="" aria-hidden="true"
-             width="28" height="28" class="h-7 w-7 flex-none">
-        BLAM8
+      {% set who = request.state.user_email if request and request.state else '' %}
+      {% set identity = onboarding_identity(request) if onboarding_identity is defined else {'account':who,'mailbox':'','same':false} %}
+      <span class="flex items-center gap-2 font-bold text-white text-lg tracking-tight" aria-label="BLAM8">
+        <img src="/static/img/blam8-assistant-glass.png?v={{ asset_rev }}" alt="" aria-hidden="true" width="28" height="28" class="h-7 w-7 flex-none">
+        <span class="onboarding-drum" data-onboarding-brand aria-hidden="true"><span data-pos="on">BLAM8</span>{% if identity.mailbox %}<span data-pos="below">Automate</span>{% endif %}</span>
       </span>
-      {# The login may differ from the connected inbox. Keep it at the far
-         right above the dock, while the wordmark aligns with the left gutter.
-         Safe-area padding belongs to the header. #}
       <div class="flex min-w-0 items-center gap-3">
-        {% set who = request.state.user_email if request and request.state else '' %}
-        {% if who %}<span class="min-w-0 max-w-[45vw] truncate text-xs text-slate-300" title="Signed in as {{ who }}" data-signed-in-as>{{ who }}</span>{% endif %}
+        {% if who %}<span class="onboarding-email text-xs text-slate-300" data-signed-in-as aria-label="Signed in as {{ who }}{% if identity.mailbox and not identity.same %}; automation inbox {{ identity.mailbox }}{% endif %}">
+          <span class="onboarding-drum" data-onboarding-email{% if identity.same %} data-stationary-email{% endif %}><span data-pos="on" title="{{ who }}">{{ who }}</span>{% if identity.mailbox and not identity.same %}<span data-pos="below" title="{{ identity.mailbox }}">{{ identity.mailbox }}</span>{% endif %}</span>
+        </span>{% endif %}
         <a href="/logout" class="flex-none text-sm text-slate-300 hover:text-white transition">Sign out</a>
       </div>
     </div>
   </header>
 
-  <main class="flex-1 flex items-start justify-center px-4 pt-5 pb-10">
+  <main class="flex-1 flex items-start justify-center px-4 pt-2.5 pb-10">
     <div class="w-full max-w-2xl">
       {% set labels = {'interview':'About you','mailbox':'Customer inbox','voice':'Voice','knowledge':'Knowledge','data':'Live data'} %}
       {# One flow of nine (Kris 2026-09-13): the wizard's four, then the five
@@ -91,7 +100,7 @@
         <span id="onboarding-step-label-{{ number }}" class="onboarding-step-label"{% if not current %} data-inspected-label hidden{% endif %}>{{ label }}</span>
       </div>
       {% endmacro %}
-      <div class="mb-6" data-stepper-total="{{ total }}">
+      <div class="mb-3" data-stepper-total="{{ total }}">
         <div class="onboarding-stepper-row" style="--stepper-count: {{ total }}">
           {% for s in steps %}
           {{ step_circle(loop.index, labels[s], s == stepper, loop.index0 < step_index) }}
@@ -106,10 +115,10 @@
       </div>
 
       <!-- card -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-7">
-        <h1 class="text-xl font-bold text-navy">{% block heading %}{% endblock %}</h1>
-        <p class="mt-1 text-sm text-slate-500">{% block subheading %}{% endblock %}</p>
-        <div class="mt-6">{% block content %}{% endblock %}</div>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
+        <h1 data-onboarding-heading class="text-xl font-bold text-navy">{% block heading %}{% endblock %}</h1>
+        <p data-onboarding-helper class="mt-1 text-sm text-slate-500"{% if pending_reviews %} hidden{% endif %}>{% block subheading %}{% endblock %}</p>
+        <div class="mt-3">{% block content %}{% endblock %}</div>
       </div>
 
       {# No wizard footer: the human-approval line lives on the Mailbox
@@ -120,6 +129,22 @@
 </div>
 
 <script>
+  // The same slot-drum transition as the public brand, with paired identities.
+  (function () {
+    var brand = document.querySelector('[data-onboarding-brand]');
+    var faces=brand ? Array.from(brand.querySelectorAll('span')) : [];
+    if (!brand || faces.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var email = document.querySelector('[data-onboarding-email]');
+    var drums = [faces], emailFaces=email ? Array.from(email.querySelectorAll('span')) : [];
+    if (emailFaces.length === 2) drums.push(emailFaces);
+    var index = 0;
+    function turn() {
+      var previous = index, next = (index + 1) % 2;
+      drums.forEach(function(drum){drum[previous].setAttribute('data-pos','above');drum[next].setAttribute('data-pos','on');});
+      setTimeout(function(){drums.forEach(function(drum){drum[previous].setAttribute('data-pos','below');});index=next;setTimeout(turn,4000);},600);
+    }
+    setTimeout(turn,4000);
+  })();
   // Step names are disclosures, never navigation or completion controls.
   (function () {
     document.querySelectorAll('[data-stepper-total]').forEach(function (stepper) {

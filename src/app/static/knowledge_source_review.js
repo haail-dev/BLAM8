@@ -133,6 +133,9 @@
   window.Blam8KnowledgeSourceReview = {
     working: function () { return !!(busy || submitting); },
     available: function () { return !!targetForm(); },
-    ask: function (question) { return ask(targetForm(), question); }
+    ask: function (question, reviewForm) {
+      if(reviewForm){if(!forms().includes(reviewForm))throw new Error('That review batch is no longer available.');selected=reviewForm.dataset.knowledgeReview;}
+      return ask(reviewForm || targetForm(), question);
+    }
   };
 })();
