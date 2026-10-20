@@ -393,6 +393,7 @@ def test_settings_voice_discard_route(client, monkeypatch):
 # ── privacy: analysis calls must not persist the corpus ──────────────────────
 
 class _FakeMsg:
+    model = "claude-sonnet-4-6"
     stop_reason = "end_turn"
     usage = type("U", (), {"input_tokens": 10, "output_tokens": 5})()
     content = [type("B", (), {"type": "text", "text": json.dumps({"ok": True})})()]

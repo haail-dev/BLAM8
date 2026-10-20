@@ -167,7 +167,8 @@ CALL_TIMEOUT_S = 90.0
 
 async def create(*, client, tenant_id: str | None = None, operation: str = "",
                  module: str = "email", log_mode: str | None = None,
-                 cache: bool = True, hedge_after: float | None = None, **kwargs):
+                 cache: bool = True, hedge_after: float | None = None,
+                 route_metadata: dict | None = None, route_validate=None, **kwargs):
     """Call `client.messages.create(**kwargs)` and log the full exchange.
 
     Drop-in: returns the SDK response unchanged and re-raises exactly what the
@@ -192,7 +193,8 @@ async def create(*, client, tenant_id: str | None = None, operation: str = "",
     if cache:
         kwargs = _cached_kwargs(kwargs)
     return await _run_metered(client, kwargs, tenant_id, operation, module, log_mode,
-                              hedge_after=hedge_after)
+                              hedge_after=hedge_after, route_metadata=route_metadata,
+                              route_validate=route_validate)
 
 
 # The hedge (2026-09-24, Kris: "It took a very long time Thinking"): about 3%
@@ -292,7 +294,8 @@ async def stream(*, client, tenant_id: str | None = None, operation: str = "",
 
 
 async def _run_metered(client, kwargs, tenant_id, operation, module, log_mode,
-                       *, hedge_after=None, on_delta=None, streaming=False):
+                       *, hedge_after=None, on_delta=None, streaming=False,
+                       route_metadata=None, route_validate=None):
     # Sonnet 5 otherwise enables adaptive thinking. Keep small output budgets
     # and forced tool choices on the explicit no-thinking path, including voice
     # streams and both hedge attempts. Log exactly the request we send.
@@ -316,6 +319,15 @@ async def _run_metered(client, kwargs, tenant_id, operation, module, log_mode,
                    "provider_request_id": getattr(msg, "_request_id", None),
                    "model": getattr(msg, "model", None) or kwargs.get("model"),
                    "usage": raw, "complete": complete, "outcome": outcome}
+        if route_metadata is not None:
+            receipt["route"] = dict(route_metadata)
+            if complete and route_validate is not None:
+                try:
+                    route_validate(msg)
+                except (ValueError, TypeError, KeyError, AttributeError):
+                    receipt["route"]["schema_failure"] = True
+        receipt["selected_model"] = kwargs.get("model")
+        receipt["duration_ms"] = int((time.monotonic() - t0) * 1000)
         transport = transport if transport is not None else getattr(exc, "response", None)
         request = getattr(transport, "request", None) or getattr(exc, "request", None)
         headers = getattr(request, "headers", {})
@@ -402,7 +414,7 @@ def _log_call(tenant_id, operation, module, kwargs, msg, exc, t0, log_mode=None,
             "cost_version": metering.COST_VERSION,
             "operation": operation or "",
             "module": module,
-            "model": str(kwargs.get("model") or ""),
+            "model": str((receipt or {}).get("model") or kwargs.get("model") or ""),
             "stop_reason": ("api_error" if exc is not None
                             else getattr(msg, "stop_reason", None)),
             "input_tokens": int(usage_obj.get("input_tokens") or 0),
