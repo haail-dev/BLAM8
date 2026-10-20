@@ -276,11 +276,15 @@ async def generate_sample(tenant_id: str, profile: dict, business_brief: str) ->
         + f"Customer email:\n{SAMPLE_ENQUIRY}\n\n"
         "Write the reply this business would send."
     )
-    msg = await llm.create(
-        client=agent.client(), tenant_id=tenant_id,
+    from app import model_routing
+    decision = model_routing.resolve_model(model_routing.Operation.TONE_PREVIEW,
+                                          authority=model_routing.Authority.PREVIEW,
+                                          fallback_model=settings.anthropic_model)
+    request = dict(
+        tenant_id=tenant_id,
         operation="voice_sample", module="voice",
         cache=False,   # one-shot preview — nothing ever reads the entry back
-        model=settings.anthropic_model, max_tokens=400,
+        max_tokens=400,
         system=("You write exactly one short email reply in the described voice — "
                 "plain text, no subject line, nothing else. Never invent specific "
                 "prices, dates or facts the business hasn't stated; keep such "
@@ -289,9 +293,21 @@ async def generate_sample(tenant_id: str, profile: dict, business_brief: str) ->
                 "no 'we have space'): say you'll check the diary and come back."),
         messages=[{"role": "user", "content": prompt}],
     )
-    usage.record_anthropic(tenant_id, settings.anthropic_model, msg.usage,
+    if decision.candidate:
+        def validated(msg):
+            text = _response_text(msg)
+            if not text.strip():
+                raise ValueError("empty preview")
+            return text
+        msg, text, totals, _ = await model_routing.create_candidate(
+            decision=decision, client=agent.client(), validate=validated, **request)
+    else:
+        msg = await llm.create(client=agent.client(), model=decision.model,
+                               route_metadata=decision.metadata(), **request)
+        text, totals = _response_text(msg), msg.usage
+    usage.record_anthropic(tenant_id, msg.model, totals,
                            operation="voice_sample", module="voice")
-    return _response_text(msg)
+    return text
 
 
 # ── orchestration ────────────────────────────────────────────────────────────

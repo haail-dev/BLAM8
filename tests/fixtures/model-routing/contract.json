@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "data": "synthetic only",
+  "runs_per_model_per_case": 3,
+  "models": [
+    "claude-sonnet-4-6",
+    "claude-haiku-5-5"
+  ],
+  "split_counts_per_family": {
+    "development": 20,
+    "held_out": 100
+  },
+  "freeze": [
+    "source_commit",
+    "SDK_version",
+    "prompts",
+    "schemas",
+    "tools",
+    "effort",
+    "case_set_digest",
+    "configuration",
+    "scoring_rules"
+  ],
+  "review": "human blind review required; automated exact checks are supplementary",
+  "gates": {
+    "critical_failures": 0,
+    "usability_minimum": 0.95,
+    "usability_difference_minimum": -0.02,
+    "known_cost_savings_minimum": 0.5,
+    "complete_cost_coverage_minimum": 0.99,
+    "p95_latency_ratio_maximum": 1.1
+  },
+  "uncertainty": "Paired case-level interval; repeats are not independent. Also cluster sensitivity by scenario_group. Expand corpus if interval cannot rule out >2 point regression."
+}

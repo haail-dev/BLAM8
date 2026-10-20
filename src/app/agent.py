@@ -2586,20 +2586,47 @@ def build_outbound_prompt(cfg: dict, purpose: str, facts: str, channel: str = "e
 async def compose_outbound(cfg: dict, purpose: str, facts: str,
                            channel: str = "email", tenant_id: str | None = None,
                            log_operation: str = "outbound",
-                           log_module: str = "email") -> DraftResult:
+                           log_module: str = "email",
+                           routing_operation=None, routing_authority=None) -> DraftResult:
     """Compose one proactive outbound message (Phase 2B). Structured output {message};
     usage is returned as the same summed-totals dict draft_reply uses, so the caller
     meters it identically. No tools, single call. `channel='sms'` = same voice,
     SMS register (docs/modules/module-sms-channel.md D3). `tenant_id`/`log_operation`/
     `log_module` attribute the llm_calls transcript row — pass the same values the
     caller meters with (usage.record_anthropic) so the two books line up."""
+    from app import model_routing
+    # This composer can only opt into its own reviewed family. Preview or CRM
+    # authority cannot be borrowed to route a customer message.
+    if routing_operation != model_routing.Operation.ADMIN_MESSAGE:
+        routing_operation = None
+    decision = model_routing.resolve_model(routing_operation, authority=routing_authority,
+                                          fallback_model=settings.anthropic_model)
     system = build_outbound_prompt(cfg, purpose, facts, channel=channel)
+    if decision.candidate:
+        def validated(msg):
+            raw = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text")
+            data = json.loads(raw)
+            if not isinstance(data, dict) or set(data) != {"message"}:
+                raise ValueError("invalid message envelope")
+            message = data["message"]
+            if not isinstance(message, str) or not message.strip() or model_markup.has_tool_markup(message):
+                raise ValueError("invalid message")
+            return message.strip()
+
+        msg, message, totals, _ = await model_routing.create_candidate(
+            decision=decision, client=client(), validate=validated,
+            tenant_id=tenant_id, operation=log_operation, module=log_module,
+            max_tokens=600, system=system,
+            messages=[{"role": "user", "content": "Write the message now."}],
+            output_config={"format": {"type": "json_schema", "schema": OUTBOUND_SCHEMA}})
+        message, applied_sign_off = sign_off.apply(message, cfg, channel)
+        return DraftResult(text=message, usage=totals, model=msg.model, sign_off=applied_sign_off)
     totals = metering.Totals()
     user = "Write the message now."
     for attempt in range(2):
         msg = await llm.create(
             client=client(), tenant_id=tenant_id, operation=log_operation, module=log_module,
-            model=settings.anthropic_model,
+            model=decision.model, route_metadata=decision.metadata(),
             max_tokens=600,
             system=system,
             messages=[{"role": "user", "content": user}],
