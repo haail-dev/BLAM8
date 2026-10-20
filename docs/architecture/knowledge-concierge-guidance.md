@@ -19,8 +19,15 @@ tenant-scoped, versioned review used by admission. It returns a bounded patch to
 the existing review form, not a database mutation. Model interpretation is used
 for natural messages; Show and explicit action buttons do not call a model.
 The action is restricted to the displayed item, with exact existing note targets.
-Owner answers and exclusion reasons must occur in the owner's message. Unknown
-details can remain unknown. Reopening a named note changes its review decision,
+Owner answers and exclusion reasons must occur in the owner's message.
+For messages up to 1,000 characters, the structured reason is constrained to
+empty or the complete verbatim owner message; it is nonempty only when the owner
+supplies an exclusion rationale. Longer messages keep guarded excerpt extraction,
+so a short reason within a longer request remains usable. Answers still require
+an owner-authored excerpt. Literal source coverage permits a sentence-opening
+word such as “Our” to become “our” inside a sentence, without changing the rest
+of the wording, identifiers, amounts, negation or attached qualifications.
+Details can remain unknown. Reopening a named note changes its review decision,
 not its text. Wording/source repairs still use the existing source-correction
 proposal flow and require review/application there.
 An owner can also undo the unsaved source-retention choices for a named note.

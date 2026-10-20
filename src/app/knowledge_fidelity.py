@@ -15,6 +15,16 @@ def normal(text):
     return " ".join(text.split())
 
 
+def _represented(text, content):
+    """Allow a sentence opener to be embedded mid-sentence, preserving facts/codes."""
+    text, content = normal(text), normal(content)
+    if text in content:
+        return True
+    if re.match(r'^(Our|We|The|Your|You|It|This|These|That|Those)\b', text):
+        return text[0].lower() + text[1:] in content
+    return False
+
+
 def inventory(pages):
     """Keep every read statement; repeated wording shares an ID and all sources."""
     units = {}
@@ -60,7 +70,7 @@ def resolve(row, entries, form, *, complete=False):
         if not entries:
             decisions.append({**unit, "status":"discarded_with_drafts", "entries":[]})
             continue
-        represented = [n["id"] for n in entries if normal(unit["text"]) in normal(n["content"])]
+        represented = [n["id"] for n in entries if _represented(unit["text"], n["content"])]
         choice = str(form.get("source_"+unit["id"], ""))
         reason = str(form.get("source_reason_"+unit["id"], "")).strip()
         if unit["kind"]=="qualification" and entries:
@@ -81,7 +91,7 @@ def resolve(row, entries, form, *, complete=False):
             choice = choice or str(form.get("source_default", ""))
             target = by_id.get(choice.removeprefix("note:")) if choice.startswith("note:") else None
             if target:
-                if normal(unit["text"]) not in normal(target["content"]):
+                if not _represented(unit["text"], target["content"]):
                     target["content"] += "\n\nRetained source statement ("+", ".join(unit["sources"])+"): " + unit["text"]
                 target["provenance"] += [{"source":url,"excerpt":unit["text"]} for url in unit["sources"]]
                 decision={"status":"retained_verbatim","entries":[target["id"]]}

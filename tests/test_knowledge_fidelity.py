@@ -30,6 +30,34 @@ def test_inventory_keeps_exact_read_statements_and_all_duplicate_sources():
     assert [u['text'] for u in units]==['Fictional sample facts.','Only if agreed.','A costs £95.','Keep this separate.']
 
 
+def test_embedded_sentence_opener_does_not_require_a_duplicate_source_copy():
+    text='Our small team keeps the landlord and resident informed as an enquiry moves forward.'
+    content='Each agreement is individual, and '+text[0].lower()+text[1:]
+    ctx,row=context([entry(content=content)],brief='')
+    row['payload']['source_units']=fidelity.inventory([{'url':'https://example.test/service','text':text}])
+    original=deepcopy(row); f=form(ctx,row)
+    entries=deepcopy(row['payload']['entries'])
+    decisions=fidelity.resolve(row,entries,f)
+    assert decisions[0]['status']=='literal_in_note'
+    assert entries[0]['content']==content and row==original
+    # Explicit retention also preserves the existing body rather than appending a copy.
+    f['source_'+row['payload']['source_units'][0]['id']]='note:one'
+    fidelity.resolve(row,entries,f)
+    assert entries[0]['content']==content
+    assert any(p.get('excerpt')==text for p in entries[0]['provenance'])
+
+
+@pytest.mark.parametrize('source,content', [
+    ('Use code AbC.','Use code abc.'), ('Supply 5 mW.','Supply 5 MW.'),
+    ('IT handles the request.','it handles the request.'), ('AbC is the code.','abc is the code.'),
+    ('Our team must not approve it.','our team must approve it.'),
+])
+def test_sentence_casing_exception_preserves_identifiers_units_and_negation(source,content):
+    ctx,row=context([entry(content=content)],brief='')
+    row['payload']['source_units']=fidelity.inventory([{'url':'https://example.test/facts','text':source}])
+    assert fidelity.view(row,row['payload']['entries'],{})['units'][0]['status']=='unresolved'
+
+
 def test_citations_and_topic_coverage_do_not_hide_omitted_constraints():
     ctx,row=source_review(); f=form(ctx,row)
     row['payload']['entries'][0]['topics']=list(kr.QUESTIONS)
