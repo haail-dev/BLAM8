@@ -25,7 +25,9 @@ from app import metering
 
 import asyncio
 import re
+from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
+from zoneinfo import ZoneInfo
 
 from anthropic import AsyncAnthropic
 
@@ -270,8 +272,11 @@ def sanitize_history(history: list[dict] | None, max_turns: int, max_chars: int)
     """Coerce a client-supplied transcript into a clean messages array: only
     user/assistant turns with string content, newest `max_turns` kept, each turn
     truncated to `max_chars`, and any leading assistant turns dropped (the API
-    requires the first turn to be `user`)."""
+    requires the first turn to be `user`). Saved turns that carry a time
+    (`created_at` on stored rows, `at` from the page) are headed by when their
+    conversation took place — see _label_conversations."""
     out: list[dict] = []
+    stamps: list[datetime | None] = []
     for turn in (history or []):
         role = (turn or {}).get("role")
         content = (turn or {}).get("content")
@@ -285,6 +290,7 @@ def sanitize_history(history: list[dict] | None, max_turns: int, max_chars: int)
             text += _lookups_note((turn or {}).get("lookups"))
         if text:
             out.append({"role": role, "content": text})
+            stamps.append(_turn_time(turn))
     # A question followed straight by another question was cut off before any
     # answer — the owner interrupted and moved on. Live 2026-09-23 (iOS voice):
     # "Can you tell me the invoices…" then "Actually, when is Laura Finch's
@@ -293,9 +299,53 @@ def sanitize_history(history: list[dict] | None, max_turns: int, max_chars: int)
     for i in range(len(out)):
         if out[i]["role"] == "user" and (i + 1 == len(out) or out[i + 1]["role"] == "user"):
             out[i] = {"role": "user", "content": out[i]["content"] + ABANDONED_NOTE}
-    out = out[-max_turns:]
+    out, stamps = out[-max_turns:], stamps[-max_turns:]
     while out and out[0]["role"] == "assistant":
         out.pop(0)
+        stamps.pop(0)
+    return _label_conversations(out, stamps)
+
+
+# Saved turns further apart than this belong to separate conversations.
+CONVERSATION_GAP = timedelta(hours=2)
+# The same clock the prompt's "Today's date is …" uses (concierge_routes).
+CONVERSATION_TZ = ZoneInfo("Europe/London")
+
+
+def _turn_time(turn: dict) -> datetime | None:
+    """Parse a saved turn's time; missing or invalid metadata has unknown age."""
+    raw = (turn or {}).get("created_at") or (turn or {}).get("at")
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        stamp = datetime.fromisoformat(raw.strip().replace("Z", "+00:00"))
+    except (ValueError, OverflowError):
+        return None
+    return stamp if stamp.tzinfo else stamp.replace(tzinfo=timezone.utc)
+
+
+def _label_conversations(out: list[dict], stamps: list[datetime | None]) -> list[dict]:
+    """Date each saved turn so windowing cannot detach it from its time.
+
+    Conversation starts use the gap heuristic; subsequent turns retain their
+    own time. Missing metadata never implies a turn belongs to this visit.
+    """
+    previous: datetime | None = None
+    for i, stamp in enumerate(stamps):
+        if stamp is None:
+            previous = None
+            continue
+        try:
+            when = stamp.astimezone(CONVERSATION_TZ)
+        except (ValueError, OverflowError):
+            previous = None
+            continue
+        if previous is None or stamp < previous or stamp - previous >= CONVERSATION_GAP:
+            head = f"[Conversation on {when:%A} {when.day} {when:%B %Y}, from {when:%H:%M}]\n"
+        else:
+            head = f"[Saved turn on {when:%A} {when.day} {when:%B %Y}, at {when:%H:%M}]\n"
+        out[i] = {**out[i], "content": head + out[i]["content"]}
+        previous = stamp
     return out
 
 
@@ -2568,7 +2618,19 @@ def build_business_prompt(*, business_name: str | None = None, today: str = "",
             "round. Never call a lookup with a guessed id or email — if you "
             "only have a name, search_contacts first.")
     sections.append(
-        "EARLIER TURNS. An earlier reply of yours may end with a bracketed "
+        "EARLIER TURNS. Available saved conversation turns may be supplied in "
+        "the message history. A heading '[Conversation on …, from …]' marks "
+        "a saved conversation boundary; '[Saved turn on …, at …]' dates another "
+        "saved turn. A heading applies only to its own turn. An unheaded turn "
+        "has no supplied date: do not infer that it is from this visit. Use "
+        "the available turns as your memory, comparing explicit dates with "
+        "today's date when asked when you last spoke. Do not claim no earlier "
+        "memory when earlier turns are present, or claim access to conversations "
+        "outside the supplied history. When none are supplied, say you have no "
+        "earlier conversation available here; when dates are missing, say you "
+        "cannot tell when it happened. Rule 5 "
+        "still decides what an unnamed reference points to. "
+        "An earlier reply of yours may end with a bracketed "
         "'[Lookups you ran for this reply: …]' note the system adds: that "
         "reply WAS checked against the records, so stand by it — never say "
         "you haven't looked anything up. When the note says what a lookup "

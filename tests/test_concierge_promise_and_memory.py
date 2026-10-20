@@ -154,6 +154,66 @@ def test_prompt_explains_the_note():
     assert "Never write such a note yourself" in p
 
 
+# ── restored conversations say when they happened ────────────────────────────
+# Live 2026-10-19 (rig, GPT-Live): with a 17 Oct exchange restored into its
+# history, "when was the last time we spoke" got "this is the start of our
+# conversation… each session starts fresh for me".
+def test_restored_conversations_are_headed_with_when_they_happened():
+    out = concierge.sanitize_history([
+        {"role": "user", "content": "Hi there", "created_at": "2026-10-17T10:33:27Z"},
+        {"role": "assistant", "content": "Hello.", "created_at": "2026-10-17T10:33:40Z"},
+        {"role": "user", "content": "When did we last speak?", "created_at": "2026-10-19T15:00:16+00:00"},
+        {"role": "assistant", "content": "On Saturday.", "created_at": "2026-10-19T15:00:30+00:00"},
+        {"role": "user", "content": "How many contacts?", "at": "2026-10-19T17:49:09Z"},
+        {"role": "assistant", "content": "Twenty."},
+        {"role": "user", "content": "Find Priya"},
+        {"role": "assistant", "content": "Found Priya Test."},
+    ], 16, 4000)
+    # Europe/London, as the prompt's date: 10:33 UTC is 11:33 BST.
+    assert out[0]["content"] == "[Conversation on Saturday 17 October 2026, from 11:33]\nHi there"
+    assert out[1]["content"].endswith("\nHello.")                          # same conversation
+    assert out[2]["content"].startswith("[Conversation on Monday 19 October 2026, from 16:00]\n")
+    assert out[4]["content"].startswith("[Conversation on Monday 19 October 2026, from 18:49]\n")
+    assert [t["content"] for t in out[5:]] == ["Twenty.", "Find Priya", "Found Priya Test."]
+
+
+def test_turns_without_a_usable_time_get_no_heading():
+    out = concierge.sanitize_history([
+        {"role": "user", "content": "a", "created_at": "not a time"},
+        {"role": "assistant", "content": "b", "at": None},
+        {"role": "user", "content": "c", "at": ""},
+        {"role": "assistant", "content": "d"},
+    ], 16, 4000)
+    assert [t["content"] for t in out] == ["a", "b", "c", "d"]
+
+
+def test_the_heading_survives_the_history_window():
+    turns = [{"role": "user" if i % 2 == 0 else "assistant", "content": str(i),
+              "created_at": f"2026-10-17T10:{i:02d}:00Z"} for i in range(10)]
+    out = concierge.sanitize_history(turns, 4, 4000)
+    # The conversation began before the window; its first kept turn says when.
+    assert out[0]["content"] == "[Conversation on Saturday 17 October 2026, from 11:06]\n6"
+    assert [t["content"].split("\n")[-1] for t in out[1:]] == ["7", "8", "9"]
+
+
+def test_prompt_treats_restored_conversations_as_memory():
+    for voice_mode in (False, True):
+        p = concierge.build_business_prompt(voice_mode=voice_mode)
+        assert "[Conversation on …, from …]" in p
+        assert "When none are supplied, say you have no " in p
+        assert "An unheaded turn has no supplied date" in p
+        assert "Rule 5 still decides what an unnamed reference points to" in p
+
+
+def test_the_page_sends_when_restored_turns_were_said():
+    from pathlib import Path
+    from app.concierge_routes import Turn
+    assert Turn(role="user", content="hi", at="2026-10-17T10:33:27Z").model_dump()["at"] == "2026-10-17T10:33:27Z"
+    js = (Path(__file__).resolve().parents[1] / "src/app/static/concierge_panel.js").read_text(encoding="utf-8")
+    assert "lookups: lookupsOf(m.trail), at: m.created_at || null" in js   # typed: restored turns
+    assert "lookups: m.lookups, at: m.at || null" in js                    # Standard voice: same shape
+
+
 # ── an interrupted question is abandoned ─────────────────────────────────────
 def test_a_question_cut_off_before_its_answer_is_marked_abandoned():
     """Live 2026-09-23 (iOS voice): "Can you tell me the invoices…" was
@@ -171,3 +231,38 @@ def test_a_question_cut_off_before_its_answer_is_marked_abandoned():
         {"role": "assistant", "content": "c"}], 16, 4000)
     assert mid[0]["content"].endswith(concierge.ABANDONED_NOTE)
     assert mid[1]["content"] == "b"
+
+
+@pytest.mark.parametrize("stamp", ["0001-01-01T00:00:00+14:00", "9999-12-31T23:59:59-12:00", "broken"])
+def test_timestamp_boundaries_do_not_break_history(stamp):
+    turns = [{"role": "user", "content": "Question", "at": stamp},
+             {"role": "assistant", "content": "Answer"}]
+    out = concierge.sanitize_history(turns, 16, 4000)
+    assert len(out) == 2 and out[0]["content"].endswith("Question")
+    assert out[1]["content"] == "Answer"
+
+
+def test_resanitizing_restored_history_does_not_repeat_dates():
+    out = concierge.sanitize_history([
+        {"role": "user", "content": "Question", "at": "2026-10-17T10:00:00Z"},
+        {"role": "assistant", "content": "Answer", "at": "2026-10-17T10:01:00Z"},
+    ], 16, 4000)
+    assert concierge.sanitize_history(out, 16, 4000) == out
+
+
+def test_saved_times_keep_order_across_unknown_and_backwards_metadata():
+    turns = [
+        {"role": "user", "content": "First", "at": "2026-10-25T01:30:00+00:00"},
+        {"role": "assistant", "content": "Second", "at": "2026-10-25T01:45:00"},
+        {"role": "user", "content": "Third", "at": "invalid"},
+        {"role": "assistant", "content": "Fourth", "at": "2026-10-25T01:50:00Z"},
+        {"role": "user", "content": "Fifth", "at": "2026-10-24T23:00:00Z"},
+        {"role": "assistant", "content": "Last"},
+    ]
+    out = concierge.sanitize_history(turns, 16, 100)
+    assert out[0]["content"].startswith("[Conversation on Sunday 25 October 2026, from 01:30]")
+    assert out[1]["content"].startswith("[Saved turn on Sunday 25 October 2026, at 01:45]")
+    assert out[2]["content"] == "Third"
+    assert out[3]["content"].startswith("[Conversation on Sunday 25 October 2026, from 01:50]")
+    assert out[4]["content"].startswith("[Conversation on Sunday 25 October 2026, from 00:00]")
+    assert out[5]["content"] == "Last"

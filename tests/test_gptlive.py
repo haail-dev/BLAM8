@@ -144,10 +144,25 @@ async def test_native_context_cutoff_is_applied_before_server_session_creation(u
     result = await live.create(live.Create(sdp="v=offer", voice_session=voice,
         context_from=datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)), unit)
     assert result["context"] == [
-        {"role": "user", "content": "Current question"},
-        {"role": "assistant", "content": "Current answer"},
+        {"role": "user", "content": "[Conversation on Wednesday 14 October 2026, from 13:00]\nCurrent question"},
+        {"role": "assistant", "content": "[Saved turn on Wednesday 14 October 2026, at 13:00]\nCurrent answer"},
     ]
-    await live.finish(live._sessions[result["session"]])
+    restored = live._sessions[result["session"]]
+    saved_context = [dict(t) for t in result["context"]]
+    calls = []
+    async def backend(ctx, question, history, turn, voice):
+        from app.concierge_routes import Turn
+        from app import concierge
+        history = concierge.sanitize_history([Turn(**t).model_dump() for t in history], 16, 4000)
+        calls.append((question, history))
+        return {"reply": "The available saved conversation was on Wednesday."}
+    monkeypatch.setattr(live, "run_backend", backend)
+    await live.handle_event(restored, fragment("When did we last speak?"), unit)
+    await live.handle_event(restored, delegation(), unit)
+    await asyncio.gather(*restored.jobs)
+    assert calls == [("When did we last speak?", saved_context)]
+    assert "earlier conversations" in live.config()["instructions"]
+    await live.finish(restored)
 
 
 def session():
