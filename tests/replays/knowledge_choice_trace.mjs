@@ -52,10 +52,15 @@ assert.equal(calls.at(-1),'Keep this note');assert(!c.log.some(m=>m.role==='user
 const overlap=cards().at(-1), overlapData=current;
 queued.push(data('note','two',{review_decision:receipt(overlapData,'keep_both'),patches:{match_match:'keep_both'}}));
 buttons(overlap)[0].click();await tick();chosen(overlap,'keep_both');chosen(card,'keep');
-// Natural typed answers and the public transcript/ask entry point both use send -> onboardTurn.
-const second=cards().at(-1), secondData=current;
+// A model proposal cannot paint approval; only the following exact typed action confirms it.
+let second=cards().at(-1), secondData=current;
+queued.push(data('note','two',{patches:{},save_ready:false}));
+c.input.value='keep that one';await c.send();
+assert(buttons(second).every(b=>b.getAttribute('aria-pressed')==='false'));
+assert(c.log.filter(m=>m.knowledge_card?.focus.id==='two').every(m=>!m.knowledge_card.selected));
+second=cards().at(-1);secondData=current;
 queued.push(data('passage','source',{review_decision:receipt(secondData,'keep'),patches:{action_two:'keep'}}));
-c.input.value='keep that one';await c.send();chosen(second,'keep');
+c.input.value='Keep this note';await c.send();chosen(second,'keep');
 const passage=cards().at(-1),passageData=current;
 queued.push(data('support','third',{review_decision:receipt(passageData,'retain'),patches:{source_source:'note:two'}}));
 c.openWith('keep that wording');await tick();chosen(passage,'retain');
@@ -75,7 +80,9 @@ const latest=cards().at(-1);
 queued.push(data('note','four',{review_decision:{...receipt(pendingData,'discard'),batch_id:'other'}}));c.input.value='leave it';await c.send();assert(buttons(latest).every(b=>b.getAttribute('aria-pressed')==='false'));
 queued.push(data('note','four',{review_decision:{...receipt(pendingData,'discard'),version:'v2'}}));c.input.value='leave it';await c.send();assert(buttons(latest).every(b=>b.getAttribute('aria-pressed')==='false'));
 // Opening the editor acknowledges editing, without applying/saving or selecting keep.
-const editing=cards().at(-1);buttons(editing).find(b=>b.getAttribute('data-knowledge-guide-choice')==='edit').click();chosen(editing,'edit');assert.equal(edits.at(-1),'four');assert.match(editing.querySelector('[data-knowledge-guide-status]').textContent,/not saved/);
+const editing=cards().at(-1);buttons(editing).find(b=>b.getAttribute('data-knowledge-guide-choice')==='edit').click();chosen(editing,'edit');assert.equal(edits.at(-1),'four');assert.match(editing.querySelector('[data-knowledge-guide-status]').textContent,/Editing.*not saved/);
+assert(!buttons(editing).find(b=>b.getAttribute('data-knowledge-guide-choice')==='keep').className.includes('emerald'));
+assert.equal(c.log.find(m=>m.knowledge_card?.state==='editing').knowledge_card.selected,'edit');
 // Restore the actual bounded transcript metadata with no executable stale actions.
 c.log=JSON.parse(saved);current=null;c.renderAll();
 chosen(cards()[0],'keep');chosen(cards()[1],'keep_both');assert(buttons(cards().at(-1)).every(b=>b.disabled));
