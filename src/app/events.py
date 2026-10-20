@@ -48,11 +48,12 @@ def publish(tenant_id: str, event: dict) -> None:
     # (src/app/inbox_labels.py) and the month ledger (the Inbox's history faces).
     # This is what keeps those caches honest: they hold only for as long as
     # nothing has happened.
-    for k in ("drafts", "inbox", "monthstats"):
-        navcache.invalidate("t:" + tenant_id + ":" + k)
-    # Belt and braces for the page-data caches (conversation list, bookings): the db client already
-    # drops them on every write, this also covers an event raised by a path with no write of its own.
-    navcache.bump_data(tenant_id)
+    if event.get('type') not in {'device_sync', 'concierge_message'}:
+        # Personal checkpoints and transcript segments do not change inbox data.
+        for k in ("drafts", "inbox", "monthstats"):
+            navcache.invalidate("t:" + tenant_id + ":" + k)
+        # Cover inbox events raised by a path with no write of its own.
+        navcache.bump_data(tenant_id)
     for q in _subscribers.get(tenant_id, set()).copy():
         try:
             q.put_nowait(event)

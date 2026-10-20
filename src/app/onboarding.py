@@ -38,7 +38,8 @@ from app.security import require_csrf
 from app.templating import templates
 from fastapi.concurrency import run_in_threadpool
 
-router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+from app.device_sync import SyncRoute
+router = APIRouter(prefix="/onboarding", tags=["onboarding"], route_class=SyncRoute)
 
 # Wizard step order (drives the progress bar). The live-data (system-of-record)
 # step came OFF the wizard 2026-08-02 (Julius: another step between them and the

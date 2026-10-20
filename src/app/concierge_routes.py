@@ -44,7 +44,10 @@ log = logging.getLogger(__name__)
 MAX_PUBLIC_ASK_BODY_BYTES = 512 * 1024
 
 
-class _BoundedPublicAskRoute(APIRoute):
+from app.device_sync import SyncRoute
+
+
+class _BoundedPublicAskRoute(SyncRoute):
     """Reject oversized anonymous chat bodies before FastAPI parses the JSON."""
 
     def get_route_handler(self):

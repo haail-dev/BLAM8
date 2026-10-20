@@ -1,5 +1,11 @@
 # Product knowledge and maintenance
 
+Cross-device onboarding and signed-in Assistant checkpoints are implemented
+behind the disabled `DEVICE_SYNC_ENABLED` rollout flag. A separate migration
+and release verification are required; see [device sync](operations/device-sync.md).
+Business Concierge history also refreshes on other devices without forcing app
+navigation. These source changes do not claim production enablement.
+
 This is the current source and maintenance contract. Implementation in a checkout
 is not proof of deployment, provider readiness or availability to a tenant.
 

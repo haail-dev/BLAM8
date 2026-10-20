@@ -66,7 +66,8 @@ def _page_prewarm(request: Request, ctx: TenantCtx = Depends(require_onboarded))
         _prewarm_ctx(ctx)
 
 
-router = APIRouter(prefix="/app", tags=["app"],
+from app.device_sync import SyncRoute
+router = APIRouter(prefix="/app", tags=["app"], route_class=SyncRoute,
                    dependencies=[Depends(require_subscription), Depends(_page_prewarm)])
 log = logging.getLogger(__name__)
 

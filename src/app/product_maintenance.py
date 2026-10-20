@@ -23,6 +23,12 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
 # Additional runtime sources associated with feature evidence but excluded from
 # the product catalogue so review metadata cannot change its serialized content.
 SOURCE_CAPABILITIES = {
+    'src/app/device_sync.py': 'product.help',
+    'src/app/static/device_sync.js': 'product.help',
+    'docs/operations/device-sync.md': 'product.help',
+    'src/app/db.py': 'owner.assistant',
+    'src/app/static/live.js': 'owner.assistant',
+    'src/app/events.py': 'owner.assistant',
     'src/app/model_routing.py': 'email',
     'src/app/llm.py': 'billing',
     'src/app/crm_extract.py': 'crm',

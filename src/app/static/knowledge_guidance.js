@@ -20,7 +20,7 @@
     var base=values(f), signature=JSON.stringify(base), key=f.dataset.knowledgeReview;
     busy=true; window.blam8KnowledgeImportBusy=true; ready();
     try {
-      var response=await fetch(f.action+'/guide', {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':f.elements.csrf_token.value},
+      var response=await (window.Blam8DeviceSync ? window.Blam8DeviceSync.request : fetch)(f.action+'/guide', {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':f.elements.csrf_token.value},
         body:JSON.stringify({form:base,question:question,focus_hash:focus && focus.key===key ? focus.hash : ''})});
       var data;
       try { data=await response.json(); }
@@ -66,6 +66,7 @@
     } finally { busy=false; window.blam8KnowledgeImportBusy=false; ready(); }
   }
   function maybeStart() {
+    if(window.Blam8DeviceSync && !window.Blam8DeviceSync.isReady()){window.Blam8DeviceSync.ready.then(maybeStart).catch(function(){});return;}
     var f=form();
     if(!f || busy || window.blam8KnowledgeImportBusy || !window.blam8KnowledgeGuideStart)return;
     var key=f.dataset.knowledgeReview;
@@ -74,6 +75,14 @@
     window.blam8KnowledgeGuideStart().then(function(ok){if(!ok)greeted=null;});
   }
   window.Blam8KnowledgeGuide={ask:ask,working:function(){return busy;},available:function(){return !!form();},
+    restore:function(saved){
+      if(!saved || !saved.review || !saved.data || !saved.data.focus_hash)return;
+      selected=saved.review;
+      var f=form();if(!f || f.dataset.knowledgeReview!==selected)return;
+      if(saved.version && saved.version!==f.elements.version.value)return;
+      greeted=selected;
+      focus={key:selected,hash:saved.data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!saved.data.save_ready};
+    },
     isCurrent:function(hash){var f=form();return !!(f && focus && focus.form===f && focus.hash===hash && focus.key===f.dataset.knowledgeReview && focus.signature===JSON.stringify(values(f)));},
     edit:function(hash,id){
       var f=form();

@@ -12,8 +12,8 @@
  *    "Your business" tab that used to live here moved there 2026-09-23.
  *  - Fix (transient, blam8ConciergeFix): diagnose one draft via /concierge/fix.
  *
- * Transcript lives in sessionStorage (per-tab, ephemeral) so it survives page
- * navigation.
+ * Signed-in transcripts use the shared workspace when enabled. Public and
+ * rollout-disabled transcripts use sessionStorage across page navigation.
  */
 (function () {
   "use strict";
@@ -22,6 +22,7 @@
   if (!root) return;
 
   var AUTHED = root.getAttribute("data-authed") === "true";
+  var deviceSync = AUTHED && window.Blam8DeviceSync;
   // Browser storage is per-BROWSER, not per-account. Live 2026-09-04: a second
   // tenant signed in on the same machine inherited the first's snooze stamps and
   // "setup done" flag, and the entire tuning walk-through never appeared. Every
@@ -246,10 +247,12 @@
 
   // ── transcript persistence ────────────────────────────────────────────────
   function loadLog() {
+    if (deviceSync) return [];
     try { return JSON.parse(sessionStorage.getItem(KEY_LOG)) || []; }
     catch (e) { return []; }
   }
   function saveLog(l) {
+    if (deviceSync && deviceSync.isReady() && !FIX_LOG_ID && !SCENARIO) deviceSync.transcript(l).catch(function () {});
     try { sessionStorage.setItem(KEY_LOG, JSON.stringify(l.slice(-MAX_TURNS * 2))); }
     catch (e) { /* private mode / quota — in-memory only */ }
   }
@@ -259,6 +262,7 @@
   function lastActivity() { return parseInt(sessionStorage.getItem(KEY_TS) || "0", 10) || 0; }
   function touch() { try { sessionStorage.setItem(KEY_TS, String(Date.now())); } catch (e) {} }
   function isStale() {
+    if (deviceSync) return false;
     return log.length > 0 && lastActivity() > 0 && (Date.now() - lastActivity()) > IDLE_MS;
   }
   function wipeStored() {
@@ -272,8 +276,9 @@
     } catch (e) {}
   }
   // Reset the thread to a fresh greeting — used by the header "clear" button and the
-  // idle-timeout. Nothing is stored server-side, so this is a pure local reset.
+  // idle-timeout. With device sync enabled, clear the shared transcript too.
   function clearThread() {
+    if (deviceSync && !FIX_LOG_ID && !SCENARIO) deviceSync.clear().catch(function () {});
     log.length = 0;
     setFixLogId(null);
     wipeStored();
@@ -450,6 +455,7 @@
       if (m.role === "assistant") appendTrailStrip(m.trail);
       var el = bubbleEl(m.role, m.content);
       msgs.appendChild(el);
+      if (m === log[log.length - 1] && m.guide) appendKnowledgeGuideActions(m.guide);
       if (m.role === "assistant") lastAssistant = el;
       if (m.role === "assistant" && m.links) {
         m.links.forEach(function (l) {
@@ -805,6 +811,8 @@
   // silent trigger — no fabricated user bubble, the assistant just asks.
   var KEY_ONB_AUTOASK = k("blam8_onb_autoask");
   function maybeOnbAutoAsk() {
+    if (deviceSync && !deviceSync.isReady()) { deviceSync.ready.then(maybeOnbAutoAsk).catch(function(){}); return; }
+    if (deviceSync && (deviceSync.state().payload.arrivals || []).indexOf('onboard:'+ONB_STEP)!==-1) return;
     if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return;
     var el = document.querySelector("[data-onb-autoask]");
     if (!el) return;
@@ -830,10 +838,12 @@
     // maybeSetupAutoAsk learned 2026-09-04): stamped up front, a turn lost to
     // a deploy restart left the owner with an apology and an interview that
     // could never start again this session (run #9, 2026-09-05).
+    if (deviceSync) deviceSync.automatic=true;
     onboardTurn(text, log.slice(-MAX_TURNS)).then(function (ok) {
+      if (deviceSync) deviceSync.automatic=false;
       sending = false; sendBtn.disabled = false;
       if (ok) { try { sessionStorage.setItem(KEY_ONB_AUTOASK, ONB_STEP); } catch (e) {} }
-    }, function () { sending = false; sendBtn.disabled = false; });
+    }, function () { if(deviceSync)deviceSync.automatic=false; sending = false; sendBtn.disabled = false; });
   }
 
   // The first walk of a page (tour.js) starts with the panel closed (Kris
@@ -941,12 +951,16 @@
   // the recommendation card. The assistant's reply lands in the log as
   // usual, so follow-up questions keep their context.
   async function askSilently(text) {
+    if (deviceSync) { await deviceSync.ready; if ((deviceSync.state().payload.arrivals || []).indexOf('help:'+location.pathname)!==-1) return false; }
     if (sending) return false;
     if (panel.classList.contains("hidden")) setOpen(true);
     sending = true; sendBtn.disabled = true;
     touch();
     showTyping();
-    var ok = await helpTurn(text, log.slice(-MAX_TURNS), true);
+    if(deviceSync)deviceSync.automatic=true;
+    var ok;
+    try { ok = await helpTurn(text, log.slice(-MAX_TURNS), true); }
+    finally { if(deviceSync)deviceSync.automatic=false; }
     sending = false; sendBtn.disabled = false;
     return ok;
   }
@@ -1329,11 +1343,13 @@
   // Network errors and 5xx retry once after a short pause; 4xx do not.
   async function postJsonWithRetry(url, body) {
     var attempt = 0;
+    var syncOperation = deviceSync ? crypto.randomUUID() : null;
     for (;;) {
       attempt++;
       try {
-        var res = await fetch(url, {
+        var res = await (deviceSync && !FIX_LOG_ID && !SCENARIO ? deviceSync.request : fetch)(url, {
           method: "POST",
+          syncOperation: syncOperation,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
@@ -1386,6 +1402,53 @@
     msgs.appendChild(wrap);
   }
 
+  function appendKnowledgeGuideActions(data) {
+    var knowledgeGuide = window.Blam8KnowledgeGuide;
+    if (data && data.focus_hash && knowledgeGuide) {
+      var choices = document.createElement("div");
+      choices.setAttribute("data-knowledge-guide-actions", "");
+      choices.className = "flex flex-wrap gap-2 px-1 py-2";
+      (data.guide_actions || data.actions || []).forEach(function (choice) {
+        var button = document.createElement("button"); button.type = "button";
+        button.setAttribute("data-knowledge-guide-choice", "");
+        button.className = "rounded-lg border border-brand px-3 py-2 text-sm text-brand";
+        button.textContent = choice.label;
+        button.addEventListener("click", function () {
+          if (sending) return;
+          if (!knowledgeGuide.isCurrent(data.focus_hash)) { input.value = "Show the current note"; send({ silentUser: true }); return; }
+          var group = choices;
+          pendingKnowledgeChoice = {group:group,selected:button,message:choice.message,
+            buttons:Array.from(group.querySelectorAll('[data-knowledge-guide-choice]'))};
+          input.value = choice.message; send({ silentUser: true });
+        });
+        choices.appendChild(button);
+      });
+      if (data.guide_save || data.save_ready) {
+        var save = document.createElement("button"); save.type = "button";
+        save.className = "rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white";
+        save.textContent = "Save reviewed decisions";
+        save.addEventListener("click", function () {
+          if (sending) return;
+          if (knowledgeGuide.isCurrent(data.focus_hash)) knowledgeGuide.save();
+          else { input.value = "Show the current note"; send(); }
+        });
+        choices.appendChild(save);
+      }
+      if (data.focus && data.focus.kind === "note" && knowledgeGuide) {
+        var edit = document.createElement("button"); edit.type = "button";
+        edit.className = "ml-auto inline-flex items-center gap-1 rounded-lg border border-brand px-3 py-2 text-sm text-brand hover:bg-brand-50";
+        edit.setAttribute("aria-label", "Edit this note before saving");
+        edit.textContent = "✎ Edit note";
+        edit.addEventListener("click", function () {
+          if (sending) return;
+          if (!knowledgeGuide.edit(data.focus_hash, data.focus.id)) { input.value = "Show the current note"; send(); }
+        });
+        choices.appendChild(edit);
+      }
+      msgs.appendChild(choices);
+    }
+  }
+
   async function onboardTurn(text, history) {
     var current = readCurrent();
     var reply, fill = {}, advance = false, notes = [], spoke = true, heldFor = [], reviewLink = null;
@@ -1419,56 +1482,15 @@
       }
     } catch (e) {
       spoke = false;
+      if (window.Blam8DeviceSync && window.Blam8DeviceSync.automatic) { hideTyping(); return false; }
       if (pendingKnowledgeChoice && pendingKnowledgeChoice.message === text) settleKnowledgeChoice(false);
       reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
-    log.push({ role: "assistant", content: reply }); saveLog(log);
+    log.push({ role: "assistant", content: reply, guide: data && data.focus_hash ? data : undefined }); saveLog(log);
     var replyEl = bubbleEl("assistant", reply);
     msgs.appendChild(replyEl);
-    if (data && data.focus_hash && knowledgeGuide) {
-      var choices = document.createElement("div");
-      choices.setAttribute("data-knowledge-guide-actions", "");
-      choices.className = "flex flex-wrap gap-2 px-1 py-2";
-      (data.guide_actions || []).forEach(function (choice) {
-        var button = document.createElement("button"); button.type = "button";
-        button.setAttribute("data-knowledge-guide-choice", "");
-        button.className = "rounded-lg border border-brand px-3 py-2 text-sm text-brand";
-        button.textContent = choice.label;
-        button.addEventListener("click", function () {
-          if (sending) return;
-          if (!knowledgeGuide.isCurrent(data.focus_hash)) { input.value = "Show the current note"; send({ silentUser: true }); return; }
-          var group = choices;
-          pendingKnowledgeChoice = {group:group,selected:button,message:choice.message,
-            buttons:Array.from(group.querySelectorAll('[data-knowledge-guide-choice]'))};
-          input.value = choice.message; send({ silentUser: true });
-        });
-        choices.appendChild(button);
-      });
-      if (data.guide_save) {
-        var save = document.createElement("button"); save.type = "button";
-        save.className = "rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white";
-        save.textContent = "Save reviewed decisions";
-        save.addEventListener("click", function () {
-          if (sending) return;
-          if (knowledgeGuide.isCurrent(data.focus_hash)) knowledgeGuide.save();
-          else { input.value = "Show the current note"; send(); }
-        });
-        choices.appendChild(save);
-      }
-      if (data.focus && data.focus.kind === "note" && knowledgeGuide) {
-        var edit = document.createElement("button"); edit.type = "button";
-        edit.className = "ml-auto inline-flex items-center gap-1 rounded-lg border border-brand px-3 py-2 text-sm text-brand hover:bg-brand-50";
-        edit.setAttribute("aria-label", "Edit this note before saving");
-        edit.textContent = "✎ Edit note";
-        edit.addEventListener("click", function () {
-          if (sending) return;
-          if (!knowledgeGuide.edit(data.focus_hash, data.focus.id)) { input.value = "Show the current note"; send(); }
-        });
-        choices.appendChild(edit);
-      }
-      msgs.appendChild(choices);
-    }
+    appendKnowledgeGuideActions(data);
     appendHeldLine(heldFor);
     applyFill(fill);
     if (reviewLink) {
@@ -2109,6 +2131,7 @@
   }
 
   async function send(options) {
+    if (deviceSync) { try { await deviceSync.ready; await deviceSync.flush(); } catch (_) { return; } }
     options = options || {};
     var silentUser = !!options.silentUser;
     var text = input.value.trim();
@@ -2764,8 +2787,9 @@
   window.blam8KnowledgeGuideStart = async function () {
     if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return false;
     sending = true; sendBtn.disabled = true; showTyping();
+    if(deviceSync)deviceSync.automatic=true;
     try { return await onboardTurn("", []); }
-    finally { sending = false; sendBtn.disabled = false; }
+    finally { if(deviceSync)deviceSync.automatic=false; sending = false; sendBtn.disabled = false; }
   };
 
   // Restore open state across navigation. On a setup step, open by default so the
@@ -2814,5 +2838,13 @@
   }
 
   // Expire an idle thread even while the tab just sits open.
+  if (deviceSync) deviceSync.register({
+    busy: function () { return sending || !!FIX_LOG_ID || SCENARIO; },
+    set: function (messages) {
+      if (FIX_LOG_ID || SCENARIO || JSON.stringify(log) === JSON.stringify(messages)) return;
+      log = messages.slice(-MAX_TURNS * 2);
+      renderAll();
+    }
+  });
   setInterval(function () { if (isStale()) clearThread(); }, 60 * 1000);
 })();

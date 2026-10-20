@@ -9,7 +9,7 @@ function between(start, end) {
   assert(at >= 0 && source.indexOf(end, at) > at);
   return source.slice(at, source.indexOf(end, at));
 }
-const turn = between('async function onboardTurn(', '// Node builder + appender');
+const turn = between('function appendKnowledgeGuideActions(', '// Node builder + appender');
 // The real turn reads this closure state even on a failed non-Knowledge turn.
 // Include the shipped declaration/helper rather than stubbing out its behaviour.
 const choices = between('var pendingKnowledgeChoice = null;', 'function appendHeldLine(');
@@ -25,6 +25,7 @@ for (const [step, held, fails] of [
     business_brief: 'Fictional/test-only online tuition for adults.',
     goals: 'Collect enquiries for human review; tutor schedules lessons.', website: 'example.test'};
   const context = vm.createContext({
+    window: {},
     ONB_STEP: step, log, String, Object, Array, Event: class {},
     document: {getElementById() { return null; }},
     fieldEls: name => elements[name] ? [elements[name]] : [], flash() {}, readCurrent: () => ({}),

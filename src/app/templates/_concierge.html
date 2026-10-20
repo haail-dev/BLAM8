@@ -3,11 +3,14 @@
    whether the visitor is logged in: public pages show the "Start setup" CTA when
    the concierge offers it; in-app it's suppressed (they're already a customer).
    Logic + transcript handling live in /static/concierge.js; the transcript is
-   kept in sessionStorage (per-tab, ephemeral) so it survives page navigation
-   without anything being stored server-side. #}
+   shared for signed-in accounts when device sync is enabled; otherwise kept
+   in sessionStorage across page navigation. #}
 {# Public assistant launcher: the animated BLAM8 mark sits in the bottom-right
    corner; opening it docks the chat to the right. Public site + onboarding only:
    the app hides it (base.html) and opens App help from the search box. #}
+{% if concierge_authed and device_sync_enabled() %}
+<script src="/static/device_sync.js?v={{ asset_rev }}"></script>
+{% endif %}
 <div id="blam8-concierge" data-pull-refresh="off"
      data-authed="{{ 'true' if concierge_authed else 'false' }}"
      {# Browser storage is per-BROWSER, not per-account: signing a second tenant

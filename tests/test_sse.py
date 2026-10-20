@@ -52,6 +52,19 @@ def test_published_events_arrive_as_named_frames():
     asyncio.run(run())
 
 
+def test_personal_sync_events_do_not_invalidate_unrelated_inbox_caches(monkeypatch):
+    invalidated = []
+    monkeypatch.setattr(events.navcache, 'invalidate', lambda key: invalidated.append(key))
+    monkeypatch.setattr(events.navcache, 'bump_data', lambda tenant: invalidated.append(tenant))
+    queue = events.attach('t1')
+    for kind in ('device_sync', 'concierge_message'):
+        events.publish('t1', {'type':kind})
+        assert queue.get_nowait()['type'] == kind
+    assert not invalidated
+    events.publish('t1', {'type':'draft_ready'})
+    assert invalidated
+
+
 def test_silence_yields_heartbeat_comments(monkeypatch):
     monkeypatch.setattr(sse, "_HEARTBEAT_SECONDS", 0.01)
 

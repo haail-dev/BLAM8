@@ -38,7 +38,7 @@
     window.dispatchEvent(new Event('blam8:onboarding-readiness'));
   }
   async function request(form, suffix, body) {
-    var response = await fetch(form.action + '/corrections' + suffix, {
+    var response = await (window.Blam8DeviceSync ? window.Blam8DeviceSync.request : fetch)(form.action + '/corrections' + suffix, {
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRF-Token': form.elements.csrf_token.value},
       body: JSON.stringify(body)
     });

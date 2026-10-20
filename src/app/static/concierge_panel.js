@@ -366,6 +366,18 @@
         }
       }).catch(function(){});
     }
+    var sharedHistoryReading=false;
+    function syncSharedHistory(){
+      if(sharedHistoryReading || !root.isConnected || document.visibilityState==='hidden' || busy ||
+          (root.getClientRects && !root.getClientRects().length) ||
+          (voiceLiveInstance && voiceLiveInstance.isOpen()))return;
+      sharedHistoryReading=true;
+      refreshHistory().finally(function(){sharedHistoryReading=false;});
+    }
+    window.addEventListener('blam8:device-sync',syncSharedHistory);
+    window.addEventListener('online',syncSharedHistory);
+    document.addEventListener('visibilitychange',syncSharedHistory);
+    setInterval(syncSharedHistory,3000);
     function linkRow(links) {
       var row = document.createElement('div');
       row.className = 'mt-2 -mb-1 flex flex-wrap gap-2 whitespace-normal';
