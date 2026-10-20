@@ -37,7 +37,8 @@
         var field=f.elements[name];
         if(!field && (name.indexOf('guided_unknown_')===0 || name.indexOf('guided_expand_')===0)){field=document.createElement('input');field.type='hidden';field.name=name;f.appendChild(field);}
         if(!field)throw new Error('The review controls changed. Check changes and overlaps before trying again.');
-        field.value=data.patches[name];
+        if(field.type==='checkbox')field.checked=data.patches[name]===field.value;
+        else field.value=data.patches[name];
         field.dispatchEvent(new Event('change',{bubbles:true}));
       });
       focus={key:key,hash:data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!data.save_ready};

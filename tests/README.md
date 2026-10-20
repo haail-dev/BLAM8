@@ -13,13 +13,21 @@ PostgreSQL binaries if they are not on PATH.
 
 - `test_*.py`: application behaviour and integration regressions.
 - `fixtures/`: synthetic test inputs and reviewed agnostic-guard records.
-- `replays/`: Node-based JavaScript replays with synthetic events and fake DOMs.
+- `replays/`: JavaScript fixtures for synthetic DOM replays and the native browser test.
 - `speech/`: separate speech worker protocol tests using fake models.
 - `agnostic_*.py` and other fixture helpers: shared test support.
 
-Node.js is needed for the JavaScript replays. No Playwright installation or
-browser screenshot pipeline is required. Speech protocol tests require the
-development dependencies, including NumPy; they download no speech models.
+Node.js is needed for the JavaScript replays. The native Knowledge form regression
+also requires Chromium/Chrome (available on the Ubuntu CI image). It discovers
+`google-chrome`, `google-chrome-stable`, `chromium` or `chromium-browser` on PATH,
+or a standard Windows Chrome installation. Set `BLAM8_TEST_CHROMIUM_BIN` to an
+explicit executable if needed; a missing browser fails rather than skipping.
+The test launches a separate headless process with a disposable profile and a
+30-second timeout, opens only a local fixture with network access blocked, and
+uses native DOM/FormData. Only its fetch response transport is substituted with
+backend-generated fixtures; this is not a live backend/browser E2E test. No
+Playwright installation or screenshot pipeline is required. Speech protocol tests
+require the development dependencies, including NumPy; they download no speech models.
 
 Test filenames stay stable because existing regression modules share fixtures
 and CI selects certain database tests explicitly. Keep new generated evidence
