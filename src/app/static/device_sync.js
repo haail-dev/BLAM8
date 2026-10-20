@@ -5,6 +5,7 @@
   if (window.Blam8DeviceSync) return;
   var states = {}, queue = Promise.resolve(), adapter = null, applying = false;
   var initialized = false, dirty = false, conflict = false, timer, polling = false;
+  var submissions = new WeakSet();
   var here = location.pathname, flow = here.indexOf('/onboarding/') === 0;
   var tuningPaths = ['/app/diary/settings','/app/diary/intake','/app/diary/dependants','/app/crm/settings','/app/invoices/settings'];
   var notice;
@@ -185,15 +186,23 @@
     var f=e.target;
     if (!flow || f.dataset.syncSubmitting==='1' || f.id==='bc-form' || f.method.toLowerCase()!=='post') return;
     e.preventDefault();e.stopImmediatePropagation();
+    if (submissions.has(f)) return;
+    submissions.add(f);
     var submitter=e.submitter;
     api.flush().then(function(){
+      // Native submission still owns its reentrancy guard during microtasks.
+      // Resume in a later task, after that original submit dispatch finishes.
+      return new Promise(function(resolve){setTimeout(resolve,0);});
+    }).then(function(){
       ['operation','revision','channel'].forEach(function(key){
         var el=f.elements['_sync_'+key];if(!el){el=document.createElement('input');el.type='hidden';el.name='_sync_'+key;f.appendChild(el);}
         el.value=key==='operation' ? uuid() : key==='revision' ? states.flow.revision : 'flow';
       });
       f.dataset.syncSubmitting='1';
-      f.requestSubmit(submitter);
-    }).catch(function(){warn('This action has not been submitted. Reconnect or reload the shared session first.');});
+      try { f.requestSubmit(submitter); }
+      finally { delete f.dataset.syncSubmitting; }
+    }).catch(function(){warn('This action has not been submitted. Reconnect or reload the shared session first.');})
+      .finally(function(){submissions.delete(f);});
   },true);
   document.addEventListener('click',function(e){
     var a=e.target.closest('a[href]');

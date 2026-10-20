@@ -29,6 +29,15 @@ backend-generated fixtures; this is not a live backend/browser E2E test. No
 Playwright installation or screenshot pipeline is required. Speech protocol tests
 require the development dependencies, including NumPy; they download no speech models.
 
+The mailbox submit regression additionally drives trusted Chromium mouse input
+through its loopback-only debugging endpoint with Node 22+ built-in fetch and
+WebSocket APIs. It renders the shipped backlog form and runs the production sync
+client, actual mailbox choice handler and disposable SQL replay protection. The
+mailbox persistence boundary records synthetic choices; existing database tests
+separately verify the mailbox choice RPC. It covers cancellation and native
+validation followed by retry. Isolated profiles and bounded subprocess timeouts
+apply; no Python network exception, new package or browser profile is required.
+
 Test filenames stay stable because existing regression modules share fixtures
 and CI selects certain database tests explicitly. Keep new generated evidence
 under `.cache/`, not beside test source.
