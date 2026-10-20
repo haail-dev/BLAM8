@@ -3,6 +3,8 @@
 Run: python -m pytest tests/test_run10_findings.py -q
 """
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 from fastapi.testclient import TestClient
@@ -237,7 +239,10 @@ def test_the_help_route_and_widget_carry_path_and_auto():
     assert "on_pages=setup_held.pages_for_path(body.path)" in py
     js = _read("src/app/static/concierge.js")
     assert "path: window.location.pathname, auto: !!auto" in js
-    assert "var ok = await helpTurn(text, log.slice(-MAX_TURNS), true);" in js
+    node = shutil.which("node")
+    assert node, "Node.js is required to replay the Help widget"
+    subprocess.run([node, "tests/replays/help_autoask_replay.mjs"], cwd=ROOT,
+                   check=True, capture_output=True, text=True, timeout=15)
 
 
 def test_the_invoice_step_never_promises_a_card_it_cannot_carry():
