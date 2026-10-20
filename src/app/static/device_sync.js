@@ -75,6 +75,7 @@
       if(old && data.refresh && data.refresh!==old.payload.refresh){location.reload();return;}
       restore(data.form || {});
       if (window.Blam8KnowledgeGuide && data.guide) window.Blam8KnowledgeGuide.restore(data.guide);
+      window.dispatchEvent(new Event('blam8:onboarding-readiness'));
     }
     if (adapter && name===channel() && !adapter.busy()) adapter.set(data.messages || []);
   }
@@ -126,7 +127,8 @@
   }
   var api=window.Blam8DeviceSync={
     ready:null,
-    isReady:function(){return initialized && !conflict;},
+    isReady:function(){return initialized && !conflict && !applying;},
+    isRestoring:function(){return applying;},
     isFlow:function(){return flow;},
     state:function(){return states[channel()] || {payload:{},revision:0};},
     register:function(a){adapter=a;api.ready.then(function(){a.set(api.state().payload.messages || []);});},
@@ -170,13 +172,15 @@
       }
     }
     // Navigation within a free app never subscribes to forced setup routing.
-    initialized=true;
     apply(name,Object.assign({},state,{revision:state.revision}));
     if (flow) {
       var data=state.payload;
       if (data.path && data.path!==here) location.replace(data.path);
       else { restore(data.form || {}); if(window.Blam8KnowledgeGuide && data.guide)window.Blam8KnowledgeGuide.restore(data.guide); }
     }
+    // Input/change listeners must not start a guide from a partially hydrated form.
+    initialized=true;
+    window.dispatchEvent(new Event('blam8:onboarding-readiness'));
     return state;
   })();
   api.ready.catch(function(){warn('Shared session unavailable. Reconnect before continuing on this device.');});

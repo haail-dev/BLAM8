@@ -36,6 +36,13 @@ backend-generated fixtures; this is not a live backend/browser E2E test. No
 Playwright installation or screenshot pipeline is required. Speech protocol tests
 require the development dependencies, including NumPy; they download no speech models.
 
+`test_knowledge_sync_startup_browser.py` serves a rendered Knowledge page only
+on an ephemeral loopback listener, runs the full production Concierge, guide and
+sync controllers in an isolated Chromium profile, and substitutes response
+transport. Native timers must remain live after fixture HTTP409 responses; restored
+source/overlap choices and the current unapproved note are checked with FormData.
+Separate route/disposable-SQL tests verify automatic-view replay identity.
+
 The mailbox submit regression additionally drives trusted Chromium mouse input
 through its loopback-only debugging endpoint with Node 22+ built-in fetch and
 WebSocket APIs. It renders the shipped backlog form and runs the production sync

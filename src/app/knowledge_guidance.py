@@ -182,7 +182,7 @@ def present(context, row, form, *, receipt=''):
     actions = []
     if kind == 'note':
         text = f"Note {item['position']} of {item['total']}: {item['label']}\n\n{item['content']}\n\nDoes this look right? You can keep it, leave it out, or tell me what needs correcting."
-        actions = [('Keep this note', 'Keep this note'), ('Leave this note out', 'Discard this note')]
+        actions = [('Keep note', 'Keep this note'), ('Leave out', 'Discard this note')]
     elif kind == 'support':
         text = (f"For {item['label']}, these {len(item['passages'])} suggested source passage(s) are not repeated exactly in the draft:\n\n"
                 + '\n\n'.join(p['text'] for p in item['passages']) + '\n\n'

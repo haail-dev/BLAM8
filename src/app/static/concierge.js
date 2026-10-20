@@ -813,8 +813,12 @@
   // side from the coverage), and the panel sends it once per session as a
   // silent trigger — no fabricated user bubble, the assistant just asks.
   var KEY_ONB_AUTOASK = k("blam8_onb_autoask");
+  var onbReadinessWaited = false;
   function maybeOnbAutoAsk() {
-    if (deviceSync && !deviceSync.isReady()) { deviceSync.ready.then(maybeOnbAutoAsk).catch(function(){}); return; }
+    if (deviceSync && !deviceSync.isReady()) {
+      if (!onbReadinessWaited) { onbReadinessWaited=true; deviceSync.ready.then(function(){if(deviceSync.isReady())maybeOnbAutoAsk();}).catch(function(){}); }
+      return;
+    }
     if (deviceSync && (deviceSync.state().payload.arrivals || []).indexOf('onboard:'+ONB_STEP)!==-1) return;
     if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return;
     var el = document.querySelector("[data-onb-autoask]");
@@ -1430,7 +1434,7 @@
       var button = document.createElement('button'); button.type = 'button';
       button.setAttribute('data-knowledge-guide-choice', choice.action);
       button.textContent = choice.label;
-      if (choice.action === 'edit') button.setAttribute('aria-label', 'Edit this note before saving');
+      if (choice.action === 'edit') button.setAttribute('aria-label', 'Edit');
       button.addEventListener('click', function () {
         if (sending || !live || card.selected) return;
         if (!knowledgeCardCurrent(card)) { input.value = 'Show the current note'; send({silentUser:true}); return; }
@@ -1446,7 +1450,7 @@
       group.appendChild(button);
     }
     card.actions.forEach(addChoice);
-    if (card.focus.kind === 'note') addChoice({action:'edit',label:'✎ Edit note'});
+    if (card.focus.kind === 'note') addChoice({action:'edit',label:'Edit'});
     if (card.save && live) {
       var save = document.createElement('button'); save.type = 'button';
       save.className = 'rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white';

@@ -355,6 +355,15 @@ class SyncRoute(APIRoute):
                     + ":"
                     + str((body.get("form") or {}).get("version"))
                 )
+                if request.url.path.endswith("/guide"):
+                    # A read-only arrival must reflect the restored review,
+                    # rather than replay the first note for its entire version.
+                    guide_identity = {"form": body.get("form") or {}}
+                    if str(body.get("question") or "").strip():
+                        guide_identity.update(question=body.get("question"), focus_hash=body.get("focus_hash"))
+                    arrival += ":" + hashlib.sha256(
+                        json.dumps(guide_identity, sort_keys=True, separators=(",", ":")).encode()
+                    ).hexdigest()
                 key = arrival
                 operation = uuid5(NAMESPACE_URL, f"{ctx.tenant_id}:{ctx.user_id}:{key}")
                 digest = hashlib.sha256(key.encode()).hexdigest()

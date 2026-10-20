@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   var selected = null, focus = null, busy = false, greeted = null, sourceWorking = function(){return false;};
+  var readinessWaited = false;
   function forms() { return Array.from(document.querySelectorAll('[data-knowledge-review]')).filter(function(f){return f.dataset.reviewClosed!=='1';}); }
   function form() {
     var all = forms();
@@ -80,7 +81,14 @@
     } finally { busy=false; window.blam8KnowledgeImportBusy=false; ready(); }
   }
   function maybeStart() {
-    if(window.Blam8DeviceSync && !window.Blam8DeviceSync.isReady()){window.Blam8DeviceSync.ready.then(maybeStart).catch(function(){});return;}
+    var sync=window.Blam8DeviceSync;
+    if(sync && sync.isRestoring && sync.isRestoring())return;
+    if(sync && !sync.isReady()){
+      // ready may already be resolved when a later revision conflict occurs.
+      // Await initialization once; terminal conflicts must never spin or retry.
+      if(!readinessWaited){readinessWaited=true;sync.ready.then(function(){if(sync.isReady())maybeStart();}).catch(function(){});}
+      return;
+    }
     var f=form();
     if(!f || busy || window.blam8KnowledgeImportBusy || !window.blam8KnowledgeGuideStart)return;
     var key=f.dataset.knowledgeReview;
@@ -94,7 +102,8 @@
       selected=saved.review;
       var f=form();if(!f || f.dataset.knowledgeReview!==selected)return;
       if(saved.version && saved.version!==f.elements.version.value)return;
-      greeted=selected;
+      // A persisted focus is a hint. Fresh pages derive the current decision
+      // once from the fully restored form instead of replaying stale approval.
       focus={key:selected,version:saved.version,hash:saved.data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!saved.data.save_ready};
     },
     isCurrent:function(hash,batch,version){var f=form();return !!(f && focus && focus.form===f && focus.hash===hash && (batch===undefined || batch===focus.key) && (version===undefined || version===focus.version) && focus.key===f.dataset.knowledgeReview && focus.signature===JSON.stringify(values(f)));},
