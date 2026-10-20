@@ -77,6 +77,21 @@ are always recomputed live — the table is a convenience, writes are
 best-effort and never block an answer. Migration:
 `scripts/db/migrations/apply_concierge_business_migration.py` (applied to prod 2026-07-25).
 
+Restored backend turns retain their time: saved rows use `created_at`; typed
+chat and Standard voice send it as `at`. Each dated turn receives its own
+Europe/London heading. A gap of at least two hours, a backward timestamp or
+an unknown timestamp starts a new group; this is a grouping heuristic, not a
+claim of full session records. Unheaded turns have unknown age. The prompt uses
+only available history and admits absent memory or dates. Rule 5 still binds
+an unnamed reference to the previous exchange only.
+
+Typed and Standard voice retain the existing three-hour, sixteen-turn window.
+They wait up to five seconds for initial restoration before proceeding without
+history. GPT-Live restores up to twenty-four backend turns for this requester,
+respecting New task, and delegates earlier-conversation questions to that context.
+Provisional native transcript segments remain excluded; full native conversation
+recall and live model wording are not verified by offline tests.
+
 ## Phase 2 — actions with confirmation (BUILT 2026-07-26)
 
 The concierge may now PROPOSE six actions; nothing runs without the operator's

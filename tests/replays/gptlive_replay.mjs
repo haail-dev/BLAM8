@@ -120,9 +120,9 @@ for(const mode of ['interrupt','cancelled','too_late','failed','reopened']) {
 const panel=fs.readFileSync('src/app/static/concierge_panel.js','utf8').replace(/\r\n/g,'\n');
 const inner='async function openVoiceLiveInner(opts) {'+panel.split('    async function openVoiceLiveInner(opts) {')[1].split('    // ── the composer')[0];
 const rewritten=inner.replace(/await (?:openingDeadline|moduleDeadline)\(import\([^;]+\)\)/,'await loadModule(requestedMode)');
-function panelRig() {
+function panelRig(mode = "gptlive") {
   const module=deferred();let created=0,opened=0;
-  const c={voiceLiveInstance:null,voiceInstances:{},voiceModeGeneration:0,historyLifecycle:0,historyReadGeneration:0,savedVoiceMode:()=> 'gptlive',
+  const c={historyReady:Promise.resolve(),voiceLiveInstance:null,voiceInstances:{},voiceModeGeneration:0,historyLifecycle:0,historyReadGeneration:0,savedVoiceMode:()=> mode,
     timing(){},releasePreMic(){},document:{querySelector:()=>null},loadModule:()=>module.promise,
     voiceUserTurn(){},voiceAssistantTurn(){},voiceDiscardTurn(){},voiceGreeting(){},voiceRenderStage(){},mountBadge(){},loadWaiting(){},openSettingsFromVoice(){},
     module,create:()=>{created++;return {open(){opened++;}};}};
@@ -141,6 +141,29 @@ function panelRig() {
 {
   const r=panelRig(),a=r.c.openVoiceLiveInner();r.c.voiceModeGeneration++;
   r.module.resolve({createVoiceLive:r.c.create});await a;assert.equal(r.created,0);
+}
+// Standard voice waits for restored context; changing mode during that wait
+// prevents an obsolete voice instance from opening.
+{
+  const r=panelRig('standard'),history=deferred();let loads=0;
+  r.c.historyReady=history.promise;
+  r.c.loadModule=()=>{loads++;return r.module.promise;};
+  const opening=r.c.openVoiceLiveInner();
+  await Promise.resolve();assert.equal(loads,0);
+  r.c.voiceModeGeneration++;
+  history.resolve();await opening;
+  assert.equal(loads,0);assert.equal(r.opened,0);
+}
+{
+  const r=panelRig('standard'),history=deferred();let loads=0;
+  r.c.historyReady=history.promise;
+  r.c.loadModule=()=>{loads++;return r.module.promise;};
+  const opening=r.c.openVoiceLiveInner();
+  await Promise.resolve();assert.equal(loads,0);
+  history.resolve();await Promise.resolve();await Promise.resolve();
+  assert.equal(loads,1);
+  r.module.resolve({createVoiceLive:r.c.create});await opening;
+  assert.equal(r.opened,1);
 }
 // Preference is per authenticated user/device and defaults to GPT-Live when available.
 const preference='function savedVoiceMode() {'+panel.split('    function savedVoiceMode() {')[1].split('    root.querySelectorAll')[0];

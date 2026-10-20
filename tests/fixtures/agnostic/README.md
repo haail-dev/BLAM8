@@ -261,3 +261,16 @@ refresh changed the embedded Help catalogue's `content_version` and
 reviewed ownership-move export; those two version fields are the only changed
 values. The platform-help render fingerprint now records that final request.
 Selected articles, prompt text, permissions, actions and schema are unchanged.
+
+
+## Bounded saved conversation memory — 20 October 2026
+
+Reviewed all nine complete Concierge request exports (typed, voice, questions,
+task, corrective nudge and four route variants). Replacing only the EARLIER
+TURNS clause with its main-branch text reproduces each previous fingerprint
+exactly. The new clause limits memory claims to supplied history, dates each
+headed turn independently and admits absent history or unknown dates. No
+business defaults, tools, permissions, schemas or lexical debt changed. Native
+voice delegation is separately exercised through session creation and a real
+transcript/delegation event pair. Offline mocks verify requests and routing,
+not live model wording or complete native conversation recall.
