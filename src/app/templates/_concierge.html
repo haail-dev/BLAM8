@@ -266,6 +266,6 @@
 <link rel="stylesheet" href="/static/concierge_busy.css?v={{ asset_rev }}">
 <script src="/static/setup_cards.js?v={{ asset_rev }}" defer></script>
 <script src="/static/concierge.js?v={{ asset_rev }}" defer></script>
-{% if landing_glass_logo %}
+{% if landing_glass_logo and not public_glass_header %}
 <script src="/static/assistant-glass-logo.js?v={{ asset_rev }}" defer></script>
 {% endif %}

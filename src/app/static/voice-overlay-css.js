@@ -13,7 +13,6 @@ export const OVERLAY_CSS = `
   position: absolute; top: max(.9rem, env(safe-area-inset-top)); left: max(1rem, env(safe-area-inset-left));
   z-index: 7; display: flex; align-items: center; gap: .5rem;
 }
-#voice-live-root .vl-brand { display: block; width: 2.75rem; height: 2.75rem; object-fit: contain; }
 #voice-live-root .vl-corner > .cz-voice-settings { position: static; }
 #voice-live-root .vl-toasts {
   position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 0; right: 0;
