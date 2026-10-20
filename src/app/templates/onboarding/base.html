@@ -32,11 +32,20 @@
        the wizard card can size naturally within it. */
     header[data-bc-full-width] { padding-left: .5rem; padding-right: .5rem; }
     @media (min-width: 768px) {
-      /* Match the dock's 1rem outside gutter above it, below the 3rem bar.
-         The bottom gutter stays 1rem; include the installed-app safe area. */
-      #blam8-concierge #bc-panel {
-        height: calc(100vh - 5rem - env(safe-area-inset-top, 0px)) !important;
-        max-height: calc(100vh - 5rem - env(safe-area-inset-top, 0px)) !important;
+      body[data-onboarding-shell] { --onboarding-gutter:10px; --onboarding-chat-width:22rem; }
+      /* Override the shared dock's single body reserve, never add a second one. */
+      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) { padding-right:calc(var(--onboarding-chat-width) + var(--onboarding-gutter)) !important; }
+      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-bc-full-width] { margin-right:calc(-1 * (var(--onboarding-chat-width) + var(--onboarding-gutter))) !important; }
+      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-onboarding-main] { padding-left:var(--onboarding-gutter);padding-right:var(--onboarding-gutter);padding-top:var(--onboarding-gutter); }
+      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-onboarding-column] { max-width:none; }
+      body[data-onboarding-shell] #blam8-concierge #bc-panel {
+        position:fixed;
+        top:calc(3rem + env(safe-area-inset-top, 0px) + var(--onboarding-gutter));
+        right:var(--onboarding-gutter);
+        bottom:var(--onboarding-gutter);
+        width:var(--onboarding-chat-width);
+        height:calc(100dvh - 3rem - env(safe-area-inset-top, 0px) - 2 * var(--onboarding-gutter)) !important;
+        max-height:calc(100dvh - 3rem - env(safe-area-inset-top, 0px) - 2 * var(--onboarding-gutter)) !important;
       }
     }
     .onboarding-stepper-row { display: grid; grid-template-columns: repeat(var(--stepper-count), minmax(0, 1fr)); height: 3rem; }
@@ -60,7 +69,7 @@
     @media(prefers-reduced-motion:reduce) { .onboarding-drum > span { transition:none; } }
   </style>
 </head>
-<body class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<body data-onboarding-shell class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
 <div class="min-h-full flex flex-col">
   {# The shared assistant dock keeps this bar and its contents viewport-wide;
      only the wizard below reserves space when the assistant opens. #}
@@ -81,8 +90,8 @@
     </div>
   </header>
 
-  <main class="flex-1 flex items-start justify-center px-4 pt-2.5 pb-10">
-    <div class="w-full max-w-2xl">
+  <main data-onboarding-main class="flex-1 flex items-start justify-center px-4 pt-2.5 pb-10">
+    <div data-onboarding-column class="w-full max-w-2xl">
       {% set labels = {'interview':'About you','mailbox':'Customer inbox','voice':'Voice','knowledge':'Knowledge','data':'Live data'} %}
       {# One flow of nine (Kris 2026-09-13): the wizard's four, then the five
          tuning steps inside the app greyed as upcoming â€” the same nine the app
