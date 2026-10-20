@@ -688,11 +688,11 @@
       }
     },
     "owner.assistant": {
-      "signature": "1d408317095b2aa8cbb1d67546ed21a9823ddd722f11ac8a7f586fd2df6bc0ab",
+      "signature": "5cde5127919e087b9d2f9249eedc2d0ab047421f3d56eb6461b332c4cd9f1adf",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
+          "reason": "Owner assistance, voice and confirmed actions: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps Settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "src/app/templates/capabilities.html",
             "src/app/product_guides.py",
@@ -709,12 +709,14 @@
             "tests/test_voice_pond.py",
             "tests/test_glass_core.py",
             "tests/replays/glass_visibility_replay.mjs",
-            "docs/operations/concierge-live-shortcut.md"
+            "docs/operations/concierge-live-shortcut.md",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "/help": {
           "disposition": "generated",
-          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
+          "reason": "Owner assistance, voice and confirmed actions: the hub and article pages use shared canonical content; package and progress instructions are included, and unrestricted availability is not inferred. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps Settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "src/app/help_center.py",
             "src/app/platform_content.py",
@@ -732,12 +734,14 @@
             "tests/test_voice_pond.py",
             "tests/test_glass_core.py",
             "tests/replays/glass_visibility_replay.mjs",
-            "docs/operations/concierge-live-shortcut.md"
+            "docs/operations/concierge-live-shortcut.md",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "agent:owner.assistant": {
           "disposition": "reviewed_unchanged",
-          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
+          "reason": "Owner assistance, voice and confirmed actions: the current authored guide is returned with a complete index and separate availability state; discovery performs no work. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps Settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "src/app/product_guides.py",
             "tests/test_platform_help.py",
@@ -756,12 +760,14 @@
             "tests/test_voice_pond.py",
             "tests/test_glass_core.py",
             "tests/replays/glass_visibility_replay.mjs",
-            "docs/operations/concierge-live-shortcut.md"
+            "docs/operations/concierge-live-shortcut.md",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
+          "reason": "Owner assistance, voice and confirmed actions: the maintained reference explains source ownership, release qualifications, version preparation and the required change checks. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. Owner assistance, voice and confirmed actions: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps Settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/product-knowledge.md",
             "src/app/product_inventory.py",
@@ -780,12 +786,14 @@
             "tests/test_voice_pond.py",
             "tests/test_glass_core.py",
             "tests/replays/glass_visibility_replay.mjs",
-            "docs/operations/concierge-live-shortcut.md"
+            "docs/operations/concierge-live-shortcut.md",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/verified-behaviours.md": {
           "disposition": "updated",
-          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps the corner brand and settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated.",
+          "reason": "Owner assistance, voice and confirmed actions: the new product-knowledge section qualifies offline proof separately from existing behaviour and rollout evidence; no live enablement is claimed. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. Recorded Goals are now explicit context only; prompt guidance is not a new action restriction, sending control or applied setting. GPT-Live visual interaction update: voice-page waves still originate at the orb, while the right pager page uses perimeter sources directed inward and a centered BLAM8 mark reflects the existing voice states. This changes no capability, permission, confirmed action, or commercial claim. Visual regression repair restores the central mist visibility, keeps Settings visible, and maintains audio sampling on the adjacent page. Product guidance and permissions remain unchanged; the device acceptance checklist is updated. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/verified-behaviours.md",
             "tests/test_platform_capabilities.py",
@@ -802,17 +810,19 @@
             "tests/test_voice_pond.py",
             "tests/test_glass_core.py",
             "tests/replays/glass_visibility_replay.mjs",
-            "docs/operations/concierge-live-shortcut.md"
+            "docs/operations/concierge-live-shortcut.md",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         }
       }
     },
     "product.help": {
-      "signature": "161a72aaec4441b67dad1ac5d31395af52bc1a94b7e5eb5e67be8cd3c2ec02ff",
+      "signature": "afa623106fd86cc84964ba0e5c3b79a8e0eb96743fc0fe57590d52e625b3b24e",
       "surfaces": {
         "/help": {
           "disposition": "reviewed_unchanged",
-          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: /help. UI review: Help discovery and permissions are unchanged; the active-operation wait now has a readable reduced-motion-aware shine and onboarding reuses the approved glass logo. Header/notice correction: Help content and access remain unchanged; the shared Assistant header now uses the coloured glass still and footer notices share the existing shine. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Help routes, authored guidance and investigation access are unchanged. Reviewed PR22 shared chat rendering: silent local Keep/Leave and Edit note do not add a product-help writer.",
+          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: /help. UI review: Help discovery and permissions are unchanged; the active-operation wait now has a readable reduced-motion-aware shine and onboarding reuses the approved glass logo. Header/notice correction: Help content and access remain unchanged; the shared Assistant header now uses the coloured glass still and footer notices share the existing shine. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Help routes, authored guidance and investigation access are unchanged. Reviewed PR22 shared chat rendering: silent local Keep/Leave and Edit note do not add a product-help writer. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -842,12 +852,13 @@
             "docs/architecture/knowledge-concierge-guidance.md",
             "tests/test_knowledge_review_presentation.py",
             "tests/replays/onboarding_journey_replay.mjs",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "/pages": {
           "disposition": "reviewed_unchanged",
-          "reason": "Page discovery now lists People settings and preserves the separate Diary and Booking Requirements setup steps. Reviewed the route inventory and its focused page-index regression; no new public capability, action permission or availability claim is introduced.",
+          "reason": "Page discovery now lists People settings and preserves the separate Diary and Booking Requirements setup steps. Reviewed the route inventory and its focused page-index regression; no new public capability, action permission or availability claim is introduced. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/architecture/knowledge-concierge-guidance.md",
             "docs/modules/module-concierge.md",
@@ -880,12 +891,13 @@
             "tests/test_onboarding_journey.py",
             "tests/test_owner_goals_context.py",
             "tests/test_pages_index.py",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "agent:product.help": {
           "disposition": "reviewed_unchanged",
-          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: agent:product.help. UI review: Reviewed the combined note guide and busy state: only existing application busy state selects animation, while pending decisions remain static and final submission remains explicit. Header/notice correction: Notice wording and application readiness are unchanged. Validation and pending-review notices now shine without claiming work; only real work retains the busy marker. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Shared chat now renders Knowledge Keep/Leave choices without user transcript echoes and opens the matching editable note. Other help actions, permission checks and readiness checks remain intact. Diary booking-mode recommendations now normalize to Diary settings; legacy pending Booking Requirements cards remain supported and departure-question suppression is preserved. No onboarding completion or settings permission is added by this assistant mapping.",
+          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: agent:product.help. UI review: Reviewed the combined note guide and busy state: only existing application busy state selects animation, while pending decisions remain static and final submission remains explicit. Header/notice correction: Notice wording and application readiness are unchanged. Validation and pending-review notices now shine without claiming work; only real work retains the busy marker. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Shared chat now renders Knowledge Keep/Leave choices without user transcript echoes and opens the matching editable note. Other help actions, permission checks and readiness checks remain intact. Diary booking-mode recommendations now normalize to Diary settings; legacy pending Booking Requirements cards remain supported and departure-question suppression is preserved. No onboarding completion or settings permission is added by this assistant mapping. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
@@ -912,12 +924,13 @@
             "tests/replays/onboarding_journey_replay.mjs",
             "docs/operations/knowledge-source-review.md",
             "docs/modules/module-concierge.md",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/product-knowledge.md. UI review: Source ownership and capability claims remain accurate; the presentation introduces no writer, entitlement or public price change. Header/notice correction: The source and capability contract remains accurate; these logo and notice changes add no features, permissions or writers. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: The source-bound maintenance contract remains accurate for PR22 shared chat presentation and run6 pending review improvements. No new feature entitlement, action authority or public commercial claim is added.",
+          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/product-knowledge.md. UI review: Source ownership and capability claims remain accurate; the presentation introduces no writer, entitlement or public price change. Header/notice correction: The source and capability contract remains accurate; these logo and notice changes add no features, permissions or writers. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: The source-bound maintenance contract remains accurate for PR22 shared chat presentation and run6 pending review improvements. No new feature entitlement, action authority or public commercial claim is added. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/modules/module-concierge.md",
             "docs/onboarding-interview-capture.md",
@@ -947,12 +960,13 @@
             "docs/architecture/knowledge-concierge-guidance.md",
             "tests/test_knowledge_review_presentation.py",
             "tests/replays/onboarding_journey_replay.mjs",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/onboarding-journey.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/onboarding-journey.md. UI review: Existing readiness events, required form validation and explicit-click navigation remain intact; the busy blocker only selects presentation. Header/notice correction: Required fields, pending-note blockers, explicit continuation and readiness events remain unchanged; only their notice presentation is shared. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: The existing journey reads the real action disabled state and busy flag. Website reading now also disables and labels the page Next action; source/navigation guards and explicit pending choices still apply.",
+          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/onboarding-journey.md. UI review: Existing readiness events, required form validation and explicit-click navigation remain intact; the busy blocker only selects presentation. Header/notice correction: Required fields, pending-note blockers, explicit continuation and readiness events remain unchanged; only their notice presentation is shared. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: The existing journey reads the real action disabled state and busy flag. Website reading now also disables and labels the page Next action; source/navigation guards and explicit pending choices still apply. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/onboarding-journey.md",
             "tests/test_onboarding_journey.py",
@@ -974,12 +988,13 @@
             "tests/replays/onboarding_journey_replay.mjs",
             "docs/operations/knowledge-source-review.md",
             "docs/modules/module-concierge.md",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/onboarding-goals-context.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/onboarding-goals-context.md. UI review: Goals remain descriptive context; logo and review presentation add no inferred settings or execution restrictions. Header/notice correction: Goals remain descriptive context; logo and notice styling do not change captured facts, settings or execution controls. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Goals remain descriptive context. Knowledge Edit and silent review choices do not modify captured goals, business settings or execution authority.",
+          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/onboarding-goals-context.md. UI review: Goals remain descriptive context; logo and review presentation add no inferred settings or execution restrictions. Header/notice correction: Goals remain descriptive context; logo and notice styling do not change captured facts, settings or execution controls. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Goals remain descriptive context. Knowledge Edit and silent review choices do not modify captured goals, business settings or execution authority. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/onboarding-goals-context.md",
             "tests/test_owner_goals_context.py",
@@ -996,12 +1011,13 @@
             "docs/operations/knowledge-source-review.md",
             "docs/modules/module-concierge.md",
             "tests/test_onboarding_journey.py",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/operations/help-investigation.md": {
           "disposition": "reviewed_unchanged",
-          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/operations/help-investigation.md. UI review: Read-only Help investigation and account evidence are unchanged; note decisions still use the existing guarded review form. Header/notice correction: Read-only investigation and permission checks are unchanged; no diagnostic result or account state is inferred from the visual notice. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Read-only Help investigation is unchanged by the shared Knowledge action rendering. No account diagnostics, permissions, writes or provider availability are inferred from these UI changes.",
+          "reason": "PR16 guided-review author check: onboarding now shows actual pending notes and prepares bounded local note/source/overlap/question choices; the flag, tenant/settings permission, CSRF, version checks and separate final admission are unchanged. Existing correction proposals retain their separate apply step. Public Help, commercial claims and execution permissions are unchanged; the shared reference documents the new onboarding-only path without claiming deployment or model quality. Specific surface reviewed: docs/operations/help-investigation.md. UI review: Read-only Help investigation and account evidence are unchanged; note decisions still use the existing guarded review form. Header/notice correction: Read-only investigation and permission checks are unchanged; no diagnostic result or account state is inferred from the visual notice. The onboarding Apple touch link now shares the PWA glass icon; no setup decisions or navigation changed. Run6/PR22 author review: Read-only Help investigation is unchanged by the shared Knowledge action rendering. No account diagnostics, permissions, writes or provider availability are inferred from these UI changes. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "src/app/help_investigation.py",
             "src/app/concierge_routes.py",
@@ -1020,7 +1036,8 @@
             "docs/operations/knowledge-source-review.md",
             "docs/modules/module-concierge.md",
             "tests/test_onboarding_journey.py",
-            "docs/operations/concierge-chat-ui.md"
+            "docs/operations/concierge-chat-ui.md",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         }
       }
@@ -1318,11 +1335,11 @@
       }
     },
     "installable": {
-      "signature": "bce50c60f6e6e68eb47e1608df18d2f28f6016c0a9267a7e1b0bae6f35b16aec",
+      "signature": "151d74560b2a2230a49e2935e151fd2a5a1c1b89fdc4651ae8b9e63fc0b84463",
       "surfaces": {
         "/capabilities": {
           "disposition": "generated",
-          "reason": "Installable app and notifications: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. PWA icon presentation: reviewed /capabilities for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified.",
+          "reason": "Installable app and notifications: the reference section renders this capability and its restrictions directly from the evidence map and shared authored guide. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. PWA icon presentation: reviewed /capabilities for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "src/app/templates/capabilities.html",
             "src/app/product_guides.py",
@@ -1333,12 +1350,14 @@
             "docs/modules/module-concierge.md",
             "docs/operations/concierge-live-shortcut.md",
             "tests/test_concierge_live_link.py",
-            "tests/test_concierge_page_modal_parity.py"
+            "tests/test_concierge_page_modal_parity.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "README.md": {
           "disposition": "updated",
-          "reason": "installable: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. PWA icon presentation: reviewed README.md for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified.",
+          "reason": "installable: the application setup and repository boundaries are retained; the README now links to the shared product catalogue and its availability qualifications. Shared catalogue and route wiring now include restricted source-backed Knowledge corrections. This surface adds no entitlement, commercial-value or execution-authority change; final Knowledge admission retains its existing checks. PWA icon presentation: reviewed README.md for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "README.md",
             "src/app/product_inventory.py",
@@ -1349,12 +1368,14 @@
             "docs/modules/module-concierge.md",
             "docs/operations/concierge-live-shortcut.md",
             "tests/test_concierge_live_link.py",
-            "tests/test_concierge_page_modal_parity.py"
+            "tests/test_concierge_page_modal_parity.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "agent:installable": {
           "disposition": "reviewed_unchanged",
-          "reason": "Installable app and notifications: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. PWA icon presentation: reviewed agent:installable for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Reviewed the app navigation cog link to the new People settings route; installation scope, start URL, notifications and install permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified.",
+          "reason": "Installable app and notifications: the complete current guide remains unchanged in the reviewed render. Internal Help can retrieve it and check existing module/page access; detailed account diagnostics are limited to Knowledge review, money send permission and mailbox count. The underlying feature and its execution gates are unchanged. PWA icon presentation: reviewed agent:installable for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Reviewed the app navigation cog link to the new People settings route; installation scope, start URL, notifications and install permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "src/app/product_guides.py",
             "src/app/help_investigation.py",
@@ -1365,12 +1386,14 @@
             "docs/modules/module-concierge.md",
             "docs/operations/concierge-live-shortcut.md",
             "tests/test_concierge_live_link.py",
-            "tests/test_concierge_page_modal_parity.py"
+            "tests/test_concierge_page_modal_parity.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         },
         "docs/product-knowledge.md": {
           "disposition": "updated",
-          "reason": "Installable app and notifications: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. PWA icon presentation: reviewed docs/product-knowledge.md for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified.",
+          "reason": "Installable app and notifications: the shared reference now explains signed-in Help investigation and the distinction between implementation, access and verified account state; this does not enable the described capability. PWA icon presentation: reviewed docs/product-knowledge.md for the new glass install/shortcut/Apple images. Existing install scope, start URL, capability text, notification badge and permissions remain unchanged. Separate Concierge installation is documented with offline launch proof and explicit on-device verification limits. Follow-up review: `/concierge/live` now omits platform navigation while using the shared Concierge conversation, history and confirmation flow. Settings access reuses saved voice preferences and closes the active voice session before starting the existing settings microphone meter. Platform record links open in a separate tab. Sign-in, entitlement and voice availability gates remain unchanged. Focused route/template and JavaScript interaction checks passed (89 tests); iPhone installation and Action Button behavior remain unverified. Public brand correction review: only landing and sign-in mastheads mirror the existing assistant glass particle renderer. Both voice modes remove the extra corner B while retaining Settings, the centered marks and speech visuals. Existing availability, permissions, commercial claims and installation behavior remain accurate.",
           "evidence": [
             "docs/product-knowledge.md",
             "docs/operations/help-investigation.md",
@@ -1381,7 +1404,9 @@
             "docs/modules/module-concierge.md",
             "docs/operations/concierge-live-shortcut.md",
             "tests/test_concierge_live_link.py",
-            "tests/test_concierge_page_modal_parity.py"
+            "tests/test_concierge_page_modal_parity.py",
+            "tests/test_assistant_glass_logo.py",
+            "tests/replays/assistant_glass_copies.mjs"
           ]
         }
       }

@@ -21,7 +21,7 @@ var WORD = { queued: 'queued', working: 'working', waiting: 'waiting for you', d
 // orb's column .vl-live; voice-live.js (the first) keeps a canvas.vl-ripples inside .vl-live. Roots and stage are laid out alike.
 var VOICE_ROOTS = ['#voice-live-root.is-open', '#voice-gptlive-root.is-open'];
 var PHONE_VOICE = 'body.voice-live-open.cz-pager-body ';
-// The corner brand/settings stay visible on either page. What pans with the column excludes .vl-ripples, the first screen's water, which stays where it is behind both halves.
+// The corner Settings stay visible on either page. What pans with the column excludes .vl-ripples, the first screen's water, which stays where it is behind both halves.
 // GPT-Live's water is NOT excluded: it is made as wide as the whole canvas (below) and pans with it, so the water runs all the way across.
 var VOICE_FOREGROUND = [].concat.apply([], VOICE_ROOTS.map(function (r) {
   return [r + '>:not(.vl-stage):not(.vl-corner)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)', r + ' .vl-live>:not(.vl-ripples)'];

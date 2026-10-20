@@ -21,7 +21,7 @@ the microphone meter starts. The saved voice choice, including GPT-Live, is read
 by the next voice launch; availability and microphone permission checks still
 apply. The existing modal header cog uses the same settings sheet.
 
-Both voice modes keep the glass B and Settings together at the top left while
+Both voice modes keep Settings at the top left while
 swiping. GPT-Live fades its central B out during the listening mist and thinking
 knot, then gathers it again for replies. The extended page has its own centered
 B and inward voice waves; sampling continues while that page is visible.
@@ -53,7 +53,7 @@ been verified by desktop/offline checks.
 - Swipe to the extended Concierge screen and back; verify platform record links
   open separately and the installed screen stays put.
 - Speak continuously while swiping: the extended page's waves should keep
-  responding, its centered B should be visible, and the corner B and Settings
+  responding, its centered B should be visible, and Settings
   should remain reachable. Confirm silence/mute lets the waves settle.
 - Check listening, thinking and audible reply states: the central B must not
   become an opaque yellow overlay on the listening mist. Check reduced motion

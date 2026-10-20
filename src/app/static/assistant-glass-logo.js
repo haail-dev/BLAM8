@@ -4,30 +4,32 @@
  */
 (()=>{
  'use strict';
- const root=document.querySelector('[data-assistant-glass-logo]');
- if(!root)return;
- const still=root.querySelector('img'),motion=matchMedia('(prefers-reduced-motion: reduce)');
+ const roots=Array.from(document.querySelectorAll('[data-assistant-glass-logo]'));
+ if(!roots.length)return;
+ const motion=matchMedia('(prefers-reduced-motion: reduce)');
  const connection=navigator.connection;
  let animator=null,failed=false;
  function syncMotion(){
    if(motion.matches||(connection&&connection.saveData)){if(animator)animator.pause();return;}
    if(failed)return;
    try{if(!animator)animator=mount();animator.resume();}
-   catch(error){failed=true;still.hidden=false;root.querySelectorAll('canvas').forEach(el=>el.remove());console.warn('Assistant logo using still image',error);}
+   catch(error){failed=true;roots.forEach(root=>{root.querySelector('img').hidden=false;root.querySelectorAll('canvas').forEach(el=>el.remove());});console.warn('Assistant logo using still image',error);}
  }
  motion.addEventListener('change',syncMotion);
  if(connection&&connection.addEventListener)connection.addEventListener('change',syncMotion);
  if(window.requestIdleCallback)requestIdleCallback(syncMotion,{timeout:1500});else setTimeout(syncMotion,150);
  function mount(){
- const canvas=document.createElement('canvas');canvas.width=canvas.height=128;
- canvas.setAttribute('aria-hidden','true');canvas.className='bc-glass-canvas';
+ const outputs=roots.map(root=>{
+   const canvas=document.createElement('canvas');canvas.width=canvas.height=128;
+   canvas.setAttribute('aria-hidden','true');canvas.className='bc-glass-canvas';
+   return {root,el:canvas,ctx:canvas.getContext('2d'),still:root.querySelector('img'),visible:true};
+ });
  const source=document.createElement('canvas');source.width=600;source.height=600;
  const c=source.getContext('2d');
- const outputs=[{el:canvas,ctx:canvas.getContext('2d')}];
  const brand=new Path2D('M35.42 15.8 L59.64 15.8 L62.47 16.04 L63.6 16.27 L64.45 16.51 L65.14 16.75 L65.74 16.99 L66.27 17.23 L66.75 17.46 L67.19 17.7 L67.59 17.94 L67.96 18.18 L68.31 18.41 L68.63 18.65 L68.94 18.89 L69.22 19.13 L69.5 19.36 L69.75 19.6 L69.99 19.84 L70.22 20.08 L70.44 20.31 L70.65 20.55 L70.85 20.79 L71.04 21.03 L71.22 21.26 L71.39 21.5 L71.55 21.74 L71.71 21.98 L71.86 22.21 L72 22.45 L72.13 22.69 L72.26 22.93 L72.38 23.16 L72.5 23.4 L72.61 23.64 L72.71 23.88 L72.81 24.11 L72.91 24.35 L73 24.59 L73.08 24.83 L73.16 25.06 L73.24 25.3 L73.31 25.54 L73.37 25.78 L73.43 26.01 L73.49 26.25 L73.54 26.49 L73.59 26.73 L73.64 26.96 L73.68 27.2 L73.71 27.44 L73.75 27.68 L73.77 27.91 L73.8 28.15 L73.82 28.39 L73.84 28.63 L73.85 28.86 L73.86 29.1 L73.87 29.34 L73.88 29.57 L73.88 29.81 L73.87 30.05 L73.87 30.29 L73.86 30.53 L73.84 30.76 L73.83 31 L73.81 31.24 L73.78 31.48 L73.76 31.71 L73.73 31.95 L73.7 32.19 L73.66 32.42 L73.62 32.66 L73.58 32.9 L73.53 33.14 L73.48 33.38 L73.43 33.61 L73.38 33.85 L73.32 34.09 L73.26 34.33 L73.19 34.56 L73.12 34.8 L73.05 35.04 L72.98 35.27 L72.9 35.51 L72.82 35.75 L72.73 35.99 L72.65 36.23 L72.55 36.46 L72.46 36.7 L72.36 36.94 L72.26 37.17 L72.16 37.41 L72.05 37.65 L71.94 37.89 L71.82 38.13 L71.7 38.36 L71.58 38.6 L71.45 38.84 L71.32 39.08 L71.19 39.31 L71.05 39.55 L70.91 39.79 L70.76 40.02 L70.61 40.26 L70.46 40.5 L70.3 40.74 L70.14 40.98 L69.97 41.21 L69.8 41.45 L69.63 41.69 L69.45 41.92 L69.26 42.16 L69.07 42.4 L68.88 42.64 L68.68 42.88 L68.47 43.11 L68.26 43.35 L68.04 43.59 L67.82 43.83 L67.59 44.06 L67.35 44.3 L67.11 44.54 L66.86 44.77 L66.61 45.01 L66.34 45.25 L66.07 45.49 L65.79 45.73 L65.5 45.96 L65.2 46.2 L64.89 46.44 L64.57 46.67 L64.24 46.91 L63.9 47.15 L63.54 47.39 L63.17 47.63 L62.78 47.86 L62.37 48.1 L61.95 48.34 L61.5 48.58 L61.25 48.81 L61.7 49.05 L62.12 49.29 L62.5 49.52 L62.86 49.76 L63.2 50 L63.51 50.24 L63.81 50.48 L64.1 50.71 L64.36 50.95 L64.62 51.19 L64.86 51.42 L65.09 51.66 L65.31 51.9 L65.52 52.14 L65.72 52.38 L65.91 52.61 L66.09 52.85 L66.26 53.09 L66.43 53.33 L66.58 53.56 L66.74 53.8 L66.88 54.04 L67.02 54.27 L67.15 54.51 L67.28 54.75 L67.4 54.99 L67.51 55.23 L67.62 55.46 L67.72 55.7 L67.82 55.94 L67.92 56.17 L68.01 56.41 L68.09 56.65 L68.17 56.89 L68.24 57.13 L68.32 57.36 L68.38 57.6 L68.44 57.84 L68.5 58.08 L68.56 58.31 L68.61 58.55 L68.65 58.79 L68.7 59.02 L68.74 59.26 L68.77 59.5 L68.8 59.74 L68.83 59.98 L68.86 60.21 L68.88 60.45 L68.89 60.69 L68.91 60.92 L68.92 61.16 L68.93 61.4 L68.93 61.64 L68.93 61.88 L68.93 62.11 L68.92 62.35 L68.92 62.59 L68.9 62.83 L68.89 63.06 L68.87 63.3 L68.85 63.54 L68.82 63.77 L68.8 64.01 L68.77 64.25 L68.73 64.49 L68.7 64.72 L68.66 64.96 L68.61 65.2 L68.57 65.44 L68.52 65.67 L68.47 65.91 L68.41 66.15 L68.35 66.39 L68.29 66.63 L68.23 66.86 L68.16 67.1 L68.09 67.34 L68.02 67.58 L67.94 67.81 L67.86 68.05 L67.78 68.29 L67.69 68.53 L67.6 68.76 L67.51 69 L67.42 69.24 L67.32 69.47 L67.21 69.71 L67.11 69.95 L67 70.19 L66.89 70.42 L66.77 70.66 L66.66 70.9 L66.53 71.14 L66.41 71.38 L66.28 71.61 L66.15 71.85 L66.01 72.09 L65.87 72.33 L65.73 72.56 L65.58 72.8 L65.43 73.04 L65.27 73.28 L65.11 73.51 L64.95 73.75 L64.78 73.99 L64.61 74.22 L64.43 74.46 L64.25 74.7 L64.07 74.94 L63.88 75.17 L63.68 75.41 L63.48 75.65 L63.28 75.89 L63.07 76.13 L62.85 76.36 L62.63 76.6 L62.4 76.84 L62.17 77.08 L61.93 77.31 L61.69 77.55 L61.44 77.79 L61.18 78.03 L60.91 78.26 L60.63 78.5 L60.35 78.74 L60.06 78.97 L59.76 79.21 L59.45 79.45 L59.13 79.69 L58.8 79.92 L58.46 80.16 L58.1 80.4 L57.74 80.64 L57.35 80.88 L56.95 81.11 L56.53 81.35 L56.1 81.59 L55.64 81.83 L55.15 82.06 L54.63 82.3 L54.08 82.54 L53.48 82.78 L52.83 83.01 L52.11 83.25 L51.3 83.49 L50.32 83.72 L49.06 83.96 L46.06 84.2 L20.88 84.2 Z');
  const transform=new DOMMatrix([4.5,0,0,4.5,0,-32]);
  const body=new Path2D();body.addPath(brand,transform);
- let time=0,last=0,visible=true,active=false,raf=0;
+ let time=0,last=0,active=false,raf=0;
  const parameters={flow:1,smoke:1.35};
  const tau=Math.PI*2;
  let seed=82731;
@@ -473,13 +475,13 @@
  for(let i=0;i<70;i++){advance(1/30,i/30);advanceEscape(1/30,i/30);}
 
  function syncVisibility(){
-   if(active&&visible&&!document.hidden&&root.isConnected){
+   if(active&&!document.hidden&&outputs.some(output=>output.visible&&output.root.isConnected)){
      if(!raf){last=performance.now();raf=requestAnimationFrame(tick);}
    }else if(raf){cancelAnimationFrame(raf);raf=0;}
  }
  function tick(now){
    raf=0;
-   if(active&&visible&&!document.hidden&&root.isConnected){
+   if(active&&!document.hidden&&outputs.some(output=>output.visible&&output.root.isConnected)){
      const dt=Math.min((now-last)/1000,.05);last=now;
      updateActivity(dt);
      const before=time,step=dt*drive;time+=step;
@@ -487,13 +489,16 @@
    }
    syncVisibility();
  }
- render(0);root.appendChild(canvas);
- const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;syncVisibility();});
- observer.observe(root);
+ render(0);outputs.forEach(output=>output.root.appendChild(output.el));
+ const observer=new IntersectionObserver(entries=>{
+   entries.forEach(entry=>{const output=outputs.find(output=>output.root===entry.target);if(output)output.visible=entry.isIntersecting;});
+   syncVisibility();
+ });
+ outputs.forEach(output=>observer.observe(output.root));
  document.addEventListener('visibilitychange',syncVisibility);
  return {
-   resume(){active=true;canvas.hidden=false;still.hidden=true;syncVisibility();},
-   pause(){active=false;syncVisibility();canvas.hidden=true;still.hidden=false;}
+   resume(){active=true;outputs.forEach(({el,still})=>{el.hidden=false;still.hidden=true;});syncVisibility();},
+   pause(){active=false;syncVisibility();outputs.forEach(({el,still})=>{el.hidden=true;still.hidden=false;});}
  };
 
  }
