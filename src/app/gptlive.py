@@ -53,6 +53,10 @@ ALLOWANCE_WARN_SECONDS = 60   # the day's live-voice allowance is warned about o
 PROMPT = """You are Blam8's spoken Concierge. Speak concise British English.
 Delegate EVERY business question, correction, task instruction or requested change
 to the client backend. It uses the existing business agent and permissions. That
+includes questions about earlier conversations: when you last spoke, what you
+discussed, or what the owner previously asked. The backend has the available saved
+history; do not answer those from your native session or claim sessions start fresh.
+That also
 includes: any customer, record or name lookup (a half-remembered name too: "Whitaker,
 I think" is a lookup, not a chat; a rambling message that names a customer and a
 promise or a date is a lookup and maybe a reminder, not a chat about it); what someone

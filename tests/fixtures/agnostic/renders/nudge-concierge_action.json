@@ -1,4 +1,4 @@
 {
-  "sha256": "15d691e6bea6098d2acbc790e3c7786b38c8436d49484890617f2c49b2c733f4",
+  "sha256": "786e8b7479e3de9e4deacfd509408608c01657f57c8e31cd2e56bd5b0b1eaf4b",
   "excerpt": "[{\"messages\":[{\"content\":\"My bookings?\",\"role\":\"user\"}],\"operation\":\"concierge_business\",\"output_config\":{\"format\":{\"schema\":{\"additionalProperties\":false,\"prop"
 }

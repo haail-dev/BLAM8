@@ -95,6 +95,7 @@
     var discovery = null;
     var busy = false;
     var history = [];   // this visit's turns, replayed for conversational context
+    var historyReady = Promise.resolve();
     // After a reload (the voice screen's own pull-to-refresh, or the reload
     // that brings the mic back after the phone was locked) the transcript is
     // on screen but the model's memory would be empty — "yes, do that" would
@@ -138,7 +139,9 @@
       }
     }
     function seedHistory() {
-      return fetch('/concierge/business/history?context_only=true', { credentials: 'same-origin' })
+      var controller = new AbortController();
+      var timeout = setTimeout(function () { controller.abort(); }, 5000);
+      return fetch('/concierge/business/history?context_only=true', { credentials: 'same-origin', signal: controller.signal })
         .then(function (r) { return r.ok ? r.json() : { messages: [] }; })
         .then(function (d) {
           if (history.length) return;   // a turn already happened here: it wins
@@ -148,10 +151,11 @@
             return m.role && m.content && m.content.indexOf('[Voice transcript segment — provisional; playback unverified]') !== 0 && (isNaN(t) || t >= cutoff);
           }).slice(-HISTORY_SEED_TURNS);
           recent.forEach(function (m) {
-            history.push({ role: m.role, content: m.content, lookups: lookupsOf(m.trail) });
+            history.push({ role: m.role, content: m.content, lookups: lookupsOf(m.trail), at: m.created_at || null });
           });
         })
-        .catch(function () {});
+        .catch(function () {})
+        .finally(function () { clearTimeout(timeout); });
     }
 
     function scrollDown() { messages.scrollTop = messages.scrollHeight; }
@@ -1679,6 +1683,7 @@
         agentStep('Still working — a lookup is taking longer than usual');
       }, 15000);
       try {
+        await historyReady;
         var res = await fetch('/concierge/business', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken() },
@@ -2215,6 +2220,10 @@
     }
     async function openVoiceLiveInner(opts) {
       var requestedMode = savedVoiceMode(), modeGeneration = voiceModeGeneration;
+      if (requestedMode === 'standard') {
+        await historyReady;
+        if (modeGeneration !== voiceModeGeneration || savedVoiceMode() !== requestedMode) { releasePreMic(); return; }
+      }
       if (!voiceLiveInstance && voiceInstances[requestedMode]) voiceLiveInstance = voiceInstances[requestedMode];
       if (!voiceLiveInstance) {
         var rev = "";
@@ -2263,7 +2272,7 @@
             return {
               question: last && last.role === "user" ? last.content : "",
               history: turns.slice(0, -1).slice(-CONTEXT_TURNS).map(function (m) {
-                return { role: m.role, content: m.content, lookups: m.lookups };
+                return { role: m.role, content: m.content, lookups: m.lookups, at: m.at || null };
               }),
             };
           },
@@ -2735,7 +2744,7 @@
     });
     scrollDown();
     loadWaiting();
-    seedHistory();
+    historyReady = seedHistory();
 
     // ── The task list (docs/plan-concierge-task-list.md, 2026-09-25) ──────────
     // Several separate things in one message are worked in the background;

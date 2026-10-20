@@ -289,6 +289,9 @@ class Turn(BaseModel):
     # Business concierge only: the lookups behind an assistant turn (trail
     # labels), folded into its text by sanitize_history.
     lookups: list[str] | None = Field(default=None, max_length=12)
+    # When a turn restored from the saved transcript was said (ISO time); turns
+    # of the current visit leave it empty. Heads its conversation in history.
+    at: str | None = Field(default=None, max_length=40)
 
 
 class AskRequest(BaseModel):

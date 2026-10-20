@@ -72,7 +72,7 @@ async def test_real_archive_helpers_history_scope_reopen_and_context_limit(unit,
     assert len(shown.messages)==3 and not any('PRIVATE' in row['content'] for row in shown.messages)
     context=routes.business_history(unit,context_only=True)
     assert [row['content'] for row in context.messages]==['Check diary','Verified backend read result']
-    assert concierge.sanitize_history(context.messages,16,3000)==[{'role':'user','content':'Check diary'},{'role':'assistant','content':'Verified backend read result'}]
+    assert concierge.sanitize_history(context.messages,16,3000)==[{'role':'user','content':'[Conversation on Thursday 1 January 2026, from 00:00]\nCheck diary'},{'role':'assistant','content':'[Saved turn on Thursday 1 January 2026, at 00:00]\nVerified backend read result'}]
     html=templates.env.get_template('app/_concierge_panel.html').render(chat_history=shown.messages,full_qa=True)
     assert html.count('data-cz-observation=')==1 and 'Observed speech' not in html   # the section's tag says the mode; no per-message repeat
     assert 'PRIVATE' not in html
