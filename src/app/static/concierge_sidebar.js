@@ -21,10 +21,10 @@ var WORD = { queued: 'queued', working: 'working', waiting: 'waiting for you', d
 // orb's column .vl-live; voice-live.js (the first) keeps a canvas.vl-ripples inside .vl-live. Roots and stage are laid out alike.
 var VOICE_ROOTS = ['#voice-live-root.is-open', '#voice-gptlive-root.is-open'];
 var PHONE_VOICE = 'body.voice-live-open.cz-pager-body ';
-// What pans with the column: everything on the voice screen except .vl-ripples, the first screen's water, which stays where it is behind both halves.
+// The corner brand/settings stay visible on either page. What pans with the column excludes .vl-ripples, the first screen's water, which stays where it is behind both halves.
 // GPT-Live's water is NOT excluded: it is made as wide as the whole canvas (below) and pans with it, so the water runs all the way across.
 var VOICE_FOREGROUND = [].concat.apply([], VOICE_ROOTS.map(function (r) {
-  return [r + '>:not(.vl-stage)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-live):not(.vl-side-mark)', r + ' .vl-live>:not(.vl-ripples)'];
+  return [r + '>:not(.vl-stage):not(.vl-corner)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)', r + ' .vl-live>:not(.vl-ripples)'];
 }));
 // GPT-Live's lake and its glow are laid out two screens wide (the engine sizes the lake from its canvas: water-core.js lakeFromCanvas), so ripples
 // run on past the voice screen's right edge into the column's half instead of bouncing back off it. !important: the canvas carries inline sizes.
@@ -106,7 +106,7 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   // moves, the water included, moves by the same number, in step, with the individual `translate` property so an element's own transform and transitions
   // (the orb's) are untouched. The first voice screen's water stays where it is instead (see VOICE_FOREGROUND).
   // concierge_sidebar.js sets the number: a finger sets it while dragging and a release glides it to 0 or 1. Phones only (.cz-pager-body).
-  + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));z-index:93;background:none;pointer-events:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
+  + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:calc(max(1rem,env(safe-area-inset-top)) + 3.25rem) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));z-index:93;background:none;pointer-events:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
   + '.cz-side-over>*{pointer-events:auto}'
   + 'body.cz-voice-side>.cz-side.cz-side-over,body.cz-panning>.cz-side.cz-side-over{visibility:visible}'
   + VOICE_FOREGROUND.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{translate:calc(var(--cz-pan,0) * -1 * var(--cz-w,100vw)) 0}'

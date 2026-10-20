@@ -21,6 +21,11 @@ the microphone meter starts. The saved voice choice, including GPT-Live, is read
 by the next voice launch; availability and microphone permission checks still
 apply. The existing modal header cog uses the same settings sheet.
 
+Both voice modes keep the glass B and Settings together at the top left while
+swiping. GPT-Live fades its central B out during the listening mist and thinking
+knot, then gathers it again for replies. The extended page has its own centered
+B and inward voice waves; sampling continues while that page is visible.
+
 Assign a Shortcut opening the installed BLAM8 Concierge web app to the iPhone
 Action Button where iOS exposes it; alternatively use Open URL with the live
 address. Verify the chosen Shortcut on the device: URL actions may open Safari
@@ -47,5 +52,11 @@ been verified by desktop/offline checks.
   available mode is used.
 - Swipe to the extended Concierge screen and back; verify platform record links
   open separately and the installed screen stays put.
+- Speak continuously while swiping: the extended page's waves should keep
+  responding, its centered B should be visible, and the corner B and Settings
+  should remain reachable. Confirm silence/mute lets the waves settle.
+- Check listening, thinking and audible reply states: the central B must not
+  become an opaque yellow overlay on the listening mist. Check reduced motion
+  and switching away from the app also stop visual animation.
 - Open normal BLAM8 and confirm its platform navigation and `/app/` start remain
   unchanged. Test the Action Button Shortcut on the device if it is configured.

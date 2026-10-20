@@ -23,7 +23,6 @@ Pins:
 
 Run: python -m pytest tests/test_strip_tap_spinner.py -q
 """
-import re
 from pathlib import Path
 
 import pytest
@@ -32,6 +31,7 @@ from fastapi.testclient import TestClient
 from app.auth import TenantCtx, require_onboarded
 from app.main import app
 from tests.test_home_dashboard import Env
+from tests.html_markup import markup
 
 NAV_JS = Path("src/app/static/nav.js").read_text(encoding="utf-8")
 
@@ -44,32 +44,38 @@ def client():
     app.dependency_overrides.clear()
 
 
-def _strip(html: str) -> str:
-    start = html.index('aria-label="Primary"')
-    return html[start:html.index("</nav>", start)]
+def _strip(html: str):
+    return markup(html).one('nav', **{'aria-label': 'Primary'})
+
+
+def _assert_door_icons(strip):
+    doors = strip.find_all('a')
+    assert len(doors) == 5
+    for door, label in zip(doors, ('Today', 'Inbox', 'Money', 'CRM', 'Diary')):
+        holders = [child for child in door.children if 'data-nav-icon' in child.attrs]
+        assert len(holders) == 1, label
+        assert holders[0].tag == 'span', label
+        assert {'relative', 'inline-flex', 'h-6', 'w-6'} <= set(holders[0].attrs.get('class', '').split()), label
+        assert [child.tag for child in holders[0].children] == ['svg'], label
+        assert {'h-6', 'w-6'} <= set(holders[0].children[0].attrs.get('class', '').split()), label
+        assert not holders[0].text.strip(), label
+        assert label in door.text, label
+    assert len(strip.find_all(**{'data-nav-icon': None})) == 5
 
 
 def test_every_door_wraps_its_icon_in_a_holder(client, monkeypatch):
-    Env(monkeypatch, modules={"scheduling", "crm"})
-    strip = _strip(client.get("/app/").text)
-    doors = re.findall(r'<a href="[^"]+"', strip)
-    holders = re.findall(r'<span class="relative inline-flex h-6 w-6" data-nav-icon><svg class="h-6 w-6', strip)
-    assert len(doors) == 5 and len(holders) == 5, (doors, len(holders))
-    # …and the holder closes right after the icon, so the label is outside it.
-    assert strip.count("</svg></span>") == 5
-    for label in ("Today", "Inbox", "Money", "CRM", "Diary"):
-        assert re.search(r"</svg></span>\s*(<span[^>]*>.*?</span>\s*)?" + label, strip, re.S), label
+    Env(monkeypatch, modules={'scheduling', 'crm'})
+    _assert_door_icons(_strip(client.get('/app/').text))
 
 
 def test_the_lock_badge_is_not_an_icon(client, monkeypatch):
-    """A locked CRM door carries a small lock beside its icon. That is a
-    badge, and it must not be swapped for a spinner."""
-    Env(monkeypatch, modules={"scheduling"})          # no CRM → locked door
-    strip = _strip(client.get("/app/").text)
-    assert "data-crm-locked" in strip
-    lock = strip[strip.index('<svg class="absolute top-1.5'):]
-    assert not lock.startswith("<span"), "the badge must sit outside any holder"
-    assert strip.count("data-nav-icon") == 5
+    Env(monkeypatch, modules={'scheduling'})
+    strip = _strip(client.get('/app/').text)
+    door = strip.one('a', **{'data-crm-locked': None})
+    lock = [child for child in door.children if child.tag == 'svg'
+            and 'absolute' in child.attrs.get('class', '').split()]
+    assert len(lock) == 1, 'the lock badge must sit outside the icon holder'
+    _assert_door_icons(strip)
 
 
 def test_the_page_carries_the_icon_spinner_rules(client, monkeypatch):

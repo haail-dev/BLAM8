@@ -99,7 +99,7 @@ function markSamples() {
   }
   return points;
 }
-export function createGlassCore(host, readSignals, onActive=()=>{}) {
+export function createGlassCore(host, readSignals, onActive=()=>{}, {visibilityTarget=host}={}) {
   let dead=false, failed=false, visible=true, frame=0, last=0, lastDraw=0;
   let elapsed=0, cameraElapsed=0, workElapsed=0, thinking=0, agentEnvelope=0, inputEnvelope=0, shapeActivity=0, speed=.3, scatter=.15, draws=0;
   let mechanicalElapsed=0,markAnimations=null,mechanicalPose={top:0,lower:0,strokes:[1,1,1]};
@@ -232,7 +232,9 @@ export function createGlassCore(host, readSignals, onActive=()=>{}) {
     c.gl.uniform1i(c.uniform('uGearMask'),0);
     bind(c,seed,'aSeed',4);bind(c,markSamples(),'aMark',4);c.gl.enable(c.gl.BLEND);c.gl.blendFuncSeparate(c.gl.SRC_ALPHA,c.gl.ONE_MINUS_SRC_ALPHA,c.gl.ONE,c.gl.ONE_MINUS_SRC_ALPHA);c.gl.clearColor(0,0,0,0);
     core.addEventListener('webglcontextlost',lost);
-    ro=new ResizeObserver(resize);ro.observe(host);io=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});io.observe(host);
+    // The voice stage also owns the adjacent page's audio-reactive water.
+    // Its caller can keep sampling while the orb itself is outside the viewport.
+    ro=new ResizeObserver(resize);ro.observe(host);io=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});io.observe(visibilityTarget);
     document.addEventListener('visibilitychange',sync);reduced.addEventListener?.('change',sync);
     host.classList.add('has-glass');host.dataset.glass='ready';resize();sync();
   } catch(_){fallback();}
