@@ -830,7 +830,8 @@ def test_a_reload_keeps_the_conversations_memory_and_the_card_it_left():
     assert ".slice(-HISTORY_SEED_TURNS)" in seed and "lookups: lookupsOf(m.trail)" in seed
     assert "var CONTEXT_ROUNDS = 8, CONTEXT_TURNS = CONTEXT_ROUNDS * 2;" in CONCIERGE_JS
     assert "var HISTORY_RECENT_MS = 3 * 60 * 60 * 1000, HISTORY_SEED_TURNS = CONTEXT_TURNS;" in CONCIERGE_JS
-    assert "loadWaiting();\n    seedHistory();\n" in CONCIERGE_JS
+    assert "loadWaiting();\n    historyReady = seedHistory();\n" in CONCIERGE_JS
+    assert "await historyReady;" in CONCIERGE_JS
     # the reload landing brings back the card set up in the last ten minutes
     assert "if (VOICE_ON) { resurfaceNewestOnLoad = true; openVoiceLive({ paused: true }); return; }" in CONCIERGE_JS
     assert "if (fresh.length) resurface(fresh[0]);" in CONCIERGE_JS
