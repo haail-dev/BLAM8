@@ -1,20 +1,14 @@
-"""CRM custom-field extraction (phase 2 — docs/architecture/CRM_design.md §10).
+"""CRM custom-field extraction with typed validation owned by crm_fields.
 
-One small Haiku call per processed email, ONLY for tenants who defined custom
-fields (everyone else pays nothing): the tenant's definitions (label, type,
-extraction_hint) go in as the schema-to-fill, the email goes in as the source,
-and typed values come back with a confidence each. The gate in src/app/crm_fields.py
-decides autofill vs suggest vs skip — this module only asks and parses.
-
-Cost: ~$0.0002/email at Haiku pricing; usage is metered like drafting
-(operation='crm_extract') so it shows in the same books.
+The general model remains the default. Explicitly reviewed ordinary fields may
+use a server-enabled candidate; those results can only become suggestions.
 """
 import json
 import logging
 import re
 from datetime import date
 
-from app import agent, llm, usage
+from app import agent, llm, usage, model_routing
 from app.config import settings
 
 log = logging.getLogger(__name__)
@@ -102,20 +96,64 @@ async def extract(tenant_id: str, definitions: list[dict], *, subject: str | Non
                    and not crm_fields.is_special_category(d)]
     if not definitions:
         return []
-    msg = await llm.create(
-        client=agent.client(), tenant_id=tenant_id, operation="crm_extract",
-        model=settings.anthropic_model,
+    authority = (model_routing.Authority.SUGGESTION if
+                 model_routing.ordinary_crm_fields(definitions) else
+                 model_routing.Authority.RECORD_WRITE)
+    decision = model_routing.resolve_model(model_routing.Operation.CRM_FIELDS,
+                                          authority=authority,
+                                          fallback_model=settings.anthropic_model)
+    request = dict(
+        tenant_id=tenant_id, operation="crm_extract",
         max_tokens=600,
         system=SYSTEM,
         messages=[{"role": "user",
                    "content": build_user_prompt(definitions, subject, body, from_name)}],
         output_config={"format": {"type": "json_schema", "schema": EXTRACT_SCHEMA}},
     )
-    text = "".join(b.text for b in msg.content if getattr(b, "type", None) == "text").strip()
-    usage.record_anthropic(tenant_id, msg.model, msg.usage, operation="crm_extract",
+    candidate_result = False
+    if decision.candidate:
+        msg, fields, totals, candidate_result = await model_routing.create_candidate(
+            decision=decision, client=agent.client(),
+            validate=lambda m: _validated_fields(m, definitions), **request)
+    else:
+        msg = await llm.create(client=agent.client(), model=decision.model,
+                               route_metadata=decision.metadata(), **request)
+        fields = parse_response(_message_text(msg))
+        totals = msg.usage
+    # The marker is assigned by trusted code after parsing, never accepted from JSON.
+    for field in fields:
+        field.pop("_suggestion_only", None)
+        if candidate_result:
+            field["_suggestion_only"] = True
+    usage.record_anthropic(tenant_id, msg.model, totals, operation="crm_extract",
                            email_log_id=email_log_id)
-    return resolve_date_years(definitions, parse_response(text),
+    return resolve_date_years(definitions, fields,
                               f"{subject or ''}\n{body or ''}")
+
+
+def _message_text(msg) -> str:
+    return "".join(b.text for b in msg.content if getattr(b, "type", None) == "text").strip()
+
+
+def _validated_fields(msg, definitions) -> list[dict]:
+    from app import crm_fields
+    data = json.loads(_message_text(msg))
+    if not isinstance(data, dict) or set(data) != {"fields"} or not isinstance(data["fields"], list):
+        raise ValueError("invalid fields envelope")
+    by_key = {(d["entity"], d["key"]): d for d in definitions}
+    seen = set()
+    for f in data["fields"]:
+        if not isinstance(f, dict) or set(f) != {"entity", "key", "value", "confidence"}:
+            raise ValueError("invalid field shape")
+        identity = (f["entity"], f["key"])
+        d = by_key.get(identity)
+        c = f["confidence"]
+        if (not d or identity in seen or not isinstance(f["value"], str)
+                or isinstance(c, bool) or not isinstance(c, (int, float)) or not 0 <= c <= 1
+                or not crm_fields.coerce_value(d["field_type"], f["value"], d.get("options"))[0]):
+            raise ValueError("invalid field identity or typed value")
+        seen.add(identity)
+    return data["fields"]
 
 
 _AHEAD_WORDS = re.compile(r"\b(?:test|exam|appointment|booking|visit|due|expir\w*|renew\w*|"

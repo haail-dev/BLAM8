@@ -64,9 +64,16 @@ async def _remind_one(tenant_id: str, cfg: dict, auto: bool, b: dict) -> str:
     facts = _facts_for(b)
     if dest_sms:
         facts += " Ask them to reply C to confirm they'll be there."
+    from app.model_routing import Operation, Authority
+    # Only draft-only reminders backed by complete direct diary facts qualify.
+    # Auto-send and specialist-framed facts keep their existing model.
+    complete = bool(b.get("booking_date") and b.get("booking_ref"))
+    eligible = not auto and complete and b.get("spaces") is None
+    route = ({"routing_operation": Operation.ADMIN_MESSAGE,
+              "routing_authority": Authority.CUSTOMER_DRAFT} if eligible else {})
     result = await agent.compose_outbound(cfg, REMINDER_PURPOSE, facts,
                                           channel="sms" if dest_sms else "email",
-                                          tenant_id=tenant_id, log_operation="reminder")
+                                          tenant_id=tenant_id, log_operation="reminder", **route)
     log_id, _ = db.insert_email_log(
         tenant_id, dest_sms or to, subject, f"[day-before reminder] {facts}", result.text,
         status="pending", kind="reminder",
