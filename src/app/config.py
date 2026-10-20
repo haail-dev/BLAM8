@@ -114,6 +114,13 @@ class Settings(BaseSettings):
     # mandate far more reliably. Bookings are the revenue path, so the cost is worth it;
     # tool-less replies stay on the cheaper model. Override via env without a redeploy.
     anthropic_booking_model: str = "claude-sonnet-4-6"
+    # Server-owned candidate policy. No tenant-facing controls; both gates default off.
+    model_candidate_enabled: bool = False
+    model_candidate_model: str = "claude-haiku-5-5"
+    model_candidate_operations: str = ""
+    # Reviewed definition fingerprints only; never dates, sensitive or financial fields.
+    model_candidate_crm_fields: str = ""
+
     # Concierge task list, split mode (docs/plan-planner-worker-reviewer.md). A planner
     # writes checkable success criteria before the worker runs; a reviewer checks the
     # tool trail against them. Planner and reviewer are blank = follow anthropic_model.

@@ -332,6 +332,8 @@ def plan_application(definitions: list[dict], extracted: list[dict]) -> list[dic
                         "value": None})
             continue
         action = gate(item.get("confidence"))
+        if item.get("_suggestion_only") is True and action == "autofill":
+            action = "suggest"
         ok, value = coerce_value(d["field_type"], item.get("value"), d.get("options"))
         if not ok:
             # Un-coercible autofill is downgraded, not trusted: the human can
