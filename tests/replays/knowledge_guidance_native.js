@@ -18,7 +18,17 @@
     };
     var guide=window.Blam8KnowledgeGuide;
     await guide.ask('');
-    await guide.ask('Keep this note');
+    var untouched=JSON.stringify(Array.from(new FormData(f).entries()));
+    for (var message of ['I’d like to edit this note before saving it.',
+                         'Keep this note after I remove the repeated sentence.']) {
+      var unchanged=await guide.ask(message);
+      assert(JSON.stringify(Array.from(new FormData(f).entries()))===untouched,'model interpretation must not change form');
+      assert(!unchanged.save_ready && unchanged.focus.id==='one','edit must not advance or enable Save');
+      assert(!unchanged.review_decision,'unconfirmed model decision must not create choice history');
+      assert(!/Recorded as a keep|Marked/.test(unchanged.reply),'model approval claim must not be echoed');
+    }
+    var confirmed=await guide.ask('Keep this note');
+    assert(confirmed.review_decision.state==='prepared' && confirmed.review_decision.action==='keep','only confirmed keep produces prepared history');
     var next=await guide.ask('Keep both notes');
     assert(box.checked,'keep_both patch must check overlap control');
     assert(box.value===initialValue,'configured submission value must be preserved');
@@ -26,8 +36,8 @@
     assert(new FormData(f).get(box.name)==='keep_both','native FormData must retain acknowledgment');
     assert(next.focus.id==='two','guide must advance to second note');
     await guide.ask('Keep this note');
-    assert(requests[3].form[box.name]==='keep_both','next request must serialize overlap acknowledgment');
-    assert(requests[3].focus_hash===next.focus_hash,'next request must carry matching advanced focus');
+    assert(requests[fixture.confirmationRequest].form[box.name]==='keep_both','next request must serialize overlap acknowledgment');
+    assert(requests[fixture.confirmationRequest].focus_hash===next.focus_hash,'next request must carry matching advanced focus');
     assert(f.elements.action_one.value==='keep' && f.elements.action_two.value==='keep','select patches must persist');
 
     // Exercise typed empty/nonmatching patches without inventing a new backend action.

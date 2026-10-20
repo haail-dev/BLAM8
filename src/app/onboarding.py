@@ -267,6 +267,25 @@ def tuning_steps() -> list[dict]:
             for s in setup_handoff.steps({"scheduling", "crm"}, None, [], None, None)]
 
 
+def _header_identity(request):
+    """Display only the signed-in address and this tenant's default connected inbox."""
+    tenant_id = getattr(request.state, 'tenant_id', None)
+    account = getattr(request.state, 'user_email', '') or ''
+    mailbox = ''
+    if tenant_id:
+        try:
+            boxes = db.list_mailboxes(tenant_id)
+            if boxes and boxes[0].get('tenant_id') == tenant_id:
+                mailbox = str(boxes[0].get('address') or '').strip()
+        except Exception:
+            pass  # Missing display metadata must not prevent onboarding.
+    return {'account': account, 'mailbox': mailbox,
+            'same': bool(mailbox and account.casefold() == mailbox.casefold())}
+
+
+templates.env.globals['onboarding_identity'] = _header_identity
+
+
 def _step_ctx(step: str, **extra) -> dict:
     # The classic industry picker isn't in STEPS (the interview replaced it) but
     # still renders — on the stepper it borrows the interview's slot.

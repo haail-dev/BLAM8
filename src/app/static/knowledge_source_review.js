@@ -72,7 +72,7 @@
       data.questions.forEach(function (q) { box.appendChild(node('p', 'Needs your answer: ' + q)); });
       if (data.changes.length) { var apply = node('button', 'Apply corrections to drafts'); apply.type = 'button'; apply.dataset.sourceApply = '1'; box.appendChild(apply); }
       say(form, data.summary);
-      return {reply: data.summary, form_fill: {}, ready_to_advance: false, notes: [], held_for: []};
+      return {reply: data.summary, correction_preview_ids: data.changes.map(function(change){return change.id;}), form_fill: {}, ready_to_advance: false, notes: [], held_for: []};
     } catch (err) { say(form, err.message); throw err; }
     finally { lock(false); }
   }
@@ -133,6 +133,9 @@
   window.Blam8KnowledgeSourceReview = {
     working: function () { return !!(busy || submitting); },
     available: function () { return !!targetForm(); },
-    ask: function (question) { return ask(targetForm(), question); }
+    ask: function (question, reviewForm) {
+      if(reviewForm){if(!forms().includes(reviewForm))throw new Error('That review batch is no longer available.');selected=reviewForm.dataset.knowledgeReview;}
+      return ask(reviewForm || targetForm(), question);
+    }
   };
 })();

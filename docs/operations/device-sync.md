@@ -69,3 +69,16 @@ No production accounts or paid models are used.
 To disable, turn off `DEVICE_SYNC_ENABLED` before applying the paired rollback.
 Rollback removes workspace checkpoints and replay receipts; it leaves normal
 business settings, approved Knowledge and business Concierge messages intact.
+
+Integration with the Knowledge review history preserves item-scoped, versioned
+choice cards. Only a confirmed guide receipt settles a prepared choice; model
+proposals leave choices unchanged and editor requests remain editing-only. The
+server records this history before acknowledging a turn, so closing the sender
+cannot lose it. Restored checkbox state retains the control's configured value.
+A poll that finishes during an active guide turn waits for the next refresh;
+it cannot replace that turn's native form snapshot.
+
+The two-document native test runs the sync and guide clients with a small
+transcript display adapter, actual guide decisions and disposable SQL. It does
+not run the complete Concierge renderer. The separate choice-history replay
+executes the actual Concierge card, send and transcript rendering functions.

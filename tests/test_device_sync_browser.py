@@ -41,12 +41,51 @@ DRIVER = r"""
     await advance(phone,'/onboarding/knowledge');await follow(pc,'/onboarding/knowledge');
     // The actual guide client changes a decision. Its server checkpoint must
     // restore both that field and the next focus on the other device.
-    await pc.contentWindow.Blam8KnowledgeGuide.ask('Keep this decision');
+    const initial=await pc.contentWindow.Blam8KnowledgeGuide.ask('Show the current note');
+    // Force an old idle poll to return while a guide request is in flight.
+    // It must not restore the old fields or mark the new local work conflicted.
+    const win=pc.contentWindow, nativeFetch=win.fetch.bind(win);
+    let releasePoll,releaseGuide,pollRead=false,guideRead=false,holdPoll=true;
+    const pollGate=new Promise(r=>releasePoll=r),guideGate=new Promise(r=>releaseGuide=r);
+    win.fetch=async function(url,options){
+      const response=await nativeFetch(url,options);
+      if(String(url)==='/device-sync/flow' && (!options || !options.method) && holdPoll){holdPoll=false;pollRead=true;await pollGate;}
+      if(String(url).endsWith('/guide')){guideRead=true;await guideGate;}
+      return response;
+    };
+    const idlePoll=win.Blam8DeviceSync.refresh();await until(()=>pollRead);
+    change(pc,'title','Wording prepared while reviewing');
+    const proposed=win.Blam8KnowledgeGuide.ask('Keep this note after editing it.');
+    await until(()=>guideRead);releasePoll();await idlePoll;
+    if(!win.Blam8DeviceSync.isReady())throw Error('Idle poll conflicted with an active guide turn');
+    if(pc.contentDocument.querySelector('[name=title]').value!=='Wording prepared while reviewing')throw Error('Idle poll replaced working wording');
+    releaseGuide();await proposed;win.fetch=nativeFetch;
+
     await pc.contentWindow.Blam8DeviceSync.flush();
     await phone.contentWindow.Blam8DeviceSync.refresh();
-    if(phone.contentDocument.querySelector('[name=action_one]').value!=='keep')throw Error('Review choice missing');
-    if(!phone.contentWindow.Blam8KnowledgeGuide.isCurrent('next-decision'))throw Error('Review resumed at wrong focus');
-    if(!messages(phone).includes('First decision kept'))throw Error('Reply was not persisted by server');
+    const noteChoice=phone.contentDocument.querySelector('[name^=action_]');
+    if(noteChoice.value!=='')throw Error('Model proposal became approval on phone');
+    let shared=phone.contentWindow.Blam8DeviceSync.state().payload.messages;
+    if(shared.some(m=>m.knowledge_card && m.knowledge_card.selected))throw Error('Model proposal created approved history');
+    const editing=await pc.contentWindow.Blam8KnowledgeGuide.ask('Edit this note');
+    if(editing.recovered_after_error)throw Error('Editor failed to open in native document');
+    await pc.contentWindow.Blam8DeviceSync.flush();await phone.contentWindow.Blam8DeviceSync.refresh();
+    shared=phone.contentWindow.Blam8DeviceSync.state().payload.messages;
+    if(noteChoice.value!=='' || !shared.some(m=>m.knowledge_card && m.knowledge_card.selected==='edit' && m.knowledge_card.state==='editing'))throw Error('Edit did not remain editing-only');
+    const kept=await pc.contentWindow.Blam8KnowledgeGuide.ask('Keep this note');
+    if(kept.focus.kind!=='overlap')throw Error('Actual guide did not reach overlap');
+    const next=await pc.contentWindow.Blam8KnowledgeGuide.ask('Keep both notes');
+    await pc.contentWindow.Blam8DeviceSync.flush();
+    await phone.contentWindow.Blam8DeviceSync.refresh();
+    const checkbox=phone.contentDocument.querySelector('input[type=checkbox]');
+    if(!checkbox.checked || checkbox.value!=='keep_both' || new phone.contentWindow.FormData(checkbox.form).get(checkbox.name)!=='keep_both')throw Error('Native checkbox acknowledgement missing');
+    if(!phone.contentWindow.Blam8KnowledgeGuide.isCurrent(next.focus_hash,next.batch_id,next.version))throw Error('Versioned review resumed at wrong focus');
+    shared=phone.contentWindow.Blam8DeviceSync.state().payload.messages;
+    if(!shared.some(m=>m.knowledge_card && m.knowledge_card.selected==='keep' && m.knowledge_card.state==='prepared'))throw Error('Confirmed choice history missing');
+    const fees=await phone.contentWindow.Blam8KnowledgeGuide.ask('Keep this note');
+    if(fees.patches.action_two!=='keep')throw Error('Native restored FormData rejected by actual guide');
+    await phone.contentWindow.Blam8DeviceSync.flush();
+    await pc.contentWindow.Blam8DeviceSync.refresh();
     await advance(pc,'/app/diary/settings');await follow(phone,'/app/diary/settings');
     await advance(phone,'/app/');await follow(pc,'/app/');
     // Free navigation in the finished app must not steer the other screen.
@@ -87,7 +126,7 @@ CONFLICT_DRIVER = r"""
 
 @pytest.mark.parametrize(
     "browser_driver,expected_calls",
-    [(DRIVER, 6), (CONFLICT_DRIVER, 1)],
+    [(DRIVER, 11), (CONFLICT_DRIVER, 1)],
     ids=["handover", "conflicting-edits"],
 )
 def test_two_device_onboarding_and_assistant_roundtrip(

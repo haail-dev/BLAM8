@@ -29,11 +29,13 @@ def test_note_content_decisions_and_optional_evidence_without_audit_inventory():
     assert (ctx, row) == before
     cards = re.findall(r'<section[^>]*data-draft="[^"]+".*?</section>', html, re.S)
     assert len(cards) == 2
+    assert '<details data-note-details open>' in cards[0]
+    assert '<details data-note-details>' in cards[1]
     for card in cards:
-        assert '<details data-note-details>' in card
-        assert '<details data-note-details open>' not in card
         assert '<textarea' in card and '<select name="action_' in card
-        assert 'Source and evidence</summary>' in card
+        assert 'data-note-panel="source"' in card and 'data-note-tool="source"' in card
+        assert 'Source caveat' in card
+        assert 'class="kr-tool-panel" hidden' not in card  # Usable before progressive enhancement.
         assert 'Fictional test facts.' in card
         assert 'data-source-unit' not in card
     for unit in view['source_view']['units']:

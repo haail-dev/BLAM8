@@ -131,6 +131,81 @@ def path_allowed(path):
     )
 
 
+def review_message(messages, answer):
+    """Persist the same bounded decision cards as Concierge, before acknowledgement.
+
+    Only the guide's item-scoped receipt settles an earlier card. A reply's prose
+    and a model-inferred decision never become choice history.
+    """
+    decision = answer.get("review_decision")
+    if isinstance(decision, dict) and decision.get("state") in (
+        "prepared",
+        "editing",
+        "preview",
+    ):
+        for prior in reversed(messages):
+            card = prior.get("knowledge_card")
+            if not isinstance(card, dict):
+                continue
+            focus = card.get("focus")
+            if not isinstance(focus, dict):
+                continue
+            if (
+                all(
+                    card.get(key) == decision.get(key)
+                    for key in ("batch_id", "version", "focus_hash")
+                )
+                and focus.get("kind") == decision.get("kind")
+                and focus.get("id") == decision.get("id")
+            ):
+                card.update(selected=decision["action"], state=decision["state"])
+                break
+    message = {"role": "assistant", "content": answer["reply"]}
+    if all(
+        answer.get(key) for key in ("focus_hash", "batch_id", "version")
+    ) and isinstance(answer.get("focus"), dict):
+        message["knowledge_card"] = {
+            "batch_id": answer["batch_id"],
+            "version": answer["version"],
+            "focus_hash": answer["focus_hash"],
+            "focus": {key: answer["focus"].get(key) for key in ("kind", "id")},
+            "actions": answer.get("actions", []),
+            "save": bool(answer.get("save_ready")),
+        }
+    return message
+
+
+def valid_checkpoint(patch):
+    """Reject malformed private drafts before they can poison a later route."""
+    forms = patch.get("form", {})
+    if not isinstance(forms, dict):
+        return False
+    for saved in forms.values():
+        if (
+            not isinstance(saved, dict)
+            or not isinstance(saved.get("action"), str)
+            or not isinstance(saved.get("version"), str)
+            or not isinstance(saved.get("values"), dict)
+        ):
+            return False
+        if any(
+            not isinstance(name, str)
+            or not isinstance(values, list)
+            or any(not isinstance(value, str) for value in values)
+            for name, values in saved["values"].items()
+        ):
+            return False
+    guide = patch.get("guide", {})
+    return isinstance(guide, dict) and (
+        not guide
+        or (
+            isinstance(guide.get("review"), str)
+            and isinstance(guide.get("version"), str)
+            and isinstance(guide.get("data"), dict)
+        )
+    )
+
+
 class Change(BaseModel):
     model_config = ConfigDict(extra="forbid")
     operation: UUID
@@ -185,6 +260,8 @@ def change_state(channel: str, body: Change, ctx: TenantCtx = Depends(require_te
             )
         ):
             raise HTTPException(422, "Invalid transcript.")
+    if not valid_checkpoint(body.patch):
+        raise HTTPException(422, "Invalid setup checkpoint.")
     fingerprint = hashlib.sha256(
         json.dumps(body.patch, sort_keys=True).encode()
     ).hexdigest()
@@ -407,9 +484,7 @@ class SyncRoute(APIRoute):
                             )
                         ):
                             messages.append({"role": "user", "content": question})
-                        message = {"role": "assistant", "content": answer["reply"]}
-                        if answer.get("focus_hash"):
-                            message["guide"] = answer
+                        message = review_message(messages, answer)
                         for key in ("links", "trail"):
                             if answer.get(key):
                                 message[key] = answer[key]

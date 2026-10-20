@@ -82,9 +82,9 @@ def test_wizard_header_names_the_signed_in_account_and_the_step_on_phones():
     html = _read("src/app/templates/onboarding/base.html")
     assert "request.state.user_email" in html and "data-signed-in-as" in html
     assert "'mailbox':'Customer inbox'" in html
-    line = html.split("data-step-line")[0][-400:]
-    assert "hidden" not in line                               # the line shows at every width
-    assert "then {{ labels[nxt] }}" in html
+    assert "data-step-line" not in html
+    assert "aria-current=\"step\"" in html and "data-step-name-toggle" in html
+    assert "onboarding-step-label" in html
 
 
 def test_wizard_bar_spans_full_width_beside_the_chat_panel():
@@ -94,8 +94,9 @@ def test_wizard_bar_spans_full_width_beside_the_chat_panel():
     assert 'data-bc-full-width' in bar and 'data-pull-bar' in bar
     assert 'max-w-2xl' not in bar and 'justify-between' in bar
     assert 'data-signed-in-as' in bar and 'href="/logout"' in bar
-    assert 'truncate' in bar and 'flex-none text-sm' in bar
+    assert 'onboarding-email' in bar and 'flex-none text-sm' in bar
     assert 'height: calc(3rem + env(safe-area-inset-top, 0px));' in html
+    assert 'text-overflow:ellipsis' in html
     shared = _read('src/app/templates/_concierge.html')
     assert '[data-bc-full-width]' in shared and 'margin-right: calc(-1 * clamp(' in shared
     assert 'body:has(#bc-panel' not in html  # reserve stays in the shared dock

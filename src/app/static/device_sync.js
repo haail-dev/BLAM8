@@ -61,6 +61,9 @@
     } finally { applying=false; }
   }
   function apply(name,state) {
+    // A read started while idle may finish during a guide turn. Keep its form
+    // snapshot intact; the next poll can apply this revision after the turn.
+    if ((adapter && adapter.busy()) || (name==='flow' && window.blam8KnowledgeImportBusy)) return;
     var old=states[name];
     if (old && old.revision>=state.revision) return;
     states[name]=state;

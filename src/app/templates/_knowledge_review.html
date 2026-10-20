@@ -1,16 +1,13 @@
-<form id="review-{{ review.id }}" method="post" action="/onboarding/knowledge/review/{{ review.id }}" class="mb-5 space-y-4 rounded-xl border border-slate-200 bg-white p-4" data-knowledge-review="{{ review.id }}" data-content-version="{{ review.signatures.content }}" data-evidence-version="{{ review.signatures.evidence }}" data-context-version="{{ review.signatures.context }}">
+<form id="review-{{ review.id }}" method="post" action="/onboarding/knowledge/review/{{ review.id }}" class="knowledge-review mb-4" data-knowledge-review="{{ review.id }}" data-content-version="{{ review.signatures.content }}" data-evidence-version="{{ review.signatures.evidence }}" data-context-version="{{ review.signatures.context }}">
+<style>
+.knowledge-review{font-size:12px}.kr-heading,.kr-helper,.kr-toolbar,.kr-tools,.kr-actions{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap}.kr-heading{justify-content:space-between;margin:0 0 4px}.kr-heading h2{font-size:14px;font-weight:600}.kr-heading>span{font-size:10px;color:#7b8797}.kr-helper{position:relative;align-items:baseline;justify-content:space-between;margin-bottom:10px;color:#64748b;font-size:11px}.kr-helper>p{margin:0}.kr-before{margin-left:auto}.kr-before>summary{cursor:pointer;list-style:none}.kr-before[open]{flex-basis:100%}.kr-before[open]>summary{text-align:right}.kr-before>div{padding:9px;background:#eef2f7;border-radius:6px;margin-top:5px;line-height:1.6}.kr-note{background:white;border:1px solid #dce3ec;border-radius:10px;margin-bottom:7px}.kr-summary{display:flex;align-items:center;gap:8px;padding:10px 12px;list-style:none;cursor:pointer}.kr-summary::-webkit-details-marker{display:none}.kr-note-title{display:block;font-weight:600;color:#21334d;font-size:13px}.kr-status-row{display:block;font-size:10px;color:#7b8797;margin-top:1px}.kr-note-status{display:inline}.kr-chevron{margin-left:auto;flex:none;width:7px;height:7px;border-right:1.5px solid #8793a4;border-bottom:1.5px solid #8793a4;transform:rotate(-45deg);margin-right:3px}[data-note-details][open]>.kr-summary .kr-chevron{transform:rotate(45deg)}.kr-body{padding:0 12px 12px}.kr-content{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.65;color:#48596e;margin:0 0 10px}.kr-toolbar{justify-content:space-between;gap:5px 8px}.kr-actions{gap:5px}.kr-actions button{border:1px solid #d7dfeb;border-radius:6px;padding:6px 7px;font-size:10px;color:#526b91;background:transparent;min-height:28px}.kr-actions button[aria-pressed=true]{border-color:#059669;color:#047857}.kr-tools{gap:10px;margin-left:auto}.kr-tools button{font-size:10px;color:#526b91;padding:6px 0;min-height:28px}.kr-tools button[aria-expanded=true]{color:#3056ce;text-decoration:underline}.kr-tool-panel{border-top:1px solid #e4e9f1;padding-top:8px;margin-top:8px}.kr-tool-panel[hidden]{display:none}.kr-tool-panel label{font-size:12px}.kr-tool-panel textarea{line-height:1.5}.knowledge-review [data-review-status]:empty{display:none}
+</style>
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
   <input type="hidden" name="version" value="{{ review.version }}">
-  {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
-  <h2 class="font-semibold text-navy">{{ review.summary.notes }} notes to review</h2>
-  <p class="text-xs text-slate-600 break-words">From {{ review.payload.origin }} · Pending, not saved to Knowledge</p>
-  <div class="rounded-lg bg-slate-50 p-3 text-sm" data-review-overview><p>Read each note and choose what to keep. Nothing is selected automatically or available to the agent until you choose Save reviewed decisions.</p><p class="mt-2">{{ review.summary.decided }} of {{ review.summary.notes }} note decisions selected{% if review.summary.overlaps %} · Possible overlaps to review below{% endif %}.</p></div>
-  {% if review.source_view.qualifications %}
-  <aside class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm" data-source-qualifications>
-    <p class="whitespace-pre-wrap break-words">{{ review.source_view.qualifications[0].text }}</p>
-    <p class="mt-1 text-xs">Shared caveats apply to all notes. Read them under Source and evidence before saving.</p>
-  </aside>
-  {% endif %}
+  {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') or name.startswith('review_later_') %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+  <div class="kr-heading"><h2>{{ review.summary.notes }} notes to review</h2><span>Pending · not saved</span></div>
+  <div class="kr-helper"><p>Read, review or leave for later.</p><details class="kr-before"><summary>Before you save</summary><div>Reviewed selects this note to keep in the review. Leave for later keeps it pending, not discarded. Resolve every note, source decision and possible overlap before Save. Shared source caveats stay attached. Nothing is available to the agent until saved. Merges combine wording and preserve both sources; check the combined preview before saving.</div></details></div>
+  <noscript><p>Use each note’s Decision field to retain, merge or discard it. All decisions still require the final review before saving.</p></noscript>
   <p data-review-status role="status" aria-live="polite" class="text-sm text-slate-700"></p>
   {% if review.source_review_enabled and review.payload.source_snapshot %}
   <details data-source-corrections class="space-y-2 rounded-lg border border-slate-200 p-3">
@@ -22,24 +19,28 @@
     <div data-source-preview class="space-y-2"></div>
   </details>
   {% endif %}
-  <p class="text-xs text-slate-500">Nothing is selected automatically. Overlaps are candidates, not proof of a duplicate. Check wording, figures and source caveats. Merging combines the selected texts and preserves both sources; review the combined preview before saving. Saved notes change only when you explicitly choose that merge.</p>
   {% for n in review.entries %}
-  <section class="space-y-2 rounded-lg border border-slate-200 p-3" data-draft="{{ n.id }}" aria-labelledby="note-heading-{{ review.id }}-{{ n.id }}">
-    <details data-note-details>
-    <summary class="cursor-pointer"><span id="note-heading-{{ review.id }}-{{ n.id }}" class="block text-sm font-semibold text-navy">{{ loop.index }}. {{ n.label }}</span>
-      <span class="mt-1 block text-xs text-slate-600">Pending draft{% if review.source_view.qualifications %} · Shared caveats apply{% endif %}{% if n.matches %} · Possible overlap — review below{% endif %}</span>
-    </summary>
-    <div class="mt-2 space-y-2">
-    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Edit note heading</summary><label class="mt-2 block text-sm font-medium">Note heading<input name="label_{{ n.id }}" value="{{ n.label }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2"></label></details>
+  <section class="kr-note" data-draft="{{ n.id }}" aria-labelledby="note-heading-{{ review.id }}-{{ n.id }}">
+    <details data-note-details{% if loop.first %} open{% endif %}>
+    <summary class="kr-summary"><span><span id="note-heading-{{ review.id }}-{{ n.id }}" class="kr-note-title">{{ loop.index }}. {{ n.label }}</span>
+      <span class="kr-status-row"><span class="kr-note-status" data-note-status>{% if review.form.get('action_'+n.id)=='keep' %}Reviewed · not saved{% elif review.form.get('action_'+n.id) %}Decision selected · not saved{% elif review.form.get('review_later_'+n.id) %}For later · pending{% else %}Pending{% endif %}</span>
+      {% if n.matches or review.source_view.qualifications %}<span class="kr-note-cues"> · {% if n.matches %}Overlap to check{% endif %}{% if n.matches and review.source_view.qualifications %} · {% endif %}{% if review.source_view.qualifications %}Source caveat{% endif %}</span>{% endif %}</span>
+    </span><span class="kr-chevron" aria-hidden="true"></span></summary>
+    <div class="kr-body">
+    <p class="kr-content" data-note-preview>{{ n.content }}</p>
+    <div class="kr-toolbar"><div class="kr-actions"><button type="button" data-note-reviewed>✓ Reviewed</button><button type="button" data-note-later>Leave for later</button></div>
+      <div class="kr-tools">{% for tool in ['edit','source','more'] %}<button type="button" data-note-tool="{{ tool }}" aria-expanded="false" aria-controls="note-{{ tool }}-{{ review.id }}-{{ n.id }}">{{ {'edit':'Edit','source':'Source','more':'More options'}[tool] }}</button>{% endfor %}</div></div>
+    <div id="note-edit-{{ review.id }}-{{ n.id }}" data-note-panel="edit" class="kr-tool-panel">
+    <label class="mt-2 block text-sm font-medium">Note heading<input name="label_{{ n.id }}" value="{{ n.label }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2"></label>
     <label class="block text-sm">Note content<textarea name="content_{{ n.id }}" rows="4" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">{{ n.content }}</textarea></label>
+    </div>
+    <div id="note-more-{{ review.id }}-{{ n.id }}" data-note-panel="more" class="kr-tool-panel">
     <label class="block text-sm font-medium">Decision<select name="action_{{ n.id }}" class="mt-1 w-full min-w-0 rounded-lg border border-slate-300 p-2">
       <option value="">Choose after review</option><option value="keep"{% if review.form.get('action_'+n.id)=='keep' %} selected{% endif %}>Retain this note</option><option value="discard"{% if review.form.get('action_'+n.id)=='discard' %} selected{% endif %}>Discard this draft; keep existing evidence</option>
       {% for target in review.entries if target.id != n.id and target.mailbox_id == n.mailbox_id %}<option value="merge_pending:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_pending:'+target.id %} selected{% endif %}>Merge into retained draft: {{ target.label }}</option>{% endfor %}
       {% for target in n.merge_options %}<option value="merge_saved:{{ target.id }}"{% if review.form.get('action_'+n.id)=='merge_saved:'+target.id %} selected{% endif %}>Merge into saved note: {{ target.label }}</option>{% endfor %}
     </select></label>
     {% if n.combined != n.content %}<details open class="text-xs"><summary>Combined preview — check for contradictions</summary><p class="mt-1 whitespace-pre-wrap break-words">{{ n.combined }}</p></details>{% endif %}
-    <details class="text-xs text-slate-600"><summary class="cursor-pointer">Source and evidence</summary>{% for p in n.preview_provenance %}{% if p.claim %}<p class="mt-1 whitespace-pre-wrap break-words">Draft clause: {{ p.claim }}</p>{% endif %}<p class="mt-1 whitespace-pre-wrap break-words">{{ p.source }}{% if p.excerpt %} — {{ p.excerpt }}{% endif %}</p>{% endfor %}{% if review.source_view.qualifications %}<p class="mt-3 font-medium">Shared caveats attached to this note</p>{% for u in review.source_view.qualifications %}<p class="mt-2 whitespace-pre-wrap break-words">{{ u.text }}</p><p class="text-xs break-words">{{ u.sources|join(', ') }}</p>{% endfor %}{% endif %}</details>
-    {% if n.content_segments %}<details class="text-xs text-slate-600"><summary>Who supplied this wording</summary>{% for part in n.content_segments %}<p class="mt-1 whitespace-pre-wrap break-words">{{ 'Owner wording' if part.kind == 'owner_said' else ('Website-derived wording' if part.kind == 'owner_site' else 'Existing wording — authorship not recorded') }}: {{ part.text }}</p>{% endfor %}</details>{% endif %}
     {% for m in n.matches %}
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs" data-duplicate-candidate>
       <p class="font-semibold">Possible overlap: {{ m.label }} ({{ m.kind }})</p>
@@ -49,6 +50,11 @@
       <label class="mt-2 block"><input type="checkbox" name="match_{{ m.key }}" value="keep_both"{% if review.form.get("match_"+m.key)=="keep_both" %} checked{% endif %}> I reviewed this match: keep both intentionally.</label>
     </div>
     {% endfor %}
+    </div>
+    <div id="note-source-{{ review.id }}-{{ n.id }}" data-note-panel="source"{% if review.source_view.qualifications %} data-source-qualifications{% endif %} class="kr-tool-panel">
+    <div class="text-xs text-slate-600">{% for p in n.preview_provenance %}{% if p.claim %}<p class="mt-1 whitespace-pre-wrap break-words">Draft clause: {{ p.claim }}</p>{% endif %}<p class="mt-1 whitespace-pre-wrap break-words">{{ p.source }}{% if p.excerpt %} — {{ p.excerpt }}{% endif %}</p>{% endfor %}{% if review.source_view.qualifications %}<p class="mt-3 font-medium">Shared caveats attached to this note</p>{% for u in review.source_view.qualifications %}<p class="mt-2 whitespace-pre-wrap break-words">{{ u.text }}</p><p class="text-xs break-words">{{ u.sources|join(', ') }}</p>{% endfor %}{% endif %}</div>
+    {% if n.content_segments %}<details class="text-xs text-slate-600"><summary>Who supplied this wording</summary>{% for part in n.content_segments %}<p class="mt-1 whitespace-pre-wrap break-words">{{ 'Owner wording' if part.kind == 'owner_said' else ('Website-derived wording' if part.kind == 'owner_site' else 'Existing wording — authorship not recorded') }}: {{ part.text }}</p>{% endfor %}</details>{% endif %}
+    </div>
     </div>
     </details>
   </section>

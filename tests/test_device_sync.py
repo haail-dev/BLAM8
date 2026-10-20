@@ -77,6 +77,44 @@ def sync_app(sync_case, monkeypatch):
     routes = APIRouter(route_class=sync.SyncRoute)
     calls = []
     tuned = []
+    from app import knowledge_guidance as guidance, llm
+    from tests.test_knowledge_review import context, entry
+    from app import concierge, usage
+    from types import SimpleNamespace
+
+    first = entry(
+        label="Services", content="We handle requests and keep owners informed."
+    )
+    review_ctx, review_row = context(
+        [first, entry("two", "Fees", "Management costs £95 each month.")],
+        brief=first["content"],
+    )
+    review_row["id"] = "review-one"
+    review_row["payload"]["questions"] = []
+    review_version = review_ctx["version"]
+    first_form = {"version": review_version, "action_" + first["id"]: "keep"}
+    overlap = guidance.present(review_ctx, review_row, first_form)["focus"]
+    match_name = "match_" + overlap["id"]
+
+    async def inferred_keep(**kwargs):
+        payload = {
+            "intent": "keep",
+            "reason": "Keep this note after editing it.",
+            "answer": "",
+            "target": "",
+            "explanation": "Recorded as keep.",
+        }
+        return SimpleNamespace(
+            content=[SimpleNamespace(type="text", text=json.dumps(payload))],
+            model="offline",
+            usage={},
+        )
+
+    monkeypatch.setattr(llm, "create", inferred_keep)
+    monkeypatch.setattr(
+        concierge, "client", lambda: SimpleNamespace(with_options=lambda **kw: None)
+    )
+    monkeypatch.setattr(usage, "record_anthropic", lambda *a, **kw: None)
     from app import setup_handoff
 
     monkeypatch.setattr(
@@ -108,12 +146,14 @@ def sync_app(sync_case, monkeypatch):
         # display adapter. Real auth, model calls and customer data are excluded.
         html = f'''<!doctype html><html><body>{strip}<main><form method="post" action="{action}"{review}>
           <input name="csrf_token" type="hidden" value="test-csrf">
-          <input name="version" type="hidden" value="v1">
-          <input name="title" value=""><input name="action_one" value="">
+          <input name="version" type="hidden" value="{review_version if knowledge else "v1"}">
+          <input name="title" value=""><input name="action_{first["id"]}" value=""><input name="action_two" value="">
+          <input type="checkbox" name="{match_name}" value="keep_both">
+          <section data-draft="{first["id"]}"><textarea name="content_{first["id"]}">{first["content"]}</textarea></section>
           <button type="submit">Continue</button></form></main><div id="messages"></div>
           <script src="/static/device_sync.js"></script>
           <script src="/static/knowledge_guidance.js"></script>
-          <script>Blam8DeviceSync.register({{busy:()=>false,set:messages=>{{document.getElementById('messages').textContent=JSON.stringify(messages);}}}});</script>
+          <script>Blam8DeviceSync.register({{busy:()=>!!window.blam8KnowledgeImportBusy,set:messages=>{{document.getElementById('messages').textContent=JSON.stringify(messages);}}}});</script>
           </body></html>'''
         return HTMLResponse(html)
 
@@ -147,14 +187,14 @@ def sync_app(sync_case, monkeypatch):
     async def guide(request: Request):
         body = await request.json()
         calls.append(body)
-        return {
-            "reply": "First decision kept; review the next note.",
-            "patches": {"action_one": "keep"},
-            "focus_hash": "next-decision",
-            "focus": {"kind": "note", "id": "two"},
-            "actions": [],
-            "save_ready": False,
-        }
+        return await guidance.turn(
+            str(tenant),
+            review_ctx,
+            review_row,
+            body["form"],
+            body["question"],
+            body.get("focus_hash", ""),
+        )
 
     @routes.post("/concierge/help")
     @routes.post("/concierge/onboard")
@@ -298,3 +338,49 @@ def test_validation_failure_releases_claim_and_query_changes_are_not_replayed(sy
 )
 def test_navigation_is_limited_to_setup_routes(path):
     assert not sync.path_allowed(path)
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"form": []},
+        {"form": {"bad": None}},
+        {
+            "form": {
+                "bad": {
+                    "action": "/onboarding/knowledge",
+                    "version": "v1",
+                    "values": [],
+                }
+            }
+        },
+        {
+            "form": {
+                "bad": {
+                    "action": "/onboarding/knowledge",
+                    "version": "v1",
+                    "values": {"title": "not-a-list"},
+                }
+            }
+        },
+        {
+            "form": {
+                "bad": {
+                    "action": "/onboarding/knowledge",
+                    "version": "v1",
+                    "values": {"title": [3]},
+                }
+            }
+        },
+        {"guide": []},
+        {"guide": {"review": "review-one", "version": "v1", "data": []}},
+    ],
+)
+def test_malformed_checkpoint_rejected_before_claim(sync_app, patch):
+    c = client(sync_app)
+    body = {"operation": str(uuid4()), "revision": 0, "patch": patch}
+    headers = {"X-CSRF-Token": "test-csrf"}
+    assert c.post("/device-sync/flow", json=body, headers=headers).status_code == 422
+    assert c.get("/device-sync/flow").json()["revision"] == 0
+    body["patch"] = {"form": {}, "guide": {}}
+    assert c.post("/device-sync/flow", json=body, headers=headers).status_code == 200

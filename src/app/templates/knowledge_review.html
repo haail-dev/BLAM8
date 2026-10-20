@@ -1,13 +1,13 @@
 {% extends "onboarding/base.html" %}
 {% block title %}Review Knowledge · BLAM8{% endblock %}
-{% block heading %}Review pending Knowledge{% endblock %}
-{% block subheading %}Keep the Assistant alongside the exact drafts. Proposals and applied corrections remain pending until you approve the final review.{% endblock %}
+{% block heading %}Review Knowledge{% endblock %}
+{% block subheading %}{% endblock %}
 {% block content %}
 <a class="text-sm text-brand" href="{{ review.payload.return_to }}">← Back to Knowledge</a>
 {% if error %}<p role="alert" class="my-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm">{{ error }}</p>{% endif %}
 {% if preview_complete %}<p role="status" class="my-3 rounded-lg bg-slate-50 p-3 text-sm">Check complete: {{ review.summary.overlaps }} possible overlaps; {{ review.summary.unresolved }} source statements need a decision. No facts saved.</p>{% endif %}
-{% include "_knowledge_coverage_review.html" %}
+<details class="mt-3 text-xs text-slate-600"><summary>Knowledge coverage</summary>{% include "_knowledge_coverage_review.html" %}</details>
 <div id="knowledge-pending-reviews">{% include "_knowledge_review.html" %}</div>
 <script src="/static/knowledge_onboarding_review.js?v={{ asset_rev }}" defer></script>
-{% if knowledge_source_review_enabled %}<script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script>{% endif %}
+{% if knowledge_source_review_enabled %}<script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script><script src="/static/knowledge_guidance.js?v={{ asset_rev }}" defer></script>{% endif %}
 {% endblock %}
