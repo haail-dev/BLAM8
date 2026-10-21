@@ -79,7 +79,7 @@ def test_trusted_click_submits_backlog_choice_once(
             + card
             + "</main>"
             + (
-                '<script>document.addEventListener("submit",function(){if(!window.invalidatedOnce){window.invalidatedOnce=true;queueMicrotask(function(){document.querySelector("[name=validation]").value="";});}},true);</script>'
+                '<script>document.addEventListener("submit",function(){if(!window.invalidatedOnce){window.invalidatedOnce=true;queueMicrotask(function(){document.querySelector("[name=validation]").value="";});}},true);document.querySelector("[name=validation]").addEventListener("invalid",function(){window.invalidReported=true;});</script>'
                 if mode == 2 and not choices
                 else ""
             )
