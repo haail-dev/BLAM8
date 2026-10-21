@@ -45,7 +45,9 @@ try {
     await clickLater();
   }
   if(mode===2){
-    await until('window.invalidatedOnce===true && document.querySelector("[name=validation]").value==="" && !document.querySelector("form").dataset.syncSubmitting');
+    // invalidReported: native validation has blocked the first attempt, so its async submit chain is finished.
+    // (invalidatedOnce alone is set at the submit event, before that chain reaches requestSubmit.)
+    await until('window.invalidReported===true && document.querySelector("[name=validation]").value==="" && !document.querySelector("form").dataset.syncSubmitting');
     const state=await (await fetch(`http://127.0.0.1:${appPort}/submission-state`)).json();
     assert.equal(state.choices.length,0);assert.equal(state.submitted.length,0);
     assert(await evaluate('trustedClicks.every(Boolean) && trustedClicks.length===1'));
