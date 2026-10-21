@@ -182,3 +182,30 @@ def test_new_unanswered_detail_makes_previously_confirmed_topic_partial():
     topic=next(t for t in kr.topic_view(ctx)['topics'] if t['key']=='prices')
     assert topic['state']=='partial'
     assert topic['questions'][-1]['status']=='unknown' and topic['questions'][-1]['answer']==''
+
+
+PARAGRAPHS=["We handle resident requests and keep owners informed.","Every request is logged on the day it arrives.",
+            "Routine repairs are arranged with approved contractors.","Owners receive one statement each month."]
+
+
+def test_native_crlf_and_guide_lf_submissions_share_one_overlap_key():
+    # The guide posts textarea.value (LF); a native Save or Check changes and overlaps
+    # submission carries the same text as CRLF. Both must hash to one acknowledgement.
+    ctx,row=context([entry(content="\n\n".join(PARAGRAPHS))],brief=PARAGRAPHS[0])
+    guide={**form(ctx,row),"content_one":"\n\n".join(PARAGRAPHS)}
+    native={**form(ctx,row),"content_one":"\r\n\r\n".join(PARAGRAPHS)}
+    legacy={**form(ctx,row),"content_one":"\r\r".join(PARAGRAPHS)}
+    views=[kr.review_view(ctx,row,f) for f in (guide,native,legacy)]
+    keys=[[m["key"] for m in v["entries"][0]["matches"]] for v in views]
+    assert len(keys[0])==1 and keys[0]==keys[1]==keys[2]
+    assert views[0]["signatures"]==views[1]["signatures"]==views[2]["signatures"]
+    assert views[0]["form"]["content_one"]==views[1]["form"]["content_one"]
+    # Resubmitting unchanged text with other line endings is not an owner edit.
+    assert all("content_segments" not in n for n in kr.edited_entries(row,native))
+    assert "content_segments" in kr.edited_entries(row,{**native,"content_one":native["content_one"]+"\r\nAn actual edit."})[0]
+    with pytest.raises(HTTPException) as unresolved:kr.plan(ctx,row,native)
+    assert unresolved.value.status_code==409
+    native["match_"+keys[0][0]]="keep_both"
+    notes,payload=kr.plan(ctx,row,native)
+    assert len(notes)==1 and "\r" not in notes[0]["content"] and "\r" not in payload["entries"][0]["content"]
+    assert payload["entries"][0]["matches"][0]["key"]==keys[0][0]

@@ -130,3 +130,41 @@ def test_many_long_draft_titles_do_not_break_the_next_chat_turn(client,review_st
     followup=client.post('/concierge/onboard',json={'step':'knowledge','question':'Show that review',
         'history':[{'role':'assistant','content':first.json()['reply']}]})
     assert followup.status_code==200 and len(review_store.rows)==1 and review_store.sources==[]
+
+
+def test_overlap_acknowledged_through_the_guide_is_honoured_by_the_native_save(client,review_store,monkeypatch):
+    from app import knowledge_source_routes as routes,security,setup_card_knowledge,setup_held,usage
+    from app.security import require_csrf_header
+    from tests.test_knowledge_review import PARAGRAPHS
+    monkeypatch.setattr(security,'_BUCKETS',{})
+    monkeypatch.setattr(routes.settings,'knowledge_source_review_enabled',True)
+    monkeypatch.setattr(routes.db,'get_member',lambda *a,**k:None)
+    monkeypatch.setattr(routes.people,'can_do',lambda *a:True)
+    app.dependency_overrides[require_csrf_header]=lambda:None
+    review_store.brief=PARAGRAPHS[0]
+    row=review_store.stage('tenant',[{'label':'Services','content':'\n\n'.join(PARAGRAPHS)}])
+    path='/onboarding/knowledge/review/'+row['id'];id=row['payload']['entries'][0]['id']
+    # The guide reads the form with FormData, so textarea newlines travel as LF.
+    guide={'version':review_store.load('tenant')['version'],'label_'+id:'Services','content_'+id:'\n\n'.join(PARAGRAPHS),'action_'+id:'keep'}
+    shown=client.post(path+'/guide',json={'form':guide,'question':'','focus_hash':''})
+    assert shown.status_code==200 and shown.json()['focus']['kind']=='overlap'
+    acknowledged=client.post(path+'/guide',json={'form':guide,'question':'Keep both notes','focus_hash':shown.json()['focus_hash']})
+    assert acknowledged.status_code==200
+    (match_name,)=acknowledged.json()['patches']
+    assert match_name.startswith('match_') and acknowledged.json()['patches'][match_name]=='keep_both'
+    calls=[]
+    async def prepare(patch):
+        return {'notes':[{**v,'chunks':[{'content':v['content'],'embedding':'[0.1]'}]} for v in patch['notes']]},1
+    monkeypatch.setattr(setup_card_knowledge,'prepare',prepare)
+    monkeypatch.setattr(usage,'record_voyage',lambda *a,**kw:None)
+    monkeypatch.setattr(setup_held,'mark_used',lambda *a,**kw:None)
+    class Client:
+        def rpc(self,name,payload):calls.append((name,payload));return SimpleNamespace(execute=lambda:SimpleNamespace(data=True))
+    monkeypatch.setattr(kr.db,'db',lambda:Client())
+    # Save reviewed decisions is a native form submission: the browser sends textarea newlines as CRLF.
+    native={**guide,**acknowledged.json()['patches'],'operation':'save','content_'+id:'\r\n\r\n'.join(PARAGRAPHS)}
+    saved=client.post(path,data=native,follow_redirects=False)
+    assert saved.status_code==303,saved.text[:400]
+    (name,rpc),=calls
+    assert name=='admit_knowledge_review' and rpc['p_payload']['entries'][0]['matches'][0]['key']==match_name.removeprefix('match_')
+    assert '\r' not in rpc['p_notes'][0]['content']

@@ -50,9 +50,14 @@ the form-associated Continue actions retain their existing submission behaviour.
 Exact sentence/block repetitions are checked across complete
 note text and shown once per pair. They may be intentional: the owner decides
 whether to retain both or merge. This is not a complete semantic duplicate or
-contradiction audit. Generic default questions are omitted for topics already
-represented by evidence; explicit unanswered questions and unknown topic states
-remain, and saved answers are preserved.
+contradiction audit. Overlap identifiers, owner-edit detection and the final
+overlap check use note text with line endings normalised to LF. The Assistant
+posts textarea values with LF while Check changes and overlaps and Save reviewed
+decisions are native form submissions that send CRLF, so one acknowledgement
+holds on every path; an unacknowledged overlap still refuses the save. Generic
+default questions are omitted for topics already represented by evidence;
+explicit unanswered questions and unknown topic states remain, and saved
+answers are preserved.
 
 Check changes and overlaps runs in place with a visible running, completed or
 failure result; it saves no facts. Without JavaScript the same read-only preview
