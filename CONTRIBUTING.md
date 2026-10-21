@@ -17,6 +17,16 @@ facts and language belong in business settings and applied presets. Missing deta
 a failed rule, an unverifiable fact, and an unsupported request are different outcomes.
 Do not invent a business configuration value when the owner has not chosen one.
 
+Keep code comments and docstrings useful to the next reader. A docstring should explain
+the function's purpose, inputs, outputs and important boundaries. Record non-obvious
+design reasoning where it helps maintainers, but describe the general case rather than
+embedding a particular person's conversation or transcript. Put concrete examples of
+expected behaviour in focused regression tests; use synthetic or minimally redacted
+data. If the reason depends on a dated incident, summarize the relevant condition and
+date without quoting private conversation unless the exact wording is necessary to
+specify or reproduce the behaviour. PR descriptions and review notes are also suitable
+places for fuller historical context.
+
 Use `python tests/run_offline.py ...` for tests. Database changes should include a
 rollback and disposable-database verification where the migration permits rollback.
 Deployment and live data changes are separate from local source development.
