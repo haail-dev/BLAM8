@@ -7,7 +7,6 @@ import os
 import subprocess
 import threading
 import shutil
-import time
 from uuid import uuid4
 
 from fastapi import APIRouter, Request
@@ -19,7 +18,7 @@ import pytest
 
 from app import backlog, onboarding, device_sync
 from tests.test_device_sync import cluster, sync_db, sync_case, sync_app
-from tests.test_knowledge_guidance_browser import chromium_binary
+from tests.test_knowledge_guidance_browser import chromium_binary, devtools_port
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -157,12 +156,7 @@ def test_trusted_click_submits_backlog_choice_once(
     with (tmp_path / "chrome.log").open("w") as log:
         browser = subprocess.Popen(command, stdout=log, stderr=log)
         try:
-            deadline = time.monotonic() + 15
-            portfile = profile / "DevToolsActivePort"
-            while not portfile.exists() and time.monotonic() < deadline:
-                time.sleep(0.05)
-            assert portfile.exists(), "Chromium debugging endpoint did not start"
-            port = portfile.read_text().splitlines()[0]
+            port = devtools_port(profile)
             result = subprocess.run(
                 [
                     shutil.which("node"),
