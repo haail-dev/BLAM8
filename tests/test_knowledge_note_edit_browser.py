@@ -7,7 +7,6 @@ from pathlib import Path
 import re
 import subprocess
 import os
-import time
 import shutil
 import pytest
 from copy import deepcopy
@@ -23,7 +22,7 @@ from app import (
     knowledge_source_evidence,
     knowledge_fidelity,
 )
-from tests.test_knowledge_guidance_browser import chromium_binary
+from tests.test_knowledge_guidance_browser import chromium_binary, devtools_port
 from tests.test_knowledge_review import context, entry
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -184,12 +183,7 @@ def test_native_removal_apply_preserves_checkbox_value_and_other_local_edits(
             stderr=log,
         )
         try:
-            portfile = profile / "DevToolsActivePort"
-            deadline = time.monotonic() + 15
-            while not portfile.exists() and time.monotonic() < deadline:
-                time.sleep(0.05)
-            assert portfile.exists(), "Chromium debugging endpoint did not start"
-            port = portfile.read_text().splitlines()[0]
+            port = devtools_port(profile)
             result = subprocess.run(
                 [
                     shutil.which("node"),

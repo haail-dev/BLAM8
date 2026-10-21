@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import time
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -32,6 +33,25 @@ def chromium_binary():
         if candidate and Path(candidate).is_file():
             return candidate
     raise AssertionError('Chromium/Chrome is required; set BLAM8_TEST_CHROMIUM_BIN to its executable.')
+
+
+def devtools_port(profile, timeout=15):
+    """Return the remote-debugging port of a Chromium started with --remote-debugging-port=0.
+
+    Chromium makes DevToolsActivePort visible before it has finished writing it (line one is the
+    port, line two the browser websocket path), so the file existing is not readiness: an early
+    read sees an empty file or, on Windows, a sharing violation. Wait for the complete file."""
+    port_file = Path(profile) / 'DevToolsActivePort'
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            lines = port_file.read_text().splitlines()
+        except OSError:  # not created yet, or still held open by Chromium while it writes
+            lines = []
+        if len(lines) >= 2 and lines[0].isdigit() and lines[1]:
+            return lines[0]
+        time.sleep(0.05)
+    raise AssertionError('Chromium debugging endpoint did not start')
 
 
 def test_overlap_checkbox_roundtrip_in_native_chromium(tmp_path):

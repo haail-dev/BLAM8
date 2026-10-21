@@ -97,7 +97,7 @@ def test_native_review_startup_and_terminal_conflict(tmp_path, mode):
         await until(()=>document.getElementById('bc-messages').textContent.includes('Note 5 of 5'));
         assert(guideCalls===1,'Startup must rederive current note exactly once');
         const actions=Array.from(document.querySelectorAll('[data-knowledge-guide-actions]')).at(-1);
-        assert(JSON.stringify(Array.from(actions.querySelectorAll('button')).map(button=>button.textContent))===JSON.stringify(['Keep note','Leave out','Edit']),'Note actions must stay concise');
+        assert(JSON.stringify(Array.from(actions.querySelectorAll('button')).map(button=>button.textContent))===JSON.stringify(['Keep note','Edit','Leave out']),'Note actions must stay concise, with Edit between the two decisions');
         assert(fixture.resumed.actions[0].message==='Keep this note' && fixture.resumed.actions[1].message==='Discard this note','Display labels must not change approval protocol');
         for(let n=1;n<=4;n++)assert(document.querySelector('[name=action_'+n+']').value==='keep','Restored decision lost');
         assert(document.querySelector('[name=action_5]').value==='','Current note must remain unapproved');

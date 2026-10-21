@@ -46,10 +46,15 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
 async function show(d){queued.push(d);await c.onboardTurn('Show the current note',[]);return cards().at(-1);}
 const first=data('note','one');const card=await show(first);
 assert(buttons(card).every(b=>!b.disabled));
+// Layout contract: the row is centred, Edit sits between the two note decisions, nothing is pushed to an edge.
+const choiceOrder=group=>buttons(group).map(b=>b.getAttribute('data-knowledge-guide-choice'));
+const centred=group=>{assert(group.className.includes('justify-center'));assert(buttons(group).every(b=>!b.className.includes('ml-auto')));assert(group.querySelector('[data-knowledge-guide-status]').className.includes('text-center'));};
+assert.deepEqual(choiceOrder(card),['keep','edit','discard']);centred(card);
 queued.push(data('overlap','match',{review_decision:receipt(first,'keep'),patches:{action_one:'keep'}}));
 buttons(card)[0].click();await tick();chosen(card,'keep');
 assert.equal(calls.at(-1),'Keep this note');assert(!c.log.some(m=>m.role==='user')); // silent button
 const overlap=cards().at(-1), overlapData=current;
+assert.deepEqual(choiceOrder(overlap),['keep_both','discard']);centred(overlap); // Edit belongs to notes only
 queued.push(data('note','two',{review_decision:receipt(overlapData,'keep_both'),patches:{match_match:'keep_both'}}));
 buttons(overlap)[0].click();await tick();chosen(overlap,'keep_both');chosen(card,'keep');
 // A model proposal cannot paint approval; only the following exact typed action confirms it.
