@@ -3,21 +3,30 @@
 Pins the security layers (each is its own dependency, so each is tested alone):
 kill switch, same-origin, CSRF header, honeypot, site-wide ceiling (in memory and
 durable), per-IP burst and daily allowance; plus the input cleaning, the
-off-topic path, and that a model failure never surfaces as a 500. The model is
-stubbed — no network.
+off-topic path, and that a model failure never surfaces as a 500. Also pins the
+privacy promise: the scenario call logs in meta mode, so no visitor text reaches
+llm_calls, while the envelope row the durable ceiling counts is still written.
+The model is stubbed — no network.
 
 Run: python -m pytest tests/test_scenario_box.py -q
 """
+import asyncio
+import json
+from types import SimpleNamespace
+
 import pytest
 from fastapi.testclient import TestClient
 
 import app.concierge_routes as routes
-from app import concierge, security
+from app import concierge, db, llm, security
 from app.config import settings
 from app.main import app
 
 TOKEN = "t" * 40
 Q = "I have three staff and we work seven days a week. Would it overload my team?"
+# The autouse fixture below swaps scenario_answer for a stub; the logging tests
+# at the end exercise the real function, so keep a handle to it from import time.
+_real_scenario_answer = concierge.scenario_answer
 
 
 @pytest.fixture(autouse=True)
@@ -167,3 +176,56 @@ def test_prompt_is_agnostic_and_carries_the_guards():
     assert "FACT-X" in p and "KNOW-Y" in p
     assert "on_topic" in p and "untrusted" in p and "does NOT do" in p
     assert "BLAM8" not in p.split("<facts>")[0]        # the rules never name the product
+
+
+# ── Privacy: what the scenario call leaves in the LLM log ────────────────────
+# privacy.html promises that the public assistant's prompt and answer content is
+# not kept in the LLM call log. answer() honours that with log_mode="meta"; the
+# scenario box must too, while still writing the metadata envelope row that
+# routes._scenario_ceiling counts (db.count_llm_calls_since on "scenario_ask").
+def _fake_message(text='{"reply": "It books against the capacity you set.", "on_topic": true}'):
+    usage_ = SimpleNamespace(input_tokens=10, output_tokens=20,
+                             cache_read_input_tokens=0, cache_creation_input_tokens=0)
+    return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)],
+                           stop_reason="end_turn", model="fake-model", usage=usage_,
+                           model_dump=lambda mode=None: {"content": [{"type": "text", "text": text}]})
+
+
+def test_scenario_call_asks_for_meta_logging(monkeypatch):
+    captured = []
+
+    async def fake_create(**kw):
+        captured.append(kw)
+        return _fake_message()
+
+    monkeypatch.setattr(concierge, "client", lambda: None)
+    monkeypatch.setattr(llm, "create", fake_create)
+    reply, on_topic, _usage, model = asyncio.run(_real_scenario_answer(Q))
+    assert reply == "It books against the capacity you set." and on_topic is True
+    assert model == "fake-model"
+    (kw,) = captured
+    assert kw["operation"] == "scenario_ask" and kw["module"] == "concierge"
+    assert kw["log_mode"] == "meta"
+
+
+def test_scenario_text_is_not_kept_in_the_llm_log_but_the_row_still_counts(monkeypatch):
+    rows = []
+    monkeypatch.setattr(db, "insert_llm_call", rows.append)
+    monkeypatch.setattr(settings, "llm_log_mode", "full")          # the production default
+    seen = []
+
+    async def create(**kw):
+        seen.append(kw)
+        return _fake_message()
+
+    monkeypatch.setattr(concierge, "client", lambda: SimpleNamespace(
+        messages=SimpleNamespace(create=create), max_retries=0))
+    asyncio.run(_real_scenario_answer(Q))
+    (sent,) = seen
+    assert Q in json.dumps(sent["messages"])                         # the model saw the scenario
+    (row,) = rows                                                    # exactly one envelope row...
+    assert row["operation"] == "scenario_ask"                        # ...which the ceiling counts
+    assert row["input_tokens"] == 10 and row["stop_reason"] == "end_turn"
+    assert "request" not in row and "response" not in row
+    assert Q not in json.dumps(row, default=str)                     # no visitor text anywhere
+

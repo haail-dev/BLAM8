@@ -535,7 +535,13 @@ async def scenario_answer(question: str):
                                    knowledge=platform_help.prompt(question))
     msg = await llm.create(
         client=client(), tenant_id=PLATFORM_TENANT_ID, operation="scenario_ask",
-        module="concierge", model=settings.anthropic_model, max_tokens=500,
+        module="concierge",
+        # Same promise as answer(): the visitor's scenario is sent to Anthropic
+        # for the reply, but neither it nor the reply is retained in BLAM8's full
+        # LLM log. The metadata envelope row is still written; that row is what
+        # the durable site-wide ceiling (concierge_routes._scenario_ceiling) counts.
+        log_mode="meta",
+        model=settings.anthropic_model, max_tokens=500,
         system=system, messages=[{"role": "user", "content": question}],
         output_config={"format": {"type": "json_schema", "schema": SCENARIO_SCHEMA}},
     )
