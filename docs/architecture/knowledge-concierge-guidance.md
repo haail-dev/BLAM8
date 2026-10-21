@@ -51,6 +51,9 @@ questions in plain language. It preserves shared qualifications and requires
 the existing admission planner to succeed before offering Save. Nothing is
 saved by chat decisions: the separate Save reviewed decisions action submits
 the ordinary form, whose permission/version/source/overlap checks still apply.
+Form text is line-ending normalised before any fingerprint or comparison, so the
+overlap key the guide acknowledged from textarea values (LF) is the key the
+native submission (CRLF) is checked against.
 It does not navigate into later onboarding steps or override sending settings.
 
 The browser checks that the form and its local values have not changed while a

@@ -246,17 +246,28 @@ def topic_view(context):
             "pending_count": sum(bool(t["pending"]) for t in result)}
 
 
+def normalise_text(value):
+    """Line endings carry no review meaning, but they change every hash of the text.
+
+    A native form submission sends textarea newlines as CRLF; the Assistant guide
+    and device sync post the same field from textarea.value with LF. Fingerprint
+    and compare one form so a choice made on either path holds on the other.
+    """
+    return value.replace('\r\n', '\n').replace('\r', '\n') if isinstance(value, str) else value
+
+
 def review_form(row, form=None):
     """Recover explicitly applied draft review choices, never inferred approvals."""
-    return {**row['payload'].get('draft_review_choices', {}), **dict(form or {})}
+    merged = {**row['payload'].get('draft_review_choices', {}), **dict(form or {})}
+    return {name: normalise_text(value) for name, value in merged.items()}
 
 
 def edited_entries(row, form, *, validate=True):
     entries = deepcopy(row["payload"]["entries"])
     for n in entries:
-        original = n['content']
-        n["label"] = str(form.get("label_"+n["id"],n["label"])).strip()
-        n["content"] = str(form.get("content_"+n["id"],n["content"])).strip()
+        original = normalise_text(n['content'])
+        n["label"] = normalise_text(str(form.get("label_"+n["id"],n["label"]))).strip()
+        n["content"] = normalise_text(str(form.get("content_"+n["id"],n["content"]))).strip()
         if n['content'] != original:
             n['content_segments'] = [{'kind': 'owner_said', 'reference': 'Owner edited this Knowledge draft', 'text': n['content']}]
         if validate and form.get("action_"+n["id"])!="discard" and (not n["label"] or len(n["label"])>160 or not n["content"] or len(n["content"])>60000):
