@@ -43,6 +43,13 @@ transport. Native timers must remain live after fixture HTTP409 responses; resto
 source/overlap choices and the current unapproved note are checked with FormData.
 Separate route/disposable-SQL tests verify automatic-view replay identity.
 
+`test_knowledge_apply_sync_browser.py` runs the real source-correction routes
+behind the sync wrapper for two native documents with disposable SQL and no
+model. It applies a paragraph removal while an idle poll observes the shared
+revision before the Apply response, then checks that the originating device
+keeps its page and unsaved decisions, the checkpoint carries the applied draft
+under the advanced version, and the second device reloads and recovers them.
+
 The mailbox submit regression additionally drives trusted Chromium mouse input
 through its loopback-only debugging endpoint with Node 22+ built-in fetch and
 WebSocket APIs. It renders the shipped backlog form and runs the production sync

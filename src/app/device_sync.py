@@ -521,6 +521,23 @@ class SyncRoute(APIRoute):
                                     ).items():
                                         saved["values"][name] = [value]
                             patch["form"] = forms
+                    elif request.url.path.endswith("/corrections/apply") and answer.get(
+                        "version"
+                    ):
+                        # Record the applied wording and the advanced version in
+                        # the same revision that asks other devices to reload, so
+                        # their reload restores the working decisions and new text.
+                        review = request.url.path.split("/")[-3]
+                        forms = current["payload"].get("form", {})
+                        for saved in forms.values():
+                            if saved.get("action", "").endswith("/" + review):
+                                saved["version"] = answer["version"]
+                                for entry in answer.get("entries", []):
+                                    for field in ("label", "content"):
+                                        saved["values"][field + "_" + entry["id"]] = [entry[field]]
+                                for name, value in answer.get("patches", {}).items():
+                                    saved["values"][name] = [value]
+                        patch["form"] = forms
             stored = {
                 "status": result.status_code,
                 "headers": {

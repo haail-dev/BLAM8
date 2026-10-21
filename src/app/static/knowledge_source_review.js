@@ -106,6 +106,10 @@
     lock(true);
     try {
       var data = await request(form, '/apply', body);
+      // The stored drafts now carry a later version. Device checkpoints record
+      // it so these working decisions survive a reload on any device, while the
+      // hidden version below still waits for Check changes and overlaps.
+      if (data.version) form.dataset.syncVersion = data.version;
       data.entries.forEach(function (entry) {
         form.elements['label_' + entry.id].value = entry.label;
         form.elements['content_' + entry.id].value = entry.content;
@@ -118,8 +122,9 @@
         if(field.dispatchEvent)field.dispatchEvent(new Event('change',{bubbles:true}));
       });
       form.dataset.reviewDirty = '1';
-      // Keep the old version until Check changes and overlaps renders a fresh
-      // preview. A racing final save is also rejected by the database.
+      // Keep the old form version until Check changes and overlaps renders a
+      // fresh preview, so a stale Save or guide turn is still refused. A racing
+      // final save is also rejected by the database.
       clear(form); say(form, data.summary);
     } catch (err) { clear(form); say(form, err.message + ' Reload to check the outcome before retrying.'); }
     finally { lock(false); }

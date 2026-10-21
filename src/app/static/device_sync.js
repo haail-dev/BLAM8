@@ -6,10 +6,17 @@
   var states = {}, queue = Promise.resolve(), adapter = null, applying = false;
   var initialized = false, dirty = false, conflict = false, timer, polling = false;
   var submissions = new WeakSet();
+  // Operations this page submitted. A refresh hint that names one of them
+  // describes this device's own completed work, not a change elsewhere.
+  var sent = {};
   var here = location.pathname, flow = here.indexOf('/onboarding/') === 0;
   var tuningPaths = ['/app/diary/settings','/app/diary/intake','/app/diary/dependants','/app/crm/settings','/app/invoices/settings'];
   var notice;
   function uuid() { return crypto.randomUUID(); }
+  function own(operation) { sent[operation]=true; return operation; }
+  // A review whose stored drafts this page advanced records that version for
+  // its checkpoints while the form's own version waits for a fresh preview.
+  function formVersion(f) { return f.dataset.syncVersion || (f.elements.version ? f.elements.version.value : ''); }
   function csrf() { var m = document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; }
   function warn(message) {
     if (!notice) { notice = document.createElement('div'); notice.setAttribute('role','status'); notice.className='fixed top-14 left-4 right-4 z-50 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-slate-800'; document.body.appendChild(notice); }
@@ -32,7 +39,7 @@
     document.querySelectorAll('main form').forEach(function(f,i){
       if (f.method.toLowerCase()!=='post') return;
       var action=new URL(f.action,location.href).pathname;
-      forms[action+':'+i]={action:action,version:f.elements.version ? f.elements.version.value : '',values:fields(f)};
+      forms[action+':'+i]={action:action,version:formVersion(f),values:fields(f)};
     });
     return forms;
   }
@@ -41,7 +48,7 @@
     try {
       document.querySelectorAll('main form').forEach(function(f,i){
         var action=new URL(f.action,location.href).pathname, saved=forms[action+':'+i];
-        if (!saved || saved.action!==action || saved.version!==(f.elements.version ? f.elements.version.value : '')) return;
+        if (!saved || saved.action!==action || saved.version!==formVersion(f)) return;
         Object.keys(saved.values || {}).forEach(function(name){
           var values=saved.values[name];
           if (!Array.isArray(values) || /^(csrf_token|_sync_.*|version|operation)$/.test(name)) return;
@@ -72,7 +79,9 @@
     if (name==='flow' && flow) {
       if (dirty) { conflict=true; warn('This setup changed on another device. Your edits are still here. Reload to use the shared version before continuing.'); return; }
       if (data.path && data.path!==here && !conflict) { location.replace(data.path); return; }
-      if(old && data.refresh && data.refresh!==old.payload.refresh){location.reload();return;}
+      // Stored drafts changed on another device: show them. The device that
+      // sent the operation already holds its result and keeps its page.
+      if(old && data.refresh && data.refresh!==old.payload.refresh && !sent[data.refresh]){location.reload();return;}
       restore(data.form || {});
       if (window.Blam8KnowledgeGuide && data.guide) window.Blam8KnowledgeGuide.restore(data.guide);
       window.dispatchEvent(new Event('blam8:onboarding-readiness'));
@@ -145,8 +154,9 @@
       if(name==='flow') await serial(async function(){
         if(JSON.stringify(capture())!==JSON.stringify(states.flow.payload.form || {})){dirty=true;await flushNow();}
       });
+      var operation=own(options.syncOperation || uuid());
       options=Object.assign({},options,{headers:Object.assign({},options.headers,{
-        'X-CSRF-Token':csrf(),'X-Blam8-Operation':options.syncOperation || uuid(),
+        'X-CSRF-Token':csrf(),'X-Blam8-Operation':operation,
         'X-Blam8-Revision':String(states[name].revision),'X-Blam8-Channel':name,
         'X-Blam8-Automatic':api.automatic ? '1' : '0'})});
       var result=await fetch(url,options);
@@ -200,7 +210,7 @@
     }).then(function(){
       ['operation','revision','channel'].forEach(function(key){
         var el=f.elements['_sync_'+key];if(!el){el=document.createElement('input');el.type='hidden';el.name='_sync_'+key;f.appendChild(el);}
-        el.value=key==='operation' ? uuid() : key==='revision' ? states.flow.revision : 'flow';
+        el.value=key==='operation' ? own(uuid()) : key==='revision' ? states.flow.revision : 'flow';
       });
       f.dataset.syncSubmitting='1';
       try { f.requestSubmit(submitter); }

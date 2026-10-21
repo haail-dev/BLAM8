@@ -175,9 +175,13 @@ def apply(review_id: UUID, body: ApplyRequest, ctx: TenantCtx = Depends(require_
             raise setup_cards.Stale('The draft update could not be confirmed. Reload before retrying.')
         # No final admission token is returned: recheck overlaps against the
         # fresh context before saving. Existing form edits remain in the browser.
+        # The advanced stored version lets device checkpoints keep those edits
+        # across a reload; the form's own version changes only with a fresh preview.
         patches = {k:v for change in checked['changes'] for k,v in change.get('patches', {}).items()}
         changed_ids = {change['id'] for change in checked['changes']}
-        return {'entries': [entry for entry in payload['entries'] if entry['id'] in changed_ids], 'patches': patches, 'summary': 'Corrections and listed source-review choices applied to drafts. Check changes and overlaps, then confirm the edited note before saving. Nothing saved to Knowledge.'}
+        return {'entries': [entry for entry in payload['entries'] if entry['id'] in changed_ids], 'patches': patches,
+                'version': knowledge_review.load(ctx.tenant_id)['version'],
+                'summary': 'Corrections and listed source-review choices applied to drafts. Check changes and overlaps, then confirm the edited note before saving. Nothing saved to Knowledge.'}
     except Exception as exc:
         if 'BLAM8_KNOWLEDGE_REVIEW_STALE' in str(exc):
             exc = setup_cards.Stale('Knowledge or drafts changed. Reload before retrying.')
