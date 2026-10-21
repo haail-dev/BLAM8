@@ -116,7 +116,11 @@ duplicate write path.
 - **Pre-auth (transcript-stateless):** answers questions from the platform knowledge
   base (D3). No account or tenant is created; the transcript stays in browser
   session storage. Public LLM calls retain usage/reliability metadata under the
-  platform sentinel, but not the prompt or response content. The prompt itself is
+  platform sentinel, but not the prompt or response content. This covers both
+  public calls: the assistant (`/concierge/ask`, operation `concierge_ask`) and the
+  FAQ scenario box (`/concierge/scenario`, operation `scenario_ask`), each of which
+  passes `log_mode="meta"`. The scenario call still writes its metadata row, which
+  is what its durable site-wide daily ceiling counts. The prompt itself is
   sent to Anthropic to generate the answer.
   Ends only in a *conversion offer* (D5).
 - **Authenticated (stateful):** drives onboarding via D1 tools against the
