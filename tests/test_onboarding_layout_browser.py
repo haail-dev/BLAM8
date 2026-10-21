@@ -86,6 +86,21 @@ def test_onboarding_progress_and_knowledge_layout(tmp_path, width, long_labels):
     const actions=Array.from(document.querySelectorAll('.kr-batch-actions button'));
     if(rect(document.querySelector('.knowledge-review')).width<=576) check(actions.every(button=>Math.abs(rect(button).width-rect(actions[0]).width)<1),'uniform review actions');
     check(!document.getElementById('bc-clear'),'onboarding reset hidden');
+    // The card starts just under the progress strip (was ~18px; stays compact but never touching).
+    const gap=rect(document.querySelector('[data-onboarding-column] > .bg-white')).top-rect(stepper.querySelector('.onboarding-progress')).bottom;
+    check(gap>=6 && gap<=14,'progress-to-card gap '+gap);
+    // The scrolling body fades into the page colour instead of ending in a hard line.
+    // getComputedStyle objects are live: keep the light colour as a string before switching theme.
+    const lightBackground=getComputedStyle(document.body).backgroundColor, fade=getComputedStyle(document.body,'::after');
+    check(fade.content!=='none' && fade.position==='fixed' && fade.pointerEvents==='none','bottom fade is a fixed click-through overlay');
+    check(fade.bottom==='0px' && parseFloat(fade.height)>=32,'bottom fade covers the viewport edge');
+    check(parseFloat(fade.height)<=parseFloat(getComputedStyle(document.querySelector('[data-onboarding-main]')).paddingBottom)+0.5,'bottom fade must not tint the last content');
+    check(Number(fade.zIndex)<Number(getComputedStyle(document.getElementById('blam8-concierge')).zIndex),'bottom fade stays under the assistant dock');
+    check(fade.backgroundImage.includes(lightBackground),'bottom fade ends in the page colour');
+    document.documentElement.setAttribute('data-theme','dark');
+    const darkBackground=getComputedStyle(document.body).backgroundColor;
+    check(darkBackground!==lightBackground && getComputedStyle(document.body,'::after').backgroundImage.includes(darkBackground),'bottom fade follows the dark theme');
+    document.documentElement.removeAttribute('data-theme');
     const cta=document.getElementById('bc-cta');
     cta.classList.remove('hidden');cta.innerHTML='<button class="w-full rounded-lg bg-brand text-white text-sm font-semibold" style="display:block;height:36px;width:100%">Continue</button><p class="text-xs text-slate-500 text-center">Or check the form over first.</p>';
     const panel=document.getElementById('bc-panel'); panel.classList.remove('hidden');panel.classList.add('flex');

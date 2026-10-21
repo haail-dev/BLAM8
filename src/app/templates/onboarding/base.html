@@ -57,6 +57,12 @@
     .onboarding-step-label { position:absolute;top:1.85rem;left:var(--label-left,0px);max-width:100%;width:max-content;padding:0 .4rem;text-align:center;font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none; }
     .onboarding-step-label[data-inspected-label] { top:3rem; }
     .onboarding-progress { position:absolute;top:calc(1.85rem + 6px);height:3px;left:0;right:0;border-radius:999px;background:linear-gradient(to right,#2450e6 0 var(--label-start),transparent var(--label-start) var(--label-end),#e2e8f0 var(--label-end) 100%);pointer-events:none; }
+    /* The body scrolls, so content otherwise ends in a hard line at the bottom of
+       the viewport. A fixed, click-through fade in the page colour (the theme
+       token, so dark mode follows) lets it dissolve instead. Its height equals
+       main's pb-10 so nothing at the end of the page is tinted, and it stays
+       below the assistant dock (z-50). */
+    body[data-onboarding-shell]::after { content:'';position:fixed;left:0;right:0;bottom:0;z-index:20;height:calc(2.5rem + env(safe-area-inset-bottom, 0px));background:linear-gradient(to bottom,rgb(var(--c-bg-slate-100)/0),rgb(var(--c-bg-slate-100)/.7) 55%,rgb(var(--c-bg-slate-100)));pointer-events:none; }
     .onboarding-drum { display:inline-block;position:relative;height:1.5rem;line-height:1.5rem;perspective:320px;white-space:nowrap; }
     .onboarding-drum > span { position:absolute;left:0;top:0;display:block;transform-origin:50% 50% -.75rem;backface-visibility:hidden;transition:transform .55s cubic-bezier(.2,.8,.2,1),opacity .4s ease; }
     .onboarding-drum > span[data-pos="above"] { transform:rotateX(90deg) translateY(-.75rem);opacity:0; }
@@ -109,7 +115,7 @@
         <span id="onboarding-step-label-{{ number }}" class="onboarding-step-label" title="{{ label }}"{% if not current %} data-inspected-label hidden{% endif %}>{{ label }}</span>
       </div>
       {% endmacro %}
-      <div class="mb-3" data-stepper-total="{{ total }}">
+      <div class="mb-1.5" data-stepper-total="{{ total }}">
         <div class="onboarding-stepper-row" style="--stepper-count: {{ total }}">
           {% for s in steps %}
           {{ step_circle(loop.index, labels[s], s == stepper, loop.index0 < step_index) }}

@@ -1394,7 +1394,6 @@
         : card.selected || !live
         ? 'rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm text-slate-400 cursor-not-allowed'
         : 'rounded-lg border border-brand px-3 py-2 text-sm text-brand';
-      if (button.getAttribute('data-knowledge-guide-choice') === 'edit') button.className += ' ml-auto';
     });
     var status = group.querySelector('[data-knowledge-guide-status]');
     if (status) status.textContent = card.state === 'editing'
@@ -1428,7 +1427,7 @@
     if (!card || !card.focus || !Array.isArray(card.actions) || typeof card.focus_hash !== 'string') return null;
     var group = document.createElement('div');
     group.setAttribute('data-knowledge-guide-actions', '');
-    group.className = 'flex flex-wrap gap-2 px-1 py-2';
+    group.className = 'flex flex-wrap justify-center gap-2 px-1 py-2';
     group.knowledgeCard = card;
     function addChoice(choice) {
       var button = document.createElement('button'); button.type = 'button';
@@ -1449,8 +1448,10 @@
       });
       group.appendChild(button);
     }
-    card.actions.forEach(addChoice);
-    if (card.focus.kind === 'note') addChoice({action:'edit',label:'Edit'});
+    // Edit sits between the two note decisions rather than apart at the far edge.
+    var choices = card.actions.slice();
+    if (card.focus.kind === 'note') choices.splice(Math.min(1, choices.length), 0, {action:'edit',label:'Edit'});
+    choices.forEach(addChoice);
     if (card.save && live) {
       var save = document.createElement('button'); save.type = 'button';
       save.className = 'rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white';
@@ -1462,7 +1463,7 @@
     }
     var status = document.createElement('p');
     status.setAttribute('data-knowledge-guide-status','');
-    status.className = 'w-full text-xs text-slate-500';
+    status.className = 'w-full text-center text-xs text-slate-500';
     group.appendChild(status);
     paintKnowledgeCard(group,card,live);
     return group;
