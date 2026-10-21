@@ -47,6 +47,8 @@ def test_preview_is_read_only_and_apply_uses_draft_rpc_not_admission(source_clie
     assert response.status_code == 200 and calls == []
     applied = client.post(url(row)+'/apply', json={'version':'v1','review':response.json()['review']})
     assert applied.status_code == 200 and len(applied.json()['entries']) == 9
+    # The advanced stored version is reported for device checkpoints only.
+    assert applied.json()['version'] == 'v1' and 'admission' not in applied.json()
     assert [name for name, body in calls] == ['revise_knowledge_review_sources']
     assert row['payload']['draft_revision'] == 1
 

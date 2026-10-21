@@ -68,6 +68,11 @@ Applying a proposal records its source identity, revision, owner request, review
 time and before/after details in the pending payload. The audit is bounded at
 twenty applications and 350,000 serialized characters; reaching a limit rejects the change without
 dropping earlier history. Repeated/stale apply requests cannot duplicate a write.
+Apply also returns the advanced stored version. With device sync enabled, the
+shared checkpoint records that version with the applied wording, so a reload on
+any device restores the owner's unsaved note and overlap decisions. The form's
+own version changes only when Check changes and overlaps renders a fresh
+preview; a Save or guide turn against the old version is still refused.
 Attribution still does not certify entailment. Missing footer evidence in an
 older batch cannot become a website quote; capture it properly or supply an
 explicit owner clarification for separate review.

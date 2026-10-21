@@ -87,6 +87,17 @@ Unchanged forms still share replay protection. Revision conflicts remain termina
 until reconciliation: settled readiness promises never schedule an automatic
 retry or a repeated microtask loop. Later normal polls do not restart the guide.
 
+A successful Knowledge request other than a guide turn records a refresh hint
+naming its operation, so other devices reload and show the stored drafts. The
+device that sent the operation recognises its own hint and keeps its page and
+unsaved decisions. Applying a source correction also records the applied
+wording and the advanced stored version in the review's form checkpoint within
+the same revision, so a reload on any device restores the remaining note and
+overlap decisions and derives the current note from them again. The review
+form's own hidden version still changes only when Check changes and overlaps
+renders a fresh preview; a Save or guide turn against the old version remains
+refused until then.
+
 The two-document native test runs the sync and guide clients with a small
 transcript display adapter, actual guide decisions and disposable SQL. It does
 not run the complete Concierge renderer. The separate choice-history replay
@@ -96,3 +107,8 @@ guide and sync clients on the rendered Knowledge page with isolated response
 fixtures. It verifies complete hydration, real checkbox/FormData retention,
 one current-note derivation and event-loop liveness after HTTP409; separate
 HTTP/disposable-SQL tests cover actual automatic-operation replay identities.
+The Apply native test runs the real source-correction routes behind the sync
+wrapper for two documents with disposable SQL: it forces a poll between the
+shared revision change and the Apply response, then checks that the originating
+device keeps its page and decisions while the second device reloads and
+recovers them.
