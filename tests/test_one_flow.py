@@ -66,12 +66,49 @@ def test_strip_is_none_when_all_done_or_hidden_and_older_tenants_may_hide():
     assert setup_handoff.strip([], "/app/") is None
 
 
+def test_strip_items_are_the_in_app_steps_numbered_after_the_wizard():
+    on_step = setup_handoff.strip(STEPS, "/app/diary/intake", onboarded_at=NOW, now=NOW)
+    # The wizard's four are behind the owner by now; only the in-app steps are drawn.
+    assert [i["badge"] for i in on_step["items"]] == ["5", "6", "7", "8", "9"]
+    assert on_step["items"][0]["name"] == "Diary & scheduling"      # no trailing "settings" in the progress bar
+    assert [i["done"] for i in on_step["items"]] == [True, False, False, False, False]
+    assert [i["current"] for i in on_step["items"]] == [False, True, False, False, False]
+
+    off_step = setup_handoff.strip(STEPS, "/app/", onboarded_at=NOW, now=NOW)
+    assert [i["key"] for i in off_step["items"] if i["current"]] == ["requirements"]   # the next open step
+
+
+@pytest.mark.parametrize("label, shown", [
+    ("Diary & scheduling settings", "Diary & scheduling"),
+    ("CRM settings", "CRM"),
+    ("Invoice SETTINGS", "Invoice"),                  # any capitalisation
+    ("Booking requirements", "Booking requirements"),
+    ("Dependants", "Dependants"),
+    ("Getting paid", "Getting paid"),
+    ("Settings", "Settings"),                         # a name that is only the word keeps it
+    ("Settings review", "Settings review"),           # only a trailing word is dropped
+])
+def test_the_progress_bar_names_drop_a_trailing_settings(label, shown):
+    steps = [{"key": "k", "label": label, "done": False, "href": "/app/x"}]
+    assert setup_handoff.strip(steps, "/app/x", onboarded_at=NOW, now=NOW)["items"][0]["name"] == shown
+    assert steps[0]["label"] == label                 # the step's own label is untouched
+
+
+def test_a_step_may_supply_its_own_badge_for_a_later_grouping():
+    grouped = [dict(STEPS[0], badge="5"), dict(STEPS[1], badge="5A"), dict(STEPS[2])]
+    items = setup_handoff.strip(grouped, "/app/", onboarded_at=NOW, now=NOW)["items"]
+    assert [i["badge"] for i in items] == ["5", "5A", "7"]   # without one, a step keeps its place in the nine
+
+
 def test_the_shell_carries_the_strip_and_busts_it_on_every_save():
     html = _read("src/app/templates/app/base.html")
-    assert "data-setup-strip" in html and "data-setup-next" in html
-    assert "Setup · {{ setup_strip.done }} of {{ setup_strip.total }} done" in html
-    assert "Save this page to move on" in html
-    assert 'action="/app/setup/hide"' in html and "setup_strip.can_hide" in html
+    assert "data-setup-strip" in html and "data-setup-stepper" in html
+    assert "setup_stepper.css" in html and "setup_stepper.js" in html
+    assert "Step {{ setup_strip.pos }} of {{ setup_strip.total }} ·" not in html   # no longer a sentence
+    assert "Setup · {{ setup_strip.done }} of {{ setup_strip.total }} done" in html   # kept for screen readers
+    # The walk has no skipping (Kris 2026-10-22): no Next link, no hint, no Hide on the strip.
+    assert "data-setup-next" not in html and "Save this page to move on" not in html
+    assert 'action="/app/setup/hide"' not in html
     src = _read("src/app/dashboard.py")
     assert '"setup_strip_raw": _setup_strip_ctx(ctx, tenant),' in src
     assert "_bust_setup_strip(ctx)" in src.split("def _held_used")[1].split("def _ctx")[0]

@@ -576,30 +576,30 @@
      step is done — where they are, what is next, no dismiss for a fresh
      sign-up (app/setup_handoff.strip). #}
   {% set setup_strip = setup_strip_fn(setup_strip_raw.steps, request.url.path, setup_strip_raw.onboarded_at, setup_strip_raw.dismissed_at) if request.url.path != '/concierge/live' and setup_strip_raw and setup_strip_fn else none %}
+  {# Kris 2026-10-22: drawn as the wizard's numbered progress, for the steps after it,
+     instead of a sentence (static/setup_stepper.css). Display only: no circles to
+     click, no Next link, no hint and no Hide, because the walk has no skipping. #}
   {% if setup_strip %}
-  <div class="flex-none border-b border-brand/20 bg-brand-50 px-4 py-2 text-sm" data-setup-strip>
-    <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-1">
-      <span class="font-semibold text-navy">Setup · {{ setup_strip.done }} of {{ setup_strip.total }} done</span>
-      {% if setup_strip.here %}
-      <span class="text-slate-600">Step {{ setup_strip.pos }} of {{ setup_strip.total }} · <span class="font-medium text-navy">{{ setup_strip.here.label }}</span>{% if setup_strip.after %} · then {{ setup_strip.after.label }}{% endif %}</span>
-      {% if setup_strip.here_done and setup_strip.next %}
-      <a href="{{ setup_strip.next.href }}" class="font-semibold text-brand hover:underline" data-setup-next>Next: {{ setup_strip.next.label }} →</a>
-      {% elif not setup_strip.here_done %}
-      {# A step whose page has no Save says what DOES move it on (run #10 (iii)). #}
-      <span class="text-xs text-slate-500">{{ setup_strip.here.move_on or 'Save this page to move on' }}</span>
-      {% endif %}
-      {% else %}
-      <a href="{{ setup_strip.next.href }}" class="font-semibold text-brand hover:underline" data-setup-next>Next: {{ setup_strip.next.label }} →</a>
-      {% endif %}
-      {% if setup_strip.can_hide %}
-      <form method="post" action="/app/setup/hide" class="ml-auto">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <input type="hidden" name="return_to" value="{{ request.url.path }}">
-        <button class="text-xs text-slate-400 hover:text-slate-600" title="Hide the setup strip">Hide</button>
-      </form>
-      {% endif %}
+  {% set focus = setup_strip['items'] | selectattr('current') | list | first %}
+  <link rel="stylesheet" href="/static/setup_stepper.css?v={{ asset_rev }}">
+  <div class="flex-none border-b border-brand/20 bg-brand-50 px-4 py-0.5 text-sm" data-setup-strip>
+    <div class="mx-auto max-w-5xl">
+      <div class="setup-stepper" data-setup-stepper>
+        <span class="sr-only">Setup · {{ setup_strip.done }} of {{ setup_strip.total }} done{% if setup_strip.here %}. Step {{ setup_strip.pos }} of {{ setup_strip.total }}: {{ focus.name }}{% endif %}</span>
+        <ol class="setup-stepper-row" style="--count: {{ setup_strip['items'] | length }}" aria-label="Setup progress">
+          {% for item in setup_strip['items'] %}
+          <li class="setup-stepper-item" title="{{ item.name }}"{% if item.current %} aria-current="step" data-setup-stepper-current{% endif %}>
+            <span class="setup-stepper-dot {% if item.done %}bg-emerald-500 text-white{% elif item.current %}bg-brand text-white{% else %}border border-dashed border-slate-300 text-slate-400{% endif %}" aria-hidden="true">{% if item.done %}&#10003;{% else %}{{ item.badge }}{% endif %}</span>
+            <span class="sr-only">Step {{ item.badge }}: {{ item.name }}, {% if item.done %}completed{% elif item.current %}current step{% else %}to do{% endif %}</span>
+          </li>
+          {% endfor %}
+        </ol>
+        {% if focus %}<span class="setup-stepper-label {% if focus.done %}text-emerald-600{% else %}text-brand{% endif %}" data-setup-stepper-label>{{ focus.name }}</span>{% endif %}
+        <div class="setup-stepper-track" aria-hidden="true"></div>
+      </div>
     </div>
   </div>
+  <script src="/static/setup_stepper.js?v={{ asset_rev }}" defer></script>
   {% endif %}
 
   <!-- Main -->
