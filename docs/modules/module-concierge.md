@@ -270,6 +270,22 @@ onboarding POSTs unchanged.
   so recommendations start from what exists. "Help me set this up" buttons live on Diary
   settings, Booking details and CRM settings. Tests: tests/test_settings_recommend.py.
 
+- **Durable setup cards: first proposals and refused pages — DONE** (2026-10-22): in card
+  mode the help model returns `setup_changes`, which `setup_card_model.unpack` reads
+  strictly and `setup_cards.change` validates against the page's card. On a card with no
+  pending lines the model often wrote a first value as a `set` on a catalogue ID
+  (`diary_settings/working_days`) or named an appended row by its label, and one bad change
+  discarded the whole reply. `setup_card_model.normalise` now translates only those known
+  shapes before validation: a `set` on a catalogue setting becomes a new `setting` row (or
+  an edit of that setting's pending line), a label-named `append` is filed under the row
+  type its field names imply (per page), and `unpack` lets a `set` restate `name: "setting"`.
+  Anything else is left for `change` to refuse. The help route then validates and saves each
+  page on its own: a page the setup walk has finished, or that `change` refuses, is named in
+  `card_errors` with its reason and the first refused change, and never costs another page
+  its card. The reply says which values were rewritten. The owner still accepts every line,
+  and `setup_card_model.RULE` states the row shapes once more. Tests:
+  tests/test_setup_card_normalise.py, tests/test_setup_card_model.py.
+
 - **Post-onboarding guided-settings hand-off — DONE** (2026-08-02, Julius; reworked same
   day to ZERO USER INITIATIVE after the watched e2e): a freshly onboarded tenant lands on
   `/app` and the widget CONTINUES onboarding unprompted — it auto-selects the App-help

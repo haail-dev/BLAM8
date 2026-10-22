@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app import concierge, concierge_routes as routes, setup_card_model as model, setup_cards as cards, setup_card_store as store
 from app.auth import require_tenant, TenantCtx
 from app.main import app
+from tests.test_setup_card_normalise import SHAPES, booking_labels, dependants_labels, diary_ids, edit, proposal
 from tests.test_setup_cards import start, service
 
 
@@ -310,3 +311,76 @@ def test_help_persists_considered_only_turn_without_claiming_settings_saved(rout
     state["changes"][0]["revision"] = 0
     assert ask(c).json()["card_errors"]
     assert len(state["saves"]) == 1
+
+
+def ask_on(c, path):
+    return c.post("/concierge/help", json={"question": "Here are my answers", "card_mode": True, "path": path})
+
+
+@pytest.mark.parametrize("shape", sorted(SHAPES))
+def test_help_saves_each_known_first_proposal_shape(route_client, shape):
+    c, state = route_client
+    state["changes"] = SHAPES[shape]()
+    reply = ask_on(c, "/app/diary/settings").json()
+    assert reply["card_errors"] == []
+    assert [card["page"] for card in reply["setup_cards"]] == [entry["page"] for entry in state["changes"]]
+    assert all(line["status"] == "proposed" and line["problems"] == [] for card in reply["setup_cards"] for line in card["lines"])
+    assert [card["page"] for card in state["saves"]] == [entry["page"] for entry in state["changes"]]
+
+
+def test_help_saves_the_valid_page_and_names_the_rejected_one(route_client, monkeypatch):
+    c, state = route_client
+    monkeypatch.setattr(routes.setup_handoff, "load_steps", lambda *a: [
+        {"key": "diary", "done": True, "href": "/app/diary/settings"},
+        {"key": "dependants", "done": False, "href": "/app/diary/dependants"}])
+    state["changes"] = dependants_labels() + diary_ids()
+    reply = ask_on(c, "/app/diary/dependants").json()
+    assert reply["card_errors"] == ["Diary settings is already set up; that proposal was not kept."]
+    assert [card["page"] for card in reply["setup_cards"]] == ["dependants"]
+    assert list(state["cards"]) == ["dependants"] and len(state["saves"]) == 1
+    assert reply["reply"].startswith("Updated setup records: Dependants.")
+    assert reply["reply"].endswith("Diary settings is already set up; that proposal was not kept.")
+
+
+def test_help_names_the_page_and_reason_for_an_invalid_change(route_client):
+    c, state = route_client
+    state["changes"] = dependants_labels() + [proposal("diary_settings",
+        edit("set", "diary_settings/timezone", "", {"value": "Europe/London"}),
+        edit("set", "mystery", "", {"value": 1}))]
+    reply = ask_on(c, "/app/diary/dependants").json()
+    assert reply["card_errors"] == ["Diary settings: Choose a pending line from this card. (set mystery)"]
+    assert [card["page"] for card in reply["setup_cards"]] == ["dependants"]
+    assert list(state["cards"]) == ["dependants"]
+    assert "incomplete or invalid" not in json.dumps(reply)
+    state["changes"] = [proposal("booking_details", edit("append", "", "Photos", {"colour": "blue"}))]
+    reply = ask_on(c, "/app/diary/intake").json()
+    assert reply["card_errors"] == ["Booking details: Append requires a supported row name and no existing ID. (append Photos)"]
+    assert "booking_details" not in state["cards"]
+
+
+def test_help_says_so_when_the_whole_list_is_unreadable(route_client):
+    c, state = route_client
+    state["changes"] = [proposal("diary_settings", edit("set", "line-1", "stage", {"value": 1}))]
+    reply = ask_on(c, "/app/diary/settings").json()
+    assert reply["card_errors"] == ["The proposed changes were incomplete or invalid. Existing cards were kept; please ask again."]
+    assert not state["saves"]
+
+
+def test_help_reply_mentions_normalised_settings(route_client):
+    c, state = route_client
+    state["changes"] = diary_ids()
+    reply = ask_on(c, "/app/diary/settings").json()
+    assert reply["card_errors"] == []
+    assert reply["reply"] == ("Updated setup records: Diary settings. Review proposals in Suggested or Held and considered notes "
+                              "in the page record. Diary settings: 5 values proposed as new settings. "
+                              "Nothing from this reply has been applied to your settings.")
+    assert "I saved" not in reply["reply"]
+
+
+def test_help_mentions_a_rewrite_only_for_a_page_that_saved(route_client):
+    c, state = route_client
+    state["changes"] = diary_ids() + booking_labels()
+    state["stale"] = True
+    reply = ask_on(c, "/app/diary/settings").json()
+    assert reply["setup_cards"] == [] and len(reply["card_errors"]) == 2
+    assert "proposed as new settings" not in reply["reply"] and "sorted into" not in reply["reply"]

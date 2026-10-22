@@ -2,7 +2,7 @@
 from copy import deepcopy
 import json
 
-from app import setup_cards, setup_card_scalars, setup_card_invoices, setup_card_crm, setup_card_mode
+from app import setup_cards, setup_rows, setup_card_scalars, setup_card_invoices, setup_card_crm, setup_card_mode
 
 # Move a page to model deltas when its acceptance adapter is complete.
 MODEL_SUPPORTED = {("diary_settings", "service"), ("diary_settings", "resource"),
@@ -116,6 +116,10 @@ clear a link. Never claim that proposing a link creates its target stage.
 Use the exact page revision and stable line IDs in CURRENT CARDS below. append
 requires name and id=""; set requires id and name=""; remove requires id, name="",
 fields=[] and held=null. Remove leaves a proposal; it never deletes a saved setting.
+A catalogue id such as diary_settings/working_days is never a line id. To propose a
+setting that has no pending line yet, append a setting row with fields key and value.
+The name of an appended row is its row type (field, group, stage, package, setting),
+never its label.
 Set includes ONLY fields explicitly changed by this turn. Unmentioned fields and
 lines carry forward automatically. Never append another version of a pending row:
 edit its ID. Applied and left lines are history; do not reintroduce them unless the
@@ -218,7 +222,10 @@ def unpack(raw):
                     raise setup_cards.Invalid("A new line cannot reuse an ID.")
                 patch = {"op": op, "name": item["name"]}
             else:
-                if not isinstance(item["id"], str) or not item["id"] or item["name"] != "":
+                # The model sometimes restates a setting's row type on a set. The ID decides
+                # the row, so that one restatement is dropped like an empty name.
+                restated = op == "set" and item["name"] == "setting"
+                if not isinstance(item["id"], str) or not item["id"] or (item["name"] != "" and not restated):
                     raise setup_cards.Invalid("An existing line needs its ID only.")
                 patch = {"op": op, "id": item["id"]}
             if op == "remove":
@@ -244,6 +251,126 @@ def unpack(raw):
             setup_considered.merge(page, [], entry["considered"], "validation")
             result[-1]["considered"] = entry["considered"]
     return result
+
+
+# A label-named append is filed under a row type from the field names it carries.
+# The first matching group wins; a page absent here is never inferred.
+_INFERRED_ROWS = {
+    "booking_details": (({"label"}, "field"),),
+    "dependants": (({"plural", "cardinality"}, "group"), ({"kind"}, "field")),
+    "crm_settings": (({"stage_type"}, "stage"),),
+    "packages": (({"quantity", "unit"}, "package"),),
+    "crm_fields": (({"field_type"}, "contact_field"),),
+    "knowledge": (({"content"}, "note"),),
+    "diary_settings": (({"minutes"}, "service"), ({"count"}, "resource"), ({"key"}, "setting")),
+}
+_NAMED_BY_NAME = {"stage", "service", "resource", "package"}
+
+
+def _catalogue_key(page, line_id, specs):
+    """The scalar setting a set's ID names (page/key or the bare key), else None."""
+    if not isinstance(line_id, str):
+        return None
+    key = line_id[len(page) + 1:] if line_id.startswith(page + "/") else line_id
+    return key if key in specs else None
+
+
+def _setting_set(patch, card, key):
+    """A set on a catalogue setting, as the card contract expects it, or None.
+
+    The model reads a catalogue ID as a line ID. With a pending line for the key the
+    set is redirected to that line; otherwise the first value is a new setting row.
+    """
+    fields, sources = patch.get("fields"), patch.get("sources")
+    if (not isinstance(fields, dict) or not isinstance(sources, dict) or "value" not in fields
+            or fields.get("key", key) != key):
+        return None
+    pending = next((line for line in card.get("lines", []) if line["status"] in setup_cards.PENDING
+                    and line["name"] == "setting" and line["fields"].get("key") == key), None)
+    held = {"held": patch["held"]} if "held" in patch else {}
+    if pending:
+        return {"op": "set", "id": pending["id"], **held,
+                "fields": {k: v for k, v in fields.items() if k != "key"},
+                "sources": {k: v for k, v in sources.items() if k != "key"}}
+    source = sources.get("value", next(iter(sources.values()), None))
+    return {"op": "append", "name": "setting", **held,
+            "fields": {"key": key, **fields}, "sources": {"key": deepcopy(source), **sources}}
+
+
+def _typed_append(page, patch):
+    """An append named by a label, filed under the row type its fields imply, or None."""
+    name, fields = patch.get("name"), patch.get("fields")
+    if not isinstance(name, str) or (page, name) in setup_rows.SUPPORTED or not isinstance(fields, dict):
+        return None
+    if page == "booking_details" and "key" in fields:
+        return None
+    row = next((row for names, row in _INFERRED_ROWS.get(page, ()) if names & set(fields)), None)
+    # The label is the model's own field; it is never made up from the row name.
+    identity = None if row == "setting" else "name" if row in _NAMED_BY_NAME else "label"
+    if row is None or (identity and identity not in fields):
+        return None
+    return {**patch, "name": row}
+
+
+def _plural(count, one, many):
+    return f"{count} {one if count == 1 else many}"
+
+
+def normalise(entries, cards):
+    """Translate known model shapes into the card contract; return (entries, notes).
+
+    Pure and deterministic: nothing is dropped, no value is invented, and any shape
+    not covered below is returned unchanged for setup_cards.change to refuse.
+    notes maps a page to one sentence for the owner, only for pages that were rewritten.
+    """
+    from app import setup_catalogue, settings_recommend
+    specs = setup_catalogue.scalar_specs()
+    entries, notes = deepcopy(entries), {}
+    for entry in entries:
+        page = entry["page"]
+        card = (cards or {}).get(page) or {}
+        line_ids = {line["id"] for line in card.get("lines", [])}
+        added = edited = filed = 0
+        for index, patch in enumerate(entry["changes"]):
+            rewrite = None
+            if patch.get("op") == "set" and patch.get("id") not in line_ids:
+                key = _catalogue_key(page, patch.get("id"), specs.get(page, {}))
+                rewrite = _setting_set(patch, card, key) if key else None
+                if rewrite:
+                    added += rewrite["op"] == "append"
+                    edited += rewrite["op"] == "set"
+            elif patch.get("op") == "append":
+                rewrite = _typed_append(page, patch)
+                filed += rewrite is not None
+            if rewrite:
+                entry["changes"][index] = rewrite
+        phrases = []
+        if added:
+            phrases.append(_plural(added, "value", "values") + " proposed as " + ("a new setting" if added == 1 else "new settings"))
+        if edited:
+            phrases.append(_plural(edited, "value", "values") + " added to " + ("a setting" if edited == 1 else "settings") + " already proposed")
+        if filed:
+            phrases.append(_plural(filed, "row", "rows") + " sorted into the right kind of row")
+        if phrases:
+            notes[page] = settings_recommend.PAGES[page]["label"] + ": " + ", ".join(phrases) + "."
+    return entries, notes
+
+
+def refused_change(page, current, revision, changes):
+    """The first change that makes setup_cards.change refuse a page, else None.
+
+    change() raises on the first bad op without saying which. Replaying growing
+    prefixes names it, so the owner is told which line to ask about again. A
+    refusal no prefix reproduces (a stale revision, the size limits) names none.
+    """
+    for count in range(1, len(changes) + 1):
+        try:
+            setup_cards.change(page, current, revision, "replay", changes[:count])
+        except setup_cards.Stale:
+            return None
+        except setup_cards.Invalid:
+            return changes[count - 1]
+    return None
 
 
 def without_legacy_rows(entries):

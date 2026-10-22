@@ -786,32 +786,50 @@ async def help(body: HelpRequest, request: Request, ctx: TenantCtx = Depends(req
             held, rejected_held = setup_card_model.without_legacy_rows(held)
             if rejected or rejected_held:
                 card_errors.append("Some row suggestions lacked sourced changes and were not kept. Please ask for those rows again.")
+            entries, notes = [], {}
             try:
-                changes = setup_card_model.unpack(getattr(result, "setup_changes", None))
-                if changes:
-                    allowed_changes = setup_handoff.cards_for(changes, setup_handoff.load_steps(ctx.tenant_id, ctx.client), body.path, body.auto)
-                    if len(allowed_changes) != len(changes):
-                        raise setup_cards.Invalid("A proposal targets a completed or different setup step.")
-                # Validate every page before the first write. Each page then has its
-                # own compare-and-swap; partial storage success is reported exactly.
-                prepared = [(entry, setup_cards.change(entry["page"], card_snapshot.get(entry["page"]),
-                             entry["revision"], str(uuid4()), entry["changes"], entry.get("considered"))) for entry in changes]
-                for entry, card in prepared:
-                    try:
-                        setup_card_store.save(ctx.tenant_id, entry["page"], entry["revision"], card, client=ctx.client)
-                        card_snapshot[entry["page"]] = card
-                        updated_cards.append(card)
-                    except setup_cards.Stale:
-                        card_errors.append("The " + entry["page"] + " proposal changed elsewhere. Reload it before asking again.")
-                    except Exception:
-                        card_errors.append("The " + entry["page"] + " proposal could not be confirmed. Reload to check its status.")
+                entries = setup_card_model.unpack(getattr(result, "setup_changes", None))
+                entries, notes = setup_card_model.normalise(entries, card_snapshot)
+                if entries:
+                    allowed = setup_handoff.cards_for(entries, setup_handoff.load_steps(ctx.tenant_id, ctx.client), body.path, body.auto)
+                    kept = {entry["page"] for entry in allowed}
+                    card_errors.extend(settings_recommend.PAGES[entry["page"]]["label"] + " is already set up; that proposal was not kept."
+                                       for entry in entries if entry["page"] not in kept)
+                    entries = allowed
             except (setup_cards.Invalid, TypeError, ValueError):
+                entries = []
                 card_errors.append("The proposed changes were incomplete or invalid. Existing cards were kept; please ask again.")
             except Exception:
+                entries = []
                 card_errors.append("The setup steps could not be checked. Existing cards were kept; please try again.")
+            # Each page is validated and saved on its own, so one refused page never
+            # costs another its card. Each page has its own compare-and-swap, and
+            # partial storage success is reported exactly.
+            for entry in entries:
+                page, current = entry["page"], card_snapshot.get(entry["page"])
+                label = settings_recommend.PAGES[page]["label"]
+                try:
+                    card = setup_cards.change(page, current, entry["revision"], str(uuid4()),
+                                              entry["changes"], entry.get("considered"))
+                except setup_cards.Invalid as exc:
+                    refused = setup_card_model.refused_change(page, current, entry["revision"], entry["changes"])
+                    card_errors.append(f"{label}: {exc}" + (f" ({refused['op']} {refused.get('id') or refused.get('name')})" if refused else ""))
+                    continue
+                except (TypeError, ValueError):
+                    card_errors.append(label + ": the proposed changes were incomplete or invalid. Existing cards were kept; please ask again.")
+                    continue
+                try:
+                    setup_card_store.save(ctx.tenant_id, page, entry["revision"], card, client=ctx.client)
+                    card_snapshot[page] = card
+                    updated_cards.append(card)
+                except setup_cards.Stale:
+                    card_errors.append("The " + page + " proposal changed elsewhere. Reload it before asking again.")
+                except Exception:
+                    card_errors.append("The " + page + " proposal could not be confirmed. Reload to check its status.")
             if updated_cards or card_errors:
                 labels = [settings_recommend.PAGES[c["page"]]["label"] for c in updated_cards]
                 reply = (("Updated setup records: " + ", ".join(labels) + ". Review proposals in Suggested or Held and considered notes in the page record. ") if labels else "")
+                reply += "".join(notes[c["page"]] + " " for c in updated_cards if c["page"] in notes)
                 reply += "Nothing from this reply has been applied to your settings."
                 if card_errors:
                     reply += " " + " ".join(card_errors)
