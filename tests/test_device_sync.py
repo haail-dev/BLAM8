@@ -210,7 +210,12 @@ def sync_app(sync_case, monkeypatch):
 
     @routes.get("/static/{filename}")
     def script(filename: str):
-        assert filename in ("device_sync.js", "knowledge_guidance.js")
+        assert filename in (
+            "device_sync.js",
+            "knowledge_guidance.js",
+            "dirty_save.js",
+            "setup_cards.js",
+        )
         return Response(
             (ROOT / "src/app/static" / filename).read_text(),
             media_type="application/javascript",
@@ -419,3 +424,120 @@ def test_malformed_checkpoint_rejected_before_claim(sync_app, patch):
     assert c.get("/device-sync/flow").json()["revision"] == 0
     body["patch"] = {"form": {}, "guide": {}}
     assert c.post("/device-sync/flow", json=body, headers=headers).status_code == 200
+
+
+def saved_form(action, **values):
+    return {
+        "action": action,
+        "version": "",
+        "values": {name: [value] for name, value in values.items()},
+    }
+
+
+@pytest.fixture
+def card_routes(sync_app):
+    """Setup-card routes behind the sync wrapper, with the flow already holding
+    one synced form per tuning page (Getting paid and CRM settings)."""
+    app = sync_app[0]
+    routes = APIRouter(route_class=sync.SyncRoute)
+
+    @routes.post("/concierge/setup-cards/{page}/accept")
+    @routes.post("/concierge/setup-cards/{page}/preview")
+    async def card(page: str):
+        return {"card": {"page": page}}
+
+    app.include_router(routes)
+    c = client(sync_app)
+    seeded = c.post(
+        "/device-sync/flow",
+        json={
+            "operation": str(uuid4()),
+            "revision": 0,
+            "patch": {
+                "path": "/app/invoices/settings",
+                "form": {
+                    "/app/invoices/settings:0": saved_form(
+                        "/app/invoices/settings", payment_terms="", vat_rate="20"
+                    ),
+                    "/app/crm/settings:0": saved_form(
+                        "/app/crm/settings", stage_one="Enquiry"
+                    ),
+                },
+            },
+        },
+        headers={"X-CSRF-Token": "test-csrf"},
+    )
+    assert seeded.status_code == 200 and seeded.json()["revision"] == 1
+
+    def post(path, channel="flow"):
+        operation = str(uuid4())
+        headers = {
+            "X-CSRF-Token": "test-csrf",
+            "X-Blam8-Operation": operation,
+            # The assistant channel is separate and still at revision 0.
+            "X-Blam8-Revision": "1" if channel else "0",
+        }
+        if channel:
+            headers["X-Blam8-Channel"] = channel
+        return operation, c.post(path, json={}, headers=headers)
+
+    return c, post
+
+
+def test_accepting_a_card_drops_that_pages_synced_form_and_asks_other_devices_to_reload(
+    card_routes,
+):
+    c, post = card_routes
+    operation, response = post("/concierge/setup-cards/invoice_settings/accept")
+    assert response.status_code == 200
+    state = c.get("/device-sync/flow").json()
+    assert state["revision"] == 2
+    assert list(state["payload"]["form"]) == ["/app/crm/settings:0"]
+    assert state["payload"]["refresh"] == operation
+    assert state["payload"]["path"] == "/app/invoices/settings"
+
+
+@pytest.mark.parametrize(
+    "path,channel",
+    [
+        ("/concierge/setup-cards/invoice_settings/preview", "flow"),
+        ("/concierge/setup-cards/not_a_page/accept", "flow"),
+        ("/concierge/setup-cards/invoice_settings/accept", None),
+    ],
+    ids=["preview", "unknown-page", "assistant-channel"],
+)
+def test_only_an_accept_on_the_flow_channel_for_a_known_page_touches_the_form(
+    card_routes, path, channel
+):
+    c, post = card_routes
+    _, response = post(path, channel)
+    assert response.status_code == 200
+    flow = c.get("/device-sync/flow").json()["payload"]
+    assert sorted(flow["form"]) == ["/app/crm/settings:0", "/app/invoices/settings:0"]
+    assert "refresh" not in flow
+
+
+def test_an_accept_that_finishes_the_active_step_keeps_the_step_advance(
+    card_routes, monkeypatch
+):
+    from app import setup_handoff
+
+    monkeypatch.setattr(
+        setup_handoff,
+        "load_steps",
+        lambda *a, **k: [
+            {
+                "href": "/app/invoices/settings",
+                "done": True,
+                "key": "invoices",
+                "label": "Getting paid",
+            }
+        ],
+    )
+    c, post = card_routes
+    operation, response = post("/concierge/setup-cards/invoice_settings/accept")
+    assert response.status_code == 200
+    payload = c.get("/device-sync/flow").json()["payload"]
+    # The walk moved on and cleared every page's draft; the hint still goes out.
+    assert payload["form"] == {} and payload["path"] == "/app/"
+    assert payload["refresh"] == operation

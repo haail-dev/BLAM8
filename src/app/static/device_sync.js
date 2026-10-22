@@ -12,6 +12,9 @@
   var here = location.pathname, flow = here.indexOf('/onboarding/') === 0;
   var tuningPaths = ['/app/diary/settings','/app/diary/intake','/app/diary/dependants','/app/crm/settings','/app/invoices/settings'];
   var notice;
+  // Never captured or restored. settings_snapshot and invoice_snapshot are a
+  // page's own optimistic-concurrency version and must always come from the render.
+  var SKIP = /^(csrf_token|_sync_.*|version|operation|settings_snapshot|invoice_snapshot)$/;
   function uuid() { return crypto.randomUUID(); }
   function own(operation) { sent[operation]=true; return operation; }
   // A review whose stored drafts this page advanced records that version for
@@ -26,7 +29,7 @@
   function fields(form) {
     var values={};
     Array.from(form.elements).forEach(function(el){
-      if (!el.name || /^(csrf_token|_sync_.*|version|operation)$/.test(el.name) || /^(file|password|submit|button)$/.test(el.type)) return;
+      if (!el.name || SKIP.test(el.name) || /^(file|password|submit|button)$/.test(el.type)) return;
       if (!values[el.name]) values[el.name]=[];
       if ((el.type==='checkbox' || el.type==='radio') && !el.checked) return;
       if (el.tagName==='SELECT' && el.multiple) Array.from(el.selectedOptions).forEach(function(o){values[el.name].push(o.value);});
@@ -51,7 +54,7 @@
         if (!saved || saved.action!==action || saved.version!==formVersion(f)) return;
         Object.keys(saved.values || {}).forEach(function(name){
           var values=saved.values[name];
-          if (!Array.isArray(values) || /^(csrf_token|_sync_.*|version|operation)$/.test(name)) return;
+          if (!Array.isArray(values) || SKIP.test(name)) return;
           var els=Array.from(f.elements).filter(function(el){return el.name===name;});
           if (!els.length && /^guided_(unknown|expand)_/.test(name)) {
             var hidden=document.createElement('input');hidden.type='hidden';hidden.name=name;f.appendChild(hidden);els=[hidden];

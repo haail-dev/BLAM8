@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import threading
+from uuid import uuid4
 import pytest
 
 from fastapi import Request
@@ -225,3 +226,197 @@ def test_two_device_onboarding_and_assistant_roundtrip(
     assert reports[0]["status"] == "PASS", reports[0]["text"]
     # A single invocation at each step, including the shared guide turn.
     assert len(calls) == expected_calls
+
+
+def drive_in_chrome(app, tmp_path, start_path, completed, wait=35):
+    """Serve the app on loopback and let headless Chrome run the page at start_path.
+
+    The page reports through a /browser-result route the test registered, which
+    sets completed. Each HTTP request gets an isolated ASGI client; all of them
+    share only the disposable SQL database.
+    """
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.dispatch()
+
+        def do_POST(self):
+            self.dispatch()
+
+        def log_message(self, *_args):
+            pass
+
+        def dispatch(self):
+            body = self.rfile.read(int(self.headers.get("content-length", "0")))
+            with TestClient(app) as c:
+                result = c.request(
+                    self.command,
+                    self.path,
+                    content=body,
+                    headers=dict(self.headers),
+                    follow_redirects=False,
+                )
+            self.send_response(result.status_code)
+            for key, value in result.headers.multi_items():
+                if key.lower() not in ("connection", "transfer-encoding"):
+                    self.send_header(key, value)
+            self.end_headers()
+            try:
+                self.wfile.write(result.content)
+            except (BrokenPipeError, ConnectionAbortedError):
+                pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        command = [
+            chromium_binary(),
+            "--headless=new",
+            "--no-sandbox",
+            "--disable-gpu",
+            "--disable-background-networking",
+            "--disable-component-update",
+            "--disable-sync",
+            "--no-first-run",
+            "--no-proxy-server",
+            "--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1",
+            "--user-data-dir=" + str(tmp_path / "browser-profile"),
+            f"http://127.0.0.1:{server.server_port}{start_path}",
+        ]
+        # Files avoid Windows child processes inheriting captured pipe handles.
+        with (tmp_path / "chrome.log").open("w") as output:
+            browser = subprocess.Popen(command, stdout=output, stderr=output)
+            try:
+                assert completed.wait(wait), (
+                    "Native browser did not report: "
+                    + (tmp_path / "chrome.log").read_text(errors="replace")[-1500:]
+                )
+            finally:
+                # taskkill can stall on a busy headless tree; bound it, then kill.
+                if os.name == "nt":
+                    try:
+                        subprocess.run(
+                            ["taskkill", "/PID", str(browser.pid), "/T", "/F"],
+                            stdout=output,
+                            stderr=output,
+                            timeout=5,
+                        )
+                    except subprocess.TimeoutExpired:
+                        pass
+                browser.kill()
+                browser.wait(timeout=10)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def report_route(app):
+    """Register /browser-result; return the event it sets and the reports it gets."""
+    completed, reports = threading.Event(), []
+
+    @app.post("/browser-result")
+    async def browser_result(request: Request):
+        reports.append(await request.json())
+        completed.set()
+        return {"ok": True}
+
+    return completed, reports
+
+
+SNAPSHOT_DRIVER = r"""
+(async()=>{
+  const pause=()=>new Promise(r=>setTimeout(r,40));
+  const until=async(check)=>{for(let n=0;n<150;n++){if(check())return;await pause();}throw Error('Timed out: '+check);};
+  const pc=document.getElementById('pc'),phone=document.getElementById('phone');
+  const ready=async(frame)=>{await until(()=>frame.contentWindow.Blam8DeviceSync);await frame.contentWindow.Blam8DeviceSync.ready;};
+  const value=(frame,name)=>frame.contentDocument.querySelector('[name="'+name+'"]').value;
+  const report=(status,text)=>fetch('/browser-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status,text:text})});
+  try{
+    await ready(pc);await ready(phone);
+    // An earlier client stored the page's concurrency inputs with the form.
+    // Restoring that draft must keep what each frame was rendered with.
+    for(const frame of [pc,phone]){
+      if(value(frame,'title')!=='Stored before the update')throw Error('Ordinary field was not restored');
+      for(const name of ['settings_snapshot','invoice_snapshot']){
+        if(value(frame,name)!==frame.dataset.rendered)throw Error(name+' was restored over the server render');
+      }
+    }
+    const title=pc.contentDocument.querySelector('[name=title]');
+    title.value='Typed on the PC';
+    title.dispatchEvent(new pc.contentWindow.Event('input',{bubbles:true}));
+    await pc.contentWindow.Blam8DeviceSync.flush();
+    await phone.contentWindow.Blam8DeviceSync.refresh();
+    if(value(phone,'title')!=='Typed on the PC')throw Error('Ordinary field did not sync');
+    for(const frame of [pc,phone]){
+      for(const name of ['settings_snapshot','invoice_snapshot']){
+        if(value(frame,name)!==frame.dataset.rendered)throw Error(name+' changed after a sync');
+      }
+    }
+    await report('PASS','Concurrency inputs stay with the server render on both devices');
+  }catch(e){await report('FAIL',e.stack);}
+})();
+"""
+
+
+def test_sync_never_stores_or_restores_a_pages_concurrency_snapshot(
+    sync_app, tmp_path
+):
+    app, _, _ = sync_app
+    completed, reports = report_route(app)
+
+    @app.get("/app/crm/settings")
+    def settings_page(frame: str = "pc"):
+        return HTMLResponse(
+            "<!doctype html><html><body><div data-setup-strip></div><main>"
+            '<form method="post" action="/app/crm/settings">'
+            '<input name="csrf_token" type="hidden" value="test-csrf">'
+            '<input name="title" value="Rendered">'
+            f'<input name="settings_snapshot" type="hidden" value="snapshot-{frame}">'
+            f'<input name="invoice_snapshot" type="hidden" value="snapshot-{frame}">'
+            '</form></main><script src="/static/device_sync.js"></script></body></html>'
+        )
+
+    @app.get("/browser-test")
+    def driver():
+        response = HTMLResponse(
+            '<!doctype html><iframe id="pc" data-rendered="snapshot-pc" src="/app/crm/settings?frame=pc"></iframe>'
+            '<iframe id="phone" data-rendered="snapshot-phone" src="/app/crm/settings?frame=phone"></iframe>'
+            "<script>" + SNAPSHOT_DRIVER + "</script>"
+        )
+        response.set_cookie("bl_csrf", "test-csrf")
+        return response
+
+    # What the previous client stored: the whole form, concurrency inputs included.
+    c = TestClient(app, cookies={"bl_csrf": "test-csrf"})
+    seeded = c.post(
+        "/device-sync/flow",
+        json={
+            "operation": str(uuid4()),
+            "revision": 0,
+            "patch": {
+                "path": "/app/crm/settings",
+                "form": {
+                    "/app/crm/settings:0": {
+                        "action": "/app/crm/settings",
+                        "version": "",
+                        "values": {
+                            "title": ["Stored before the update"],
+                            "settings_snapshot": ["snapshot-stale"],
+                            "invoice_snapshot": ["snapshot-stale"],
+                        },
+                    }
+                },
+            },
+        },
+        headers={"X-CSRF-Token": "test-csrf"},
+    )
+    assert seeded.status_code == 200
+
+    drive_in_chrome(app, tmp_path, "/browser-test", completed)
+    assert reports[0]["status"] == "PASS", reports[0]["text"]
+    form = c.get("/device-sync/flow").json()["payload"]["form"]
+    names = {name for saved in form.values() for name in saved["values"]}
+    assert "title" in names
+    assert not names & {"settings_snapshot", "invoice_snapshot"}
