@@ -24,6 +24,7 @@ a hand-off, not a permanent nag.
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+import re
 
 
 # How long after onboarding the hand-off stays offered. Long enough for the
@@ -178,6 +179,13 @@ def first_open(step_list: list[dict]) -> dict | None:
     return next((s for s in step_list if not s.get("done")), None)
 
 
+def _progress_name(label: str | None) -> str:
+    """A step's name in the progress display: its page title without a trailing
+    "settings" ("Diary & scheduling settings" -> "Diary & scheduling")."""
+    label = (label or "").strip()
+    return re.sub(r"\s+settings$", "", label, flags=re.IGNORECASE) or label
+
+
 def strip(step_list: list[dict], current_path: str | None = None,
           onboarded_at=None, dismissed_at=None, now: datetime | None = None) -> dict | None:
     """The shell strip: where the owner is in the nine, what is next, and
@@ -199,8 +207,16 @@ def strip(step_list: list[dict], current_path: str | None = None,
         idx = step_list.index(here)
         pos = WIZARD_STEPS + idx + 1
         after = next((s for s in step_list[idx + 1:] if not s.get("done")), None)
+    # The in-app steps as the shell's numbered progress (the wizard's four are behind
+    # the owner by now and are not drawn). The badge is the circle's text: a step may
+    # carry its own ("5A"); otherwise it is its place in the nine. Focus is the page
+    # the owner stands on, else the next open step.
+    focus = here or nxt
+    items = [{"key": s.get("key"), "badge": str(s.get("badge") or WIZARD_STEPS + i + 1),
+              "name": _progress_name(s.get("label")), "done": bool(s.get("done")), "current": s is focus}
+             for i, s in enumerate(step_list)]
     return {"total": total, "done": done, "next": nxt, "here": here, "pos": pos, "after": after,
-            "here_done": bool(here and here.get("done")),
+            "here_done": bool(here and here.get("done")), "items": items,
             "can_hide": not is_fresh(onboarded_at, now=now)}
 
 

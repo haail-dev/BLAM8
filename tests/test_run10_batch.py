@@ -40,7 +40,7 @@ def test_the_crm_step_says_set_a_pipeline_not_save_this_page():
     assert strip["here"]["move_on"] == "Set a pipeline to move on"
     assert setup_handoff.strip(steps, "/app/invoices/settings", onboarded_at=None)["here"].get("move_on") is None
     shell = _read("src/app/templates/app/base.html")
-    assert "{{ setup_strip.here.move_on or 'Save this page to move on' }}" in shell
+    assert "move_on" not in shell      # the strip no longer shows a hint (Kris 2026-10-22); the step data is unchanged
     src = _read("src/app/setup_handoff.py")
     assert '"move_on": "Set a pipeline to move on",' in src
     # The one card that writes on press says so — the others fill a form.
