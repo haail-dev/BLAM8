@@ -170,3 +170,43 @@ def test_the_page_renders_marked_rows_that_ship_visible(client, monkeypatch):
         assert not re.search(r"(?<![-\w])hidden(?![-\w])", row), \
             "ships a save row already hidden"
     assert "/static/dirty_save.js" in html
+
+
+# ── Dependants: the add control lives in the save row ──────────────────────
+def _dependants_save_row(client, monkeypatch, groups):
+    """The rendered Dependants page's save-row wrapper: its opening tag and body.
+
+    The nested Save button carries data-save-row as well (the sweep above looks
+    for it), so the wrapper is the <div>, not every marked element."""
+    import app.dashboard as dashboard
+
+    _env(monkeypatch, modules={"scheduling"})
+    snapshot = {"page": "dependants", "config": {}, "groups": groups,
+                "instances": [], "definitions": []}
+    monkeypatch.setattr(dashboard.setup_forms, "load", lambda *a: snapshot)
+    monkeypatch.setattr(dashboard.db, "list_requirement_groups",
+                        lambda t, client=None: list(groups))
+    html = client.get("/app/diary/dependants").text
+    rows = re.findall(r"(<div[^>]*data-save-row[^>]*>)(.*?)</div>", html, re.S)
+    assert len(rows) == 1, rows
+    return rows[0]
+
+
+def test_an_empty_dependants_page_keeps_its_add_control_reachable(client, monkeypatch):
+    """A tenant with no kind yet has no field in the form to change, so the
+    dirty-save script would hide a plain save row. The page's only add button is
+    inside it, which left an owner no way to start the page by hand."""
+    tag, body = _dependants_save_row(client, monkeypatch, groups=[])
+    assert "data-save-always" in tag
+    assert 'id="add-group"' in body
+
+
+def test_a_dependants_page_with_a_kind_hides_its_save_row_until_edited(client, monkeypatch):
+    """Once a kind exists the form has fields to change, so the row goes back to
+    appearing only when the form differs from how it loaded."""
+    kind = {"id": "g-dog", "label": "Dog", "label_plural": "Dogs", "cardinality": "many",
+            "fields": [{"label": "Breed", "type": "text", "required": False,
+                        "durability": "once"}]}
+    tag, body = _dependants_save_row(client, monkeypatch, groups=[kind])
+    assert "data-save-always" not in tag
+    assert 'id="add-group"' in body
