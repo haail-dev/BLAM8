@@ -159,6 +159,16 @@ def test_function_20261004_accepts_the_five_scalars_after_the_mode_line_is_left(
     assert "booking_mode" not in diary.client.calls[-1]["p_settings_patch"]
 
 
+def test_function_20261004_also_refuses_the_scalars_alone_while_the_mode_line_is_still_pending(diary):
+    # A pending mode line adds _setup_has_bookings to the expected settings, and the 2026-10-04
+    # function compares expected settings to the (absent) row without removing that key.
+    response = accept(diary, {k for k, _ in SCALARS})
+    assert "_setup_has_bookings" in diary.client.calls[-1]["p_expected_settings"]
+    # Reloading cannot clear this: only leaving the mode line (or the 2026-10-19 function) does.
+    assert response.status_code == 409 and "Reload" in response.json()["detail"]
+    assert diary.scheduling() is None and diary.card()["revision"] == 1
+
+
 def test_function_20261019_accepts_the_mixed_accept_and_keeps_the_appointment_mode(diary):
     diary.install_20261019()
     response = accept(diary)
