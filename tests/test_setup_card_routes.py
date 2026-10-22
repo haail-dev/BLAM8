@@ -370,6 +370,41 @@ def test_database_race_maps_to_conflict_without_success(client, monkeypatch):
     assert state["card"]["status"] == "proposed"
 
 
+@pytest.mark.parametrize("message, status, detail", [
+    ("BLAM8_SETUP_INVALID", 422, "database migrations"),
+    ("BLAM8_SETUP_INVALID: customer field limit", 422,
+     "The saved settings could not take this change: customer field limit."),
+    ("BLAM8_SETUP_INVALID: preserve progress identity and levels.", 422,
+     "The saved settings could not take this change: preserve progress identity and levels."),
+    ("BLAM8_SETUP_UNAVAILABLE", 503, "could not be confirmed"),
+    ("canceling statement due to statement timeout", 503, "could not be confirmed"),
+])
+def test_a_database_refusal_is_named_and_other_database_errors_stay_unconfirmed(client, monkeypatch, message, status, detail):
+    from postgrest.exceptions import APIError
+    c, state = client
+    body = selection(state)
+    preview = c.post(BASE + "/preview", json=body).json()
+    def refused(*a, **kw):
+        raise APIError({"message": message, "code": "P0001", "hint": None, "details": None})
+    monkeypatch.setattr(store, "save", refused)
+    response = c.post(BASE + "/accept", json=body | {"settings_version": preview["settings_version"]})
+    assert response.status_code == status and detail in response.json()["detail"]
+    if status == 422:
+        assert "Reload the card" not in response.json()["detail"]
+    assert state["card"]["status"] == "proposed"
+
+
+def test_stale_database_messages_keep_their_conflict_and_other_failures_say_unconfirmed(client, monkeypatch):
+    c, state = client
+    body = selection(state)
+    preview = c.post(BASE + "/preview", json=body).json()
+    for error, status in ((cards.Stale("reload"), 409), (cards.Invalid("Choose again."), 422), (RuntimeError("down"), 503)):
+        def failing(*a, error=error, **kw):
+            raise error
+        monkeypatch.setattr(store, "save", failing)
+        assert c.post(BASE + "/accept", json=body | {"settings_version": preview["settings_version"]}).status_code == status
+
+
 def test_edit_endpoint_preserves_other_fields_and_rejects_missing_sources(client):
     c, state = client
     line = state["card"]["lines"][0]

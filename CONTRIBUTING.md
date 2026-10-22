@@ -46,7 +46,9 @@ For an ordinary change:
 4. Open a PR explaining the problem, change and validation. Inspect the diff and
    checks before merging. A skipped, cancelled or unavailable run is not a pass.
 5. Merge the reviewed change, then validate and tag an intentional release.
-   Deployments and migrations are separate decisions.
+   Deployments and migrations are separate decisions. After a deploy, and before
+   saying a migration is live, run `python scripts/ops/check_db_functions.py`
+   ([database function check](docs/operations/database-function-check.md)).
 
 If Actions minutes are unavailable, run the same commands locally and record the
 commit and results in the PR. That is useful evidence, but does not make a missing

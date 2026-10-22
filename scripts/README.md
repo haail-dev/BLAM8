@@ -11,7 +11,7 @@ imports come from the installed `src/` packages, not from copies in this folder.
 | `db/migrations/` | Explicit, individually reviewed database migrations |
 | `db/` | Backfills and database backup commands |
 | `knowledge/` | Prepare the platform content refresh manifest offline |
-| `ops/` | Operational configuration, metrics, IndexNow and VAPID helpers |
+| `ops/` | Operational configuration, metrics, IndexNow, VAPID and read-only database function checks |
 
 Examples:
 
