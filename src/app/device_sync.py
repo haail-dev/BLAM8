@@ -184,6 +184,7 @@ def valid_checkpoint(patch):
         if (
             not isinstance(saved, dict)
             or not isinstance(saved.get("action"), str)
+            or not isinstance(saved.get("page", ""), str)
             or not isinstance(saved.get("version"), str)
             or not isinstance(saved.get("values"), dict)
         ):
@@ -484,13 +485,17 @@ class SyncRoute(APIRoute):
 
                     page = settings_recommend.PAGES.get(request.url.path.split("/")[-2])
                     if page:
-                        # Synced forms are keyed by path; a card href may add #anchor.
+                        # A synced form records the page it was captured on, which
+                        # is not always the path it posts to (Diary settings posts
+                        # to /app/settings/scheduling). A card href may add
+                        # #anchor. A draft an older client stored carries only
+                        # its action, so that is matched as before.
                         href = page["href"].split("#")[0]
                         if "form" not in patch:
                             patch["form"] = {
                                 key: saved
                                 for key, saved in current["payload"].get("form", {}).items()
-                                if (saved.get("action") or "") != href
+                                if (saved.get("page") or saved.get("action") or "") != href
                             }
                         patch["refresh"] = str(operation)
                 if "application/json" in result.headers.get(

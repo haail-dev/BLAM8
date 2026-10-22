@@ -10,9 +10,11 @@ import threading
 from uuid import uuid4
 import pytest
 
-from fastapi import Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.testclient import TestClient
+
+from app import device_sync as sync
 
 from tests.test_device_sync import cluster, sync_db, sync_case, sync_app
 from tests.test_knowledge_guidance_browser import chromium_binary
@@ -420,3 +422,122 @@ def test_sync_never_stores_or_restores_a_pages_concurrency_snapshot(
     names = {name for saved in form.values() for name in saved["values"]}
     assert "title" in names
     assert not names & {"settings_snapshot", "invoice_snapshot"}
+
+
+DIARY_PAGE = "/app/diary/settings"
+
+DIARY_DRIVER = r"""
+(async()=>{
+  const frame=document.getElementById('page');
+  const win=()=>frame.contentWindow, doc=()=>frame.contentDocument, sync=()=>win().Blam8DeviceSync;
+  const pause=ms=>new Promise(r=>setTimeout(r,ms||40));
+  const until=async(check)=>{for(let n=0;n<200;n++){const found=check();if(found)return found;await pause();}throw Error('Timed out: '+check);};
+  const field=name=>doc().querySelector('[name="'+name+'"]');
+  const loaded=async()=>{await until(()=>sync());await sync().ready;};
+  const report=(status,text)=>fetch('/browser-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status,text:text})});
+  // Every named control of every form in main, as it is now.
+  const controls=root=>JSON.stringify(Array.from(root.querySelectorAll('main form')).map(f=>
+    Array.from(f.elements).filter(e=>e.name && e.name!=='csrf_token').map(e=>e.name+'='+e.value)));
+  const stored=async()=>(await (await fetch('/device-sync/flow',{cache:'no-store'})).json()).payload.form||{};
+  try{
+    await loaded();
+    win().marker='before-accept';
+    // The owner messages the assistant. Every flow request first stores the
+    // untouched page, as in the live run: blank times, availability unset.
+    const asked=await sync().request('/concierge/help',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Set up Diary settings for me'})});
+    if(!asked.ok)throw Error('Assistant request failed: '+asked.status);
+    const before=await stored();
+    const actions=Object.values(before).map(f=>f.action).sort().join(' ');
+    if(actions!=='/app/diary/cancel-all /app/diary/settings/booking-mode /app/settings/scheduling')throw Error('Stored forms: '+actions);
+    if(Object.values(before).some(f=>f.page!=='/app/diary/settings'))throw Error('A stored form does not record the page it was captured on');
+    if(field('open_time').value!=='' || field('opening_hours_state').value!=='unset')throw Error('The page did not start untouched');
+    // The accept writes the settings; nothing on the open page changes.
+    const accepted=await sync().request('/concierge/setup-cards/diary_settings/accept',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+    if(!accepted.ok)throw Error('Accept failed: '+accepted.status);
+    // The panel then reloads the page it changed.
+    win().location.reload();
+    await until(()=>win().marker===undefined && sync());
+    await sync().ready;
+    const remaining=Object.values(await stored()).filter(f=>f.page==='/app/diary/settings');
+    if(remaining.length)throw Error('The flow still holds '+remaining.length+' form(s) for the accepted page');
+    const render=new DOMParser().parseFromString(await (await fetch('/app/diary/settings',{cache:'no-store'})).text(),'text/html');
+    if(field('open_time').value!=='09:00' || field('close_time').value!=='16:00')throw Error('Times show "'+field('open_time').value+'"-"'+field('close_time').value+'" after the accept');
+    if(field('opening_hours_state').value!=='set')throw Error('Availability shows '+field('opening_hours_state').value+' after the accept');
+    if(field('booking_mode').value!=='stay')throw Error('Booking mode shows '+field('booking_mode').value+' after the accept');
+    if(controls(doc())!==controls(render))throw Error('The inputs differ from the server render:\n'+controls(doc())+'\n'+controls(render));
+    const rows=Array.from(doc().querySelectorAll('[data-save-row]'));
+    if(rows.length!==2 || rows.some(row=>!row.hidden))throw Error('A Save row is showing although nobody edited the page');
+    const typed=field('open_time');typed.value='10:00';typed.dispatchEvent(new (win().Event)('input',{bubbles:true}));
+    if(typed.form.querySelector('[data-save-row]').hidden)throw Error('The Save row did not appear after an edit');
+    await report('PASS','Accepting a card reloads Diary settings with the saved values and no stale draft');
+  }catch(e){await report('FAIL',e.stack+'\n--- page text ---\n'+(doc().body ? doc().body.innerText : ''));}
+})();
+"""
+
+
+def test_diary_settings_shows_the_saved_values_after_a_card_accept_although_its_forms_post_elsewhere(
+    sync_app, tmp_path
+):
+    """Diary settings posts to three paths and none is the page itself.
+
+    The page's forms are stored untouched, a card accept writes the settings,
+    and the reload must render them without the older draft laid over them.
+    """
+    app, _, _ = sync_app
+    completed, reports = report_route(app)
+    saved = {"open": "", "close": "", "hours": "unset", "mode": "appointment"}
+    routes = APIRouter(route_class=sync.SyncRoute)
+
+    @routes.post("/concierge/setup-cards/{page}/accept")
+    async def accept(page: str):
+        # The card route writes the table directly; the open page does not change.
+        saved.update(open="09:00", close="16:00", hours="set", mode="stay")
+        return {"card": {"page": page, "revision": 2}}
+
+    app.include_router(routes)
+
+    def chosen(current, value):
+        return " selected" if current == value else ""
+
+    def render():
+        return f"""<!doctype html><html><body><div data-setup-strip></div><main>
+<form method="post" action="/app/diary/settings/booking-mode">
+  <input type="hidden" name="csrf_token" value="test-csrf">
+  <select name="booking_mode">
+    <option value="appointment"{chosen(saved["mode"], "appointment")}>Appointments</option>
+    <option value="stay"{chosen(saved["mode"], "stay")}>Arrival to departure</option>
+  </select>
+  <div data-save-row><button>Save booking mode</button></div>
+</form>
+<form method="post" action="/app/settings/scheduling" id="scheduling">
+  <input type="hidden" name="csrf_token" value="test-csrf">
+  <input type="hidden" name="return_to" value="/app/diary/settings">
+  <select name="opening_hours_state">
+    <option value="unset"{chosen(saved["hours"], "unset")}>Not set yet</option>
+    <option value="set"{chosen(saved["hours"], "set")}>Apply value</option>
+  </select>
+  <input name="open_time" type="time" value="{saved["open"]}">
+  <input name="close_time" type="time" value="{saved["close"]}">
+  <div data-save-row><button>Save diary settings</button></div>
+</form>
+<form method="post" action="/app/diary/cancel-all" id="cancel-all-form">
+  <input type="hidden" name="csrf_token" value="test-csrf">
+  <input type="hidden" name="return_to" value="/app/diary">
+  <button>Cancel all</button>
+</form>
+</main><script src="/static/device_sync.js"></script><script src="/static/dirty_save.js"></script></body></html>"""
+
+    app.state.pages[DIARY_PAGE] = render
+
+    @app.get("/browser-test")
+    def host():
+        response = HTMLResponse(
+            f'<!doctype html><iframe id="page" src="{DIARY_PAGE}"></iframe><script>'
+            + DIARY_DRIVER
+            + "</script>"
+        )
+        response.set_cookie("bl_csrf", "test-csrf")
+        return response
+
+    drive_in_chrome(app, tmp_path, "/browser-test", completed)
+    assert reports[0]["status"] == "PASS", reports[0]["text"]

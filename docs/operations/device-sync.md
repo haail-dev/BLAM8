@@ -102,12 +102,16 @@ A page's own concurrency version is never synced. Checkpoints skip
 `settings_snapshot` and `invoice_snapshot` (with the CSRF token, the review
 `version` and the sync fields) when capturing and when restoring, so a restored
 draft cannot replace the version the server rendered with an older one.
-Accepting a setup card writes that page's settings directly and leaves its
-synced draft stale. A successful accept on the flow channel therefore drops the
-synced form for that page (other pages' drafts are kept) and records a refresh
-hint naming the operation. Other devices reload and show the saved values; the
-device that accepted reloads itself when the card's page is the page it has
-open. Unsaved edits typed on that page before the accept are not kept in sync
+Each synced form records the page it was captured on as well as the path it
+posts to: a settings page's forms do not all post to the page itself (Diary
+settings posts to `/app/settings/scheduling`, CRM settings to its per-stage
+paths). Accepting a setup card writes that page's settings directly and leaves
+its synced draft stale. A successful accept on the flow channel therefore drops
+every synced form captured on that page (other pages' drafts are kept; a draft
+an older client stored without its page is matched by its action) and records
+a refresh hint naming the operation. Other devices reload and show the saved
+values; the device that accepted reloads itself when the card's page is the
+page it has open. Unsaved edits typed on that page before the accept are not kept in sync
 afterwards. A Getting paid save that finds the settings changed since the form
 opened redirects back to the page with a message and the latest saved values,
 instead of answering with a bare 409; the redirect also clears the synced draft.
@@ -133,4 +137,8 @@ The Getting paid replay runs the sync client, the dirty-save script and the
 setup-card panel in one native document against the same wrapper and disposable
 SQL: it messages the assistant, presses Accept all, and checks that the reloaded
 form shows the saved values, carries the new concurrency version and keeps its
-Save row hidden until an edit.
+Save row hidden until an edit. A Diary settings replay, whose three forms post
+elsewhere than the page, stores the untouched page through an assistant
+request, accepts a card for the page and reloads: the inputs then equal the
+server render, the Save rows stay hidden until an edit, and the flow holds no
+form for the page.

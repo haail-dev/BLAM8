@@ -135,10 +135,15 @@ def sync_app(sync_case, monkeypatch):
         ),
     )
 
+    # A test may serve its own page at a setup path in place of this one.
+    app.state.pages = {}
+
     @routes.get("/onboarding/{stage}")
     @routes.get("/app/{stage}")
     def page(request: Request, stage: str):
         path = request.url.path
+        if path in app.state.pages:
+            return HTMLResponse(app.state.pages[path]())
         knowledge = stage == "knowledge"
         action = "/onboarding/knowledge/review/review-one" if knowledge else path
         review = ' data-knowledge-review="review-one"' if knowledge else ""
@@ -412,6 +417,16 @@ def test_navigation_is_limited_to_setup_routes(path):
                 }
             }
         },
+        {
+            "form": {
+                "bad": {
+                    "action": "/onboarding/knowledge",
+                    "page": 3,
+                    "version": "v1",
+                    "values": {},
+                }
+            }
+        },
         {"guide": []},
         {"guide": {"review": "review-one", "version": "v1", "data": []}},
     ],
@@ -426,18 +441,23 @@ def test_malformed_checkpoint_rejected_before_claim(sync_app, patch):
     assert c.post("/device-sync/flow", json=body, headers=headers).status_code == 200
 
 
-def saved_form(action, **values):
-    return {
+def saved_form(action, page=None, **values):
+    """A synced form as the client stores it. A draft an older client stored
+    has no page, only the action it posts to."""
+    saved = {
         "action": action,
         "version": "",
         "values": {name: [value] for name, value in values.items()},
     }
+    if page:
+        saved["page"] = page
+    return saved
 
 
 @pytest.fixture
-def card_routes(sync_app):
-    """Setup-card routes behind the sync wrapper, with the flow already holding
-    one synced form per tuning page (Getting paid and CRM settings)."""
+def card_app(sync_app):
+    """Setup-card routes behind the sync wrapper, a way to seed the flow's
+    synced forms, and a way to post to a route as a device would."""
     app = sync_app[0]
     routes = APIRouter(route_class=sync.SyncRoute)
 
@@ -448,39 +468,55 @@ def card_routes(sync_app):
 
     app.include_router(routes)
     c = client(sync_app)
-    seeded = c.post(
-        "/device-sync/flow",
-        json={
-            "operation": str(uuid4()),
-            "revision": 0,
-            "patch": {
-                "path": "/app/invoices/settings",
-                "form": {
-                    "/app/invoices/settings:0": saved_form(
-                        "/app/invoices/settings", payment_terms="", vat_rate="20"
-                    ),
-                    "/app/crm/settings:0": saved_form(
-                        "/app/crm/settings", stage_one="Enquiry"
-                    ),
-                },
+
+    def seed(path, forms):
+        revision = c.get("/device-sync/flow").json()["revision"]
+        seeded = c.post(
+            "/device-sync/flow",
+            json={
+                "operation": str(uuid4()),
+                "revision": revision,
+                "patch": {"path": path, "form": forms},
             },
-        },
-        headers={"X-CSRF-Token": "test-csrf"},
-    )
-    assert seeded.status_code == 200 and seeded.json()["revision"] == 1
+            headers={"X-CSRF-Token": "test-csrf"},
+        )
+        assert seeded.status_code == 200 and seeded.json()["revision"] == revision + 1
 
     def post(path, channel="flow"):
         operation = str(uuid4())
+        # The assistant channel is separate and keeps its own revision.
+        revision = c.get("/device-sync/" + (channel or "assistant")).json()["revision"]
         headers = {
             "X-CSRF-Token": "test-csrf",
             "X-Blam8-Operation": operation,
-            # The assistant channel is separate and still at revision 0.
-            "X-Blam8-Revision": "1" if channel else "0",
+            "X-Blam8-Revision": str(revision),
         }
         if channel:
             headers["X-Blam8-Channel"] = channel
         return operation, c.post(path, json={}, headers=headers)
 
+    return c, seed, post
+
+
+@pytest.fixture
+def card_routes(card_app):
+    """The flow already holding one synced form per tuning page (Getting paid
+    and CRM settings)."""
+    c, seed, post = card_app
+    seed(
+        "/app/invoices/settings",
+        {
+            "/app/invoices/settings:0": saved_form(
+                "/app/invoices/settings",
+                page="/app/invoices/settings",
+                payment_terms="",
+                vat_rate="20",
+            ),
+            "/app/crm/settings:0": saved_form(
+                "/app/crm/settings", page="/app/crm/settings", stage_one="Enquiry"
+            ),
+        },
+    )
     return c, post
 
 
@@ -540,4 +576,123 @@ def test_an_accept_that_finishes_the_active_step_keeps_the_step_advance(
     payload = c.get("/device-sync/flow").json()["payload"]
     # The walk moved on and cleared every page's draft; the hint still goes out.
     assert payload["form"] == {} and payload["path"] == "/app/"
+    assert payload["refresh"] == operation
+
+
+# The templates each tuning page renders, so the forms seeded below post to
+# the paths the real pages post to. Diary settings includes its scheduling form.
+TUNING_PAGE_TEMPLATES = {
+    "diary_settings": ("app/diary_settings.html", "app/_scheduling_settings.html"),
+    "booking_details": ("app/diary_intake.html",),
+    "dependants": ("app/diary_dependants.html",),
+    "crm_settings": ("app/crm_settings.html",),
+    "invoice_settings": ("app/invoice_settings.html",),
+}
+
+
+def form_actions(page):
+    """The paths a tuning page's forms post to, with one stage id filled in."""
+    actions = []
+    for name in TUNING_PAGE_TEMPLATES[page]:
+        source = (ROOT / "src/app/templates" / name).read_text(encoding="utf-8")
+        for match in re.finditer(r'<form[^>]*\baction="([^"]+)"', source):
+            actions.append(match.group(1).replace("{{ s.id }}", "7"))
+    return actions
+
+
+def test_tuning_page_forms_do_not_all_post_to_their_page():
+    """Why the accept drops by page: Diary settings, CRM settings and Getting
+    paid post somewhere other than their own path too. Order is not compared:
+    an included form is read after the page template, not where it renders."""
+    assert {
+        page: sorted(form_actions(page)) for page in TUNING_PAGE_TEMPLATES
+    } == {
+        "diary_settings": [
+            "/app/diary/cancel-all",
+            "/app/diary/settings/booking-mode",
+            "/app/settings/scheduling",
+        ],
+        "booking_details": ["/app/diary/intake"],
+        "dependants": ["/app/diary/dependants"],
+        "crm_settings": [
+            "/app/crm/settings",
+            "/app/crm/settings/stages",
+            "/app/crm/settings/stages/7",
+            "/app/crm/settings/stages/7/delete",
+        ],
+        "invoice_settings": [
+            "/app/invoices/settings",
+            "/app/payments/disconnect",
+            "/app/payments/methods",
+        ],
+    }
+
+
+@pytest.mark.parametrize("page", list(TUNING_PAGE_TEMPLATES))
+def test_accepting_a_card_drops_every_form_of_its_page_whatever_they_post_to(
+    card_app, page
+):
+    from app import settings_recommend
+
+    c, seed, post = card_app
+    hrefs = {key: settings_recommend.PAGES[key]["href"] for key in TUNING_PAGE_TEMPLATES}
+    # Every tuning page's forms as the client captures them: keyed by the path
+    # they post to and their index, each recording the page it was captured on.
+    forms = {
+        f"{action}:{index}": saved_form(action, page=hrefs[key], field="typed")
+        for key in TUNING_PAGE_TEMPLATES
+        for index, action in enumerate(form_actions(key))
+    }
+    seed(hrefs[page], forms)
+    operation, response = post(f"/concierge/setup-cards/{page}/accept")
+    assert response.status_code == 200
+    payload = c.get("/device-sync/flow").json()["payload"]
+    assert sorted(payload["form"]) == sorted(
+        key for key, saved in forms.items() if saved["page"] != hrefs[page]
+    )
+    assert payload["refresh"] == operation
+    assert payload["path"] == hrefs[page]
+
+
+def test_accepting_a_packages_card_drops_the_getting_paid_forms_it_shares(card_app):
+    """The packages card's href is the Getting paid page with an anchor."""
+    c, seed, post = card_app
+    seed(
+        "/app/invoices/settings",
+        {
+            "/app/payments/methods:0": saved_form(
+                "/app/payments/methods", page="/app/invoices/settings", method="bank"
+            ),
+            "/app/invoices/settings:2": saved_form(
+                "/app/invoices/settings", page="/app/invoices/settings", payment_terms="Net 14"
+            ),
+            "/app/crm/settings:0": saved_form(
+                "/app/crm/settings", page="/app/crm/settings", stage_one="Enquiry"
+            ),
+        },
+    )
+    operation, response = post("/concierge/setup-cards/packages/accept")
+    assert response.status_code == 200
+    payload = c.get("/device-sync/flow").json()["payload"]
+    assert list(payload["form"]) == ["/app/crm/settings:0"]
+    assert payload["refresh"] == operation
+
+
+def test_a_draft_stored_without_its_page_is_matched_by_its_action(card_app):
+    """An older client stored only the action; the form posting to the page's
+    own href is still dropped, as before."""
+    c, seed, post = card_app
+    seed(
+        "/app/diary/settings",
+        {
+            "/app/diary/settings/booking-mode:0": saved_form(
+                "/app/diary/settings/booking-mode", booking_mode="stay"
+            ),
+            "/app/diary/settings:1": saved_form("/app/diary/settings", title="typed"),
+        },
+    )
+    operation, response = post("/concierge/setup-cards/diary_settings/accept")
+    assert response.status_code == 200
+    payload = c.get("/device-sync/flow").json()["payload"]
+    assert list(payload["form"]) == ["/app/diary/settings/booking-mode:0"]
     assert payload["refresh"] == operation
