@@ -47,6 +47,7 @@ SOURCE_CAPABILITIES = {
     'src/app/static/voice-gptlive.js': 'owner.assistant',
     'src/app/gptlive.py': 'owner.assistant',
     'src/app/templates/app/diary_dependants.html': 'subjects',
+    'src/app/templates/app/invoice_settings.html': 'money',
 }
 
 

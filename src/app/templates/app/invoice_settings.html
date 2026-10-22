@@ -4,6 +4,7 @@
 {% block menu_sections %}{% include "app/_invoices_nav.html" %}{% endblock %}
 {% block content %}
 {% set msg = request.query_params.get('msg') %}
+{% set err = request.query_params.get('err') %}
 {% set inp = "mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-brand" %}
 {# The Settings idiom (settings.html) applied to the last expanded page: every
    section folds to one line that STATES ITS VALUE — the page reads as a
@@ -44,6 +45,7 @@
   {% if msg == 'stripe_connected' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Stripe connected — invoices now go out with a Pay Now link.</div>{% endif %}
   {% if msg == 'methods_saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved — the Pay Now page offers bank payment {% if s.bank_methods_min_gbp is not none %}on invoices from £{{ '%.2f'|format(s.bank_methods_min_gbp) }}{% else %}on no invoice; cards and wallets only{% endif %}.</div>{% endif %}
   {% if msg == 'methods_badamount' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">That threshold didn't read as money — a figure like 250, or blank for cards only.</div>{% endif %}
+  {% if err == 'stale' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">These settings changed after this form opened. The page now shows the latest saved values; check them and save again.</div>{% endif %}
   {% if msg == 'stripe_disconnected' %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">Stripe disconnected — invoices fall back to your bank-transfer details.</div>{% endif %}
   {% if msg in ('stripe_failed', 'stripe_declined', 'stripe_unavailable') %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{{ "Online payments aren't available yet — invoices use your bank details instead." if msg == 'stripe_unavailable' else "Stripe connection didn't complete — you can try again any time." }}</div>{% endif %}
 

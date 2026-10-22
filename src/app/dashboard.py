@@ -3382,7 +3382,8 @@ async def invoice_settings_save(request: Request, ctx: TenantCtx = Depends(requi
         try:
             db.save_invoice_settings_checked(ctx.tenant_id, expected, fields, mode, client=ctx.client)
         except db.InvoiceSettingsStale:
-            raise HTTPException(409, "Invoice or package settings changed after this form opened. Reload before saving; no changes from this form were saved.") from None
+            # Nothing was written: show the page with the latest values and a message.
+            return RedirectResponse("/app/invoices/settings?err=stale", status_code=303)
         except Exception:
             raise HTTPException(503, "The save could not be confirmed. Reload invoice settings to check before trying again.") from None
         _held_used(ctx, "invoice_settings")

@@ -73,12 +73,16 @@
   Panel.prototype.setWaiting = function (on) {
     this.waiting = on; this.tray.hidden = on || !this.mode; this.place();
   };
+  // Whether a card's page is the one open now; its href may add an #anchor.
+  Panel.prototype.onPage = function (page) {
+    return ((this.data.views[page] || {}).href || "").split("#")[0] === window.location.pathname;
+  };
   Panel.prototype.pending = function (mode) {
     var result = [], self = this;
     this.data.cards.forEach(function (card) {
       card.lines.forEach(function (line) {
         if (line.status !== "proposed" && line.status !== "held") return;
-        var here = ((self.data.views[card.page] || {}).href || "").split("#")[0] === window.location.pathname;
+        var here = self.onPage(card.page);
         var held = line.status === "held" && !here;
         if ((mode === "held") === held) result.push({ card: card, line: line });
       });
@@ -176,7 +180,11 @@
       if (action === "/accept") this.onApplying(card);
       var result = await request("/concierge/setup-cards/" + encodeURIComponent(card.page) + action, body);
       this.editing = false;
-      if (action === "/accept") this.onApplied(result.card);
+      if (action === "/accept") {
+        this.onApplied(result.card);
+        // The open page still shows what it loaded with: show what was saved.
+        if (this.onPage(card.page)) window.location.reload();
+      }
       await this.load();
     } catch (err) {
       // A lost response is uncertain, not a failed save to repeat. Keep the

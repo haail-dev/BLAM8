@@ -98,6 +98,22 @@ form's own hidden version still changes only when Check changes and overlaps
 renders a fresh preview; a Save or guide turn against the old version remains
 refused until then.
 
+A page's own concurrency version is never synced. Checkpoints skip
+`settings_snapshot` and `invoice_snapshot` (with the CSRF token, the review
+`version` and the sync fields) when capturing and when restoring, so a restored
+draft cannot replace the version the server rendered with an older one.
+Accepting a setup card writes that page's settings directly and leaves its
+synced draft stale. A successful accept on the flow channel therefore drops the
+synced form for that page (other pages' drafts are kept) and records a refresh
+hint naming the operation. Other devices reload and show the saved values; the
+device that accepted reloads itself when the card's page is the page it has
+open. Unsaved edits typed on that page before the accept are not kept in sync
+afterwards. A Getting paid save that finds the settings changed since the form
+opened redirects back to the page with a message and the latest saved values,
+instead of answering with a bare 409; the redirect also clears the synced draft.
+The other settings pages (Diary settings, Booking requirements, Dependants, CRM
+settings) still answer that refusal as a 409 document.
+
 The two-document native test runs the sync and guide clients with a small
 transcript display adapter, actual guide decisions and disposable SQL. It does
 not run the complete Concierge renderer. The separate choice-history replay
@@ -112,3 +128,9 @@ wrapper for two documents with disposable SQL: it forces a poll between the
 shared revision change and the Apply response, then checks that the originating
 device keeps its page and decisions while the second device reloads and
 recovers them.
+
+The Getting paid replay runs the sync client, the dirty-save script and the
+setup-card panel in one native document against the same wrapper and disposable
+SQL: it messages the assistant, presses Accept all, and checks that the reloaded
+form shows the saved values, carries the new concurrency version and keeps its
+Save row hidden until an edit.

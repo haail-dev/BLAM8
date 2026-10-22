@@ -472,6 +472,27 @@ class SyncRoute(APIRoute):
                         "form": {},
                         "guide": {},
                     }
+                if (
+                    channel == "flow"
+                    and request.url.path.startswith("/concierge/setup-cards/")
+                    and request.url.path.endswith("/accept")
+                ):
+                    # An accepted card writes the settings table directly, so the
+                    # page's synced draft is stale: drop it and have other devices
+                    # reload. The sending device reloads itself from the response.
+                    from app import settings_recommend
+
+                    page = settings_recommend.PAGES.get(request.url.path.split("/")[-2])
+                    if page:
+                        # Synced forms are keyed by path; a card href may add #anchor.
+                        href = page["href"].split("#")[0]
+                        if "form" not in patch:
+                            patch["form"] = {
+                                key: saved
+                                for key, saved in current["payload"].get("form", {}).items()
+                                if (saved.get("action") or "") != href
+                            }
+                        patch["refresh"] = str(operation)
                 if "application/json" in result.headers.get(
                     "content-type", ""
                 ) and hasattr(result, "body"):
