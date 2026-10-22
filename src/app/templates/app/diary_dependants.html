@@ -138,7 +138,10 @@
       <button type="button" id="add-ladder" class="text-sm font-medium text-brand" {{ 'hidden' if ladders|length >= max_ladders }}>+ Add a ladder</button>
     </div>
 
-    <div data-save-row class="flex flex-wrap items-center gap-3">
+    {# With no kind yet nothing in this form can change, so dirty_save.js hid
+       the add button along with the row and a first kind could not be added
+       by hand (2026-10-22). Until one exists the row stays: data-save-always. #}
+    <div data-save-row {% if not groups %}data-save-always{% endif %} class="flex flex-wrap items-center gap-3">
       {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add a kind of dependant</button>{% endif %}
       <button type="submit" data-save-row class="ml-auto rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
     </div>
