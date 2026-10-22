@@ -39,6 +39,25 @@ def _version(cfg):
     return sha256(json.dumps(cfg, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+REFUSED = "BLAM8_SETUP_INVALID"
+BEHIND = ("The saved settings could not take this change. The server's setup functions may be behind "
+          "the application; ask support to check the database migrations.")
+
+
+def _refusal(exc):
+    """The owner-facing sentence for a PostgREST error raised as BLAM8_SETUP_INVALID, else None.
+
+    A bare code means the function rejected the shape of the change, which is what an
+    older installed function does with a newer patch. A reason after the colon is the
+    function's own explanation of a particular refusal, so it is passed on as written.
+    """
+    message = getattr(exc, "message", None)
+    if not isinstance(message, str) or not message.startswith(REFUSED):
+        return None
+    reason = message[len(REFUSED):].lstrip(": ").strip()
+    return f"The saved settings could not take this change: {reason.rstrip('.')}." if reason else BEHIND
+
+
 def _error(exc):
     if isinstance(exc, cards.Stale):
         raise HTTPException(409, str(exc)) from None
@@ -46,6 +65,12 @@ def _error(exc):
         raise HTTPException(422, str(exc)) from None
     if isinstance(exc, HTTPException):
         raise exc
+    refusal = _refusal(exc)
+    if refusal:
+        # The database refused a change the application built. Repeating it, or
+        # reloading the card, cannot help, so say so instead of "could not be confirmed".
+        log.warning("Setup card change refused by the database: %s", refusal, exc_info=True)
+        raise HTTPException(422, refusal) from None
     log.warning("Setup card operation could not be verified", exc_info=True)
     raise HTTPException(503, "The operation could not be confirmed. Reload the card before trying again.") from None
 

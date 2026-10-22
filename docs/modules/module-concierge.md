@@ -286,6 +286,18 @@ onboarding POSTs unchanged.
   and `setup_card_model.RULE` states the row shapes once more. Tests:
   tests/test_setup_card_normalise.py, tests/test_setup_card_model.py.
 
+- **Durable setup cards: a refused accept is named — DONE** (2026-10-22): when
+  `change_setup_card` raises `BLAM8_SETUP_INVALID` on an accept, `setup_card_routes._error`
+  answers 422 instead of the 503 "could not be confirmed. Reload the card". A bare code means
+  the installed function rejected the shape of a patch it does not know, which is what a
+  database that is missing a later migration does (the Diary allowlist before
+  `20261019_diary_booking_mode_setup_cards.sql` has no `booking_mode`), so the sentence tells the
+  owner to ask support to check the database migrations. A reason after the colon is passed on.
+  Stale and other database errors are unchanged. `scripts/ops/check_db_functions.py` finds the
+  missing migration (`docs/operations/database-function-check.md`). Tests:
+  tests/test_setup_card_accept_database.py (route against the real function, both versions),
+  tests/test_setup_card_routes.py, tests/test_check_db_functions.py.
+
 - **Post-onboarding guided-settings hand-off — DONE** (2026-08-02, Julius; reworked same
   day to ZERO USER INITIATIVE after the watched e2e): a freshly onboarded tenant lands on
   `/app` and the widget CONTINUES onboarding unprompted — it auto-selects the App-help
