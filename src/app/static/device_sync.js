@@ -42,7 +42,11 @@
     document.querySelectorAll('main form').forEach(function(f,i){
       if (f.method.toLowerCase()!=='post') return;
       var action=new URL(f.action,location.href).pathname;
-      forms[action+':'+i]={action:action,version:formVersion(f),values:fields(f)};
+      // The page a form was captured on, as well as where it posts: a settings
+      // page's forms can post elsewhere (Diary settings posts to
+      // /app/settings/scheduling), and an accepted setup card drops that
+      // page's drafts by this path.
+      forms[action+':'+i]={action:action,page:here,version:formVersion(f),values:fields(f)};
     });
     return forms;
   }
