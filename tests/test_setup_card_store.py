@@ -27,6 +27,17 @@ def test_history_always_scopes_tenant_page_and_exclusive_cursor():
     assert ("limit", (50,), {}) in client.calls
 
 
+def test_archived_receipt_read_is_scoped_to_original_tenant_page_and_card():
+    card = {'id': 'original', 'revision': 7}
+    client = Client(response=[{'card': card, 'revision': 7}])
+    assert store.latest_receipt('owner', 'diary_settings', 'original', client=client) == card
+    assert ('eq', ('tenant_id', 'owner'), {}) in client.calls
+    assert ('eq', ('page', 'diary_settings'), {}) in client.calls
+    assert ('eq', ('card->>id', 'original'), {}) in client.calls
+    assert ('order', ('revision',), {'desc': True}) in client.calls
+    assert store.latest_receipt('owner', 'diary_settings', 'missing', client=Client(response=[])) is None
+
+
 def test_save_uses_one_rpc_and_requires_its_confirmed_receipt():
     card = {"revision": 2}
     client = Client(response=card)

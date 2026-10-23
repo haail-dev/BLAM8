@@ -88,6 +88,13 @@ Cancel leaves the original settings intact. Replays fail revision checks and
 cannot duplicate effects. Separate pages/proposals commit independently; this
 does not imply a multi-page transaction. A card applied or left on another
 surface can be reconciled from its authoritative terminal line receipt.
+This also reads the original card's tenant-scoped history after another surface
+starts a new card. If that surface saved some lines and left others, the receipt
+records a partial result with each line's actual outcome; reconciliation never
+applies or retries settings.
+Leaving remaining changes also works after another surface applies only part
+of a proposal: pending lines are left, applied settings remain saved, and the
+partial outcome is explicit.
 
 Related answered invoice choices are previewed together. Native first-save,
 tax and deposit dependencies still require explicit answers; the preview never

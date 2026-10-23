@@ -86,7 +86,11 @@ def journey(database, monkeypatch, request, tmp_path):
     monkeypatch.setattr(db, 'crm_list_stages', lambda tid, **kw: [r[0] for r in query('select to_jsonb(g) from crm_stages g where tenant_id=%s', tid, all=True)])
     monkeypatch.setattr(db, 'get_requirement_instance', lambda identity, tid, **kw: next((r[0] for r in query('select to_jsonb(g) from requirement_instances g where tenant_id=%s and id=%s', tid, identity, all=True)), None))
     monkeypatch.setattr(onboarding_routes, 'require_manager', lambda ctx: None)
-    from app import knowledge_review, dashboard, security
+    from app import knowledge_review, dashboard, security, setup_card_store
+    def receipt(tid, page, card_id, **kw):
+        result = query("select card from setup_card_revisions where tenant_id=%s and page=%s and card->>'id'=%s order by revision desc limit 1", tid, page, card_id)
+        return result[0] if result else None
+    monkeypatch.setattr(setup_card_store, 'latest_receipt', receipt)
     monkeypatch.setattr(security, '_BUCKETS', {})
     monkeypatch.setattr(knowledge_review, 'load', lambda tid: {'sources': [], 'reviews': [], 'metadata': [], 'version': 'empty'})
     monkeypatch.setattr(dashboard, '_ctx', lambda active, ctx, **kw: dict(active=active, concierge_on=False,
@@ -535,9 +539,17 @@ def test_existing_card_surface_receipt_can_be_reconciled_without_second_write(jo
         revision=proposal['card_revision'], ids=proposal['line_ids'], settings_version=proposal['settings_version']))
     assert response.status_code == 200, response.text
     before = j.row('scheduling_config', j.tenant)
+    # A later conversation starts a new card; the original terminal receipt
+    # remains in immutable SQL history and must still unlock this answer.
+    response = j.http.post('/concierge/setup-cards/diary_settings/changes', json=dict(
+        revision=response.json()['card']['revision'], changes=[dict(op='append', name='setting',
+            fields={'key': 'min_notice_hours', 'value': 2}, sources={
+                name: {'kind': 'owner_said', 'reference': 'Later owner choice'} for name in ('key', 'value')})]))
+    assert response.status_code == 200, response.text
     j.action('reconcile', {'proposal': proposal['id']})
     assert j.state()['proposals'][proposal['id']]['status'] == 'applied'
     assert j.row('scheduling_config', j.tenant) == before
+    j.answer('setting.diary_settings.horizon_days', 55)  # The original answer is editable again.
 
 
 def test_changed_dependency_reopens_only_its_dependent_review(journey):
@@ -553,3 +565,48 @@ def test_changed_dependency_reopens_only_its_dependent_review(journey):
     assert subs['charges.terms']['review'] == 'dependency_pending'
     assert not subs['charges.terms']['done']
     assert subs['diary.activities']['done']
+
+
+def test_partial_external_selection_reconciles_actual_terminal_results_without_retry(journey):
+    j = journey
+    j.execute('insert into invoice_settings(tenant_id,payment_terms) values(%s,%s)', j.tenant, 'Original terms')
+    primary = j.answer('setting.invoice_settings.payment_terms', 'Due in 14 days')
+    j.answer('setting.invoice_settings.footer_note', 'Owner footer')
+    j.action('propose', {'answer': primary})
+    proposal = next(iter(j.state()['proposals'].values()))
+    card = j.row('tenant_config', j.tenant)['setup_cards']['invoice_settings']
+    term = next(v['id'] for v in card['lines'] if v['fields']['key'] == 'payment_terms')
+    footer = next(v['id'] for v in card['lines'] if v['fields']['key'] == 'footer_note')
+    response = j.http.post('/concierge/setup-cards/invoice_settings/accept', json=dict(
+        revision=card['revision'], ids=[term], settings_version=proposal['settings_version']))
+    assert response.status_code == 200, response.text
+    response = j.http.post('/concierge/setup-cards/invoice_settings/changes', json=dict(
+        revision=response.json()['card']['revision'], changes=[{'op': 'remove', 'id': footer}]))
+    assert response.status_code == 200, response.text
+    before = j.row('invoice_settings', j.tenant)
+    j.action('reconcile', {'proposal': proposal['id']})
+    receipt = j.state()['proposals'][proposal['id']]
+    assert receipt['status'] == 'partial' and receipt['line_receipts'] == {term: 'applied', footer: 'left'}
+    assert j.row('invoice_settings', j.tenant) == before
+    assert before['payment_terms'] == 'Due in 14 days' and before['footer_note'] is None
+    assert 'Some changes handled separately' in j.http.get('/app/setup/charges').text
+    j.answer('setting.invoice_settings.footer_note', 'A deliberate later answer')
+
+
+def test_cancel_leaves_remaining_lines_after_an_external_partial_apply(journey):
+    j = journey
+    j.execute('insert into invoice_settings(tenant_id,payment_terms) values(%s,%s)', j.tenant, 'Original')
+    primary = j.answer('setting.invoice_settings.payment_terms', 'Due in 21 days')
+    j.answer('setting.invoice_settings.footer_note', 'Not yet applied')
+    j.action('propose', {'answer': primary})
+    proposal = next(iter(j.state()['proposals'].values()))
+    card = j.row('tenant_config', j.tenant)['setup_cards']['invoice_settings']
+    term = next(v['id'] for v in card['lines'] if v['fields']['key'] == 'payment_terms')
+    response = j.http.post('/concierge/setup-cards/invoice_settings/accept', json=dict(
+        revision=card['revision'], ids=[term], settings_version=proposal['settings_version']))
+    assert response.status_code == 200, response.text
+    before = j.row('invoice_settings', j.tenant)
+    j.action('cancel', {'proposal': proposal['id']})
+    assert j.state()['proposals'][proposal['id']]['status'] == 'partial'
+    assert j.row('invoice_settings', j.tenant) == before
+    assert before['payment_terms'] == 'Due in 21 days' and before['footer_note'] is None

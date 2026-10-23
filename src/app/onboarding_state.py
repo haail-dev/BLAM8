@@ -361,23 +361,31 @@ def proposal_action(ctx, context, state, operation, data):
     _page_available(context, proposal['page'])
     page = proposal['page']
     card = setup_card_store.load(ctx.tenant_id, page, client=ctx.client)
+    if operation == 'reconcile' and (not card or card['id'] != proposal['card_id']):
+        card = setup_card_store.latest_receipt(ctx.tenant_id, page, proposal['card_id'], client=ctx.client)
     if not card or card['id'] != proposal['card_id']:
         raise setup_cards.Stale('The proposal card changed. Reload and create a fresh proposal.')
     revision = card['revision']
     if operation == 'reconcile':
         selected = [v for v in card['lines'] if v['id'] in proposal['line_ids']]
         statuses = {v['status'] for v in selected}
-        if len(selected) != len(proposal['line_ids']) or len(statuses) != 1 or not statuses <= {'applied', 'left'}:
+        if len(selected) != len(proposal['line_ids']) or not statuses <= {'applied', 'left'}:
             raise ValueError('The proposal still needs review in its original card.')
-        proposal.update(status='applied' if statuses == {'applied'} else 'cancelled', finished_at=stamp(),
-                        applied_card_revision=revision, receipt_source='existing_setup_card')
+        status = 'applied' if statuses == {'applied'} else 'cancelled' if statuses == {'left'} else 'partial'
+        proposal.update(status=status, finished_at=stamp(), applied_card_revision=revision,
+                        receipt_source='existing_setup_card', line_receipts={v['id']: v['status'] for v in selected})
         return state, None
     if operation == 'cancel':
-        pending = [v['id'] for v in card['lines'] if v['id'] in proposal['line_ids'] and v['status'] in setup_cards.PENDING]
-        if len(pending) != len(proposal['line_ids']):
-            raise setup_cards.Stale('The proposal was already changed elsewhere. Reload its receipt.')
+        selected = [v for v in card['lines'] if v['id'] in proposal['line_ids']]
+        if len(selected) != len(proposal['line_ids']) or any(v['status'] not in setup_cards.PENDING | {'applied', 'left'} for v in selected):
+            raise setup_cards.Stale('The proposal was changed elsewhere. Reload its receipt.')
+        pending = [v['id'] for v in selected if v['status'] in setup_cards.PENDING]
+        if not pending:
+            raise ValueError('These changes were already handled. Check their saved result.')
         cancelled = setup_cards.change(page, card, revision, 'onboarding-cancel', [{'op': 'remove', 'id': v} for v in pending])
-        proposal.update(status='cancelled', finished_at=stamp())
+        outcomes = {v['id']: 'left' if v['id'] in pending else v['status'] for v in selected}
+        proposal.update(status='partial' if 'applied' in outcomes.values() else 'cancelled', finished_at=stamp(),
+                        line_receipts=outcomes)
         return state, dict(page=page, revision=revision, card=cancelled, expected_settings=None, settings_patch=None)
     if revision != proposal['card_revision']:
         raise setup_cards.Stale('The proposal changed. Cancel it and review a fresh difference.')

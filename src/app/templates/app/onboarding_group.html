@@ -94,11 +94,11 @@
     </div>{% endfor %}
   </div></details>{% endif %}
   {% for proposal in review_proposals %}<section class="review-row review-body" data-proposal-id="{{ proposal.id }}">
-    <h2 class="font-semibold">{{ {'proposed':'Review these changes','applied':'Changes saved','cancelled':'Changes left unchanged'}[proposal.status] }}</h2>
-    {% for change in proposal.display_changes %}<p>{{ change.title }}</p>{% for value in change['values'] %}<p>{{ value.label }}</p><dl class="review-diff"><dt>Current</dt><dd>{{ value.before }}</dd><dt>Proposed</dt><dd>{{ value.after }}</dd></dl>{% endfor %}{% endfor %}
+    <h2 class="font-semibold">{{ {'proposed':'Review these changes','applied':'Changes saved','cancelled':'Changes left unchanged','partial':'Some changes handled separately'}[proposal.status] }}</h2>
+    {% for change in proposal.display_changes %}<p>{{ change.title }}{% if change.receipt %} · {{ 'Saved' if change.receipt == 'applied' else 'Left unchanged' }}{% endif %}</p>{% for value in change['values'] %}<p>{{ value.label }}</p><dl class="review-diff"><dt>{{ 'Current' if proposal.status == 'proposed' else 'Before' }}</dt><dd>{{ value.before }}</dd><dt>{{ 'Proposed' if proposal.status == 'proposed' else 'After' }}</dt><dd>{{ value.after }}</dd></dl>{% endfor %}{% endfor %}
     {% if proposal.status == 'proposed' %}<p>Only the changes shown here will be saved. Other settings stay as they are.</p>
     <form method="post" action="/app/setup/action">{{ hidden('apply', {'proposal':proposal.id}) }}<button type="submit">Apply these changes</button></form>
-    <form method="post" action="/app/setup/action">{{ hidden('cancel', {'proposal':proposal.id}) }}<button type="submit">Leave unchanged</button></form>
+    <form method="post" action="/app/setup/action">{{ hidden('cancel', {'proposal':proposal.id}) }}<button type="submit">Leave remaining changes</button></form>
     <details><summary>Already handled on another settings page?</summary><form method="post" action="/app/setup/action">{{ hidden('reconcile', {'proposal':proposal.id}) }}<button type="submit">Check saved result</button></form></details>
     {% endif %}
   </section>{% endfor %}

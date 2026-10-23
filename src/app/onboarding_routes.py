@@ -81,6 +81,8 @@ def page_context(context, group, scope_type='organisation', scope_id='organisati
         a['substep'].startswith(group['key'] + '.') for key, a in state['answers'].items() if key == p['answer'])]
     for proposal in proposals:
         proposal['display_changes'] = [display_change(change) for change in proposal['changes']]
+        for change, shown in zip(proposal['changes'], proposal['display_changes']):
+            shown['receipt'] = proposal.get('line_receipts', {}).get(change['id'])
     candidates = state_store.knowledge_candidates(context['knowledge'])
     from app.booking_policy import compile_profile
     profile = compile_profile(context['cfg'])
