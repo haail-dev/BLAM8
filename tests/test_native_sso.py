@@ -28,7 +28,7 @@ SESSION = {"access_token": "AT", "refresh_token": "RT",
 def client(monkeypatch):
     monkeypatch.setattr(settings, "rate_limit_enabled", False)
     native_auth._pending.clear()
-    yield TestClient(app, follow_redirects=False)   # no `with`: skip startup events
+    yield TestClient(app, follow_redirects=False, headers={'X-Blam8-Native-Auth':'1'})   # no `with`: skip startup events
     native_auth._pending.clear()
 
 
@@ -223,3 +223,35 @@ def test_the_store_keeps_only_hashes_and_purges_expired_codes(client):
     native_auth.issue(SESSION, CHALLENGE, "/app", now=float(native_auth.CODE_TTL_S) + 1)
     assert len(native_auth._pending) == 1                      # the expired one went
     assert native_auth.redeem(old, VERIFIER) is None
+
+
+def test_complete_rejects_foreign_origin_even_with_attackers_valid_code(client, monkeypatch):
+    monkeypatch.setattr(auth_routes.db, 'get_tenant_for_user', lambda uid: 't1')
+    code=native_auth.issue(SESSION,CHALLENGE,'/app')
+    response=client.post('/auth/native/complete',data={'code':code,'verifier':VERIFIER},headers={'Origin':'https://untrusted.example','Sec-Fetch-Site':'cross-site'})
+    assert response.status_code==403
+    assert 'bl_at=' not in _set_cookies(response)
+    assert native_auth.redeem(code,VERIFIER) is not None
+
+
+@pytest.mark.parametrize('headers', [{}, {'Origin':'null'}, {'Origin':'https://untrusted.example'}])
+def test_native_completion_requires_non_simple_header_before_consuming_code(client, headers):
+    client.headers.pop('X-Blam8-Native-Auth', None)
+    code=native_auth.issue(SESSION,CHALLENGE,'/app')
+    response=client.post('/auth/native/complete',data={'code':code,'verifier':VERIFIER},headers=headers)
+    assert response.status_code==403 and response.headers['cache-control']=='no-store'
+    assert 'bl_at=' not in _set_cookies(response)
+    assert native_auth.redeem(code,VERIFIER) is not None
+
+
+def test_native_completion_does_not_allow_cross_origin_header_preflight(client):
+    response=client.options('/auth/native/complete',headers={'Origin':'https://untrusted.example','Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'X-Blam8-Native-Auth'})
+    assert 'access-control-allow-origin' not in response.headers
+
+
+def test_native_completion_allows_same_origin_app_request(client, monkeypatch):
+    monkeypatch.setattr(auth_routes.db,'get_tenant_for_user',lambda uid:'t1')
+    code=native_auth.issue(SESSION,CHALLENGE,'/app')
+    response=client.post('/auth/native/complete',data={'code':code,'verifier':VERIFIER},headers={'Origin':settings.app_base_url.rstrip('/'),'Sec-Fetch-Site':'same-origin'})
+    assert response.status_code==303 and response.headers['location']=='/app'
+    assert 'bl_at=' in _set_cookies(response)

@@ -24,7 +24,7 @@ instead. The web and PWA sign-in is unchanged.
 4. **Complete.** The sheet returns that URL to the app. The app's web view then sends:
 
    ```
-   POST /auth/native/complete   (form: code, verifier)
+   POST /auth/native/complete   (form: code, verifier; header: X-Blam8-Native-Auth: 1)
    ```
 
    The server redeems `K`: single use, 120 s lifetime, `S256(verifier)` must match the
@@ -53,8 +53,9 @@ A `bl_native` cookie that fails either list is ignored, and the callback takes t
 - **Codes.** Single use, 120 s, stored only as SHA-256 hashes. A wrong verifier still
   consumes the code.
 - **POST for completion.** The code and verifier stay out of URLs and access logs.
-- **No CSRF token on completion.** The shell posts it directly. The verifier binding gives
-  the same protection: only the app that started a sign-in can finish it.
+- **Cross-site login protection.** Completion requires `X-Blam8-Native-Auth: 1` from the native request. A foreign form cannot set that non-simple header, and this route exposes no CORS permission for a foreign script to set it. A supplied foreign or null Origin, or cross-site/same-site Fetch Metadata, is rejected before redemption. The verifier protects intercepted codes separately; it is not a replacement for cross-site protection because an attacker knows the verifier for their own login.
+- **Client compatibility.** Rebuild both iOS shells with the matching completion header before testing. Older shells without it receive a 403 and cannot complete sign-in. Web/PWA sign-in is unchanged.
+- **Callback privacy.** Native code-bearing redirects use `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
 - **No open redirect.** Scheme and landing are exact-match allow-lists.
 
 ## Operating notes

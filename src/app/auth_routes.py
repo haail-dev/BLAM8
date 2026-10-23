@@ -305,7 +305,7 @@ async def _native_callback(request: Request, pending: native_auth.Pending):
     else:
         target = native_auth.callback_url(
             pending.scheme, code=native_auth.issue(session, pending.challenge, pending.next))
-    resp = RedirectResponse(target, status_code=303)
+    resp = RedirectResponse(target, status_code=303, headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer'})
     auth.clear_pkce_cookie(resp)
     native_auth.clear_cookie(resp)
     return resp
@@ -316,8 +316,16 @@ async def native_sso_complete(request: Request):
     """The app's web view redeems its one-time code with the verifier only it
     holds, then signs in exactly as the web callback would. POST keeps both
     values out of URLs and access logs. No CSRF token: the shell posts this
-    directly, and the verifier binding already means only the app that began
-    the sign-in can finish it."""
+    directly with a required non-simple header. Cross-origin browser forms are
+    rejected separately from the single-use verifier binding."""
+    # A verifier protects interception, but an attacker knows the verifier for
+    # their own login. Require a native-only request header so a foreign form
+    # cannot plant that login in another browser. This route exposes no CORS.
+    if request.headers.get('X-Blam8-Native-Auth') != '1':
+        return PlainTextResponse('Update the app and sign in again.', status_code=403, headers={'Cache-Control':'no-store'})
+    origin = request.headers.get('origin')
+    if (origin is not None and origin != settings.app_base_url.rstrip('/')) or request.headers.get('sec-fetch-site') in {'cross-site','same-site'}:
+        return PlainTextResponse('Sign-in must finish in the app that started it.', status_code=403, headers={'Cache-Control':'no-store'})
     form = await request.form()
     redeemed = native_auth.redeem(str(form.get("code") or ""), str(form.get("verifier") or ""))
     if not redeemed:
