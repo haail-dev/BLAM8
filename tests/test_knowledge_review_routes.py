@@ -19,19 +19,22 @@ def test_saved_page_uses_note_titles_and_authoritative_status(client, review_sto
     monkeypatch.setattr(onboarding, '_next_step_target', lambda ctx: {'href':'/app/diary','label':'Guided setup'})
     response = client.get('/onboarding/knowledge')
     assert response.status_code == 200
-    from bs4 import BeautifulSoup
-    page = BeautifulSoup(response.text, 'html.parser')
-    assert page.select_one('[data-kb-note] > summary').get_text(' ',strip=True) == 'Service hours View note Close'
-    assert source in page.select_one('[data-kb-note] details').get_text()
-    assert '1 note saved. No drafts waiting for review.' in page.select_one('[data-knowledge-saved-status]').get_text()
-    assert page.select_one('[data-knowledge-saved-status]').get_text().startswith('Knowledge saved 1 note')
-    assert row['id'] in page.select_one('[data-knowledge-saved-reviews]')['data-knowledge-saved-reviews']
+    from tests.html_markup import markup
+    page = markup(response.text)
+    note = page.one(**{'data-kb-note': None})
+    summary = next(child for child in note.children if child.tag == 'summary')
+    assert summary.children[0].text.strip() == 'Service hours'
+    assert [child.text for child in summary.children[1].children] == ['View note', 'Close']
+    assert source in note.one('details').text
+    assert '1 note saved. No drafts waiting for review.' in page.one(**{'data-knowledge-saved-status': None}).text
+    assert page.one(**{'data-knowledge-saved-status': None}).text.startswith('Knowledge saved 1 note')
+    assert row['id'] in page.one(**{'data-knowledge-saved-reviews': None}).attrs['data-knowledge-saved-reviews']
     assert 'topics have saved notes' not in response.text
     # Starting another batch must not falsely say all reviews are complete.
     review_store.stage('tenant', [{'label':'New fact', 'content':'A new pending note.'}])
-    pending = BeautifulSoup(client.get('/onboarding/knowledge').text, 'html.parser')
-    assert pending.select_one('[data-knowledge-saved-status]') is None
-    assert pending.select_one('[data-knowledge-review]')
+    pending = markup(client.get('/onboarding/knowledge').text)
+    assert not pending.find_all(**{'data-knowledge-saved-status': None})
+    assert pending.find_all(**{'data-knowledge-review': None})
 
 
 def test_automatic_correction_recheck_does_not_rebase_a_concurrent_edit(client, review_store):
