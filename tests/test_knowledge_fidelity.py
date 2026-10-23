@@ -30,6 +30,53 @@ def test_inventory_keeps_exact_read_statements_and_all_duplicate_sources():
     assert [u['text'] for u in units]==['Fictional sample facts.','Only if agreed.','A costs £95.','Keep this separate.']
 
 
+def test_structural_labels_and_typography_are_compact_but_facts_stay_unresolved():
+    from app.knowledge_capture import extract
+    page = {'url':'https://example.test', **extract(
+        '<nav>Home | Services | Contact</nav><h1>Personal service</h1><h2>Management fees</h2>'
+        '<h2>Maximum 5 visits</h2><h2>Only if agreed</h2><h2>No emergency service</h2>'
+        '<h2>After 1 November</h2><h2>Except public holidays</h2>'
+        '<p>We arrange inspections according to the owner’s agreement.</p>'
+        '<p>We close at 5 pm.</p><p>Optional work costs £30.</p>')}
+    ctx,row=context([entry(content="We arrange inspections according to the owner's agreement. We close at 4 pm.")])
+    row['payload']['source_units']=fidelity.inventory([page])
+    view=fidelity.view(row,row['payload']['entries'],{})
+    assert sum(u['status']=='layout_fragment' for u in view['units'])==3
+    assert sum(u['status']=='literal_in_note' for u in view['units'])==1
+    remaining=[u['text'] for u in view['units'] if u['status']=='unresolved']
+    assert len(remaining)==7 and 'We close at 5 pm.' in remaining and 'Optional work costs £30.' in remaining
+    assert all(u['sources']==['https://example.test'] and u['spans'] for u in view['units'])
+
+
+def test_layout_group_needs_review_and_factual_labels_can_be_recovered():
+    from app.knowledge_capture import extract
+    ctx,row=context([entry(content='A confirmed note.')])
+    row['payload']['source_units']=fidelity.inventory([{'url':'https://example.test',**extract('<h2>Payment by transfer</h2>')}])
+    choices=form(ctx,row)
+    with pytest.raises(HTTPException,match='grouped layout'):
+        kr.plan(ctx,row,choices)
+    unit=row['payload']['source_units'][0]
+    # Heuristic classification never removes the owner's opportunity to retain
+    # a factual heading; it has the same native controls and original evidence.
+    choices['source_'+unit['id']]='note:one'
+    notes,payload=kr.plan(ctx,row,choices)
+    assert 'Payment by transfer' in notes[0]['content']
+    assert payload['source_decisions'][0]['status']=='retained_verbatim'
+
+
+@pytest.mark.parametrize('choice',['exclude','unknown'])
+def test_excluded_or_unknown_facts_cannot_survive_inside_retained_body(choice):
+    ctx,row=context([entry(content='The office closes at 5 pm.')])
+    row['payload']['source_units']=fidelity.inventory([{'url':'https://example.test','text':'The office closes at 5 pm.'}])
+    unit=row['payload']['source_units'][0]
+    choices={**form(ctx,row),'source_'+unit['id']:choice,'source_reason_'+unit['id']:'Owner confirms this is outdated.'}
+    with pytest.raises(HTTPException,match='still in a retained note'):kr.plan(ctx,row,choices)
+    assert fidelity.view(row,row['payload']['entries'],choices)['unresolved']==1
+    choices['content_one']='The office closes at 4 pm.'
+    notes,payload=kr.plan(ctx,row,choices)
+    assert '5 pm' not in notes[0]['content'] and '4 pm' in notes[0]['content']
+
+
 def test_embedded_sentence_opener_does_not_require_a_duplicate_source_copy():
     text='Our small team keeps the landlord and resident informed as an enquiry moves forward.'
     content='Each agreement is individual, and '+text[0].lower()+text[1:]

@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import json
 import re
 
-from app import setup_cards, knowledge_source_evidence, knowledge_note_edits
+from app import setup_cards, knowledge_source_evidence, knowledge_note_edits, knowledge_owner_corrections
 
 
 def obj(properties):
@@ -104,7 +104,7 @@ def validate(card, evidence, raw):
         raise setup_cards.Invalid('Too many review changes.')
     changes, seen, unchanged = [], set(), 0
     for change in raw['changes']:
-        if not isinstance(change, dict) or set(change) - {'id', 'content_hash', 'insertions', 'citations', 'removals'} or not {'id', 'content_hash', 'insertions'} <= set(change):
+        if not isinstance(change, dict) or set(change) - {'id', 'content_hash', 'insertions', 'citations', 'removals', 'owner_replacements'} or not {'id', 'content_hash', 'insertions'} <= set(change):
             raise setup_cards.Invalid('Supply existing card IDs and source insertions only.')
         identity = change['id']
         if not isinstance(identity, str) or identity not in available or identity in seen:
@@ -123,7 +123,13 @@ def validate(card, evidence, raw):
         if not isinstance(removals, list):
             raise setup_cards.Invalid('Choose exact paragraph references for removals.')
         remaining, removed, source_choices, patches = knowledge_note_edits.removal(card, identity, line['content'], removals)
-        if not (insertions or citations or removed):
+        owner_replacements = change.get('owner_replacements', [])
+        if owner_replacements and (insertions or citations or removals):
+            raise setup_cards.Invalid('Review owner replacements separately from source additions, citations or removals.')
+        remaining, replaced, owner_patches, superseded = knowledge_owner_corrections.replacements(card, identity, remaining, owner_replacements)
+        patches.update(owner_patches)
+        source_choices += superseded
+        if not (insertions or citations or removed or replaced):
             unchanged += 1
             continue
         before, after, passages = [], [], []
@@ -158,11 +164,12 @@ def validate(card, evidence, raw):
             if checked in checked_citations:
                 raise setup_cards.Invalid('Do not repeat a citation.')
             checked_citations.append(checked)
-        if not passages and not checked_citations and not removed:
+        if not passages and not checked_citations and not removed and not replaced:
             continue
         changes.append({'id': identity, 'label': line['label'], 'before': line['content'],
                         'after': content, 'passages': passages, 'citations': checked_citations,
-                        **({'remaining':remaining,'removals':removed,'source_choices':source_choices,'patches':patches} if removed else {})})
+                        **({'remaining':remaining,'removals':removed,'owner_replacements':replaced,
+                            'source_choices':source_choices,'patches':patches} if removed or replaced else {})})
     overlaps = raw['overlaps']
     if not isinstance(overlaps, list) or len(overlaps) > 30:
         raise setup_cards.Invalid('Too many overlap annotations.')
@@ -181,8 +188,10 @@ def validate(card, evidence, raw):
                if changes else 'No new draft corrections were proposed. Nothing changed. You can undo added website wording in the review form, or request a specific sourced addition.')
     if any(c.get('removals') for c in changes):
         summary += ' Exact paragraph removals and any listed source-review choices are a preview only. Apply them to the draft separately, then review and confirm Keep before final Save.'
-    if changes and not any(c['passages'] or c.get('removals') for c in changes):
+    if changes and not any(c['passages'] or c.get('removals') or c.get('owner_replacements') for c in changes):
         summary += ' These are citation changes only; no note wording is changed.'
+    if any(c.get('owner_replacements') for c in changes):
+        summary += ' Owner replacements supersede the listed website wording only after Apply and final Save. Unrelated wording is preserved.'
     if unchanged:
         summary += f' {unchanged} unchanged or already-recorded item(s) need no draft update.'
     if omitted_questions:
@@ -236,6 +245,9 @@ def apply(card, evidence, raw, *, turn):
         for position in ('before', 'original', 'after'):
             if position == 'original':
                 original_segments = content_segments(card, old)
+                if change.get('owner_replacements'):
+                    original_segments = knowledge_owner_corrections.segments(change['before'], original_segments,
+                        change['owner_replacements'], card['knowledge_owner_request'])
                 if change.get('removals'):
                     original_segments = knowledge_note_edits.clip_segments(change['before'], original_segments, change['removals'])
                 segments.extend({**s, 'start': s['start'] + offset, 'end': s['end'] + offset}
@@ -267,6 +279,15 @@ async def answer(tenant_id, question, card, evidence):
     message = await llm.create(client=concierge.client().with_options(max_retries=0), tenant_id=tenant_id,
         operation='concierge_onboard', module='concierge', model=settings.anthropic_model,
         max_tokens=2500, system=SYSTEM + (
+            ' OWNER CORRECTION: the preceding extractive-only rules apply to website-derived changes. '
+            'This separate owner contract permits replacement of obsolete wording and takes precedence over '
+            'preserving the original value. When the owner explicitly confirms a changed fact, use owner_replacements '
+            'with the smallest exact existing substring as before, and an exact substring of the owner request as after. '
+            'For example replace only the closing time, preserving hours, timezone, exceptions and contact instructions. '
+            'Owner replacements are distinct from website evidence. Never propose a citation-only change or delete a paragraph '
+            'to satisfy a replacement request. If the owner is uncertain or asking a hypothetical question, ask for confirmation. '
+            'Use empty insertions, citations and removals for an owner replacement. Omit unchanged notes. '
+            if card.get('knowledge_owner_request') else '') + (
             ' CURRENT NOTE EDIT: the exact owner request may also ask to remove existing paragraphs. '
             'Only current_note_edit supplies allowed paragraph references over displayed_body. Relative requests like last paragraph refer to that body, never retention_context_only attachments. Propose removals solely '
             'for that current note, in removals, without offsets or replacement wording. Preserve all '
@@ -290,9 +311,13 @@ async def answer(tenant_id, question, card, evidence):
 
 
 def edit_schema(card):
-    if not card.get('knowledge_edit_scope'): return SCHEMA
     schema = deepcopy(SCHEMA)
     change = schema['properties']['changes']['items']
+    if card.get('knowledge_owner_request'):
+        change['properties']['owner_replacements'] = {'type':'array','items':obj({
+            'before':{'type':'string'}, 'after':{'type':'string'}})}
+        change['required'].append('owner_replacements')
+    if not card.get('knowledge_edit_scope'): return schema
     change['properties']['removals'] = {'type':'array','items':{'type':'string','enum':[p['reference'] for p in card['knowledge_edit_scope']['paragraphs']]}}
     change['required'].append('removals')
     return schema

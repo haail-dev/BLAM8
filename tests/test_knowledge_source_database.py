@@ -28,6 +28,94 @@ def capture(c, tenant, row, evidence):
         (tenant,row['id'],json.dumps(row['payload']),json.dumps(evidence))).fetchone()[0]
 
 
+@pytest.mark.asyncio
+async def test_excluded_stale_hours_never_reach_stored_chunks_or_prompt(source_db, monkeypatch):
+    """Reproduce the saved 4 pm body / 5 pm evidence contradiction on real SQL."""
+    from app import knowledge_review as admission, knowledge_fidelity, knowledge as kb, setup_card_knowledge
+    old = 'Our office is open Monday to Friday, 9 am to 5 pm UK time, excluding public holidays in England.'
+    rest = 'Routine messages are reviewed on the next working day. Email contact@example.test. Include your property address.'
+    row, evidence = seeded()
+    row['payload']['entries'] = [dict(row['payload']['entries'][0], label='Hours and Contact',
+        content=old + ' ' + rest, provenance=[{'source':'https://example.test/hours', 'excerpt':old + ' ' + rest}])]
+    row['payload']['source_units'] = knowledge_fidelity.inventory([{'url':'https://example.test/hours','text':old + ' ' + rest}])
+    identity = row['payload']['entries'][0]['id']
+    driver, dsn = source_db
+    tenant = uuid.uuid4()
+    with driver.connect(dsn, autocommit=True) as c:
+        c.execute('insert into tenants values(%s)', (tenant,))
+        c.execute("insert into tenant_config values(%s,'')", (tenant,))
+        capture(c, tenant, row, evidence)
+        ctx = c.execute('select knowledge_review_context(%s)', (tenant,)).fetchone()[0]
+        form = {'version':ctx['version'], 'action_'+identity:'keep',
+            'content_'+identity:(old + ' ' + rest).replace('5 pm','4 pm'),
+            'source_'+row['payload']['source_units'][0]['id']:'exclude',
+            'source_reason_'+row['payload']['source_units'][0]['id']:'Owner confirms closing time is now 4 pm.'}
+        notes, payload = admission.plan(ctx, row, form)
+        async def embed(texts): return [[0.1]*1024 for _ in texts], 0
+        monkeypatch.setattr(kb, 'is_configured', lambda:True)
+        monkeypatch.setattr(setup_card_knowledge.embeddings, 'embed_documents', embed)
+        prepared, _ = await setup_card_knowledge.prepare({'notes':notes})
+        assert c.execute('select admit_knowledge_review(%s,%s,%s,%s,%s)',
+            (tenant,row['id'],ctx['version'],json.dumps(payload),json.dumps(prepared['notes']))).fetchone()[0]
+        stored = c.execute('select source,content from knowledge_chunks where tenant_id=%s', (tenant,)).fetchall()
+        async def embed_query(query):return [0.1]*1024, 0
+        monkeypatch.setattr(kb.embeddings, 'embed_query', embed_query)
+        monkeypatch.setattr(kb.usage, 'record_voyage', lambda *a,**k:None)
+        monkeypatch.setattr(kb.db, 'match_knowledge_chunks', lambda *a,**k:[
+            {'source':s,'content':t,'similarity':1.0} for s,t in c.execute(
+                'select source,content from knowledge_chunks where tenant_id=%s',(tenant,)).fetchall()])
+        prompt = kb.render_for_prompt(await kb.retrieve(str(tenant), 'office hours', whole_if_small=True))
+        assert '4 pm' in prompt and '5 pm' not in prompt
+        assert all(s in prompt for s in ('next working day','contact@example.test','property address'))
+        audit = c.execute('select payload from knowledge_reviews where id=%s',(row['id'],)).fetchone()[0]
+        assert '5 pm' in json.dumps(audit) and audit['source_decisions'][0]['status']=='excluded'
+
+
+@pytest.mark.asyncio
+async def test_owner_replacement_survives_atomic_apply_save_reload_and_stale_reread(source_db, monkeypatch):
+    from tests.test_knowledge_owner_corrections import owner_case, REQUEST, BEFORE, REST
+    from app import knowledge_review as admission, knowledge as kb, setup_card_knowledge
+    row, evidence, card, raw = owner_case()
+    driver, dsn = source_db
+    tenant = uuid.uuid4()
+    with driver.connect(dsn, autocommit=True) as c:
+        c.execute('insert into tenants values(%s)',(tenant,))
+        c.execute("insert into tenant_config values(%s,'')",(tenant,))
+        capture(c,tenant,row,evidence)
+        ctx = c.execute('select knowledge_review_context(%s)',(tenant,)).fetchone()[0]
+        payload = review.corrected_payload(row,evidence,raw,card=card,owner_request=REQUEST,reviewer='owner')
+        assert c.execute('select revise_knowledge_review_sources(%s,%s,%s,%s)',
+            (tenant,row['id'],ctx['version'],json.dumps(payload))).fetchone()[0]
+        with pytest.raises(driver.errors.RaiseException,match='STALE'):
+            c.execute('select revise_knowledge_review_sources(%s,%s,%s,%s)',
+                (tenant,row['id'],ctx['version'],json.dumps(payload)))
+        ctx = c.execute('select knowledge_review_context(%s)',(tenant,)).fetchone()[0]
+        row = next(r for r in ctx['reviews'] if r['id']==row['id'])
+        identity = row['payload']['entries'][0]['id']
+        form = {'version':ctx['version'],'action_'+identity:'keep'}
+        notes, final = admission.plan(ctx,row,form)
+        async def embed(texts):return [[0.1]*1024 for _ in texts],0
+        monkeypatch.setattr(kb,'is_configured',lambda:True)
+        monkeypatch.setattr(kb.embeddings,'embed_documents',embed)
+        prepared,_ = await setup_card_knowledge.prepare({'notes':notes})
+        assert c.execute('select admit_knowledge_review(%s,%s,%s,%s,%s)',
+            (tenant,row['id'],ctx['version'],json.dumps(final),json.dumps(prepared['notes']))).fetchone()[0]
+        saved = c.execute('select knowledge_review_context(%s)',(tenant,)).fetchone()[0]
+        assert len(saved['sources'])==1 and '5 pm' not in saved['sources'][0]['content']
+        assert '4 pm' in saved['sources'][0]['content'] and REST in saved['sources'][0]['content']
+        with pytest.raises(driver.errors.RaiseException,match='STALE'):
+            c.execute('select admit_knowledge_review(%s,%s,%s,%s,%s)',
+                (tenant,row['id'],ctx['version'],json.dumps(final),json.dumps(prepared['notes'])))
+        # A deliberate reread is another pending batch, requiring an explicit
+        # overlap decision against the corrected saved fact. It cannot overwrite it.
+        reread, _, _, _ = owner_case()
+        saved['reviews'].append(reread)
+        with pytest.raises(Exception,match='overlap'):
+            admission.plan(saved,reread,{'version':saved['version'],
+                'action_'+reread['payload']['entries'][0]['id']:'keep'})
+        assert c.execute('select count(*) from knowledge_chunks where tenant_id=%s',(tenant,)).fetchone()[0]==1
+
+
 @pytest.fixture
 def source_case(source_db):
     driver, dsn = source_db; tenant = uuid.uuid4(); row, evidence = seeded()

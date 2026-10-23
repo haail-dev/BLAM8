@@ -376,7 +376,11 @@ def plan(context, row, form):
                 raise HTTPException(409, "Resolve every overlap: keep both intentionally, or discard the draft. Nothing was saved.")
         # A fresh stable source name avoids an implicit replacement even on a label collision.
         source = n["merge_target"]["label"] if n.get("merge_target") else f"{n['label']} · {n['id'][:8]}"
-        provenance = "\n".join("- " + p.get("source", "") + (" — " + p.get("excerpt", "") if p.get("excerpt") else "") for p in n["provenance"])
+        # Evidence is an audit of the source we read, not a second set of
+        # approved facts. Repeating excerpts here resurrects excluded/superseded
+        # wording inside embeddings and every retrieval consumer. Keep the
+        # complete quotations in the saved review payload, outside grounding.
+        provenance = "\n".join(dict.fromkeys("- " + p.get("source", "") for p in n["provenance"]))
         notes.append({"label": source, "mailbox_id": n.get("mailbox_id"),
                       "content": n["content"] + "\n\nSource evidence:\n" + provenance,
                       "source_context":n.get("source_context","")})
