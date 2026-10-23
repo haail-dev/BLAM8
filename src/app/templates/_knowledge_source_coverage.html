@@ -1,7 +1,19 @@
-{# Internal decision contract for the Assistant guide. Source inventory is not
-   an owner-facing review. No hidden field makes a decision automatically. #}
+{# The same controls are used by the guide and the native review form. #}
 <input type="hidden" name="source_default" value="{{ review.form.get('source_default','') }}">
+<details class="kr-source-coverage kr-tool-panel">
+<summary>Source coverage · {{ review.source_view.unresolved }} remaining decisions</summary>
+<p>Headings and navigation labels without factual content are grouped here for inspection. Already represented wording remains linked to its source. Uncertain facts still need a decision; leaving them unknown preserves the audit without adding them to agent Knowledge.</p>
+{% if review.source_view.units|selectattr('status','equalto','layout_fragment')|list %}<label><input type="checkbox" name="guided_layout_review" value="acknowledged"{% if review.form.get('guided_layout_review')=='acknowledged' %} checked{% endif %}> I reviewed the grouped layout labels. Any factual labels have a note or unknown decision below; the remaining labels stay in this audit.</label>{% endif %}
 {% for u in review.source_view.units if u.kind!='qualification' %}
-<input type="hidden" name="source_{{ u.id }}" value="{{ review.form.get('source_'+u.id,'') }}">
-<input type="hidden" name="source_reason_{{ u.id }}" value="{{ review.form.get('source_reason_'+u.id,'') }}">
+<details class="kr-source-unit"><summary>{{ u.status|replace('_',' ') }} · {{ u.text[:100] }}</summary>
+<p class="kr-content">{{ u.text }}</p><p class="break-words">{{ u.sources|join(', ') }}</p>
+<label>Source decision<select name="source_{{ u.id }}">
+<option value="">{{ 'Already represented in note' if u.status == 'literal_in_note' else ('Layout label — retained in this audit' if u.status == 'layout_fragment' else 'Choose after review') }}</option>
+{% for n in review.entries %}<option value="note:{{ n.id }}"{% if review.form.get('source_'+u.id)=='note:'+n.id %} selected{% endif %}>Retain with {{ n.label }}</option>{% endfor %}
+<option value="exclude"{% if review.form.get('source_'+u.id)=='exclude' %} selected{% endif %}>Exclude with reason</option>
+<option value="unknown"{% if review.form.get('source_'+u.id)=='unknown' %} selected{% endif %}>Leave unknown for now</option>
+</select></label>
+<label>Exclusion reason<input name="source_reason_{{ u.id }}" maxlength="1000" value="{{ review.form.get('source_reason_'+u.id,'') }}"></label>
+</details>
 {% endfor %}
+</details>

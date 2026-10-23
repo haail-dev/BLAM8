@@ -17,12 +17,23 @@ def normal(text):
 
 def _represented(text, content):
     """Allow a sentence opener to be embedded mid-sentence, preserving facts/codes."""
-    text, content = normal(text), normal(content)
+    typography = str.maketrans({'’':"'", '‘':"'", '“':'"', '”':'"', '\u00a0':' '})
+    text, content = normal(text.translate(typography)), normal(content.translate(typography))
     if text in content:
         return True
     if re.match(r'^(Our|We|The|Your|You|It|This|These|That|Those)\b', text):
         return text[0].lower() + text[1:] in content
     return False
+
+
+def layout_fragment(unit):
+    """Suggest short structural labels for grouped owner review, never approval."""
+    places = {p for span in unit.get('spans', []) for p in span.get('locations', [])}
+    text = unit['text']
+    protected = re.search(r"\d|[£$€@]|\b(no|not|never|only|unless|except|if|before|after|until|excluding|without|includes?|is|are|we|our|must|can|will|available|closed|open|free)\b", text, re.I)
+    return (bool(places & {'nav','h1','h2','h3','h4'}) and len(text.split()) <= 9
+            and not protected and not re.search(r'[.!?;:]', text)
+            and unit['kind'] == 'statement')
 
 
 def inventory(pages):
@@ -73,6 +84,12 @@ def resolve(row, entries, form, *, complete=False):
         represented = [n["id"] for n in entries if _represented(unit["text"], n["content"])]
         choice = str(form.get("source_"+unit["id"], ""))
         reason = str(form.get("source_reason_"+unit["id"], "")).strip()
+        if unit['kind'] != 'qualification' and represented and choice in {'exclude','unknown'}:
+            if complete:
+                raise HTTPException(409,'Excluded or unknown source wording is still in a retained note. Edit that note before saving.')
+            decisions.append({**unit,'status':'unresolved','entries':represented,
+                              'conflict':'This wording is still in a retained note.'})
+            continue
         if unit["kind"]=="qualification" and entries:
             if choice=="exclude":
                 raise HTTPException(409,"Source qualifications must remain attached to source-derived facts. Nothing was saved.")
@@ -87,6 +104,13 @@ def resolve(row, entries, form, *, complete=False):
                 decision={"status":"excluded","entries":[],"reason":reason}
         elif represented and not choice:
             decision={"status":"literal_in_note","entries":represented}
+        elif choice == 'unknown':
+            decision={"status":"deferred_unknown","entries":[]}
+        elif not choice and layout_fragment(unit):
+            reviewed = form.get('guided_layout_review') == 'acknowledged'
+            if complete and not reviewed:
+                raise HTTPException(409,'Review the grouped layout labels before saving; any factual label still needs a note or an unknown decision.')
+            decision={"status":"layout_fragment","entries":[],"reviewed":reviewed}
         else:
             choice = choice or str(form.get("source_default", ""))
             target = by_id.get(choice.removeprefix("note:")) if choice.startswith("note:") else None
@@ -116,5 +140,5 @@ def view(row, entries, form):
     for unit in units:
         unit["suggested"]=[n["label"] for n in entries if any(
             p["source"] in unit["sources"] for p in n["provenance"])]
-    return {"units":units,"unresolved":sum(u["status"]=="unresolved" for u in units),
+    return {"units":units,"unresolved":sum(u["status"]=="unresolved" or (u['status']=='layout_fragment' and not u.get('reviewed')) for u in units),
             "qualifications":[u for u in units if u["kind"]=="qualification"]}

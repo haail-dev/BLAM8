@@ -13,7 +13,7 @@ class _Blocks(HTMLParser):
         text = ' '.join(''.join(self.parts).split())
         self.parts = []
         if text:
-            location = next((t for t in reversed(self.stack) if t in {'header', 'footer', 'aside', 'nav'}), 'body')
+            location = next((t for t in reversed(self.stack) if t in {'header', 'footer', 'aside', 'nav', 'h1', 'h2', 'h3', 'h4'}), 'body')
             self.blocks.append({'text': text, 'location': location})
 
     def handle_starttag(self, tag, attrs):

@@ -140,6 +140,8 @@ def correction_card(ctx, row, evidence, body, owner_request):
             raise setup_cards.Stale('The current note changed. Show it again before requesting a wording edit.')
         card = knowledge_note_edits.scope(card, context, row, knowledge_review.review_form(row, body.form), body.note_id, owner_request)
     card['knowledge_local_review'] = local_review(row, body)
+    card['knowledge_owner_request'] = owner_request
+    card['knowledge_source_units'] = row['payload'].get('source_units', [])
     return card
 
 

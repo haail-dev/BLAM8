@@ -34,8 +34,15 @@ try{
   await until('window.nativeEditReady===true && window.nativeBeforeReload!==true');
   assert.equal(await evaluate('innerWidth'),width);
   const point=await evaluate('(()=>{const b=document.querySelector("[data-source-apply]");b.scrollIntoView({block:"center"});const r=b.getBoundingClientRect();const x=r.x+r.width/2,y=r.y+r.height/2;if(document.elementFromPoint(x,y)!==b)throw Error("Apply is obscured");return {x,y};})()');
-  await cdp('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
-  await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
+  if(width===390){
+    await cdp('Emulation.setFocusEmulationEnabled',{enabled:true});
+    await evaluate('document.querySelector("[data-source-apply]").focus()');
+    await cdp('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,nativeVirtualKeyCode:13,text:'\r',unmodifiedText:'\r'});
+    await cdp('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+  }else{
+    await cdp('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
+    await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
+  }
   await until('document.getElementById("result").dataset.status');
   assert.equal(await evaluate('document.getElementById("result").dataset.status'),'PASS',await evaluate('document.getElementById("result").textContent'));
   console.log(await evaluate('document.getElementById("result").textContent'));

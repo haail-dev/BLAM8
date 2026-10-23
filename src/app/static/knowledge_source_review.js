@@ -64,11 +64,12 @@
         detail.appendChild(node('summary', change.label));
         detail.appendChild(node('p', 'Original: ' + change.before));
         detail.appendChild(node('p', 'Proposed: ' + change.after));
+        (change.owner_replacements || []).forEach(function(p){detail.appendChild(node('p','Owner-provided replacement: '+p.before+' → '+p.after+'. This new wording is supplied by you, not verified by the website.'));});
         (change.removals || []).forEach(function(p){detail.appendChild(node('blockquote','Remove this exact paragraph: '+p.quote));});
         (change.source_choices || []).forEach(function(choice){
           detail.appendChild(node('p','Source passage: '+choice.text));
           detail.appendChild(node('p','Source: '+choice.sources.join(', ')));
-          detail.appendChild(node('p',choice.action==='excluded'?'Proposed source choice: leave out of all retained notes.':'Retained in: '+choice.destinations.join(', ')));
+          detail.appendChild(node('p',choice.action==='superseded'?'Superseded by your correction: keep this source passage in the audit, outside active Knowledge.':choice.action==='excluded'?'Proposed source choice: leave out of all retained notes.':'Retained in: '+choice.destinations.join(', ')));
           if(choice.reason)detail.appendChild(node('p','Your exact reason: '+choice.reason));
         });
         change.passages.forEach(function (p) { detail.appendChild(node('blockquote', p.quote)); detail.appendChild(node('p', p.url)); });
@@ -77,7 +78,7 @@
       });
       data.overlaps.forEach(function (group) { box.appendChild(node('p', 'Possible overlap; kept separate: ' + group.map(function (n) { return n.label; }).join(', '))); });
       data.questions.forEach(function (q) { box.appendChild(node('p', 'Needs your answer: ' + q)); });
-      if (data.changes.length) { var apply = node('button', data.changes.some(function(c){return (c.removals || []).length;}) ? 'Apply listed wording and source choices to draft' : 'Apply corrections to drafts'); apply.type = 'button'; apply.dataset.sourceApply = '1'; box.appendChild(apply); }
+      if (data.changes.length) { var apply = node('button', data.changes.some(function(c){return (c.removals || []).length;}) ? 'Apply listed wording and source choices to draft' : 'Apply corrections to drafts'); apply.type = 'button'; apply.className = 'kr-apply bg-brand hover:bg-blue-700'; apply.dataset.sourceApply = '1'; box.appendChild(apply); }
       if(data.changes.length){
         var disclosure=form.querySelector('[data-source-corrections]');if(disclosure)disclosure.open=true;
         if(window.blam8ConciergeClose)window.blam8ConciergeClose();
@@ -104,6 +105,8 @@
     }
     var body = Object.assign({review: preview.review, owner_request: preview.question}, preview.base, preview.scope);
     lock(true);
+    var applyControl = form.querySelector('[data-source-apply]');
+    if (applyControl) { applyControl.textContent = 'Applying corrections…'; applyControl.setAttribute('aria-busy', 'true'); }
     try {
       var data = await request(form, '/apply', body);
       // The stored drafts now carry a later version. Device checkpoints record

@@ -160,7 +160,7 @@
     action.value=deferred?'':'keep';later.value=deferred?'1':'';
     form.dataset.reviewDirty='1';
     action.dispatchEvent(new Event('change',{bubbles:true}));syncNotes(form);
-    notice(form,deferred?'Left this draft pending for later. It has not been discarded; decide every draft before saving.':'Marked this note reviewed to keep. Source and overlap decisions still apply; nothing saved.');
+    notice(form,deferred?'Left the last note pending for later. It has not been discarded; decide every draft before saving.':'Marked the last note reviewed to keep. Source and overlap decisions still apply; nothing saved.');
     var guide=window.Blam8KnowledgeGuide;
     if(guide && guide.available(form) && !guide.working()){
       button.disabled=true;

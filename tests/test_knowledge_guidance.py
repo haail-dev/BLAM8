@@ -42,7 +42,8 @@ def test_guided_review_reaches_existing_admission_without_touching_stored_drafts
     navigation = next(u for u in row['payload']['source_units'] if u['text']=='Return to home.')
     assert form['source_'+payment['id']]=='note:one'
     assert not form.get('source_'+navigation['id'])
-    assert supported['focus']['kind']=='passage' and supported['focus']['target']==''
+    assert supported['focus']['kind']=='source_batch' and supported['focus']['remaining']==1
+    supported=act(ctx,row,form,'expand_sources')
     supported=act(ctx,row,form,'exclude',reason='This is a navigation link, not wording I want in my note.')
     assert 'Fictional test facts only.' in supported['shared_caveats']
     for _ in range(40):
@@ -75,6 +76,7 @@ def test_stale_focus_saved_reviews_and_foreign_targets_fail_closed():
         guide.apply(ctx,row,form,focus,choice('keep'))
     assert exc.value.status_code==409
     act(ctx,row,form,'keep'); act(ctx,row,form,'details')
+    if guide.present(ctx,row,form)['focus']['kind']=='source_batch':act(ctx,row,form,'expand_sources')
     with pytest.raises(HTTPException):act(ctx,row,form,'retain',target='other-tenant-note')
     row['state']='saved'
     with pytest.raises(HTTPException):guide.present(ctx,row,form)
@@ -407,6 +409,7 @@ def test_decision_receipt_identifies_submitted_note_before_advancing(intent):
         focus_hash=shown['focus_hash'],kind='note',id='one',action=intent,
         state='editing' if intent=='edit' else 'prepared')
     assert result.get('edit_requested',False)==(intent=='edit')
+    if intent in {'keep','discard'}:assert 'last note, Prices' in result['reply']
     if intent=='edit':assert result['patches']=={} and form=={'version':ctx['version']}
     else:assert result['focus_hash']!=shown['focus_hash']
 

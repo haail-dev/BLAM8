@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from app import knowledge_review, knowledge_fidelity
 
 INTENTS = ['show', 'keep', 'discard', 'retain', 'exclude', 'keep_both',
-           'answer', 'unknown', 'correct', 'edit', 'explain', 'retain_support', 'details', 'revisit', 'undo_support']
+           'answer', 'unknown', 'correct', 'edit', 'explain', 'retain_support', 'details', 'revisit', 'undo_support', 'defer_sources', 'expand_sources', 'review_layout']
 SHOW = {'', 'show the current note', 'start reviewing the notes', 'show the next decision'}
 SHORTCUTS = {'keep this note':'keep', 'discard this note':'discard',
     'retain this passage with the note':'retain', 'keep both notes':'keep_both',
@@ -15,6 +15,9 @@ SHORTCUTS = {'keep this note':'keep', 'discard this note':'discard',
     'undo added website wording for this note':'undo_support',
     'edit it':'edit', 'edit this note':'edit', 'edit note':'edit',
     'change this':'edit', 'change this note':'edit'}
+SHORTCUTS.update({'leave these source details unknown':'defer_sources',
+                  'review these source details individually':'expand_sources',
+                  'leave reviewed layout labels in the audit':'review_layout'})
 
 
 def needs_model(question):
@@ -156,7 +159,14 @@ def current(context, row, form):
                     'label': note['label'], 'content': note['combined'][:600], 'other_label': match['label'],
                     'other_content': match['content'][:600],
                     'comparison_hash':knowledge_review.fingerprint(note['combined'],match['content'])}
+    layout = [u for u in review['source_view']['units'] if u['status']=='layout_fragment' and not u.get('reviewed')]
+    if layout:
+        return review, {'kind':'layout_batch', 'id':'layout', 'remaining':len(layout),
+            'passages':[{'id':u['id'],'text':u['text'],'sources':u['sources']} for u in layout]}
     if unresolved:
+        if not form.get('guided_expand_sources'):
+            return review, {'kind':'source_batch', 'id':'unassigned', 'remaining':len(unresolved),
+                'passages':[{'id':u['id'],'text':u['text'],'sources':u['sources']} for u in unresolved]}
         unit = unresolved[0]
         return review, {'kind':'passage', 'id':unit['id'], 'text':unit['text'], 'sources':unit['sources'],
             'note':'a note you choose', 'target':'', 'targets':[{'id':n['id'],'label':n['label']} for n in retained]}
@@ -197,6 +207,21 @@ def present(context, row, form, *, receipt=''):
         actions = [('Keep this wording with the note', 'Retain this passage with the note')] if item['target'] else []
         if not item['target']:
             text += '\n\nThis passage has no verified note destination. Name a kept note, or explain why it should be left out. No choice has been made.'
+    elif kind == 'layout_batch':
+        text = (f"{item['remaining']} short source fragments look like headings or navigation labels. "
+                'Review the expandable Source coverage list, including its original text and URLs. '
+                'If any label contains a real fact, choose a note or leave it unknown there. '
+                'After checking, leave the remaining layout labels in the review audit; they will not become agent facts.\n\n'
+                + '\n'.join(p['text'] for p in item['passages'][:4]))
+        actions = [('Leave reviewed labels in audit', 'Leave reviewed layout labels in the audit')]
+    elif kind == 'source_batch':
+        text = (f"{item['remaining']} source details still need a decision and have no retained note destination. "
+                'Open Source coverage in the review form to inspect the full text and provenance. '
+                'Review them individually, choose a destination there, or leave them unknown for now. '
+                'Unknown passages stay in the review audit and are not added to agent Knowledge.\n\n'
+                + '\n'.join(p['text'][:180] for p in item['passages'][:3]))
+        actions = [('Review source details', 'Review these source details individually'),
+                   ('Leave these details unknown', 'Leave these source details unknown')]
     elif kind == 'overlap':
         text = (f"These notes may overlap:\n\n{item['label']}\n{item['content']}\n\n"
                 f"{item['other_label']}\n{item['other_content']}\n\nThese are short comparisons; the full wording remains in the review form. Do you want to keep both? You can also leave out the current draft. Nothing will be merged automatically.")
@@ -267,6 +292,14 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
             raise HTTPException(422, 'Name one of the notes in this review.')
         patches['action_'+note['id']] = ''
         receipt = 'Reopened that note decision in the review form.'
+    elif intent == 'expand_sources' and kind == 'source_batch':
+        patches['guided_expand_sources'] = '1'
+    elif intent == 'review_layout' and kind == 'layout_batch':
+        patches['guided_layout_review'] = 'acknowledged'
+        receipt = f"Marked the last {item['remaining']} reviewed layout labels to stay in the audit, outside agent Knowledge."
+    elif intent == 'defer_sources' and kind == 'source_batch':
+        patches.update({'source_'+u['id']:'unknown' for u in item['passages']})
+        receipt = f"Left the last {item['remaining']} source details unknown in this review."
     elif intent == 'undo_support':
         target = raw['target'] or (item.get('note_id') if kind=='overlap' else item.get('id') if kind in {'note','support'} else item.get('target'))
         note = next((n for n in row['payload']['entries'] if n['id']==target),None)
@@ -277,19 +310,19 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
         receipt = f"Undid the unsaved source-retention choices for {note['label']}. Its original wording and shared caveats are unchanged; those source statements need review again."
     elif intent == 'keep' and kind == 'note':
         patches['action_'+item['id']] = 'keep'
-        receipt = f"Marked {item['label']} to keep in this review."
+        receipt = f"Marked the last note, {item['label']}, to keep in this review."
     elif intent == 'discard' and kind in {'note', 'overlap'}:
         patches['action_'+(item['id'] if kind == 'note' else item['note_id'])] = 'discard'
-        receipt = f"Marked {item['label']} to leave out of this review. Existing saved notes are unchanged."
+        receipt = f"Marked the last note, {item['label']}, to leave out of this review. Existing saved notes are unchanged."
     elif intent == 'retain' and kind == 'passage':
         target = raw['target'] or item['target']
         if target not in {n['id'] for n in item['targets']}:
             raise HTTPException(422, 'Choose an existing note marked to keep for this wording.')
         patches['source_'+item['id']] = 'note:'+target
-        receipt = 'Marked the exact source wording to stay with the selected note.'
+        receipt = 'Marked the last detail’s exact source wording to stay with the selected note.'
     elif intent == 'retain_support' and kind == 'support':
         patches.update({'source_'+u['id']:'note:'+item['id'] for u in item['passages']})
-        receipt = f"Marked the original website wording to stay verbatim alongside {item['label']}."
+        receipt = f"Marked the last details’ original website wording to stay verbatim alongside {item['label']}."
     elif intent == 'details' and kind == 'support':
         patches['guided_expand_'+item['id']] = '1'
     elif intent == 'exclude' and kind == 'passage' and raw['reason'].strip():
@@ -297,19 +330,19 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
             raise HTTPException(422, 'Keep your reason within 1,000 characters.')
         patches['source_'+item['id']] = 'exclude'
         patches['source_reason_'+item['id']] = raw['reason'].strip()
-        receipt = 'Marked this passage to leave out, with your reason recorded in the review form.'
+        receipt = 'Marked the last detail to leave out, with your reason recorded in the review form.'
     elif intent == 'keep_both' and kind == 'overlap':
         patches['match_'+item['id']] = 'keep_both'
-        receipt = 'Marked these notes to stay separate after your overlap review.'
+        receipt = 'Marked the last notes to stay separate after your overlap review.'
     elif intent == 'answer' and kind == 'question' and raw['answer'].strip():
         patches['question_'+item['id']] = 'answered'
         patches['answer_'+item['id']] = raw['answer'].strip()
-        receipt = 'Added your answer to the review form.'
+        receipt = 'Added your answer to the last detail in the review form.'
     elif intent == 'unknown' and kind == 'question':
         patches['guided_unknown_'+item['id']] = '1'
         patches['question_'+item['id']] = 'unknown'
         patches['answer_'+item['id']] = ''
-        receipt = 'Left this detail unknown.'
+        receipt = 'Left the last detail unknown.'
     elif intent == 'correct':
         target = item.get('id') if kind in {'note','support'} else item.get('note_id') if kind=='overlap' else item.get('target')
         return {'correction_requested': True,

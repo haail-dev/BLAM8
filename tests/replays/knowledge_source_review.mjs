@@ -5,6 +5,7 @@ import vm from 'node:vm';
 const events = {}, requests = [], controls = [];
 function element() {
   return {dataset:{},disabled:false,value:'',children:[],textContent:'',hidden:false,
+    setAttribute(name,value) { this[name]=value; },
     appendChild(el) { this.children.push(el); return el; }, replaceChildren(...els) { this.children=els; }};
 }
 const status=element(), box=element(), question=element(), later=element(), navigation=element();

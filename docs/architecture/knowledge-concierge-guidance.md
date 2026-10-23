@@ -112,3 +112,20 @@ exclude facts still retained elsewhere; partial source-unit deletion and unique
 caveat/negative-limitation loss are rejected. Removed clause-specific citations
 move to the edit audit, not current note attribution. This supports bounded
 removal; it does not invent replacement facts or change operational settings.
+
+Owner-provided replacements now use a separate bounded contract: exact old
+substring, exact replacement from the owner's request, unchanged surrounding
+wording and explicit before/after Apply. They carry owner provenance and
+supersession choices, never a fabricated website citation. Apply remains a
+pending draft mutation; Keep and final Save remain separate. Admission no
+longer concatenates historical source quotations into retrieval chunks.
+
+Previous-decision receipts refer to the last note/detail and name the note
+where available. Source coverage is expandable in the native form. Short
+nonfactual structural labels and typographic matches do not produce individual
+conversational questions; ambiguous facts remain reviewable.
+Grouped labels require explicit review before Save; their native controls can
+retain a factual heading or leave it unknown. Unassigned facts are grouped
+with a remaining count and a separate explicit unknown route. No semantic
+coverage is inferred solely from a citation. Questions and topic answers keep
+their existing Knowledge persistence and do not change operational settings.

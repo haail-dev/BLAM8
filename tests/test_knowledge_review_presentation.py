@@ -21,7 +21,7 @@ def fixture():
     return ctx, row
 
 
-def test_note_content_decisions_and_optional_evidence_without_audit_inventory():
+def test_note_content_decisions_and_expandable_source_inventory():
     ctx, row = fixture(); before = deepcopy((ctx, row))
     view = kr.review_view(ctx, row)
     env = Environment(loader=FileSystemLoader(Path(__file__).parents[1]/'src/app/templates'), autoescape=True)
@@ -43,13 +43,13 @@ def test_note_content_decisions_and_optional_evidence_without_audit_inventory():
             continue
         for name in ['source_'+unit['id'], 'source_reason_'+unit['id']]:
             assert html.count('name="'+name+'"') == 1
-            assert '<input type="hidden" name="'+name+'" value="">' in html
+            assert ('<select name="'+name+'"' in html if name.startswith('source_') and not name.startswith('source_reason_') else '<input name="'+name+'"' in html)
     assert 'Source-to-note review' not in html
-    assert 'unresolved' not in html and 'literal in note' not in html
+    assert 'Source coverage · 3 remaining decisions' in html
     assert 'source text' not in html and 'data-source-unit' not in html
 
 
-def test_source_choices_and_exclusion_reasons_survive_hidden_form_contract():
+def test_source_choices_and_exclusion_reasons_survive_native_form_contract():
     ctx, row = fixture()
     unit = row['payload']['source_units'][2]
     form={'source_'+unit['id']:'exclude','source_reason_'+unit['id']:'Not relevant <owner decision>', 'source_default':'note:two',
@@ -57,7 +57,7 @@ def test_source_choices_and_exclusion_reasons_survive_hidden_form_contract():
     view = kr.review_view(ctx, row, form)
     env = Environment(loader=FileSystemLoader(Path(__file__).parents[1]/'src/app/templates'), autoescape=True)
     html = env.get_template('_knowledge_review.html').render(review=view, csrf_token=lambda r:'token', request={})
-    assert 'name="source_'+unit['id']+'" value="exclude"' in html
+    assert 'name="source_'+unit['id']+'"' in html and '<option value="exclude" selected>' in html
     assert 'value="Not relevant &lt;owner decision&gt;"' in html
     assert 'name="source_default" value="note:two"' in html
     assert 'name="guided_unknown_question" value="1"' in html
