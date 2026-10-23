@@ -45,7 +45,7 @@ def test_note_content_decisions_and_expandable_source_inventory():
             assert html.count('name="'+name+'"') == 1
             assert ('<select name="'+name+'"' in html if name.startswith('source_') and not name.startswith('source_reason_') else '<input name="'+name+'"' in html)
     assert 'Source-to-note review' not in html
-    assert 'Source audit · 3 remaining decisions' in html
+    assert 'Website evidence and optional details' in html
     assert 'source text' not in html and 'data-source-unit' not in html
 
 

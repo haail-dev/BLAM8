@@ -14,7 +14,7 @@
   <input type="hidden" name="version" value="{{ review.version }}">
   {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') or name.startswith('review_later_') or name.startswith('reviewed_') or name.startswith('source_revision_') %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
   <div class="kr-heading"><h2>{{ review.summary.notes }} notes to review</h2><span>Pending · not saved</span></div>
-  <div class="kr-helper"><p><span data-review-remaining>{{ review.summary.notes - review.summary.decided }}</span> notes remaining. Review each note, then Save once.</p><details class="kr-before"><summary>Before you save</summary><div>Reviewed selects this note to keep in the review. Leave for later keeps it pending, not discarded. Resolve every note, source decision and possible overlap before Save. Shared source caveats stay attached. Nothing is available to the agent until saved. Merges combine wording and preserve both sources; check the combined preview before saving.</div></details></div>
+  <div class="kr-helper"><p><span data-review-remaining>{{ review.summary.notes - review.summary.decided }}</span> <span data-review-remaining-label>{{ "note remaining" if review.summary.notes - review.summary.decided == 1 else "notes remaining" }}</span>. Review each note, then Save once.</p><details class="kr-before"><summary>Before you save</summary><div>Reviewed selects this note to keep in the review. Leave for later keeps it pending, not discarded. Resolve every note, source decision and possible overlap before Save. Shared source caveats stay attached. Nothing is available to the agent until saved. Merges combine wording and preserve both sources; check the combined preview before saving.</div></details></div>
   <noscript><p>Use each note’s Decision field to retain, merge or discard it. All decisions still require the final review before saving.</p></noscript>
   <p data-review-status role="status" aria-live="polite" class="text-sm text-slate-700"></p>
   {% if review.source_review_enabled and review.payload.source_snapshot %}
@@ -32,7 +32,7 @@
     <details data-note-details{% if loop.first %} open{% endif %}>
     <summary class="kr-summary"><span><span id="note-heading-{{ review.id }}-{{ n.id }}" class="kr-note-title">{{ loop.index }}. {{ n.label }}</span>
       <span class="kr-status-row"><span class="kr-note-status" data-note-status>{% if review.form.get('action_'+n.id)=='keep' %}Reviewed · not saved{% elif review.form.get('action_'+n.id) %}Decision selected · not saved{% elif review.form.get('review_later_'+n.id) %}For later · pending{% else %}Pending{% endif %}</span>
-      {% if n.matches or review.source_view.qualifications %}<span class="kr-note-cues"> · {% if n.matches %}Overlap to check{% endif %}{% if n.matches and review.source_view.qualifications %} · {% endif %}{% if review.source_view.qualifications %}Source caveat{% endif %}</span>{% endif %}</span>
+      {% if n.matches or review.source_view.qualifications %}<span class="kr-note-cues"> · {% if n.matches %}<span data-overlap-status>Overlap to check</span>{% endif %}{% if n.matches and review.source_view.qualifications %} · {% endif %}{% if review.source_view.qualifications %}Source caveat{% endif %}</span>{% endif %}</span>
     </span><span class="kr-chevron" aria-hidden="true"></span></summary>
     <div class="kr-body">
     <p class="kr-content" data-note-preview>{{ n.content }}</p>

@@ -125,8 +125,8 @@ def validate(card, evidence, raw):
             raise setup_cards.Invalid('Choose exact paragraph references for removals.')
         remaining, removed, source_choices, patches = knowledge_note_edits.removal(card, identity, line['content'], removals)
         owner_replacements = change.get('owner_replacements', [])
-        if owner_replacements and (insertions or citations or removals):
-            raise setup_cards.Invalid('Review owner replacements separately from source additions, citations or removals.')
+        if owner_replacements and (insertions or removals):
+            raise setup_cards.Invalid('Review owner replacements separately from source additions or removals.')
         remaining, replaced, owner_patches, superseded = knowledge_owner_corrections.replacements(card, identity, remaining, owner_replacements)
         patches.update(owner_patches)
         source_choices += superseded
@@ -158,6 +158,8 @@ def validate(card, evidence, raw):
             claim = citation['claim']
             if not isinstance(claim,str) or not claim.strip() or claim not in content:
                 raise setup_cards.Invalid('Cite exact existing note wording from the surviving text; a removed clause cannot receive a current citation.')
+            if replaced and claim not in line['content']:
+                raise setup_cards.Invalid('Owner corrections cannot receive website attribution. Keep the owner fact separate from source citations.')
             checked={**citation, **knowledge_source_evidence.resolve(evidence,citation['reference'])}
             if {'source':checked['url'],'excerpt':checked['quote'],'claim':claim} in line.get('citations',[]):
                 unchanged += 1
@@ -208,7 +210,12 @@ def validate(card, evidence, raw):
     return {'revision': card['revision'], 'review': deepcopy(raw), 'changes': changes,
             'overlaps': [[{'id': i, 'label': available[i]['label']} for i in ids] for ids in overlaps],
             'questions': shown_questions,
-            'summary': summary}
+            'summary': summary,
+            'presentation_summary': (
+                f"{len(changes)} correction(s) ready to review. Nothing has changed yet."
+                if changes else 'No new corrections to apply. Your notes are unchanged.')
+                + (' Some suggestions could not be verified; see Review details.'
+                   if omitted_changes or omitted_overlaps or omitted_questions else '')}
 
 
 def content_segments(card, line):
@@ -296,6 +303,7 @@ async def answer(tenant_id, question, card, evidence):
             'Owner replacements are distinct from website evidence. Never propose a citation-only change or delete a paragraph '
             'to satisfy a replacement request. If the owner is uncertain or asking a hypothetical question, ask for confirmation. '
             'Use empty insertions, citations and removals for an owner replacement. Omit unchanged notes. '
+            'If asked to remove duplicate sentences, use owner_replacements with before set to the full repeated sentence and after empty; only a duplicate whose exact meaning remains elsewhere in that same note can be removed. Include changes to each explicitly named note. '
             if card.get('knowledge_owner_request') else '') + (
             ' CURRENT NOTE EDIT: the exact owner request may also ask to remove existing paragraphs. '
             'Only current_note_edit supplies allowed paragraph references over displayed_body. Relative requests like last paragraph refer to that body, never retention_context_only attachments. Propose removals solely '

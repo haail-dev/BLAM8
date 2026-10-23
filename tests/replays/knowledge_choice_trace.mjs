@@ -25,7 +25,7 @@ const guide={available:()=>true,start(){},isCurrent:(hash,batch,version)=>!!curr
   edit:(hash,id)=>{if(!guide.isCurrent(hash))return false;edits.push(id);return true;},save:()=>assert.fail('No save from choices'),
   async ask(text){calls.push(text);const next=queued.shift();if(next instanceof Error)throw next;if(!next)throw new Error('No fixture');current=next;return next;}};
 const noop=()=>{};
-const c=vm.createContext({document:{createElement:tag=>new Element(tag)},window:{Blam8KnowledgeGuide:guide},
+const c=vm.createContext({document:{createElement:tag=>new Element(tag),querySelector:()=>null},window:{Blam8KnowledgeGuide:guide},
   msgs,input,sendBtn,log:[],deviceSync:null,ONB_STEP:'knowledge',AUTHED:true,ONB_MODE:true,FIX_LOG_ID:false,HELP_MODE:false,SCENARIO:false,MAX_TURNS:16,sending:false,
   readCurrent:()=>({}),applyFill:noop,appendHeldLine:noop,hideTyping:noop,showTyping:noop,pinToTop:noop,showContinueHint:noop,
   autosize:noop,refreshTitle:noop,touch:noop,clearPin:noop,unpinCaveat:noop,scrollDown:noop,applyQuestionAllowance:noop,
@@ -94,3 +94,21 @@ chosen(cards()[0],'keep');chosen(cards()[1],'keep_both');assert(buttons(cards().
 const before=calls.length;buttons(cards()[0])[0].click();assert.equal(calls.length,before);
 assert(!saved.includes('Owner text'));assert.equal(c.sending,false);
 console.log('Knowledge card trace: click, typed/transcript, all choices, failures, identity, edit and restored history verified.');
+
+// A server-confirmed saved review collapses old unsaved instructions, without changing its transcript.
+const originalLog=JSON.stringify(c.log), savedMarker=new Element(), savedStatus=new Element();
+savedMarker.setAttribute('data-knowledge-saved-reviews',JSON.stringify(['batch']));
+savedStatus.textContent='Knowledge saved. 9 notes saved. No drafts waiting for review.';
+c.document.querySelector=selector=>selector==='[data-knowledge-saved-reviews]'?savedMarker:selector==='[data-knowledge-saved-status]'?savedStatus:null;
+c.renderAll();
+assert.equal(JSON.stringify(c.log),originalLog);
+assert.equal(cards().length,0);
+assert(msgs.children.some(el=>el.tagName==='DETAILS'&&el.children[0].textContent.includes('completed')));
+assert.equal(msgs.children.at(-1).textContent,savedStatus.textContent);
+c.log.push({role:'assistant',content:'A later answer about your business.'});c.renderAll();
+assert.equal(msgs.children.at(-1).textContent,savedStatus.textContent);
+assert(msgs.children.some(el=>el.tagName==='DETAILS'&&el.children.some(child=>child.textContent==='A later answer about your business.')));c.log.pop();
+// Another pending batch must retain its review controls; a saved ID is not blanket approval.
+savedMarker.setAttribute('data-knowledge-saved-reviews',JSON.stringify(['another-batch']));
+c.document.querySelector=selector=>selector==='[data-knowledge-saved-reviews]'?savedMarker:null;
+c.renderAll();assert(cards().length>0);

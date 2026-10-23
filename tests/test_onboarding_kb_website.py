@@ -261,3 +261,19 @@ def test_save_nothing_ticked_redirects_with_an_error(client, store):
     assert r.status_code == 303
     assert "err=" in r.headers["location"]
     assert store == []
+
+
+def test_cited_statement_retention_does_not_repeat_embedded_complete_clauses():
+    from app.knowledge_fidelity import inventory
+    text='Each item has its own agreement. Our small team keeps the owner informed.'
+    pages=[{'url':'https://example.test','text':text}]
+    entry={'content':'Each item has its own agreement, and our small team keeps the owner informed.',
+           'provenance':[{'source':pages[0]['url'],'excerpt':text}]}
+    before=entry['content']
+    kb_website._retain_cited_statements(entry,pages,inventory(pages))
+    assert entry['content']==before
+    # The same framing with a genuinely different exception must still survive.
+    pages[0]['text'] += ' The agreement excludes emergency work.'
+    entry['provenance'][0]['excerpt']=pages[0]['text']
+    kb_website._retain_cited_statements(entry,pages,inventory(pages))
+    assert 'The agreement excludes emergency work.' in entry['content']

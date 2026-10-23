@@ -68,9 +68,12 @@ def test_unverified_replacements_fail_closed(case):
     with pytest.raises((setup_cards.Invalid, setup_cards.Stale)):review.validate(card,source,raw)
 
 
-def test_owner_replacement_preview_apply_route_keeps_final_admission_separate(source_client, monkeypatch):
+@pytest.mark.parametrize('whole_sentence', [False, True])
+def test_owner_replacement_preview_apply_route_keeps_final_admission_separate(source_client, monkeypatch, whole_sentence):
     client, row, source, ctx, calls, _ = source_client
     row, source, card, raw = owner_case(row, source)
+    if whole_sentence:
+        raw['changes'][0]['owner_replacements'] = [{'before':BEFORE, 'after':BEFORE.replace('5 pm','4 pm')}]
     async def provider(**kwargs):
         sent = json.loads(kwargs['messages'][0]['content'])
         assert sent['owner_request']==REQUEST
@@ -91,3 +94,43 @@ def test_owner_replacement_preview_apply_route_keeps_final_admission_separate(so
     assert payload['entries'][0]['content'].startswith(BEFORE.replace('5 pm','4 pm'))
     assert payload['source_review_history'][0]['reviewer']=='owner'
     assert row['state']=='pending' and 'Nothing saved to Knowledge' in applied.json()['summary']
+
+
+def test_plain_language_value_change_accepts_retained_sentence_context():
+    row, source, card, raw = owner_case()
+    request = 'We now close at 4 pm, not 5 pm. Keep everything else unchanged.'
+    card['knowledge_owner_request'] = request
+    raw['changes'][0]['owner_replacements'] = [{'before': BEFORE, 'after': BEFORE.replace('5 pm', '4 pm')}]
+    result = review.validate(card, source, raw)
+    assert result['changes'][0]['after'] == (BEFORE+' '+REST).replace('5 pm','4 pm')
+    assert result['changes'][0]['owner_replacements'] == [{'start': BEFORE.index('5'), 'end': BEFORE.index('5')+1, 'before':'5','after':'4'}]
+    payload = review.corrected_payload(row,source,raw,card=card,owner_request=request,reviewer='owner')
+    assert ''.join(s['text'] for s in payload['entries'][0]['content_segments']) == payload['entries'][0]['content']
+    assert [s['text'] for s in payload['entries'][0]['content_segments'] if s['kind']=='owner_said'] == ['4']
+
+
+def test_plain_language_cannot_introduce_an_unrequested_exception_or_partial_number():
+    row, source, card, raw = owner_case()
+    card['knowledge_owner_request'] = 'We now close at 14 pm. Keep everything else unchanged.'
+    raw['changes'][0]['owner_replacements'] = [{'before': BEFORE, 'after': BEFORE.replace('5 pm','4 pm')}]
+    with pytest.raises(setup_cards.Invalid):review.validate(card,source,raw)
+    card['knowledge_owner_request'] = 'We now close at 4 pm.'
+    raw['changes'][0]['owner_replacements'][0]['after'] = BEFORE.replace('5 pm','4 pm') + ' Open on weekends.'
+    with pytest.raises(setup_cards.Invalid):review.validate(card,source,raw)
+
+
+def test_explicit_duplicate_removal_keeps_one_copy_and_does_not_remove_unique_facts():
+    from app.knowledge_owner_corrections import replacements
+    card={'knowledge_owner_request':'Please correct this note and remove repeated sentences.', 'knowledge_source_units':[]}
+    sentence='Each booking requires confirmation.'
+    content=sentence+' '+sentence
+    after, edits, _, _ = replacements(card,'x',content,[{'before':sentence,'after':''}])
+    assert after.strip()==sentence and len(edits)==1
+    with pytest.raises(setup_cards.Invalid):replacements(card,'x',sentence,[{'before':sentence,'after':''}])
+
+
+def test_owner_corrected_fact_cannot_receive_website_citation():
+    row, source, card, raw = owner_case()
+    raw['changes'][0]['citations'] = [{'claim': BEFORE.replace('5 pm','4 pm'), 'reference': evidence.reference(source,0,'Fictional test profile only.')}]
+    with pytest.raises(setup_cards.Invalid, match='Owner corrections cannot receive website attribution'):
+        review.validate(card,source,raw)

@@ -29,7 +29,7 @@
   function lock(on) {
     busy = on;
     if (on) {
-      locked = Array.from(document.querySelectorAll('[data-knowledge-review] input,[data-knowledge-review] textarea,[data-knowledge-review] select,[data-knowledge-review] button,#kb-note button,form[action="/onboarding/knowledge/upload"] button,#site-go,[data-onb-continue],[data-leave-knowledge]'));
+      locked = Array.from(document.querySelectorAll('[data-knowledge-review] input,[data-knowledge-review] textarea,[data-knowledge-review] select,[data-knowledge-review] button,#kb-note button,form[action="/onboarding/knowledge/upload"] button,#site-go,[data-onb-continue]'));
       locked.forEach(function (el) { el.dataset.sourceWasDisabled = el.disabled ? '1' : '0'; el.disabled = true; });
     } else {
       locked.forEach(function (el) { el.disabled = el.dataset.sourceWasDisabled === '1'; delete el.dataset.sourceWasDisabled; });
@@ -64,20 +64,24 @@
         detail.appendChild(node('summary', change.label));
         detail.appendChild(node('p', 'Original: ' + change.before));
         detail.appendChild(node('p', 'Proposed: ' + change.after));
+        var evidence=node('details','');evidence.appendChild(node('summary','Why this changes · source details'));
         (change.owner_replacements || []).forEach(function(p){detail.appendChild(node('p','Owner-provided replacement: '+p.before+' → '+p.after+'. This new wording is supplied by you, not verified by the website.'));});
         (change.removals || []).forEach(function(p){detail.appendChild(node('blockquote','Remove this exact paragraph: '+p.quote));});
         (change.source_choices || []).forEach(function(choice){
-          detail.appendChild(node('p','Source passage: '+choice.text));
-          detail.appendChild(node('p','Source: '+choice.sources.join(', ')));
+          if(choice.action==='excluded')detail.appendChild(node('blockquote','Exclude this source fact: '+choice.text));
+          evidence.appendChild(node('p','Source passage: '+choice.text));
+          evidence.appendChild(node('p','Source: '+choice.sources.join(', ')));
           detail.appendChild(node('p',choice.action==='superseded'?'Superseded by your correction: keep this source passage in the audit, outside active Knowledge.':choice.action==='excluded'?'Removed factual claim: this will be excluded from all active notes if you Apply and then Save. Review the full claim below; this is not merely a formatting change.':'Retained in: '+choice.destinations.join(', ')));
           if(choice.reason)detail.appendChild(node('p','Your exact reason: '+choice.reason));
         });
-        change.passages.forEach(function (p) { detail.appendChild(node('blockquote', p.quote)); detail.appendChild(node('p', p.url)); });
-        (change.citations || []).forEach(function(p){detail.appendChild(node('p','Citation for existing wording: '+p.claim));detail.appendChild(node('blockquote',p.quote));detail.appendChild(node('p',p.url));});
+        change.passages.forEach(function (p) { evidence.appendChild(node('blockquote', p.quote)); evidence.appendChild(node('p', p.url)); });
+        (change.citations || []).forEach(function(p){evidence.appendChild(node('p','Citation for existing wording: '+p.claim));evidence.appendChild(node('blockquote',p.quote));evidence.appendChild(node('p',p.url));});
+        detail.appendChild(evidence);
         box.appendChild(detail);
       });
       data.overlaps.forEach(function (group) { box.appendChild(node('p', 'Possible overlap; kept separate: ' + group.map(function (n) { return n.label; }).join(', '))); });
       data.questions.forEach(function (q) { box.appendChild(node('p', 'Needs your answer: ' + q)); });
+      var diagnostics=node('details','');diagnostics.appendChild(node('summary','Review details'));diagnostics.appendChild(node('p',data.summary));box.appendChild(diagnostics);
       if (data.changes.length) { var apply = node('button', data.changes.some(function(c){return (c.removals || []).length;}) ? 'Apply listed wording and source choices to draft' : 'Apply corrections to drafts'); apply.type = 'button'; apply.className = 'kr-apply bg-brand hover:bg-blue-700'; apply.dataset.sourceApply = '1'; box.appendChild(apply); }
       if(data.changes.length){
         var disclosure=form.querySelector('[data-source-corrections]');if(disclosure)disclosure.open=true;
@@ -86,8 +90,8 @@
         if(box.scrollIntoView)box.scrollIntoView({behavior:'smooth',block:'center'});
         if(box.focus)box.focus({preventScroll:true});
       }
-      say(form, data.summary);
-      return {reply: data.summary+(data.changes.length?' Review the opened correction preview for the exact before/after wording and listed source choices, then choose Apply. This has not kept or saved the note.':''), correction_preview_ids: data.changes.map(function(change){return change.id;}), form_fill: {}, ready_to_advance: false, notes: [], held_for: []};
+      say(form, data.presentation_summary || data.summary);
+      return {reply: (data.presentation_summary || data.summary)+(data.changes.length?' Check the before and after wording, then Apply. I’ll recheck overlaps automatically; you still review the updated note before Save.':''), correction_preview_ids: data.changes.map(function(change){return change.id;}), form_fill: {}, ready_to_advance: false, notes: [], held_for: []};
     } catch (err) { say(form, err.message); throw err; }
     finally { lock(false); }
   }
@@ -109,9 +113,7 @@
     if (applyControl) { applyControl.textContent = 'Applying corrections…'; applyControl.setAttribute('aria-busy', 'true'); }
     try {
       var data = await request(form, '/apply', body);
-      // The stored drafts now carry a later version. Device checkpoints record
-      // it so these working decisions survive a reload on any device, while the
-      // hidden version below still waits for Check changes and overlaps.
+      // Preserve the stale form token until the authoritative recheck succeeds.
       if (data.version) form.dataset.syncVersion = data.version;
       data.entries.forEach(function (entry) {
         form.elements['label_' + entry.id].value = entry.label;
@@ -125,10 +127,22 @@
         if(field.dispatchEvent)field.dispatchEvent(new Event('change',{bubbles:true}));
       });
       form.dataset.reviewDirty = '1';
-      // Keep the old form version until Check changes and overlaps renders a
-      // fresh preview, so a stale Save or guide turn is still refused. A racing
-      // final save is also rejected by the database.
       clear(form); say(form, data.summary);
+      // Rechecking is part of Apply, not another task for the owner. This does
+      // not approve the changed note or admit any facts to saved Knowledge.
+      lock(false);
+      var workspace=window.Blam8KnowledgeReview;
+      if(workspace && workspace.check){
+        var updated=await workspace.check(form,data.version);
+        if(updated){
+          var first=data.entries[0];
+          if(first)workspace.focusNote(updated,first.id);
+          var status=updated.querySelector('[data-review-status]');
+          if(status)status.textContent='Correction applied and checked. Review the updated note, then Save when you’ve finished.';
+          if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged('Correction applied and checked. Review the updated note, then Save.');
+          if(first){var note=updated.querySelector('[data-draft="'+first.id+'"]');if(note && note.scrollIntoView)note.scrollIntoView({behavior:'smooth',block:'center'});}
+        }else say(form,'Correction applied, but its recheck could not be confirmed. Use Check changes and overlaps before saving.');
+      }
     } catch (err) { clear(form); say(form, err.message + ' Reload to check the outcome before retrying.'); }
     finally { lock(false); }
   }
@@ -138,17 +152,13 @@
     var askButton = event.target.closest('[data-source-ask]'), applyButton = event.target.closest('[data-source-apply]');
     if (askButton) { var form = askButton.closest('form'); ask(form, form.querySelector('[data-source-question]').value).catch(function (err) { say(form, err.message); }); }
     if (applyButton) apply(applyButton.closest('form'));
-    var next = event.target.closest('[data-onb-continue],[data-leave-knowledge]');
+    var next = event.target.closest('[data-onb-continue]');
     if (!next || !document.querySelector('[data-knowledge-source-mode]')) return;
-    var note = document.getElementById('kb-note'), later = document.querySelector('[data-knowledge-later]');
-    var message = later.querySelector('[data-knowledge-navigation-status]');
-    if (busy || submitting || window.blam8KnowledgeImportBusy || note.elements.content.value.trim() || (forms().length && !next.hasAttribute('data-leave-knowledge'))) {
-      event.preventDefault(); event.stopImmediatePropagation(); later.hidden = false;
-      message.textContent = busy || submitting || window.blam8KnowledgeImportBusy ? 'Wait for the current review operation.' : note.elements.content.value.trim() ? 'Your pasted note is unsaved. Choose Review note, or clear the box before continuing.' : 'Review the drafts or choose to leave them for later.';
-      return;
-    }
-    if (next.hasAttribute('data-leave-knowledge')) {
-      var choice = node('input', ''); choice.type = 'hidden'; choice.name = 'knowledge_draft_decision'; choice.value = 'keep'; note.appendChild(choice);
+    var note = document.getElementById('kb-note');
+    var message = document.querySelector('[data-knowledge-navigation-status]');
+    if (busy || submitting || window.blam8KnowledgeImportBusy || note.elements.content.value.trim() || forms().length || !document.querySelector('[data-knowledge-saved-status]')) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      if(message)message.textContent = busy || submitting || window.blam8KnowledgeImportBusy ? 'Wait for the current review operation.' : note.elements.content.value.trim() ? 'Your pasted note is unsaved. Review it or clear it before continuing.' : 'Review and save your Knowledge before continuing.';
     }
   }, true);
   document.addEventListener('submit', function (event) {

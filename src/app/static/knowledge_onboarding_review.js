@@ -38,6 +38,7 @@
     if(!holder || !manual)return;
     var heading=document.querySelector('[data-onboarding-heading]'),helper=document.querySelector('[data-onboarding-helper]');
     if(!heading || !Array.from(holder.querySelectorAll('[data-knowledge-review]')).some(function(form){return form.dataset.reviewClosed!=='1';}))return;
+    var savedStatus=document.querySelector('[data-knowledge-saved-status]');if(savedStatus)savedStatus.remove();
     heading.textContent='Review Knowledge';if(helper)helper.hidden=true;
     holder.after(manual); // Move the existing controls, preserving unsaved inputs.
     var coverage=document.getElementById('knowledge-coverage-shell');
@@ -97,6 +98,7 @@
   }
   function present(state){
     if(!lifecycle)return;
+    lifecycle.hidden=state.state==='saved' && !!document.querySelector('[data-knowledge-saved-status]');
     if(state.pending_notes!==undefined){knownSite.pending_notes=state.pending_notes;knownSite.review_href=state.review_href;}
     lifecycle.dataset.state=state.state;
     var title={idle:'Start from your website',reading:'Reading your website',pending:'Website drafts ready to review',saved:'Website notes saved',error:'Website read failed',unconfirmed:'Website read outcome unconfirmed'};
@@ -120,7 +122,9 @@
   function syncNotes(form){
     if(!form.dataset.reviewEnhanced){noteSections(form).forEach(function(section){if(section.querySelector('[data-note-status]'))noteTool(section,null);});form.dataset.reviewEnhanced='1';}
     var remaining=form.querySelector('[data-review-remaining]');if(remaining)remaining.textContent=noteSections(form).filter(function(section){return !form.elements['action_'+section.dataset.draft].value;}).length;
+    var label=form.querySelector('[data-review-remaining-label]');if(label && remaining)label.textContent=Number(remaining.textContent)===1?'note remaining':'notes remaining';
     noteSections(form).forEach(function(section){
+      var overlap=section.querySelector('[data-overlap-status]');if(overlap){var checks=Array.from(section.querySelectorAll('[data-duplicate-candidate] input[type="checkbox"]'));overlap.textContent=checks.length && checks.every(function(c){return c.checked;})?'Overlap reviewed':'Overlap to check';}
       var id=section.dataset.draft,status=section.querySelector('[data-note-status]');
       if(!status)return;
       var action=form.elements['action_'+id],later=form.elements['review_later_'+id];
@@ -168,6 +172,7 @@
       button.disabled=true;
       try{
         var data=await guide.ask('Show the current note',form);
+        if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged(data.reply || 'Review choice recorded. Save when you have finished.');
         var focus=data.focus || {};
         var next=focus.kind==='note'||focus.kind==='support'?focus.id:focus.note_id || focus.target;
         if(deferred && next===id){
@@ -195,14 +200,18 @@
     }
     syncNotes(form);
   });
-  window.Blam8KnowledgeReview={replace:replace,signature:signature,focusNote:focusNote,syncNotes:syncNotes,noteTool:noteTool};
+  window.Blam8KnowledgeReview={replace:replace,signature:signature,focusNote:focusNote,syncNotes:syncNotes,noteTool:noteTool,check:checkReview};
   document.addEventListener('submit',async function(event){
     var form=event.target, button=event.submitter;
     if(!form.matches('[data-knowledge-review]') || !button || button.value!=='preview')return;
     if(event.defaultPrevented)return;
     event.preventDefault();
-    if(busy || window.blam8KnowledgeImportBusy || window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working())return;
+    await checkReview(form);
+  },true);
+  async function checkReview(form,expectedVersion){
+    if(busy || window.blam8KnowledgeImportBusy || window.Blam8KnowledgeSourceReview && window.Blam8KnowledgeSourceReview.working())return null;
     var body=new FormData(form);body.set('operation','preview');
+    if(expectedVersion)body.set('correction_recheck_version',expectedVersion);
     var controls=Array.from(form.querySelectorAll('input,textarea,select,button'));
     var disabled=controls.map(function(el){return el.disabled;});
     busy=true;window.blam8KnowledgeImportBusy=true;ready();
@@ -212,9 +221,10 @@
       var data=await response.json();if(!response.ok)throw new Error(typeof data.detail==='string'?data.detail:'The check failed. Your edits remain.');
       replace(data,form.dataset.knowledgeReview);
       var updated=document.querySelector('[data-knowledge-review="'+form.dataset.knowledgeReview+'"]');notice(updated,data.summary);
-    }catch(e){notice(form,e.message || 'Check failed. Your local edits remain; no facts saved.');}
+      return updated;
+    }catch(e){notice(form,e.message || 'Check failed. Your local edits remain; no facts saved.');return null;}
     finally{controls.forEach(function(el,i){el.disabled=disabled[i];});busy=false;window.blam8KnowledgeImportBusy=false;ready();}
-  },true);
+  }
   window.addEventListener('blam8:knowledge-review',async function(){
     try{var r=await fetch('/onboarding/knowledge/reviews',{cache:'no-store'});if(!r.ok)throw new Error();replace(await r.json());}
     catch(e){document.querySelectorAll('[data-knowledge-review]').forEach(function(f){notice(f,'Review refresh could not be confirmed. Your local edits remain; reload only after preserving them.');});}

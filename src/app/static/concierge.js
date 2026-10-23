@@ -212,7 +212,7 @@
     mailbox: "Step 2 of 4 here: connect the inbox your customers email. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
     knowledge: ONB_SITE
       ? "I'll help you review the notes prepared from " + ONB_SITE + ". We'll check each note and any decisions it needs together. Drafts and corrections stay pending until you save your reviewed decisions."
-      : "I'll help you review each note and any decisions it needs. Unknown details can stay unknown. The drafts stay pending until you save your reviewed decisions, or you can choose to leave them for later.",
+      : "I'll help you review each note and any decisions it needs. Unknown details can stay unknown. The drafts stay pending until you save your reviewed decisions. Every pending note needs a decision before you continue.",
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
   };
   var GREETING = ONB_MODE
@@ -448,6 +448,8 @@
   }
 
   function renderAll() {
+    var savedStatus = document.querySelector('[data-knowledge-saved-status]');
+    var receiptText = savedStatus ? savedStatus.textContent.trim() : '';
     clearPin();
     msgs.innerHTML = "";
     msgs.appendChild(caveatEl(log.length === 0));
@@ -455,6 +457,15 @@
     lastAssistant.dataset.bcGreeting = "";
     msgs.appendChild(lastAssistant);
     log.forEach(function (m) {
+      // Keep the transcript for reference, but don't present a completed
+      // review's old "not saved" instructions as the current state.
+      if (m.role === 'assistant' && (receiptText || m.knowledge_card && knowledgeBatchSaved(m.knowledge_card.batch_id))) {
+        var history = document.createElement('details');
+        history.className = 'rounded-lg border border-slate-200 p-3 text-xs text-slate-500';
+        var summary = document.createElement('summary'); summary.textContent = savedStatus ? 'Earlier Knowledge review · completed' : 'Earlier Knowledge review';
+        history.appendChild(summary); history.appendChild(bubbleEl(m.role, m.content));
+        msgs.appendChild(history); return;
+      }
       if (m.role === "assistant") appendTrailStrip(m.trail);
       var el = bubbleEl(m.role, m.content, m.guide_stop || '');
       msgs.appendChild(el);
@@ -471,6 +482,11 @@
         });
       }
     });
+    if (receiptText) {
+      lastAssistant = bubbleEl('assistant', receiptText);
+      lastAssistant.setAttribute('data-knowledge-current-status', '');
+      msgs.appendChild(lastAssistant);
+    }
     refreshTitle();
     if (window.Blam8GuidedSetup) window.Blam8GuidedSetup.messagesChanged();
     // Opening the panel shows the latest assistant message from its first line,
@@ -606,10 +622,6 @@
     var state = window.Blam8OnboardingJourney ? window.Blam8OnboardingJourney.read(PENDING_KB_CARDS.length) : {ready:!!btn, action:btn};
     cta.innerHTML = "";
     if (!state.ready) {
-      if (state.blocker === "pending_reviews") {
-        var later = document.querySelector("[data-knowledge-later]");
-        if (later && later.hidden) later.hidden = false; // reveal the existing explicit choice; never select it
-      }
       var reason = notice(state.reason || "No Continue action is available on this page.", state.blocker === "busy");
       if(state.journey && state.journey.current==='voice'){var disabled=document.createElement('button');disabled.type='button';disabled.disabled=true;disabled.className='w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white opacity-50 cursor-not-allowed';disabled.textContent='Continue';disabled.setAttribute('aria-describedby','voice-completion-status');cta.appendChild(disabled);}
       cta.appendChild(reason);
@@ -649,7 +661,7 @@
         }, 4000);
       });
       cta.appendChild(go);
-      var p = notice("Review the visible form before saving your choices.");
+      var p = notice(document.querySelector('[data-knowledge-saved-status]') ? 'Your Knowledge is saved. Continue when you’re ready.' : 'Review the visible form before saving your choices.');
       p.className += " mt-1.5";
       cta.appendChild(p);
     } else {
@@ -1383,6 +1395,12 @@
   // re-run 2026-09-13: identical lines under two replies read as a repeat).
   var heldExplained = false;
   var pendingKnowledgeChoice = null;
+  function knowledgeBatchSaved(id) {
+    var marker = document.querySelector('[data-knowledge-saved-reviews]');
+    if (!marker) return false;
+    try { return JSON.parse(marker.getAttribute('data-knowledge-saved-reviews')).includes(id); }
+    catch (_) { return false; }
+  }
   function knowledgeCardCurrent(card) {
     var guide = window.Blam8KnowledgeGuide;
     var latest = log.slice().reverse().find(function(entry){return entry.knowledge_card;});
@@ -2841,6 +2859,14 @@
 
   // Start from actual stored drafts when they arrive. Keep browser integration
   // outside the onboarding-turn function and its standalone replay boundary.
+  window.blam8KnowledgeReviewChanged = function (message) {
+    // A form receipt updates chat without a model call or a second mutation.
+    msgs.querySelectorAll('[data-knowledge-current-status]').forEach(function(el){el.remove();});
+    var receipt=bubbleEl('assistant', message);
+    receipt.setAttribute('data-knowledge-current-status','');
+    msgs.appendChild(receipt);pinToTop(receipt);
+    showContinueHint();
+  };
   window.blam8KnowledgeGuideStart = async function () {
     if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return false;
     sending = true; sendBtn.disabled = true; showTyping();

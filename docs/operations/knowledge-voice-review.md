@@ -77,3 +77,30 @@ Knowledge guide and source-correction output schemas are included in the provide
 subset guard, including their dynamic variants. The guide enforces the thirty
 answer limit in `apply_many`, before processing choices; it must not send the
 unsupported `maxItems` keyword to the model provider.
+
+
+Knowledge usability follow-up: Apply automatically invokes the existing authoritative
+preview/check endpoint, preserving the stale-token guard until that succeeds. It
+never approves the corrected note or bypasses final admission. A failed recheck
+leaves the explicit Check changes and overlaps recovery action. Other note choices
+and exact source exclusions remain intact across the refreshed form and reload.
+Correction previews show before/after first, with detailed citations and diagnostics
+in expandable disclosures; factual removals remain visible beside the proposal.
+Optional source details stay collapsed until the owner asks to inspect them.
+Their original text and explicit grouped unknown decisions remain in the audit.
+
+The saved page uses original note headings rather than retrieval identifiers.
+Identifiers and stored section counts remain under Source details. Topic coverage
+is an optional exploration, not a competing completion counter. A server-rendered
+saved status appears only when saved notes exist and no review is pending. The
+assistant collapses cards belonging to server-confirmed saved review IDs into
+history and shows that same current status; it does not rewrite the transcript.
+
+
+Knowledge completion requires saved facts and no pending review batches. Deferral
+keeps a note pending within this step; it cannot bypass completion. Server-side
+finish and Continue enforce the same rule as the page and assistant controls.
+Owner corrections may name just the changed value: unchanged draft words retain
+their provenance, while each introduced token must be present in the owner request.
+Explicit exact duplicate removals preserve another occurrence. Apply remains a
+previewed draft operation, automatically rechecks, and still requires review and Save.

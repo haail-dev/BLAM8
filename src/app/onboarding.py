@@ -329,6 +329,10 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     the tenant_config row came to exist — including rows created before the column
     did."""
     voice_completion.require_saved(ctx)
+    from app import knowledge_review
+    knowledge = knowledge_review.load(ctx.tenant_id)
+    if any(r['state'] == 'pending' for r in knowledge['reviews']) or not knowledge['sources']:
+        return _kb_redirect(err='Review and save your Knowledge before continuing. Every pending note needs a decision.')
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
     target = _prepare_guided_setup(ctx) if nxt else '/app/'
@@ -735,6 +739,10 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
     from app import knowledge_coverage, knowledge_review
     review_context = knowledge_review.load(ctx.tenant_id)
     sources = [{**s,"chunks":s.get("chunks",1)} for s in review_context["sources"] if s.get("mailbox_id") is None]
+    # Display owner-facing titles; retain stable retrieval identifiers in evidence.
+    saved_labels = {n['admitted_source']: n['label'] for r in review_context['reviews']
+                    if r['state'] == 'saved' for n in r['payload']['entries'] if n.get('admitted_source')}
+    sources = [{**s, 'display_label': saved_labels.get(s['source'], s['source'])} for s in sources]
     texts = [{"source":s["source"],"text":s["content"]} for s in sources]
     cov = knowledge_coverage.coverage(texts)
     pending_reviews = [knowledge_review.review_view(review_context, r) for r in review_context["reviews"] if r["state"] == "pending"]
@@ -767,6 +775,7 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
         "knowledge", sources=sources, configured=kb.is_configured(), coverage=cov,
         review_coverage=knowledge_review.topic_view(review_context), pending_reviews=pending_reviews,
         source_texts=text_by_source,
+        saved_review_ids=[r['id'] for r in review_context['reviews'] if r['state']=='saved'],
         coverage_ask=coverage_ask, site_url=website, auto_site=auto_site,
         site_state=knowledge_review.website_state(review_context),
         site_done=site_read, site_note_count=len(site_sources), held_notes=held_notes,
@@ -779,7 +788,7 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
 async def knowledge_text(request: Request, label: str = Form(""), content: str = Form(""),
                          then: str = Form(""), ctx: TenantCtx = Depends(require_tenant)):
     """Stage pasted text only through Review note. Continue preserves unsaved
-    text and requires an explicit decision to leave pending drafts for later."""
+    text and requires saved Knowledge with no pending review batches."""
     content = (content or "").strip()
     # Knowledge is the wizard's last step: Continue finishes setup (the
     # live-data step is off-flow since 2026-08-02).
@@ -797,9 +806,8 @@ async def knowledge_text(request: Request, label: str = Form(""), content: str =
             return stay('Your pasted note is unsaved. Choose Review note, or clear the box before continuing. Your text is kept below.')
         from app import knowledge_review
         context = knowledge_review.load(ctx.tenant_id)
-        form = await request.form()
-        if any(r['state'] == 'pending' for r in context['reviews']) and form.get('knowledge_draft_decision') != 'keep':
-            return _kb_redirect(err='Knowledge drafts remain pending. Review them or explicitly leave them for later. Nothing was saved.')
+        if any(r['state'] == 'pending' for r in context['reviews']) or not context['sources']:
+            return _kb_redirect(err='Review and save your Knowledge before continuing. Every pending note needs a decision.')
     if not content:
         return (_finish(ctx) if finishing else _kb_redirect(err="Type a note first, then Add note."))
 
@@ -967,6 +975,9 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             if admitted:
                 setup_held.mark_used(ctx.tenant_id, "knowledge", client=ctx.client)
         else:
+            expected_recheck = form.get('correction_recheck_version')
+            if expected_recheck and expected_recheck != context['version']:
+                raise HTTPException(409, 'The review changed after your correction. Check the current notes before continuing; nothing was saved to Knowledge.')
             if form.get('version')==context['version']:
                 context,row,form = knowledge_review.checkpoint(ctx.tenant_id,context,row,form)
             # A stale preview is an explicit read-only comparison, never a write retried against a newer revision.
@@ -977,6 +988,8 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=view,
                 review_coverage=knowledge_review.topic_view(context), preview_complete=True))
     except HTTPException as exc:
+        if request.headers.get('accept') == 'application/json':
+            return JSONResponse({'detail':exc.detail},status_code=exc.status_code)
         return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row,form),
             review_coverage=knowledge_review.topic_view(context),error=exc.detail),status_code=exc.status_code)
     except Exception:
