@@ -21,7 +21,7 @@ controls.push(...Object.values(form.elements)); controls.forEach(e=>Object.assig
 const note=element(); note.elements={content:{value:''}};
 const document = {addEventListener:(name,fn)=>events[name]=fn, createElement:element,
   querySelectorAll:s=>s==='[data-knowledge-review]'?[form]:controls,
-  querySelector:s=>s==='[data-knowledge-later]'?later:element(), getElementById:()=>note};
+  querySelector:s=>s==='[data-knowledge-navigation-status]'?navigation:s==='[data-knowledge-saved-status]'?null:element(), getElementById:()=>note};
 const window={addEventListener(){},dispatchEvent(){}};
 const fetch=(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}));
 vm.runInNewContext(fs.readFileSync('src/app/static/knowledge_source_review.js','utf8'),{document,window,fetch,console,Event:class{constructor(type){this.type=type;}}});
@@ -70,8 +70,6 @@ await assert.rejects(window.Blam8KnowledgeSourceReview.ask('During website read'
 const navigateDuringRead=event(target('[data-onb-continue]'));events.click(navigateDuringRead);
 assert(navigateDuringRead.prevented && navigateDuringRead.stopped);
 assert.match(navigation.textContent,/Wait/);
-const leaveDuringRead=event(target('[data-leave-knowledge]'));events.click(leaveDuringRead);
-assert(leaveDuringRead.prevented && leaveDuringRead.stopped);
 const submitDuringRead=event(form);events.submit(submitDuringRead);assert(submitDuringRead.prevented);
 const manualDuringRead=event({matches:s=>s.includes('#kb-note')});events.submit(manualDuringRead);assert(manualDuringRead.prevented);
 

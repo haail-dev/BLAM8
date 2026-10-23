@@ -329,6 +329,10 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     the tenant_config row came to exist — including rows created before the column
     did."""
     voice_completion.require_saved(ctx)
+    from app import knowledge_review
+    knowledge = knowledge_review.load(ctx.tenant_id)
+    if any(r['state'] == 'pending' for r in knowledge['reviews']) or not knowledge['sources']:
+        return _kb_redirect(err='Review and save your Knowledge before continuing. Every pending note needs a decision.')
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
     target = _prepare_guided_setup(ctx) if nxt else '/app/'
@@ -784,7 +788,7 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
 async def knowledge_text(request: Request, label: str = Form(""), content: str = Form(""),
                          then: str = Form(""), ctx: TenantCtx = Depends(require_tenant)):
     """Stage pasted text only through Review note. Continue preserves unsaved
-    text and requires an explicit decision to leave pending drafts for later."""
+    text and requires saved Knowledge with no pending review batches."""
     content = (content or "").strip()
     # Knowledge is the wizard's last step: Continue finishes setup (the
     # live-data step is off-flow since 2026-08-02).
@@ -802,9 +806,8 @@ async def knowledge_text(request: Request, label: str = Form(""), content: str =
             return stay('Your pasted note is unsaved. Choose Review note, or clear the box before continuing. Your text is kept below.')
         from app import knowledge_review
         context = knowledge_review.load(ctx.tenant_id)
-        form = await request.form()
-        if any(r['state'] == 'pending' for r in context['reviews']) and form.get('knowledge_draft_decision') != 'keep':
-            return _kb_redirect(err='Knowledge drafts remain pending. Review them or explicitly leave them for later. Nothing was saved.')
+        if any(r['state'] == 'pending' for r in context['reviews']) or not context['sources']:
+            return _kb_redirect(err='Review and save your Knowledge before continuing. Every pending note needs a decision.')
     if not content:
         return (_finish(ctx) if finishing else _kb_redirect(err="Type a note first, then Add note."))
 

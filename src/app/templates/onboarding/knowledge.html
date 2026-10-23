@@ -73,8 +73,9 @@
       <span class="font-medium text-navy truncate" data-kb-source="{{ s.source }}">{{ s.display_label or s.source }}</span>
       <span class="flex-none text-xs text-brand"><span class="group-open:hidden">View note</span><span class="hidden group-open:inline">Close</span></span>
     </summary>
-    <p class="mt-1.5 whitespace-pre-wrap text-xs text-slate-600">{{ (source_texts or {}).get(s.source) or '(nothing to show)' }}</p>
-    <details class="mt-2 text-xs text-slate-500"><summary class="cursor-pointer">Source details</summary><p class="break-words">{{ s.source }}</p><p>{{ s.chunks }} stored section{{ '' if s.chunks == 1 else 's' }}</p></details>
+    {% set note_parts = ((source_texts or {}).get(s.source) or '(nothing to show)').partition('\n\nSource evidence:\n') %}
+    <p class="mt-1.5 whitespace-pre-wrap text-xs text-slate-600">{{ note_parts[0] }}</p>
+    <details class="mt-2 text-xs text-slate-500"><summary class="cursor-pointer">Source details</summary><p class="break-words">{{ s.source }}</p><p class="whitespace-pre-wrap">{{ note_parts[2] }}</p><p>{{ s.chunks }} stored section{{ '' if s.chunks == 1 else 's' }}</p></details>
   </details>
   {% endfor %}
 </div>
@@ -129,8 +130,8 @@
      typed-but-not-Added note. It says "Next: Diary settings" — the first of
      the five tuning steps inside the app — not "Finish setup" (Kris 2026-09-13:
      "we've shown/done four steps… the user can just ignore the next 5"). #}
-  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue
+  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue{% if not sources or pending_reviews %} disabled{% endif %}
           class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait">{{ next_label or 'Finish setup' }}</button>
 </div>
-<div data-knowledge-later hidden class="mt-3 text-sm"><p>Drafts are still pending. You can return to review them later.</p><button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-leave-knowledge class="mt-2 rounded border border-slate-300 px-3 py-2">Leave drafts for later and continue</button><p data-knowledge-navigation-status role="status"></p></div>
+<p data-knowledge-navigation-status role="status" class="mt-3 text-sm">{% if not sources or pending_reviews %}Review and save your Knowledge before continuing.{% endif %}</p>
 {% endblock %}

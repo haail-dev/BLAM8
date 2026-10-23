@@ -110,7 +110,8 @@ def test_onboarding_progress_and_knowledge_layout(tmp_path, width, long_labels):
       const r=rect(document.querySelector(selector));check(r.left>=0 && r.right<=innerWidth+1,selector+' outside viewport');
     }
     panel.classList.add('hidden');
-    document.querySelector('[data-knowledge-later]').hidden=false;
+    check(!document.querySelector('[data-knowledge-later]'),'Knowledge has no skip control');
+    check(document.querySelector('[data-onb-continue]').disabled,'pending Knowledge cannot continue');
     document.activeElement.blur();
     document.getElementById('layout-result').textContent=JSON.stringify({failures,width:innerWidth});
     document.getElementById('layout-result').dataset.status=failures.length?'FAIL':'PASS';

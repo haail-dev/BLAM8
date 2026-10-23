@@ -111,7 +111,7 @@ SYSTEM += ("\nFor every note, identify relevant topic keys and cite page URLs wi
            "Preserve scope, uncertainty and source caveats, including fictional/test facts. Do not generalise a "
            "missing integration into a missing service. Return unanswered follow-up questions under questions, "
            "tagged by topic; absent facts stay unknown. Never infer 'no variation' or 'not applicable'. "
-           "Do not remove apparent duplicate proposals: the owner reviews overlap explicitly. "
+           "Write each distinct fact once within a note. Prefer complete original source sentences rather than paraphrasing and then repeating the source. Preserve every exception and qualification. Do not remove apparent duplicate proposals across notes: the owner reviews overlap explicitly. "
            "Ask only about details not already stated in the supplied pages. A source saying a rule varies "
            "by agreement is an answer about scope, not a reason to ask for one universal value.")
 
@@ -132,7 +132,7 @@ def _retain_cited_statements(entry, pages, units):
     intersecting statements, on that same page. Uncited facts remain in the
     separate source-coverage review; this is not an entailment/coverage verdict.
     """
-    from app.knowledge_fidelity import normal
+    from app.knowledge_fidelity import normal, _represented
     for citation in list(entry['provenance']):
         page = next(p for p in pages if p['url'] == citation['source'])
         match = re.search(r'\s+'.join(re.escape(t) for t in citation['excerpt'].split()), page['text'])
@@ -142,7 +142,7 @@ def _retain_cited_statements(entry, pages, units):
             if not any(s['url'] == page['url'] and s['start'] < match.end() and s['end'] > match.start()
                        for s in unit['spans']):
                 continue
-            if unit['text'] in normal(entry['content']):
+            if _represented(unit['text'], entry['content']):
                 continue
             entry['content'] += '\n\n' + unit['text']
             proof = {'source': page['url'], 'excerpt': unit['text'], 'claim': unit['text']}

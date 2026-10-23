@@ -100,7 +100,7 @@ def test_continue_with_typed_note_requires_review_before_finishing(client, store
     assert review_store.rows==[]
 
 
-def test_finish_with_an_empty_box_just_completes(client, store, monkeypatch):
+def test_empty_knowledge_cannot_finish(client, store, monkeypatch):
     done = []
     monkeypatch.setattr(db, "set_onboarded", lambda tid, client=None: done.append(tid))
     # finishing also stamps the go-live hold (2026-09-01) — stub it so these
@@ -110,8 +110,8 @@ def test_finish_with_an_empty_box_just_completes(client, store, monkeypatch):
                     data={"label": "", "content": "   ", "then": "continue"},
                     follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "/app/"
-    assert done == ["t1"]
+    assert r.headers["location"].startswith("/onboarding/knowledge?err=")
+    assert done == []
     assert store == []
 
 

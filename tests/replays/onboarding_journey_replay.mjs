@@ -6,12 +6,12 @@ const helper=fs.readFileSync('src/app/static/onboarding_journey.js','utf8');
 const widget=fs.readFileSync('src/app/static/concierge.js','utf8');
 const a=widget.indexOf('function showContinueHint()'),b=widget.indexOf('// ── open / close',a);
 assert(a>0 && b>a);
-let action, step='interview', pending=0, note='', clicks=0, busy=false;
+let action, step='interview', pending=0, note='', clicks=0, busy=false, saved=true;
 const cta={children:[],innerHTML:'',appendChild(el){this.children.push(el);},classList:{remove(){}}};
 const doc={
   getElementById:()=>({textContent:JSON.stringify({current:step,next:{label:'Voice'}})}),
   querySelectorAll(selector){return selector==='[data-onb-continue]'?(action?[action]:[]):Array(pending).fill({});},
-  querySelector(selector){return selector.includes('content')?{value:note}:null;},
+  querySelector(selector){return selector.includes('content')?{value:note}:selector==='[data-knowledge-saved-status]'&&saved?{textContent:'Knowledge saved'}:null;},
   createElement(){return {className:'',textContent:'',children:[],listeners:{},setAttribute(name,value){this[name]=value;},appendChild(el){this.children.push(el);},addEventListener(name,fn){this.listeners[name]=fn;}};}
 };
 const window={Blam8KnowledgeSourceReview:{working:()=>busy}};
@@ -52,3 +52,7 @@ note='';step='interview';action=makeAction(false);cta.children=[];context.showCo
 assert.equal(cta.children[0].className,'bc-notice');
 assert.match(cta.children[0].children[0].textContent,/Complete the required form fields/);
 console.log('Journey readiness and explicit-click replay passed');
+
+step="knowledge";saved=false;assert.equal(state.read(0).ready,false);assert.equal(state.read(0).blocker,"knowledge_required");
+
+action.disabled=true;assert.equal(state.read(0).blocker,"knowledge_required");
