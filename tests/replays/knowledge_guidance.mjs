@@ -143,7 +143,7 @@ finish(index,result({},'other-hash'));await loading;
 assert(guide.isCurrent('other-hash','other-batch','v1'));
 assert(!guide.isCurrent('other-hash','batch','v1'));
 
-// Grouped coverage opens the native list and preserves checkbox submission identity.
+// Grouped coverage leaves the optional evidence collapsed and preserves checkbox submission identity.
 const sourceCoverage={open:false}, originalQuery=form.querySelector;
 form.querySelector=selector=>selector==='.kr-source-coverage'?sourceCoverage:originalQuery(selector);
 fields.guided_layout_review={name:'guided_layout_review',type:'checkbox',value:'acknowledged',checked:false,dispatchEvent(){}};
@@ -152,4 +152,7 @@ finish(index,{...result({guided_layout_review:'acknowledged'},'layout-reviewed')
 await loading;
 assert(fields.guided_layout_review.checked);
 assert.equal(fields.guided_layout_review.value,'acknowledged');
-assert(sourceCoverage.open);
+assert(!sourceCoverage.open);
+
+index=requests.length;loading=guide.ask('Review these source details individually',form);
+finish(index,{...result({},'passage-view'),focus:{kind:'passage',id:'one'}});await loading;assert(sourceCoverage.open);

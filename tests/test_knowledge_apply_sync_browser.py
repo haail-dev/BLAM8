@@ -27,6 +27,7 @@ from app import (
     knowledge_source_review as review,
     knowledge_source_routes as routes,
     llm,
+    onboarding,
     security,
 )
 from app.auth import TenantCtx, require_tenant
@@ -96,6 +97,7 @@ def apply_app(sync_case, monkeypatch):
         raise AssertionError("This review path must not call a model")
 
     monkeypatch.setattr(security, "_BUCKETS", {})
+    monkeypatch.setitem(onboarding.templates.env.globals, "csrf_token", security.csrf_token)
     monkeypatch.setattr(sync.settings, "device_sync_enabled", True)
     monkeypatch.setattr(sync.settings, "knowledge_source_review_enabled", True)
     monkeypatch.setattr(sync, "require_tenant", auth)
@@ -117,27 +119,15 @@ def apply_app(sync_case, monkeypatch):
 
     @pages.get("/onboarding/knowledge")
     def page():
-        units = review_row["payload"]["source_units"]
-        # The shipped review form's decision fields with the same sync and
-        # review scripts; templates, auth, models and customer data are excluded.
-        html = (
-            f'<!doctype html><html><body><main><form method="post" action="{action}" data-knowledge-review="{review_row["id"]}">'
-            '<input name="csrf_token" type="hidden" value="test-csrf">'
-            f'<input name="version" type="hidden" value="{review_ctx["version"]}">'
-            + "".join(
-                f'<section data-draft="{n["id"]}"><input name="label_{n["id"]}" value="{escape(n["label"], quote=True)}">'
-                f'<textarea name="content_{n["id"]}">{escape(n["content"])}</textarea>'
-                f'<input name="action_{n["id"]}" value=""></section>'
-                for n in review_row["payload"]["entries"])
-            + f'<label><input type="checkbox" name="{match_name}" value="keep_both"> keep both</label>'
-            '<input type="hidden" name="source_default" value="">'
-            + "".join(f'<input type="hidden" name="source_{u["id"]}" value=""><input type="hidden" name="source_reason_{u["id"]}" value="">' for u in units)
-            + '<details data-source-corrections><input data-source-question><button type="button" data-source-ask>Review drafts against source</button>'
-            '<p data-source-status></p><div data-source-preview></div></details></form></main><div id="messages"></div>'
-            + "".join(f'<script src="/static/{name}"></script>' for name in SCRIPTS)
-            + "<script>Blam8DeviceSync.register({busy:()=>!!window.blam8KnowledgeImportBusy,set:messages=>{document.getElementById('messages').textContent=JSON.stringify(messages);}});</script>"
-            "</body></html>"
-        )
+        # Render the real form on both devices and on the automatic recheck.
+        # Different synthetic field inventories would create spurious sync edits.
+        view = knowledge_review.review_view(review_ctx, review_row)
+        markup = onboarding.templates.env.get_template('_knowledge_review.html').render(
+            request=SimpleNamespace(cookies={}), csrf_token=lambda _: 'test-csrf', review=view)
+        html = ('<!doctype html><html><body><main>' + markup + '</main><div id="messages"></div>'
+                + ''.join('<script src="/static/'+name+'"></script>' for name in SCRIPTS)
+                + "<script>Blam8DeviceSync.register({busy:()=>!!window.blam8KnowledgeImportBusy,set:messages=>{document.getElementById('messages').textContent=JSON.stringify(messages);}});</script>"
+                + '</body></html>')
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     @pages.get("/static/{filename}")
@@ -145,6 +135,7 @@ def apply_app(sync_case, monkeypatch):
         assert filename in SCRIPTS
         return Response((ROOT / "src/app/static" / filename).read_text(encoding="utf-8"), media_type="application/javascript")
 
+    pages.add_api_route('/onboarding/knowledge/review/{review_id}', onboarding.knowledge_review_save, methods=['POST'])
     app.include_router(pages)
     return app, review_ctx, review_row, match_name, counters
 
@@ -250,7 +241,7 @@ DRIVER = r"""
     // reload it while the originating device's assertions are running.
     phone.contentWindow.blam8Document='stale';
     button.click();
-    await until(()=>pc.contentWindow.blam8Document!=='original' || (polled && !win.Blam8KnowledgeSourceReview.working()));
+    await until(()=>pc.contentWindow.blam8Document!=='original' || (polled && !win.Blam8KnowledgeSourceReview.working() && !win.blam8KnowledgeImportBusy));
     if(pc.contentWindow.blam8Document!=='original')throw Error('Originating device reloaded on its own Apply');
     win.fetch=nativeFetch;
     await win.Blam8DeviceSync.refresh();await win.Blam8DeviceSync.refresh();
@@ -260,7 +251,7 @@ DRIVER = r"""
     const after=decisions(pc);
     if(!kept(after))throw Error('Apply discarded unsaved decisions: '+JSON.stringify(after));
     if(after.note.includes('previous reference') || !after.note.includes('We review each request.'))throw Error('Removal not applied: '+after.note);
-    if(after.version!=='v1')throw Error('Hidden review version must wait for Check changes and overlaps: '+after.version);
+    if(after.version!=='v2')throw Error('Automatic recheck did not return the current version: '+after.version);
     if(form.dataset.syncVersion!=='v2')throw Error('Advanced stored version not recorded for the checkpoint: '+form.dataset.syncVersion);
     await win.Blam8DeviceSync.flush();
     const state=win.Blam8DeviceSync.state();
@@ -275,15 +266,16 @@ DRIVER = r"""
     const restored=decisions(phone);
     if(restored.version!=='v2')throw Error('Second device did not reload to the stored version: '+restored.version);
     if(!kept(restored) || restored.note.includes('previous reference'))throw Error('Second device lost decisions on reload: '+JSON.stringify(restored));
+    // The phone may have loaded while Apply's automatic recheck was still
+    // finishing. Read its final revision before the next owner action.
+    await phone.contentWindow.Blam8DeviceSync.refresh();
     const resumed=await phone.contentWindow.Blam8KnowledgeGuide.ask('Show the current note');
     if(resumed.focus.kind!=='note' || resumed.focus.id!=='5')throw Error('Guide restarted at '+JSON.stringify(resumed.focus));
-    // A stale guide turn on the originating device is still refused until Check
-    // changes and overlaps; its decisions stay on the page and survive a reload.
+    // Apply includes the authoritative recheck, so the owner can continue the
+    // corrected note immediately, without an extra Check changes click.
     await win.Blam8DeviceSync.refresh();
-    let refused='';
-    try{await guide.ask('Show the current note');}catch(e){refused=e.message;}
-    if(!/Check changes/.test(refused))throw Error('Stale review guard changed: '+refused);
-    if(JSON.stringify(decisions(pc))!==JSON.stringify(after))throw Error('Refused turn altered the form');
+    const current=await guide.ask('Show the current note');
+    if(current.focus.kind!=='note' || current.focus.id!=='5')throw Error('Recheck did not resume corrected note');
     pc.contentWindow.location.reload();
     await reloaded(pc,'original');
     await ready(pc);
@@ -302,6 +294,7 @@ def test_own_apply_keeps_decisions_and_other_device_reloads(apply_app, tmp_path)
     app, review_ctx, review_row, match_name, counters = apply_app
     completed = threading.Event()
     reports = []
+    failed_requests = []
 
     @app.post("/browser-result")
     async def browser_result(request: Request):
@@ -335,6 +328,8 @@ def test_own_apply_keeps_decisions_and_other_device_reloads(apply_app, tmp_path)
             # Each HTTP request gets an isolated ASGI client; all share only SQL.
             with TestClient(app) as c:
                 result = c.request(self.command, self.path, content=body, headers=dict(self.headers), follow_redirects=False)
+            if result.status_code >= 400:
+                failed_requests.append((self.path, result.status_code, result.text[:1200]))
             self.send_response(result.status_code)
             for key, value in result.headers.multi_items():
                 if key.lower() not in ("connection", "transfer-encoding"):
@@ -369,7 +364,7 @@ def test_own_apply_keeps_decisions_and_other_device_reloads(apply_app, tmp_path)
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
-    assert reports[0]["status"] == "PASS", reports[0]["text"]
+    assert reports[0]["status"] == "PASS", reports[0]["text"] + json.dumps(failed_requests)
     # One preview and one draft revision; the forced poll replayed nothing.
     assert counters == {"previews": 1, "revisions": 1}
     assert review_row["payload"]["draft_revision"] == 2 and review_ctx["version"] == "v2"

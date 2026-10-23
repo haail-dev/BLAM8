@@ -1,8 +1,8 @@
 {# The same controls are used by the guide and the native review form. #}
 <input type="hidden" name="source_default" value="{{ review.form.get('source_default','') }}">
 <details class="kr-source-coverage kr-tool-panel">
-<summary>Source audit · {{ review.source_view.unresolved }} remaining decisions</summary>
-<p>Headings and navigation labels without factual content are grouped here for inspection. Already represented wording remains linked to its source. Uncertain facts still need a decision; leaving them unknown preserves the audit without adding them to agent Knowledge.</p>
+<summary>Website evidence and optional details</summary>
+<p>Original website passages are kept here for reference, including headings and wording already covered by your notes. You can leave additional details unknown without adding them to your agent’s knowledge.</p>
 {% for u in review.source_view.units if u.kind!='qualification' %}
 <details class="kr-source-unit"><summary>{{ u.status|replace('_',' ') }} · {{ u.text[:100] }}</summary>
 <p class="kr-content">{{ u.text }}</p><p class="break-words">{{ u.sources|join(', ') }}</p>

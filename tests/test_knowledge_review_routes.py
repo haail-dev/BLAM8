@@ -8,6 +8,47 @@ from app.security import require_csrf
 from tests.knowledge_review_fixture import review_store
 
 
+def test_saved_page_uses_note_titles_and_authoritative_status(client, review_store, monkeypatch):
+    from app import db, onboarding
+    row = review_store.stage('tenant', [{'label':'Service hours', 'content':'We close at four.'}])
+    row['state'] = 'saved'
+    source = 'Service hours · 1234abcd'
+    row['payload']['entries'][0]['admitted_source'] = source
+    review_store.sources = [{'source':source,'content':'We close at four.','mailbox_id':None,'chunks':1}]
+    monkeypatch.setattr(db, 'get_tenant_config', lambda *a, **k: {'agent_name':'Team','tone':'Clear','sign_off':'Thanks'})
+    monkeypatch.setattr(onboarding, '_next_step_target', lambda ctx: {'href':'/app/diary','label':'Guided setup'})
+    response = client.get('/onboarding/knowledge')
+    assert response.status_code == 200
+    from tests.html_markup import markup
+    page = markup(response.text)
+    note = page.one(**{'data-kb-note': None})
+    summary = next(child for child in note.children if child.tag == 'summary')
+    assert summary.children[0].text.strip() == 'Service hours'
+    assert [child.text for child in summary.children[1].children] == ['View note', 'Close']
+    assert source in note.one('details').text
+    assert '1 note saved. No drafts waiting for review.' in page.one(**{'data-knowledge-saved-status': None}).text
+    assert page.one(**{'data-knowledge-saved-status': None}).text.startswith('Knowledge saved 1 note')
+    assert row['id'] in page.one(**{'data-knowledge-saved-reviews': None}).attrs['data-knowledge-saved-reviews']
+    assert 'topics have saved notes' not in response.text
+    # Starting another batch must not falsely say all reviews are complete.
+    review_store.stage('tenant', [{'label':'New fact', 'content':'A new pending note.'}])
+    pending = markup(client.get('/onboarding/knowledge').text)
+    assert not pending.find_all(**{'data-knowledge-saved-status': None})
+    assert pending.find_all(**{'data-knowledge-review': None})
+
+
+def test_automatic_correction_recheck_does_not_rebase_a_concurrent_edit(client, review_store):
+    from copy import deepcopy
+    row = review_store.stage('tenant', [{'label':'Hours','content':'We close at four.'}])
+    before = deepcopy(review_store.rows)
+    response = client.post('/onboarding/knowledge/review/'+row['id'],
+        headers={'Accept':'application/json'}, data={'operation':'preview','version':'old',
+        'correction_recheck_version':'another-device-changed-this'})
+    assert response.status_code == 409
+    assert 'review changed after your correction' in response.json()['detail']
+    assert review_store.rows == before and not review_store.sources
+
+
 @pytest.fixture
 def client(monkeypatch,review_store):
     app.dependency_overrides[require_tenant]=lambda:TenantCtx(tenant_id='tenant',client=None)
@@ -106,7 +147,7 @@ def test_source_inventory_blocks_admission_and_preserves_corrections(client,revi
     unit=row['payload']['source_units'][0]
     assert unit['text']=='Approval must precede a booking.' and review_store.sources==[]
     assert f'select name="source_{unit["id"]}"' in r.text
-    assert 'Source audit · 1 remaining decisions' in r.text
+    assert 'Website evidence and optional details' in r.text
     assert 'Source-to-note review' not in r.text
 
 

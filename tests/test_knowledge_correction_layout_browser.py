@@ -33,6 +33,7 @@ def test_correction_cards_apply_and_source_choices_in_native_browser(tmp_path,th
     fixture={'review':{'revision':1},'summary':'Owner correction preview; nothing saved.', 'overlaps':[], 'questions':[],
         'changes':[{'id':'one','label':'Hours and Contact','before':note['content'],
                     'after':note['content'].replace('5 pm','4 pm'),'passages':[],
+                    'source_choices':[{'action':'excluded','text':'A source fact explicitly excluded by the owner.','sources':['https://example.test/'],'destinations':[],'reason':'Owner requests its removal.'}],
                     'owner_replacements':[{'before':'5 pm','after':'4 pm'}]}]}
     script = r'''
     const failures=[];const check=(ok,label)=>{if(!ok)failures.push(label)};
@@ -58,6 +59,8 @@ def test_correction_cards_apply_and_source_choices_in_native_browser(tmp_path,th
       // Changing the form invalidates the preview, without an Apply request.
       button.click();check(document.querySelector('[data-source-status]').textContent.includes('changed'),'stale preview rejected');
       await window.Blam8KnowledgeSourceReview.ask('Owner confirms closing time is now 4 pm.');
+      const excluded=Array.from(document.querySelectorAll('blockquote')).find(el=>el.textContent.startsWith('Exclude this source fact:'));
+      check(excluded&&excluded.getBoundingClientRect().height>0,'factual exclusion is visible without expanding evidence');
       const active=document.querySelector('[data-source-apply]');
       let finish;window.fetch=()=>new Promise(resolve=>finish=resolve);
       active.click();check(active.disabled&&active.getAttribute('aria-busy')==='true','disabled loading');

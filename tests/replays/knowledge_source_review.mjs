@@ -84,7 +84,10 @@ refreshed.querySelectorAll=s=>s==='[data-draft]'?[{dataset:{draft:'note'}}]:Obje
 targetButton.closest=()=>refreshed;
 events.click(event(target('[data-source-apply]')));await flush();
 assert.equal(requests.length,5);assert(requests[4].url.endsWith('/corrections/apply'));
-finish(4,{entries:[{id:'note',label:'Exact title',content:'Source caveat. Owner original.'}],summary:'Draft correction confirmed.'});await flush();
+let checks=0;window.Blam8KnowledgeReview={check:async(f,version)=>{assert.equal(version,'v2');checks++;return null;}};
+finish(4,{version:'v2',entries:[{id:'note',label:'Exact title',content:'Source caveat. Owner original.'}],summary:'Draft correction confirmed.'});await flush();
+assert.equal(checks,1);assert.match(status.textContent,/recheck could not be confirmed/);assert.equal(form.elements.version.value,'v1');
+delete window.Blam8KnowledgeReview;
 events.click(event(target('[data-source-apply]')));await flush();
 assert.equal(requests.length,5);assert.match(status.textContent,/no current correction preview/i);
 const fourth=window.Blam8KnowledgeSourceReview.ask('Review before a local source choice changes.');finish(5,preview);await fourth;

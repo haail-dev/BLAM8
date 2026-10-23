@@ -1,8 +1,6 @@
 <section id="knowledge-review-coverage" class="mb-4 rounded-xl border border-slate-200 bg-white p-4" aria-live="polite">
-  <h2 class="font-semibold text-navy">Saved and pending knowledge</h2>
-  <p class="mt-1 text-sm text-slate-600" data-saved-coverage>{{ review_coverage.saved_count }} topics have saved notes. {{ review_coverage.pending_count }} topics have pending drafts.</p>
-  <p class="mt-1 text-xs text-slate-500">A note mentioning a topic does not confirm every detail. Pending drafts are not available to the agent. Missing facts remain unknown.</p>
-  <details class="mt-2 text-sm"><summary class="cursor-pointer">Explore saved evidence and unknown details by topic</summary>
+  <details class="text-sm"><summary class="cursor-pointer font-semibold text-navy">Explore what your agent knows</summary>
+  <p class="mt-2 text-xs text-slate-500" data-saved-coverage>Notes are grouped by topic below; a note can cover more than one topic. Missing facts remain unknown. Pending drafts are not available to the agent.</p>
   {% for t in review_coverage.topics %}
   <details class="mt-2 border-t border-slate-100 pt-2" data-topic="{{ t.key }}">
     <summary class="cursor-pointer text-sm font-medium text-navy">{{ t.label }} · {{ t.state | replace('_',' ') }} · {{ t.saved|length }} saved / {{ t.pending|length }} pending</summary>
