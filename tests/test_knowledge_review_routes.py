@@ -105,7 +105,8 @@ def test_source_inventory_blocks_admission_and_preserves_corrections(client,revi
     assert r.status_code==409 and 'corrected fee' in r.text
     unit=row['payload']['source_units'][0]
     assert unit['text']=='Approval must precede a booking.' and review_store.sources==[]
-    assert f'type="hidden" name="source_{unit["id"]}" value=""' in r.text
+    assert f'select name="source_{unit["id"]}"' in r.text
+    assert 'Source coverage · 1 remaining decisions' in r.text
     assert 'Source-to-note review' not in r.text
 
 

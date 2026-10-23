@@ -142,3 +142,14 @@ await assert.rejects(guide.ask('Show the current note',form),/wait/);
 finish(index,result({},'other-hash'));await loading;
 assert(guide.isCurrent('other-hash','other-batch','v1'));
 assert(!guide.isCurrent('other-hash','batch','v1'));
+
+// Grouped coverage opens the native list and preserves checkbox submission identity.
+const sourceCoverage={open:false}, originalQuery=form.querySelector;
+form.querySelector=selector=>selector==='.kr-source-coverage'?sourceCoverage:originalQuery(selector);
+fields.guided_layout_review={name:'guided_layout_review',type:'checkbox',value:'acknowledged',checked:false,dispatchEvent(){}};
+index=requests.length;loading=guide.ask('Leave reviewed layout labels in the audit',form);
+finish(index,{...result({guided_layout_review:'acknowledged'},'layout-reviewed'),focus:{kind:'source_batch',id:'unassigned'}});
+await loading;
+assert(fields.guided_layout_review.checked);
+assert.equal(fields.guided_layout_review.value,'acknowledged');
+assert(sourceCoverage.open);

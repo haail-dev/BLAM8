@@ -181,3 +181,45 @@ immutable identity, tenant scope, conflicting corrections and approval races.
 The mandatory CI database step rejects skips. Synthetic examples remain in
 `tests/fixtures/knowledge_review/`; historical run evidence stays outside the
 platform repository.
+
+## Effective facts and owner replacements (23 October 2026, local verification)
+
+Admission embeds approved note wording and source references only. Full website
+quotations, original drafts, excluded statements and correction history remain
+in the saved review payload; they are never appended as current retrieval facts.
+This also covers manual note edits and explicit source exclusions. Existing
+saved chunks are not changed by deploying this code.
+An exclusion/unknown decision cannot save while its exact source wording still
+survives in a retained note; the owner must edit or retain that wording explicitly.
+
+An authorised settings writer can request a bounded replacement using their
+actual words. The model selects an exact, unique old substring and an exact
+owner-supplied replacement. The server preserves every other character and
+records replacement ranges as owner wording, separate from website evidence.
+Ambiguous/conditional requests, overlapping ranges, invented values and no-op
+replacements fail closed. Source additions/removals cannot be mixed into the
+same replacement proposal. The before/after preview requires a separate Apply;
+Apply changes pending drafts and resets their Keep decision. Final Save alone
+embeds and admits the effective note under the existing atomic admission lock.
+Stale Apply/Save retries are rejected. A deliberate stale-site reread is a new
+pending review and must resolve overlap with the corrected saved source; it
+cannot silently replace the owner-approved note. Explicit Keep both remains an
+owner choice and should be used only when the facts can coexist.
+
+Short structural navigation/heading labels without factual markers are grouped
+in expandable Source coverage, with original text and URLs. Final Save requires
+explicit acknowledgement of the grouped labels. Any factual heading can instead
+be retained with a note or deliberately left unknown. Numbers, negation,
+conditions and source qualifications stay reviewable facts. Typography matching
+preserves case-sensitive identifiers, numbers and units. Semantic equivalence
+is not certified from a model citation or lexical similarity: uncertain
+paraphrases remain review items. Related factual gaps stay with their note;
+unassigned details have a counted batch review and an explicit Leave unknown
+route. Deferred text stays in the audit and outside active Knowledge. Topic
+questions remain separate and unknown until the owner supplies an answer.
+
+The source-review gate, settings permission, tenant boundaries and final Save
+authority are unchanged. These changes do not configure Diary, CRM or invoicing.
+Use the owner-correction, source-database and native correction-layout tests in
+addition to the existing caller/recovery checks. Live model answer quality and
+already-saved data remediation require separate validation and release approval.

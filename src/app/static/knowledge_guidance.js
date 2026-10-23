@@ -44,7 +44,7 @@
       }
       Object.keys(data.patches || {}).forEach(function(name){
         var field=f.elements[name];
-        if(!field && (name.indexOf('guided_unknown_')===0 || name.indexOf('guided_expand_')===0)){field=document.createElement('input');field.type='hidden';field.name=name;f.appendChild(field);}
+        if(!field && (name.indexOf('guided_unknown_')===0 || name.indexOf('guided_expand_')===0 || name==='guided_layout_review')){field=document.createElement('input');field.type='hidden';field.name=name;f.appendChild(field);}
         if(!field)throw new Error('The review controls changed. Check changes and overlaps before trying again.');
         if(field.type==='checkbox')field.checked=data.patches[name]===field.value;
         else field.value=data.patches[name];
@@ -58,6 +58,7 @@
       data.guide_actions=data.actions || [];
       data.guide_save=!!data.save_ready;
       var item=data.focus || {}, noteId=item.kind==='note'||item.kind==='support'?item.id:item.note_id || item.target;
+      if(item.kind==='layout_batch'||item.kind==='source_batch'){var sources=f.querySelector('.kr-source-coverage');if(sources)sources.open=true;}
       var workspace=window.Blam8KnowledgeReview;
       if(workspace && workspace.focusNote && noteId)workspace.focusNote(f,noteId,item.kind==='overlap'?'more':item.kind==='support'||item.kind==='passage'?'source':null);
       else {
