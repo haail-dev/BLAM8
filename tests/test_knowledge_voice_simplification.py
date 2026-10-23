@@ -163,6 +163,16 @@ def test_multi_answer_resolves_all_supported_items_without_partial_invalid_appli
     assert fields==before
 
 
+@pytest.mark.parametrize('count', [0, 31])
+def test_multi_answer_bound_is_enforced_before_pending_choices_are_read(monkeypatch, count):
+    ctx,row=context([entry(content='We provide support.')]);fields=form(ctx,row)
+    before=deepcopy((ctx,fields))
+    monkeypatch.setattr(guide,'pending_decisions',lambda *a:pytest.fail('Invalid batch reached decision processing'))
+    with pytest.raises(HTTPException) as error:
+        guide.apply_many(ctx,row,fields,[{}]*count)
+    assert error.value.status_code==422 and (ctx,fields)==before
+
+
 def test_current_revision_review_survives_unrelated_edit_only():
     ctx,row=context([entry(),entry('two',content='Other useful information.')])
     first,second=row['payload']['entries']

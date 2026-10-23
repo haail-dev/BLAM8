@@ -37,7 +37,7 @@ from tests.test_knowledge_review import context, entry
 ROOT = Path(__file__).resolve().parents[1]
 FINAL = "We handle enquiries.\n\nWe review each request.\n\nInclude a previous reference for a repeated enquiry."
 REQUEST = "Please remove the final repeated paragraph and keep the rest."
-SCRIPTS = ("device_sync.js", "knowledge_source_review.js", "knowledge_guidance.js")
+SCRIPTS = ("device_sync.js", "knowledge_source_review.js", "knowledge_guidance.js", "knowledge_onboarding_review.js")
 
 
 @pytest.fixture
@@ -208,13 +208,13 @@ DRIVER = r"""
   // flight makes refresh() a no-op, so ask again while waiting under load.
   const reloaded=async(frame,marker)=>{for(let n=0;n<300;n++){if(frame.contentWindow.blam8Document!==marker)return;
     if(n%25===24){const sync=frame.contentWindow.Blam8DeviceSync;if(sync)await sync.refresh().catch(function(){});}await pause();}
-    throw Error('Timed out waiting for the '+marker+' document to reload');};
+    throw Error('Timed out waiting for the '+marker+' document to reload: '+JSON.stringify(frame.contentWindow.Blam8DeviceSync.state())+' / '+frame.contentDocument.body.textContent);};
   const field=(frame,name)=>frame.contentDocument.querySelector('[name="'+name+'"]');
   const decisions=frame=>({keeps:[1,2,3,4].map(n=>field(frame,'action_'+n).value).join(),overlap:field(frame,MATCH).checked,
     edited:field(frame,'action_5').value,note:field(frame,'content_5').value,version:field(frame,'version').value});
   const kept=d=>d.keeps==='keep,keep,keep,keep' && d.overlap && d.edited==='';
   try{
-    await ready(pc);await ready(phone);
+    await ready(pc);
     const guide=pc.contentWindow.Blam8KnowledgeGuide;
     let turn=await guide.ask('Show the current note');
     if(turn.focus.id!=='1')throw Error('Review must open at note 1: '+JSON.stringify(turn.focus));
@@ -227,7 +227,10 @@ DRIVER = r"""
     }
     if(turn.focus.kind!=='note' || turn.focus.id!=='5')throw Error('Guide must reach note 5: '+JSON.stringify(turn.focus));
     await pc.contentWindow.Blam8DeviceSync.flush();
-    await phone.contentWindow.Blam8DeviceSync.refresh();
+    // Open the second device from the checkpoint before Apply. Starting it
+    // earlier lets prior guide refreshes race this test's Apply reload marker.
+    phone.src='/onboarding/knowledge';
+    await ready(phone);
     if(!kept(decisions(phone)))throw Error('Decisions did not reach the phone before Apply: '+JSON.stringify(decisions(phone)));
     const win=pc.contentWindow, nativeFetch=win.fetch.bind(win), form=pc.contentDocument.querySelector('[data-knowledge-review]');
     const shared=win.Blam8DeviceSync.state();
@@ -243,6 +246,9 @@ DRIVER = r"""
       return response;
     };
     win.blam8Document='original';
+    // Mark the old phone document before Apply: its normal poll may already
+    // reload it while the originating device's assertions are running.
+    phone.contentWindow.blam8Document='stale';
     button.click();
     await until(()=>pc.contentWindow.blam8Document!=='original' || (polled && !win.Blam8KnowledgeSourceReview.working()));
     if(pc.contentWindow.blam8Document!=='original')throw Error('Originating device reloaded on its own Apply');
@@ -263,7 +269,6 @@ DRIVER = r"""
     if(!snapshot || snapshot.version!=='v2' || snapshot.values.action_1[0]!=='keep' || (snapshot.values[MATCH]||[])[0]!=='keep_both' || snapshot.values.content_5[0].includes('previous reference'))throw Error('Checkpoint lacks the applied draft or decisions: '+JSON.stringify(snapshot));
     if(state.payload.guide.data.focus.id!=='5')throw Error('Shared guide focus moved: '+JSON.stringify(state.payload.guide.data.focus));
     // The second device reloads to the stored drafts and recovers the decisions.
-    phone.contentWindow.blam8Document='stale';
     await phone.contentWindow.Blam8DeviceSync.refresh();
     await reloaded(phone,'stale');
     await ready(phone);
@@ -310,7 +315,7 @@ def test_own_apply_keeps_decisions_and_other_device_reloads(apply_app, tmp_path)
             json.dumps(v) for v in (review_row["id"], match_name, REQUEST))
         response = HTMLResponse(
             '<!doctype html><iframe id="pc" src="/onboarding/knowledge"></iframe>'
-            '<iframe id="phone" src="/onboarding/knowledge"></iframe><pre id="result">Running</pre><script>'
+            '<iframe id="phone"></iframe><pre id="result">Running</pre><script>'
             + constants + DRIVER + "</script>")
         response.set_cookie("bl_csrf", "test-csrf")
         return response

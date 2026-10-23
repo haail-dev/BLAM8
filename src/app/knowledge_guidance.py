@@ -59,7 +59,9 @@ SCHEMA = {'type': 'object', 'properties': {
     'reason': {'type': 'string'}, 'answer': {'type': 'string'},
     'target': {'type': 'string'}, 'explanation': {'type': 'string'},
 }, 'required': ['intent', 'reason', 'answer', 'target', 'explanation'], 'additionalProperties': False}
-SCHEMA['properties']['decisions'] = {'type':'array','maxItems':30,'items':{
+# Provider structured output does not support maxItems. apply_many enforces
+# the thirty-decision bound before any patches or checkpoint can be written.
+SCHEMA['properties']['decisions'] = {'type':'array','items':{
     'type':'object','properties':{'kind':{'type':'string','enum':['source','question','overlap']},
     'id':{'type':'string'},'action':{'type':'string','enum':['exclude','unknown','retain','covered','answer','keep_both']},
     'answer':{'type':'string'},'reason':{'type':'string'},'target':{'type':'string'}},

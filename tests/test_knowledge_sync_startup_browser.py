@@ -31,6 +31,12 @@ def test_native_review_startup_and_terminal_conflict(tmp_path, mode):
     unit=row['payload']['source_units'][0]
     choices.update({'source_'+unit['id']:'exclude','source_reason_'+unit['id']:'This is an invitation to contact us, not a service fact.'})
     stale = guide.present(ctx, row, {'version': ctx['version']})
+    # Production renders checkpointed decisions before device sync restores the
+    # same text. Testing only an initially blank form missed that restore cleared
+    # already-rendered approvals as though the owner had edited every note.
+    for note in notes[:4]:
+        choices['reviewed_'+note['id']] = knowledge_review.fingerprint(note['label'], note['content'])
+    row['payload']['draft_review_choices'] = {k:v for k,v in choices.items() if k != 'version'}
     resumed = guide.present(ctx, row, choices)
     assert stale['focus']['id'] == '1' and resumed['focus']['id'] == '5'
     env = Environment(loader=ChoiceLoader([
@@ -124,7 +130,14 @@ def test_native_review_startup_and_terminal_conflict(tmp_path, mode):
           assert(document.body.textContent.includes('changed') || document.body.textContent.includes('Reload'),'Conflict warning lost');
           assert(document.querySelector('[name=action_5]').value==='','Conflict inferred approval');
         }
-        await nativeFetch('/browser-result',{method:'POST',body:JSON.stringify({status:'PASS',requests,guideCalls})});
+        const saveForm=Object.fromEntries(new FormData(review));
+        saveForm.action_5='keep';
+        const edited=review.elements.content_2;
+        edited.value+=' Owner correction.';
+        edited.dispatchEvent(new Event('input',{bubbles:true}));
+        assert(review.elements.action_2.value==='' && review.elements.reviewed_2.value==='','Real edit kept an obsolete approval');
+        for(const n of [1,3,4])assert(review.elements['action_'+n].value==='keep' && review.elements['reviewed_'+n].value===fixture.choices['reviewed_'+n],'Editing one note invalidated another');
+        await nativeFetch('/browser-result',{method:'POST',body:JSON.stringify({status:'PASS',requests,guideCalls,saveForm})});
       }catch(error){await nativeFetch('/browser-result',{method:'POST',body:JSON.stringify({status:'FAIL',error:String(error),requests,guideCalls})});}
     });
     '''.replace('FIXTURE', json.dumps(fixture))
@@ -171,3 +184,5 @@ def test_native_review_startup_and_terminal_conflict(tmp_path, mode):
     _, current=guide.current(ctx,row,first_request['form'])
     assert current['kind']=='note' and current['id']=='5'
     assert reports[0]['guideCalls']==(2 if mode=='guide_conflict' else 1)
+    saved, _ = knowledge_review.plan(ctx, row, reports[0]['saveForm'])
+    assert len(saved) == 5
