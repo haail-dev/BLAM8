@@ -48,6 +48,7 @@ from app.people_routes import join_router as people_join_router
 from app.people_routes import router as people_router
 from app.people_routes import viewas_router as people_viewas_router
 from app.onboarding import router as onboarding_router
+from app.onboarding_routes import router as onboarding_review_router
 from app.webhook import router as webhook_router
 from app.build_hooks import router as build_hooks_router
 from app.sms_webhook import router as sms_webhook_router
@@ -79,6 +80,7 @@ from app.sse import router as sse_router
 from app.device_sync import router as device_sync_router
 
 app = FastAPI(title="BLAM8 — Business Logistics Automated")
+app.include_router(onboarding_review_router)
 app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 security.install_security(app)
 templates.env.globals["csrf_token"] = security.csrf_token

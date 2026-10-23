@@ -1,5 +1,20 @@
 # Verified behaviours — what is PROVEN to work, and what guards it
 
+## Grouped onboarding: local verification, awaiting integration (23 October 2026)
+
+The later setup review uses Diary, Records and workflows, and Charges and
+payments with explicit substep review state. This is local synthetic evidence;
+no live tenant continuation, migration execution or deployment is claimed.
+See [grouped onboarding](agnostic-onboarding.md) for compatibility and limits.
+
+| Behaviour | Guard |
+|---|---|
+| Review-off/deferred completion creates no booking/payment authority or mandatory commercial data | `tests/test_agnostic_onboarding.py` |
+| Stable scoped answers survive labels, reload, reuse, false/zero/empty values and superseded history | `tests/test_agnostic_onboarding.py` |
+| Visible proposals use native adapters; metadata and target writes commit atomically, stale saves and retries fail safely | `tests/test_agnostic_onboarding.py` |
+| Legacy settings routes, tenant isolation, migration replay and rollback preserve user-entered data | `tests/test_agnostic_onboarding.py` |
+| Native disclosure/focus and longer labels fit narrow/wide light/dark layouts | `tests/test_agnostic_onboarding_browser.py` |
+
 ## Product knowledge: local offline verification (18 October 2026)
 
 The product evidence map, discovery adapters, local versioned articles, public

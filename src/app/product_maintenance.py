@@ -23,6 +23,12 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
 # Additional runtime sources associated with feature evidence but excluded from
 # the product catalogue so review metadata cannot change its serialized content.
 SOURCE_CAPABILITIES = {
+    'src/app/onboarding_contract.py': 'product.help',
+    'src/app/onboarding_state.py': 'product.help',
+    'src/app/onboarding_routes.py': 'product.help',
+    'src/app/templates/app/onboarding_group.html': 'product.help',
+    'src/app/static/onboarding_group.css': 'product.help',
+    'docs/agnostic-onboarding.md': 'product.help',
     'src/app/knowledge_note_edits.py': 'knowledge.review',
     'src/app/device_sync.py': 'product.help',
     'src/app/static/device_sync.js': 'product.help',

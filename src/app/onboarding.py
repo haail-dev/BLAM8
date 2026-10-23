@@ -262,9 +262,9 @@ _TUNING_SHORT = {"diary": "Diary", "requirements": "Requirements", "dependants":
 
 
 def tuning_steps() -> list[dict]:
-    from app import setup_handoff
-    return [{"key": s["key"], "label": _TUNING_SHORT.get(s["key"], s["label"])}
-            for s in setup_handoff.steps({"scheduling", "crm"}, None, [], None, None)]
+    from app.onboarding_contract import group_steps
+    return [{"key": s["key"], "label": s["label"]}
+            for s in group_steps({'scheduling', 'crm'})]
 
 
 def _header_identity(request):

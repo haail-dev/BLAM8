@@ -602,6 +602,10 @@
   <script src="/static/setup_stepper.js?v={{ asset_rev }}" defer></script>
   {% endif %}
 
+  {% if onboarding_routes is defined and request.url.path in onboarding_routes %}
+  {% set review_target = onboarding_routes[request.url.path] %}
+  <div class="px-4 py-1 text-xs"><a href="/app/setup/{{ review_target[0] }}#{{ review_target[1] }}" class="text-brand underline">Return to grouped setup review →</a></div>
+  {% endif %}
   <!-- Main -->
   <main class="app-sky flex-1 min-h-0 overflow-auto">{% block content %}{% endblock %}</main>
   {# Held for later (src/app/setup_held.py): what the owner told the assistant for

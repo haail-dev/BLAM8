@@ -79,12 +79,17 @@ def invoice_configured(row: dict | None) -> bool:
 
 def steps(modules: set, scheduling_cfg: dict | None, crm_stages: list | None,
           crm_quiet_days, invoice_row: dict | None,
-          dependant_groups: list | None = None) -> list[dict]:
+          dependant_groups: list | None = None, *, review_state=None) -> list[dict]:
     """The tenant's walk-through, in order, with per-step done flags. Steps
     whose module isn't on are omitted entirely (invoicing is core — always
     present). Diary setup is done when booking is ready OR the owner explicitly
     disabled it; a confirmed off choice is complete setup, but never grants
     booking permission."""
+    if review_state is not None:
+        from app.onboarding_contract import group_steps
+        return group_steps(modules, scheduling_cfg, review_state, dependant_groups)
+    # Compatibility for legacy callers. Current application reads supply review
+    # metadata; these old heuristics never approve new groups.
     out = []
     if DIARY_MODULES & modules:
         from app.booking_policy import compile_profile
@@ -170,7 +175,7 @@ def load_steps(tenant_id: str, client=None) -> list[dict]:
         stages = next(rest) if wanted_stages else []
         groups = next(rest) if wanted_groups else []
         return steps(set(modules), cfg, stages, tcfg.get("crm_quiet_days"), invoice_row,
-                     dependant_groups=groups)
+                     dependant_groups=groups, review_state=tcfg.get('onboarding_state') or {})
     except Exception:
         return []
 
@@ -201,7 +206,7 @@ def strip(step_list: list[dict], current_path: str | None = None,
         return None
     total = WIZARD_STEPS + len(step_list)
     done = WIZARD_STEPS + sum(1 for s in step_list if s.get("done"))
-    here = next((s for s in step_list if s.get("href") == current_path), None) if current_path else None
+    here = next((s for s in step_list if s.get("href") == current_path or current_path in s.get('aliases', [])), None) if current_path else None
     pos = after = None
     if here:
         idx = step_list.index(here)
@@ -237,7 +242,7 @@ def nav_allowed(link: dict | None, step_list: list[dict], path: str | None) -> b
     href = str((link or {}).get("href") or "").split("?")[0].split("#")[0]
     if not href or not step_list or not first_open(step_list):
         return True
-    hrefs = {str(s.get("href") or "").split("#")[0] for s in step_list}
+    hrefs = {str(p).split('#')[0] for s in step_list for p in [s.get('href') or '', *s.get('aliases', [])]}
     here = (path or "").split("?")[0].split("#")[0]
     return not (href in hrefs and href != here)
 
@@ -272,6 +277,10 @@ def cards_for(recs: list | None, step_list: list[dict] | None, path: str | None,
                 out.append(r)
             continue
         step = steps.get(PAGE_STEPS.get(r["page"], ""))
+        if any(s.get('substeps') for s in steps.values()):
+            from app.onboarding_contract import PAGE_SUBSTEPS
+            sid = PAGE_SUBSTEPS.get(r['page'])
+            step = next((sub for group in steps.values() for sub in group.get('substeps', []) if sub['id'] == sid), None)
         if on_page or not step or not step.get("done"):
             out.append(r)
     return out
