@@ -24,6 +24,16 @@ def history(tenant_id, page, *, before=None, client=None):
     return query.order("revision", desc=True).limit(50).execute().data
 
 
+def latest_receipt(tenant_id, page, card_id, *, client=None):
+    """A card can be terminal and archived while an onboarding receipt is pending."""
+    if page not in setup_cards.PAGES:
+        raise setup_cards.Invalid('Unknown setup card page.')
+    rows = ((client or db.db()).table('setup_card_revisions').select('revision,card')
+            .eq('tenant_id', tenant_id).eq('page', page).eq('card->>id', card_id)
+            .order('revision', desc=True).limit(1).execute().data)
+    return rows[0]['card'] if rows else None
+
+
 def save(tenant_id, page, revision, card, *, expected_settings=None, settings_patch=None, client=None):
     try:
         response = (client or db.db()).rpc("change_setup_card", {

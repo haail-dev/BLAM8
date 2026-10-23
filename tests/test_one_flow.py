@@ -200,16 +200,16 @@ def test_the_widget_counts_nine_and_has_no_dismiss():
     strip = js.split("function paintSetupCta()")[1].split("async function fetchSetupStatus")[0]
     assert "setup-dismiss" not in strip and 'x.textContent = "×"' not in strip
     assert "Setup's done" not in js
-    assert 'diary: "Four steps done — {TOTAL} to go' in js
+    # Historical registered guard name retained; the grouping now totals seven.
+    assert 'diary: "I\'m the BLAM8 AI assistant. This is {POS}: Diary.' in js
 
 
 def test_the_wizard_stepper_draws_all_nine():
-    """Kris (re-run): "it's still looking like 4 steps and we're done." The
-    wizard's stepper carries the five tuning steps greyed as upcoming, the
-    bar and the phone line count out of nine."""
+    """The first four retain their routes; three later groups stay visible as
+    upcoming. The registered historical test name remains for outcome coverage."""
     ctx = onboarding._step_ctx("interview")
-    assert [t["label"] for t in ctx["tuning"]] == ["Diary", "Requirements", "Dependants", "CRM", "Getting paid"]
-    assert ctx["step_count"] + len(ctx["tuning"]) == setup_handoff.WIZARD_STEPS + 5
+    assert [t["label"] for t in ctx["tuning"]] == ["Diary", "Records and workflows", "Charges and payments"]
+    assert ctx["step_count"] + len(ctx["tuning"]) == setup_handoff.WIZARD_STEPS + 3
     html = _read("src/app/templates/onboarding/base.html")
     assert 'data-stepper-total="{{ total }}"' in html
     assert 'data-tuning-step="{{ key }}"' in html and 'key=t.key' in html

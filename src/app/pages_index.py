@@ -159,6 +159,8 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
              ]),
              _g("Settings, people & knowledge", "signed-in", [
                  _p("/app/settings", "Settings", "auto-send, notifications, the installable app, everything else"),
+                 _p('/app/setup', 'Resume setup review', 'independently saved groups; review does not grant operational readiness'),
+                 _p('/app/setup/{group}', 'Setup group', 'Diary, Records and workflows, or Charges and payments', via='/app/setup'),
                  _p("/app/mailboxes", "Mailboxes", "every connected mailbox, by department"),
                  _p("/app/mailboxes/add", "Add a mailbox", "the price, before the consent screen"),
                  _p("/app/mailboxes/{mailbox_id}/settings", "One mailbox", "its labels, its role, its persona", via="/app/mailboxes"),

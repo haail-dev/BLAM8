@@ -32,7 +32,7 @@ from fastapi.routing import APIRoute
 
 from app import concierge, concierge_actions, concierge_data, concierge_intake, concierge_tasks, concierge_delegation, db, fairuse, llm, support, trace, trial, usage
 from app import knowledge as kb
-from app import settings_recommend, setup_handoff
+from app import settings_recommend, setup_handoff, onboarding_contract
 from app import debrief_walk
 from app.auth import require_concierge, require_onboarded, require_subscription, require_tenant, TenantCtx
 from app.config import settings
@@ -211,7 +211,8 @@ def _tenant_context(ctx: TenantCtx) -> dict | None:
             stage_rows = (db.crm_list_stages(ctx.tenant_id, client=ctx.client)
                           if "crm" in mods else [])
             handoff = setup_handoff.steps(mods, cfg, stage_rows, tcfg.get("crm_quiet_days"),
-                                          invoice_row, dependant_groups=groups)
+                                          invoice_row, dependant_groups=groups,
+                                          review_state=tcfg.get('onboarding_state') or {})
         except Exception:
             handoff = None
         return {
@@ -225,6 +226,7 @@ def _tenant_context(ctx: TenantCtx) -> dict | None:
             "handoff": handoff,
             # Held for later — the same row, no extra read.
             "held": [i for i in (tcfg.get("setup_held") or []) if isinstance(i, dict)],
+            "onboarding_answers": onboarding_contract.model_context(tcfg.get('onboarding_state') or {}),
             "setup": {
                 "mailboxes": mailboxes,
                 "knowledge_sources": sources,
@@ -2168,7 +2170,8 @@ def setup_status(ctx: TenantCtx = Depends(require_onboarded)) -> SetupStatusResp
                   if setup_handoff.DIARY_MODULES & modules else [])
         step_list = setup_handoff.steps(modules, cfg, stages,
                                         tcfg.get("crm_quiet_days"), invoice_row,
-                                        dependant_groups=groups)
+                                        dependant_groups=groups,
+                                        review_state=tcfg.get('onboarding_state') or {})
         return SetupStatusResponse(
             show=setup_handoff.show(tenant.get("onboarded_at"),
                                     tcfg.get("settings_handoff_dismissed_at"), step_list),

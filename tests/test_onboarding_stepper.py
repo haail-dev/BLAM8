@@ -30,14 +30,14 @@ def test_shared_stepper_has_one_visible_current_name_and_safe_disclosures(step):
     html=render_stepper(step);tags=Tags(html).tags
     buttons=[attrs for tag,attrs in tags if 'data-step-name-toggle' in attrs]
     labels=[attrs for tag,attrs in tags if attrs.get('class')=='onboarding-step-label']
-    assert len(buttons)==len(labels)==9
+    assert len(buttons)==len(labels)==7
     assert all(button['type']=='button' and 'href' not in button and 'onclick' not in button for button in buttons)
     active=[button for button in buttons if button.get('aria-current')=='step']
     assert len(active)==1 and active[0]['aria-expanded']=='true'
     visible=[label for label in labels if 'hidden' not in label]
     assert len(visible)==1 and visible[0]['id']==active[0]['aria-controls']
     assert all(button['aria-controls'] in {label['id'] for label in labels} for button in buttons)
-    assert 'Step 9: Getting paid, upcoming' in html
+    assert 'Step 7: Charges and payments, upcoming' in html
     assert 'data-step-line' not in html
     assert 'inside the app)' not in html
     assert 'class="onboarding-progress"' in html

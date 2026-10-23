@@ -196,7 +196,7 @@ def test_website_is_a_lockstep_interview_field():
     assert '"website"' in fields.split("interview:")[1].split("]")[0]
     html = _read("src/app/templates/onboarding/interview.html")
     assert 'id="website" name="website"' in html
-    assert "Step 1 of 4 here" in html and "five short tuning steps" in html
+    assert "Step 1 of 4 here" in html and "three groups follow" in html
 
 
 @pytest.mark.parametrize("raw, want", [

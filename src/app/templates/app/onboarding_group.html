@@ -1,0 +1,118 @@
+{% extends "app/base.html" %}
+{% block title %}{{ review_group.label }} · Setup · BLAM8{% endblock %}
+{% block heading %}{{ review_group.label }}{% endblock %}
+{% set answer_names = {'answered':'Saved','unknown':'Not sure','deferred':'Decide later','not_applicable':"Doesn’t apply",'unanswered':'Optional'} %}
+{% set review_names = {'reviewed':'Reviewed','off':'Not needed','deferred':'For later','unreviewed':'To review','dependency_pending':'Waiting for another answer'} %}
+{% set decision_names = {'needed':'Included','off':'Not needed','deferred':'For later','undecided':'Not chosen yet'} %}
+{% macro hidden(operation, data) %}
+<input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+<input type="hidden" name="revision" value="{{ review_state.revision }}">
+<input type="hidden" name="operation" value="{{ operation }}">
+<input type="hidden" name="group" value="{{ review_group.key }}">
+<input type="hidden" name="scope_type" value="{{ scope_type }}">
+<input type="hidden" name="scope_id" value="{{ scope_id }}">
+<input type="hidden" name="data" value="{{ data|tojson|forceescape }}">
+{% endmacro %}
+{% block content %}
+<link rel="stylesheet" href="/static/onboarding_group.css?v={{ asset_rev }}">
+<div class="onboarding-group max-w-3xl mx-auto p-4 space-y-4" data-onboarding-group="{{ review_group.key }}">
+  <nav aria-label="Setup groups" class="review-group-nav">
+    {% for g in review_groups %}<a href="{{ g.href }}"{% if g.key == review_group.key %} aria-current="page"{% endif %}>{{ g.label }}{% if g.done %} ✓{% endif %}</a>{% endfor %}
+  </nav>
+  <p class="text-sm text-slate-500">Choose what you need. Each section saves as you go.</p>
+  {% if review_saved %}<p role="status" class="text-sm text-emerald-700">Saved.</p>{% endif %}
+  {% if earlier_description %}<details class="review-row"><summary>What you told us earlier</summary><div class="review-body"><p>{{ earlier_description }}</p></div></details>{% endif %}
+  {% if saved_services or review_scopes or record_scopes or scope_type != 'organisation' %}
+  <details class="review-row">
+    <summary>Who or what does this apply to?</summary>
+    <div class="review-body">
+      <a href="/app/setup/{{ review_group.key }}">The whole business</a>
+      {% for identity, activity in review_scopes.items() %}<a href="/app/setup/{{ review_group.key }}?scope_type=activity&amp;scope_id={{ identity }}">{{ activity.label }}</a>{% endfor %}
+      {% for record in record_scopes %}<a href="/app/setup/{{ review_group.key }}?scope_type=record_group&amp;scope_id={{ record.id }}">{{ record.label }}</a>{% endfor %}
+      {% if saved_services %}<form method="post" action="/app/setup/action">{{ hidden('activity', {}) }}
+        <label>Use separate answers for an activity<select name="service_name" required>{% for activity in saved_services %}<option value="{{ activity.name }}">{{ activity.name }}</option>{% endfor %}</select></label>
+        <button type="submit">Review this activity</button>
+      </form>{% endif %}
+      <p>Answering for: {% if scope_type == 'activity' %}{{ review_scopes[scope_id].label }}{% elif scope_type == 'record' %}this record{% elif scope_type == 'record_group' %}this kind of record{% else %}the whole business{% endif %}.</p>
+    </div>
+  </details>{% endif %}
+  {% for sub in review_group.substeps %}
+  <details class="review-row" id="{{ sub.id }}" data-review-substep="{{ sub.id }}"{% if review_state.position == sub.id %} open{% endif %}>
+    <summary><span>{{ sub.badge }} · {{ sub.label }}</span><span class="review-status">{{ review_names[sub.review] }}</span></summary>
+    <div class="review-body">
+      {% if sub.legacy %}<p>{{ sub.legacy }}</p>{% endif %}
+      {% if sub.dependencies %}<p role="status">Review Records and relationships first, or leave this section for later.</p>{% endif %}
+      {% if sub.decision != 'undecided' %}<details><summary>Include this section? {{ decision_names[sub.decision] }}</summary><div class="review-body">{% endif %}
+      <form method="post" action="/app/setup/action">{{ hidden('capability', {'capability':sub.capability}) }}
+        <label>{{ review_capabilities[sub.capability] }}<select name="decision">
+          {% for value, label in [('undecided','Choose'),('needed','Yes'),('off','Not needed'),('deferred','Decide later')] %}<option value="{{ value }}"{% if sub.decision == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select></label><button type="submit" data-save-row>Save choice</button>
+      </form>
+      {% if sub.decision != 'undecided' %}</div></details>{% endif %}
+      {% if sub.needs %}<details><summary>Anything else to include?</summary><div class="review-body">
+        {% for need in sub.needs %}<form method="post" action="/app/setup/action">{{ hidden('need', {'need':need.id}) }}
+          <label>{{ need.label }}<select name="selected" required><option value="" disabled{% if not need.chosen and not need.selected %} selected{% endif %}>Choose if relevant</option><option value="false"{% if need.chosen and not need.selected %} selected{% endif %}>Not needed</option><option value="true"{% if need.selected %} selected{% endif %}>Include this</option></select></label><button type="submit" data-save-row>Save</button>
+          <details><summary>When this matters</summary><p>{{ need.why }}</p></details>
+        </form>{% endfor %}
+      </div></details>{% endif %}
+      {% if sub.decision == 'needed' or sub.legacy %}<div class="review-links">{% for href, label in sub.links %}<a href="{{ href }}">{{ label }} →</a>{% endfor %}</div>{% endif %}
+      {% for q in sub.questions %}
+      <details class="review-question" data-question-id="{{ q.id }}" data-answer-state="{{ q.answer.state if q.answer else 'unanswered' }}">
+        <summary>{{ q.text }} <span class="review-status">{{ answer_names[q.answer.state] if q.answer else 'Optional' }}</span></summary>
+        <div class="review-body">
+          {% if q.answer %}<p>Saved: <strong>{% if q.answer.state == 'answered' %}{{ 'Yes' if q.answer.value is sameas true else 'No' if q.answer.value is sameas false else q.answer.value }}{% else %}{{ answer_names[q.answer.state] }}{% endif %}</strong></p>{% endif %}
+          {% if q.id == 'activity.purpose' and not q.answer and scope_type == 'organisation' and earlier_description %}<form method="post" action="/app/setup/action">{{ hidden('reuse_about', {'question':q.id}) }}<p>{{ earlier_description }}</p><button type="submit">Use my earlier answer</button></form>{% endif %}
+          <form method="post" action="/app/setup/action">{{ hidden('answer', {'question':q.id,'scope_type':scope_type,'scope_id':scope_id}) }}
+            <label><span class="sr-only">{{ q.text }}</span>
+            {% if q.kind == 'boolean' %}<select name="value"><option value="">Choose</option><option value="true"{% if q.answer and q.answer.value is sameas true %} selected{% endif %}>Yes</option><option value="false"{% if q.answer and q.answer.value is sameas false %} selected{% endif %}>No</option></select>
+            {% elif q.kind == 'choice' %}<select name="value"><option value="">Choose</option>{% for choice in q.choices %}<option value="{{ choice }}"{% if q.answer and q.answer.value == choice %} selected{% endif %}>{{ {'owner_arranges':'I arrange and confirm times','review_booking_settings':'Review booking rules for the assistant'}.get(choice, choice|replace('_',' ')) }}</option>{% endfor %}</select>
+            {% else %}<textarea name="value" rows="2" maxlength="2000">{{ q.answer.value if q.answer and q.answer.state == 'answered' and q.answer.value is not none else '' }}</textarea>{% endif %}
+            </label>
+            <label><span class="sr-only">How would you like to answer?</span><select name="state">{% for value, label in [('answered','Answer now'),('unknown','Not sure'),('deferred','Decide later'),('not_applicable',"Doesn’t apply"),('unanswered','Clear answer')] %}<option value="{{ value }}"{% if q.answer and q.answer.state == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+            <button type="submit" data-save-row{% if not q.answer %} data-save-always{% endif %}>Save answer</button>
+          </form>
+          {% if q.adapter and q.answer and q.answer.state == 'answered' %}<form method="post" action="/app/setup/action">{{ hidden('propose', {'answer':q.key}) }}<button type="submit">Review suggested changes</button></form>{% endif %}
+          <details><summary>Why we ask{% if q.answer %} and where this came from{% endif %}</summary><div class="review-body"><p>{{ q.why }}</p>{% if q.answer %}<p>{{ q.answer.provenance.kind|replace('_',' ') }}</p>{% endif %}</div></details>
+        </div>
+      </details>{% endfor %}
+      {% if sub.decision == 'deferred' %}<p>Left for later. You can return to this section whenever you need it.</p>{% elif sub.decision == 'undecided' %}<p>Choose Yes to see the relevant questions.</p>{% endif %}
+      <details><summary>Change this section’s name</summary><div class="review-body">
+        <form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<label>Section name<input name="text" maxlength="80" value="{{ sub.label }}"></label><button type="submit" data-save-row>Save name</button></form>
+        <form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<button type="submit" name="text" value="">Use the original name</button></form>
+        {% if sub.id == 'records.relationships' and label_suggestion %}<form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<p>From the records you already use:</p><button name="text" value="{{ label_suggestion }}" type="submit">Use {{ label_suggestion }}</button></form>{% endif %}
+      </div></details>
+      {% if sub.decision not in ('off','deferred') %}<form method="post" action="/app/setup/action">{{ hidden('review', {'substep':sub.id}) }}
+        <label>Finish this section<select name="state">{% for value, label in [('unreviewed','Still to do'),('reviewed','Reviewed'),('deferred','Leave for later')] %}<option value="{{ value }}"{% if sub.review == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button type="submit" data-save-row>Save</button>
+      </form>{% endif %}
+    </div>
+  </details>{% endfor %}
+  {% if knowledge_candidates or knowledge_unavailable %}<details class="review-row"><summary>Answers from Knowledge</summary><div class="review-body">
+    {% if knowledge_unavailable %}<p>We couldn’t check Knowledge just now. Your saved answers are still here.</p>{% endif %}
+    {% for q in knowledge_candidates %}<div class="review-question"><p>{{ q.text }} · {{ answer_names[q.state] }}</p>
+      {% if import_states.get(q.id, {}).get('status') == 'conflict' %}<p role="status">{{ import_states[q.id].message }}</p>{% endif %}
+      <form method="post" action="/app/setup/action">{{ hidden('import_knowledge', {'ids':[q.id]}) }}<button type="submit">{{ 'Check for changes' if q.id in import_states else 'Use this answer' }}</button></form>
+    </div>{% endfor %}
+  </div></details>{% endif %}
+  {% for proposal in review_proposals %}<section class="review-row review-body" data-proposal-id="{{ proposal.id }}">
+    <h2 class="font-semibold">{{ {'proposed':'Review these changes','applied':'Changes saved','cancelled':'Changes left unchanged','partial':'Some changes handled separately'}[proposal.status] }}</h2>
+    {% for change in proposal.display_changes %}<p>{{ change.title }}{% if change.receipt %} · {{ 'Saved' if change.receipt == 'applied' else 'Left unchanged' }}{% endif %}</p>{% for value in change['values'] %}<p>{{ value.label }}</p><dl class="review-diff"><dt>Saved at preview</dt><dd>{{ value.before }}</dd><dt>{{ 'Proposed — not applied' if change.receipt == 'left' or proposal.status == 'cancelled' else 'Proposed at preview' }}</dt><dd>{{ value.after }}</dd></dl>{% endfor %}{% endfor %}
+    {% if proposal.status != 'proposed' %}<p>These are the original preview values.</p>{% endif %}
+    <a href="{{ proposal.settings_href }}">View current saved settings →</a>
+    {% if proposal.status == 'proposed' %}<p>Only the changes shown here will be saved. Other settings stay as they are.</p>
+    <form method="post" action="/app/setup/action">{{ hidden('apply', {'proposal':proposal.id}) }}<button type="submit">Apply these changes</button></form>
+    <form method="post" action="/app/setup/action">{{ hidden('cancel', {'proposal':proposal.id}) }}<button type="submit">Leave remaining changes</button></form>
+    <details><summary>Already handled on another settings page?</summary><form method="post" action="/app/setup/action">{{ hidden('reconcile', {'proposal':proposal.id}) }}<button type="submit">Check saved result</button></form></details>
+    {% endif %}
+  </section>{% endfor %}
+  <details class="review-row"><summary>Your setup choices</summary><div class="review-body">
+    {% for g in review_groups %}<h2 class="font-semibold">{{ g.label }}</h2><ul>{% for sub in g.substeps %}<li>{{ sub.label }}: {{ review_names[sub.review] }}</li>{% endfor %}</ul>{% endfor %}
+    <details><summary>What the assistant can do now</summary><div class="review-body">
+      <p>{{ 'Existing booking checks pass. Each request still goes through the normal booking checks.' if booking_ready else 'Finish the diary’s availability and permission settings before the assistant can confirm bookings.' }}</p>
+      <p>Payments still use your saved payment settings. Finishing this review does not turn them on.</p>
+      <p>Changing what you review does not switch existing features off. Use their settings to change them.</p>
+    </div></details>
+    {% if factual_needs %}<details><summary>Needs to review separately</summary><div class="review-body"><ul>{% for fact in factual_needs %}<li>{{ fact.text }}</li>{% endfor %}</ul><p>These answers are saved as facts. Check the supported options before promising a schedule or charge.</p></div></details>{% endif %}
+    <details><summary>Supported options and limits</summary><div class="review-body">{% for limitation in review_limits %}<p>{{ limitation }}</p>{% endfor %}<a href="/app/people/settings">Team assignment in People →</a></div></details>
+  </div></details>
+</div>
+{% endblock %}

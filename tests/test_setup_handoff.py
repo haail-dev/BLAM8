@@ -154,7 +154,7 @@ def test_setup_status_fresh_unconfigured_tenant_shows_all_steps(client, monkeypa
     data = client.get("/concierge/setup-status").json()
     assert data["show"] is True
     assert [s["key"] for s in data["steps"]] == \
-        ["diary", "requirements", "dependants", "crm", "invoicing"]
+        ["diary", "records", "charges"]
     assert all(not s["done"] for s in data["steps"])
 
 
@@ -169,7 +169,7 @@ def test_setup_status_honours_dismiss_and_staleness(client, monkeypatch):
     assert client.get("/concierge/setup-status").json()["show"] is False
 
 
-def test_setup_status_all_configured_stops_showing(client, monkeypatch):
+def test_setup_status_configuration_is_not_whole_group_review(client, monkeypatch):
     fresh = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     Env(monkeypatch, onboarded_at=fresh, modules={"scheduling", "crm"},
         tcfg={"crm_quiet_days": 30},
@@ -177,9 +177,20 @@ def test_setup_status_all_configured_stops_showing(client, monkeypatch):
              "intake_configured_at": "2026-09-01T09:00:00+00:00"},
         invoice={"business_name": "Deane & Sons"}, groups=[{"label": "Horse"}])
     data = client.get("/concierge/setup-status").json()
-    assert data["show"] is False
-    # steps still reported with their done flags (the widget just won't render)
-    assert [s["done"] for s in data["steps"]] == [True, True, True, True, True]
+    assert data["show"] is True
+    assert [s["done"] for s in data["steps"]] == [False, False, False]
+
+
+def test_setup_status_all_configured_stops_showing(client, monkeypatch):
+    # Registered outcome name retained. Completion now requires the explicit
+    # reviewed/deferred decision instead of a business-name/CRM heuristic.
+    from app.onboarding_contract import neutral_state, SUBSTEPS
+    state = neutral_state()
+    state['reviews'] = {sid: {'state': 'deferred'} for sid in SUBSTEPS}
+    fresh = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    Env(monkeypatch, onboarded_at=fresh, modules={'scheduling', 'crm'}, tcfg={'onboarding_state': state})
+    data = client.get('/concierge/setup-status').json()
+    assert data['show'] is False and all(s['done'] for s in data['steps'])
 
 
 def test_setup_status_degrades_to_hidden_on_db_error(client, monkeypatch):

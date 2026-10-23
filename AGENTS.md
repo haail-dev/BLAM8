@@ -50,7 +50,10 @@ availability and capacity share Diary settings. Team assignment configuration
 belongs in People settings and is not a Diary onboarding requirement. Use the
 existing compact expandable settings rows and business-neutral labels.
 
-Keep Diary settings and Booking requirements as separate onboarding steps.
-Diary settings owns booking mode, availability, timing and capacity; Booking
-requirements owns customer answers, documents and their collection rules.
-Saving the checklist must preserve the configured booking mode.
+Group later onboarding into Diary, Records and workflows, and Charges and
+payments, using explicit independently saved substep reviews. Keep Diary settings
+and Booking requirements as separate configuration domains with their own save
+validation and revisions. Diary settings owns booking mode, availability, timing
+and capacity; Booking requirements owns customer answers, documents and collection
+rules. Saving the checklist must preserve the configured booking mode. Review
+completion and display labels never grant booking or payment readiness.

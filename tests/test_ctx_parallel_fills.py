@@ -30,12 +30,14 @@ def test_load_steps_reads_overlap_and_the_answer_is_unchanged(monkeypatch):
     calls = []
     _stub_steps(monkeypatch, {"crm", "scheduling"}, calls)
     seen = {}
-    monkeypatch.setattr(setup_handoff, "steps", lambda mods, cfg, stages, quiet, inv, dependant_groups=None:
-                        seen.update(mods=mods, cfg=cfg, stages=stages, quiet=quiet, inv=inv, groups=dependant_groups) or ["ok"])
+    monkeypatch.setattr(setup_handoff, "steps", lambda mods, cfg, stages, quiet, inv, dependant_groups=None, review_state=None:
+                        seen.update(mods=mods, cfg=cfg, stages=stages, quiet=quiet, inv=inv,
+                                    groups=dependant_groups, review_state=review_state) or ["ok"])
     started = time.monotonic()
     assert setup_handoff.load_steps("t1") == ["ok"]
     assert time.monotonic() - started < 0.7          # modules, then one wave: ~0.4 s, not 1.4 s in a row
     assert seen["mods"] == {"crm", "scheduling"} and seen["quiet"] == 7
+    assert seen['review_state'] == {}
     assert sorted(calls) == sorted(["modules", "sched", "invoice", "tcfg", "stages", "groups"])
 
 
