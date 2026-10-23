@@ -95,8 +95,9 @@ def test_applier_fills_from_the_page_only_when_no_card_stash_and_empty_fields_on
     tail = js.split("function applyPrefillData(data)")[1].split("applySettingsPrefill();")[0]
     assert "if (!data.held) { try { sessionStorage.removeItem(KEY_PREFILL); } catch (e) {} }" in tail
     # the wizard's knowledge step renders held notes as a ready card, after setOpen
-    boot = js.split("if (openFlag === \"1\" || (ONB_MODE && openFlag !== \"0\")) setOpen(true);")[1]
+    boot = js.split('var openFlag = sessionStorage.getItem(KEY_OPEN);',1)[1]
     assert "function maybeHeldNotesCard()" in boot
+    assert boot.index('setOpen(true') < boot.index('function maybeHeldNotesCard()')
     assert 'label: "knowledge notes — from what you told me earlier"' in boot
 
 

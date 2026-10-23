@@ -350,8 +350,12 @@ def test_start_opens_diary_then_actual_settings_and_get_never_mutates(guide_jour
 
 def test_notice_horizon_edit_next_accept_and_resume_real_sql(guide_journey,monkeypatch,tmp_path):
     j=guide_journey;j.move('diary_settings/min_notice_hours')
+    metered=[]
+    monkeypatch.setattr(usage,'record_anthropic',lambda *args,**kwargs:metered.append((args,kwargs)))
     seen=model(monkeypatch,change('diary_settings',0,[dict(fields={'key':'min_notice_hours','value':24}),dict(fields={'key':'horizon_days','value':60})]))
     result=turn(j,'We need 24 hours notice and allow bookings 60 days ahead.').json()
+    assert len(metered)==1 and metered[0][1]=={'operation':'concierge_help','module':'concierge'}
+    assert metered[0][0][0]==j.tenant and metered[0][0][2].input_tokens==11 and metered[0][0][2].output_tokens==8
     assert j.row('scheduling_config',j.tenant) is None
     assert len(j.state()['answers'])==2 and len(result['pending']['ids'])==2
     assert 'Booking notice and horizon' not in str(seen[0]['messages'])
@@ -381,6 +385,7 @@ def test_notice_horizon_edit_next_accept_and_resume_real_sql(guide_journey,monke
     context=concierge_routes._tenant_context(j.ctx)
     assert next(a for a in context['onboarding_answers']['answers'] if a['question']=='setting.diary_settings.horizon_days')['value']==45
     (tmp_path/'diary-receipts.json').write_text(json.dumps(dict(state=after,settings=saved),indent=2),encoding='utf-8')
+    assert len(metered)==1  # Edits, guide navigation and Accept emit no duplicate usage event.
 
 
 def test_stale_saved_settings_need_explicit_new_difference(guide_journey,monkeypatch):

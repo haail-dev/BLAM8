@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const source=fs.readFileSync('src/app/static/concierge.js','utf8');
 const between=(a,b)=>source.slice(source.indexOf(a),source.indexOf(b,source.indexOf(a)));
 class Element {
-  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.attributes={};this.listeners={};this.disabled=false;this.textContent='';}
+  constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.attributes={};this.dataset={};this.listeners={};this.disabled=false;this.textContent='';}
   setAttribute(k,v){this.attributes[k]=String(v);}
   getAttribute(k){return this.attributes[k];}
   appendChild(child){this.children.push(child);return child;}

@@ -128,6 +128,7 @@ SOURCE_BY_OPERATION: dict[str, str] = {
     "crm_intel": "inbound_email", "tms_handoff": "inbound_email",
     "fsm_handoff": "inbound_email", "party_extract": "inbound_email",
     "redraft": "owner", "concierge_onboard": "owner", "concierge_help": "owner",
+    "guide": "owner",  # owner setup action label; model spend remains concierge_help, with no extra event
     "concierge_fix": "owner", "concierge_business": "owner", "concierge_discovery": "owner", "concierge_discovery_rewrite": "owner",
     "concierge_task": "owner",              # one task of the Concierge's task list (src/app/concierge_tasks.py)
     "gptlive_session": "owner",             # one GPT-Live voice session, priced by the second (src/app/gptlive.py)
