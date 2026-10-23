@@ -27,6 +27,22 @@ claim only for their section; the section may instead be reviewed as deferred.
 A saved billing-grouping question depends on reviewing the related-record
 decision. Its fact does not implement consolidated invoicing.
 
+Agreement terms, combined charging, out-of-hours response, repeat-activity facts,
+booking timing and prepaid-credit cancellation have specific optional relevance
+choices. Selecting a coarse group does not ask all of those questions. An exact
+owner answer choosing review of booking rules can supply relevance for timing
+questions; imported owner-reviewed questions also retain their own relevance.
+Existing answers stay accessible when a topic is deselected. Record information
+and subject evidence remain reviewable with diary modules even without CRM;
+links are filtered by actual available modules.
+
+The primary UI uses business-facing choices: Answer now, Not sure, Decide later
+and Doesn't apply. Internal answer states, scope IDs and capability IDs stay in
+the contract. Technical limitations and provenance are expandable details, and
+the Apply preview shows named current/proposed values rather than raw JSON.
+An explicit not-needed/later choice records that decision for the associated
+sections directly, without requiring a second completion form.
+
 Review completion never supplies capacity, booking authority, payment permission,
 bank details, a sales stage or a record type. `booking_policy` and the existing
 booking/payment workflows remain authoritative. Checklist saves still preserve

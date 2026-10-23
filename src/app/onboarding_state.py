@@ -201,9 +201,21 @@ def transact(ctx, context, body):
                 raise ValueError('Choose an implemented capability and explicit review decision.')
             capability = data['capability']
             state['capabilities'][capability] = data['decision']
+            state['position'] = next(sid for sid, spec in contract.SUBSTEPS.items() if spec[3] == capability)
             for sid, spec in contract.SUBSTEPS.items():
                 if spec[3] == capability:
                     state['reviews'].pop(sid, None)
+                    if data['decision'] in ('off', 'deferred'):
+                        state['reviews'][sid] = dict(state=data['decision'], at=stamp(), by=ctx.user_id,
+                                                     source='explicit_relevance_choice')
+        elif op == 'need':
+            _keys(data, {'need', 'selected'})
+            if data['need'] not in contract.NEEDS or type(data['selected']) is not bool:
+                raise ValueError('Choose a supported optional need explicitly.')
+            state['needs'][data['need']] = data['selected']
+            sid = contract.NEEDS[data['need']]['substep']
+            state['reviews'].pop(sid, None)
+            state['position'] = sid
         elif op == 'label':
             _keys(data, {'substep', 'text'})
             if data['substep'] not in contract.SUBSTEPS:
@@ -212,6 +224,7 @@ def transact(ctx, context, body):
             old = state['labels'].get(data['substep'], {})
             state['labels'][data['substep']] = dict(text=text or contract.SUBSTEPS[data['substep']][2],
                 provenance='owner_label', version=old.get('version', 0) + 1, at=stamp())
+            state['position'] = data['substep']
         elif op == 'activity':
             _keys(data, {'service_name'})
             name = contract.bounded(data['service_name'], 80)
@@ -220,7 +233,9 @@ def transact(ctx, context, body):
                 raise ValueError('Choose one unambiguous saved activity. Define it on Diary settings first.')
             if any(s['service_name'] == name for s in state['scopes'].values()):
                 raise ValueError('This activity already has a stable identity.')
-            state['scopes'][str(uuid4())] = dict(service_name=name, label=name, registered_at=stamp())
+            activity_id = str(uuid4())
+            state['scopes'][activity_id] = dict(service_name=name, label=name, registered_at=stamp())
+            state['scope_position'] = {'type': 'activity', 'id': activity_id}
         elif op == 'reuse_about':
             _keys(data, {'question'})
             if data['question'] != 'activity.purpose':

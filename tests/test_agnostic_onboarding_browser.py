@@ -45,8 +45,9 @@ def render_group(theme, *, long=False):
 
 @pytest.mark.parametrize('theme', ['light', 'dark'])
 @pytest.mark.parametrize('width', [390, 1280])
-def test_group_disclosures_focus_long_labels_and_geometry(tmp_path, theme, width):
-    page = render_group(theme, long=True)
+@pytest.mark.parametrize('long', [False, True], ids=['primary', 'long-labels'])
+def test_group_disclosures_focus_long_labels_and_geometry(tmp_path, theme, width, long):
+    page = render_group(theme, long=long)
     assertions = r'''
     const failures=[];const check=(ok,message)=>{if(!ok)failures.push(message)};
     check(document.documentElement.scrollWidth<=innerWidth+1,'horizontal overflow');
@@ -66,7 +67,9 @@ def test_group_disclosures_focus_long_labels_and_geometry(tmp_path, theme, width
     check(forms.every(f=>f.method==='post' && f.querySelector('[name=csrf_token]') && f.querySelector('[name=revision]')),'csrf and revision on each save');
     const controls=[...group.querySelectorAll('input:not([type=hidden]),select,textarea,button')].filter(e=>e.getBoundingClientRect().width>0);
     controls.forEach(e=>{const r=e.getBoundingClientRect();check(r.left>=-1 && r.right<=innerWidth+1,'control outside viewport')});
-    const text=group.innerText;check(text.includes('Activities, permissions and confirmed arrangements'),'long label readable');
+    const text=group.innerText;check(text.includes('Activities'),'section label readable');
+    check(!text.includes('Answer state')&&!text.includes('Scope and saved activities')&&!text.includes('Add activity scope')&&!text.includes('operational readiness'),'plain primary wording');
+    check(!group.querySelector('[data-question-id="response.urgent"]'),'no unselected urgent-response question');
     check(!group.querySelector('[data-question-id="service.price"]'),'activity question not leaked into organisation scope');
     document.getElementById('layout-result').textContent=JSON.stringify({failures,width:innerWidth,theme:document.documentElement.dataset.theme,form_count:forms.length,open_question_count:group.querySelectorAll('[data-question-id][open]').length});
     '''
@@ -77,7 +80,7 @@ def test_group_disclosures_focus_long_labels_and_geometry(tmp_path, theme, width
         + f'<iframe width="{width}" height="1050" src="content.html" onload="'
         + "document.body.appendChild(this.contentDocument.getElementById('layout-result').cloneNode(true))"
         + '"></iframe>', encoding='utf-8')
-    screenshot = tmp_path / (theme + '-' + str(width) + '.png')
+    screenshot = tmp_path / (theme + '-' + str(width) + ('-long' if long else '-primary') + '.png')
     command = [chromium_binary(), '--headless=new', '--no-sandbox', '--disable-gpu', '--allow-file-access-from-files',
         '--disable-background-networking', '--disable-component-update', '--disable-sync', '--disable-default-apps',
         '--no-first-run', '--no-default-browser-check', '--no-proxy-server', '--host-resolver-rules=MAP * ~NOTFOUND',

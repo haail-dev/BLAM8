@@ -28,6 +28,7 @@ SOURCE_CAPABILITIES = {
     'src/app/onboarding_routes.py': 'product.help',
     'src/app/templates/app/onboarding_group.html': 'product.help',
     'src/app/static/onboarding_group.css': 'product.help',
+    'src/app/templates/onboarding/interview.html': 'product.help',
     'docs/agnostic-onboarding.md': 'product.help',
     'src/app/knowledge_owner_corrections.py': 'knowledge.review',
     'src/app/knowledge_note_edits.py': 'knowledge.review',

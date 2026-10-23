@@ -2,7 +2,6 @@
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import json
-import os
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -30,9 +29,10 @@ REAL_MANAGER = onboarding_routes.require_manager
 def database(cluster):
     driver, dsn = cluster
     with driver.connect(dsn, autocommit=True) as conn:
+        conn.execute('create role anon; create role authenticated; create role service_role bypassrls;')
         initialise(conn)
         conn.execute(DIARY_MODE_FORWARD.read_text(encoding='utf-8'))
-        conn.execute('create role anon; create role authenticated; create role service_role bypassrls;')
+        conn.execute('grant select,insert,update,delete on all tables in schema public to service_role')
         conn.execute(FORWARD.read_text(encoding='utf-8'))
         conn.execute(FORWARD.read_text(encoding='utf-8'))
     return driver, dsn
@@ -48,6 +48,8 @@ class Rpc:
 
     def execute(self, name, args):
         with self.driver.connect(self.dsn, autocommit=True) as conn:
+            if name == 'save_onboarding_state':
+                conn.execute('set role service_role')
             try:
                 result = conn.execute('select ' + name + '(' + ','.join(k + ' => %s' for k in args) + ')',
                     tuple(json.dumps(v) if isinstance(v, (dict, list)) else v for v in args.values())).fetchone()[0]
@@ -58,7 +60,7 @@ class Rpc:
 
 
 @pytest.fixture
-def journey(database, monkeypatch, request):
+def journey(database, monkeypatch, request, tmp_path):
     driver, dsn = database
     tenant, other = str(uuid4()), str(uuid4())
     with driver.connect(dsn, autocommit=True) as conn:
@@ -120,10 +122,9 @@ def journey(database, monkeypatch, request):
 
     yield SimpleNamespace(http=http, action=action, answer=answer, state=current, row=row,
                           query=query, execute=execute, tenant=tenant, other=other, rpc=rpc)
-    if os.environ.get('ONBOARDING_EVIDENCE_DIR'):
+    if trace:
         import re
-        target = Path(os.environ['ONBOARDING_EVIDENCE_DIR'])
-        target.mkdir(parents=True, exist_ok=True)
+        target = tmp_path
         name = re.sub(r'[^a-zA-Z0-9_.-]', '_', request.node.name)
         final = current()
         report = dict(synthetic=True, tenant=tenant, actions=trace,
@@ -404,6 +405,45 @@ def test_first_stage_owner_context_is_reused_once_without_permission_inference(j
     j.action('reuse_about', {'question': 'activity.purpose'}, expected=400)
     assert j.state()['answers'][key]['value'] == 'We arrange requests for the owner.'
     assert j.row('scheduling_config', j.tenant) is None
+
+
+def test_optional_terms_related_charges_and_urgent_questions_need_specific_relevance(journey):
+    j = journey
+    for capability in ('charging', 'time_occupancy'):
+        j.action('capability', {'capability': capability, 'decision': 'needed'})
+    diary = j.http.get('/app/setup/diary').text
+    charges = j.http.get('/app/setup/charges').text
+    assert 'data-question-id="response.urgent"' not in diary
+    assert 'data-question-id="terms.agreement_notice"' not in charges
+    assert 'data-question-id="billing.grouping"' not in charges
+    assert 'data-question-id="setting.diary_settings.min_notice_hours"' not in diary
+    model_ids = {q['id'] for q in contract.model_context(j.state())['relevant_question_templates']}
+    assert not {'response.urgent', 'terms.agreement_notice', 'billing.grouping'} & model_ids
+    for identity in ('agreement_terms', 'related_charges', 'urgent_response'):
+        j.action('need', {'need': identity, 'selected': True})
+    assert 'data-question-id="response.urgent"' in j.http.get('/app/setup/diary').text
+    assert 'data-question-id="terms.agreement_notice"' in j.http.get('/app/setup/charges').text
+    assert 'data-question-id="billing.grouping"' in j.http.get('/app/setup/charges').text
+    key = j.answer('terms.agreement_notice', 'Six weeks')
+    j.action('need', {'need': 'agreement_terms', 'selected': False})
+    assert j.state()['answers'][key]['value'] == 'Six weeks'
+    assert 'data-answer-state="answered"' in j.http.get('/app/setup/charges').text
+
+
+def test_diary_only_related_subject_information_and_evidence_remain_reviewable(journey, monkeypatch):
+    j = journey
+    monkeypatch.setattr(db, 'visible_modules', lambda *a, **kw: {'scheduling'})
+    groups = contract.group_steps({'scheduling'}, state=j.state())
+    records = next(g for g in groups if g['key'] == 'records')
+    information = next(s for s in records['substeps'] if s['id'] == 'records.information')
+    assert information['links'] == [('/app/diary/dependants', 'Related subject fields and evidence')]
+    j.action('capability', {'capability': 'record_information', 'decision': 'needed'})
+    page = j.http.get('/app/setup/records')
+    assert page.status_code == 200 and 'Information and evidence' in page.text
+    assert 'Related subject fields and evidence' in page.text
+    assert 'href="/app/crm/fields"' not in page.text
+    j.action('review', {'substep': 'records.information', 'state': 'reviewed'})
+    assert j.state()['reviews']['records.information']['state'] == 'reviewed'
 
 
 def test_exact_known_answer_reused_once_without_duplicate_question_or_setting_write(journey, monkeypatch):

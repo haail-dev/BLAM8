@@ -48,6 +48,8 @@ def questions_for(context, substep, scope_type, scope_id):
                 continue
         key = state_store.key_for(spec['id'], scope_type, scope_id)
         answer = state['answers'].get(key)
+        if not answer and not contract.need_selected(state, spec.get('need')):
+            continue
         result.append(dict(spec, key=key, answer=answer, optional=bool(spec['adapter']),
                            is_open=not answer or answer['state'] == 'unanswered'))
     return result
@@ -67,6 +69,9 @@ def page_context(context, group, scope_type='organisation', scope_id='organisati
     if scope_type not in ('organisation', 'activity', 'record_group', 'record') or (scope_type == 'organisation' and scope_id != 'organisation'):
         raise HTTPException(400, 'Choose a supported scope.')
     for sub in group['substeps']:
+        sub['needs'] = [dict(spec, id=identity, selected=contract.need_selected(state, identity),
+                            chosen=identity in state['needs'])
+                        for identity, spec in contract.NEEDS.items() if spec['substep'] == sub['id']]
         sub['dependencies'] = state_store.unresolved_dependencies(state, sub['id'])
         sub['questions'] = questions_for(context, sub, scope_type, scope_id)
         if sub['decision'] in ('off', 'deferred', 'undecided'):
@@ -74,6 +79,8 @@ def page_context(context, group, scope_type='organisation', scope_id='organisati
             sub['questions'] = [q for q in sub['questions'] if q['answer']]
     proposals = [p for p in state['proposals'].values() if any(
         a['substep'].startswith(group['key'] + '.') for key, a in state['answers'].items() if key == p['answer'])]
+    for proposal in proposals:
+        proposal['display_changes'] = [display_change(change) for change in proposal['changes']]
     candidates = state_store.knowledge_candidates(context['knowledge'])
     from app.booking_policy import compile_profile
     profile = compile_profile(context['cfg'])
@@ -97,6 +104,21 @@ def page_context(context, group, scope_type='organisation', scope_id='organisati
         booking_ready=profile.ready, booking_message=profile.message)
 
 
+def display_change(change):
+    def words(value):
+        if value is None:
+            return 'Not set'
+        if type(value) is bool:
+            return 'Yes' if value else 'No'
+        return str(value)
+    before, after = change.get('before') or {}, change.get('after') or {}
+    keys = ['value'] if change['name'] == 'setting' else [
+        key for key in ('name', 'minutes', 'price', 'timing', 'resource') if before.get(key) != after.get(key)]
+    return dict(title=change['display'], values=[dict(label={'value': '', 'minutes': 'Minutes',
+        'price': 'Price', 'timing': 'Timing', 'resource': 'Resource', 'name': 'Name'}[key],
+        before=words(before.get(key)), after=words(after.get(key))) for key in keys])
+
+
 @router.get('')
 def index(ctx: TenantCtx = Depends(require_onboarded)):
     require_manager(ctx)
@@ -106,6 +128,16 @@ def index(ctx: TenantCtx = Depends(require_onboarded)):
     target = next((g for g in groups if position and any(s['id'] == position for s in g['substeps'])), None)
     target = target or next((g for g in groups if not g['done']), groups[0])
     scope = context['state'].get('scope_position', {})
+    # A deleted record must not strand resume. Its answer history remains saved.
+    if scope.get('type') == 'record_group' and scope.get('id') not in {str(g['id']) for g in context['groups']}:
+        scope = {}
+    elif scope.get('type') == 'activity' and scope.get('id') not in context['state']['scopes']:
+        scope = {}
+    elif scope.get('type') == 'record':
+        from app import db
+        record = db.get_requirement_instance(scope['id'], ctx.tenant_id, client=ctx.client)
+        if not record or record.get('archived_at'):
+            scope = {}
     from urllib.parse import urlencode
     query = ('?' + urlencode({'scope_type': scope['type'], 'scope_id': scope['id']})) if scope else ''
     return RedirectResponse(target['href'] + query + ('#' + position if position else ''), status_code=303)
@@ -156,6 +188,10 @@ async def form_action(request: Request, ctx: TenantCtx = Depends(require_onboard
             data['service_name'] = form.get('service_name', '')
         elif form.get('operation') == 'capability':
             data['decision'] = form.get('decision', 'undecided')
+        elif form.get('operation') == 'need':
+            if form.get('selected') not in ('true', 'false'):
+                raise ValueError('Choose whether this topic is relevant.')
+            data['selected'] = form.get('selected') == 'true'
         elif form.get('operation') == 'review':
             data['state'] = form.get('state', 'unreviewed')
         body = Action(revision=int(form['revision']), operation=form['operation'], data=data)
@@ -164,7 +200,8 @@ async def form_action(request: Request, ctx: TenantCtx = Depends(require_onboard
         raise HTTPException(400, 'Check the review fields and reload before retrying.') from None
     # Explicit section resume and scope survive normal POST/redirect/reload.
     from urllib.parse import urlencode
-    query = urlencode({'saved': '1', 'scope_type': form.get('scope_type', 'organisation'),
-                       'scope_id': form.get('scope_id', 'organisation')})
+    selected = after.get('scope_position') if body.operation == 'activity' else None
+    query = urlencode({'saved': '1', 'scope_type': selected['type'] if selected else form.get('scope_type', 'organisation'),
+                       'scope_id': selected['id'] if selected else form.get('scope_id', 'organisation')})
     anchor = after.get('position') or ''
     return RedirectResponse('/app/setup/' + group + '?' + query + ('#' + anchor if anchor else ''), status_code=303)
