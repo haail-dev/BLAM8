@@ -149,13 +149,14 @@
     } catch (e) {}
   }
   function modeLabel() {
+    if (window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) return "Setup";
     if (ONB_MODE) return "Onboard";
     return HELP_MODE ? "Help" : "Ask";
   }
   function refreshTitle() {
     if (titleEl) titleEl.textContent = FIX_LOG_ID
       ? "BLAM8 assistant — Fix a draft"
-      : (log.length ? "BLAM8 assistant — " + modeLabel() : "BLAM8 assistant");
+      : ((log.length || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) ? "BLAM8 assistant — " + modeLabel() : "BLAM8 assistant");
   }
 
   // EU AI Act Art 50(1): the FIRST message in every mode says "AI assistant"
@@ -325,9 +326,11 @@
   }
 
   // ── rendering ─────────────────────────────────────────────────────────────
-  function bubbleEl(role, text) {
+  function bubbleEl(role, text, guideStop) {
     var wrap = document.createElement("div");
     wrap.dataset.bcRole = role;
+    wrap.dataset.guideStop = guideStop === undefined && window.Blam8GuidedSetup
+      ? window.Blam8GuidedSetup.currentStop() : (guideStop || '');
     wrap.className = "flex " + (role === "user" ? "justify-end" : "justify-start");
     var b = document.createElement("div");
     b.className = role === "user"
@@ -353,7 +356,7 @@
       });
     });
   }
-  function scrollDown() { msgs.scrollTop = msgs.scrollHeight; }
+  function scrollDown() { var scroller=document.querySelector(".guided-stream")||msgs; scroller.scrollTop=scroller.scrollHeight; }
   // Incoming-message pinning (Julius): every assistant reply lands with its
   // TOP at the top of the viewport — read downward, scroll up for history.
   // A temporary bottom spacer lets a SHORT tail rest at the top (without it
@@ -364,6 +367,8 @@
   function clearPin() { msgs.style.paddingBottom = ""; }
   function pinToTop(el) {
     if (!el) return;
+    var stream=document.querySelector(".guided-stream");
+    if(stream){msgs.style.paddingBottom="";return;}
     var tail = 0, n = el;
     while (n) { tail += n.offsetHeight + 10; n = n.nextElementSibling; }
     var pad = msgs.clientHeight - tail - 4;
@@ -450,10 +455,11 @@
     msgs.innerHTML = "";
     msgs.appendChild(caveatEl(log.length === 0));
     var lastAssistant = bubbleEl("assistant", greeting());
+    lastAssistant.dataset.bcGreeting = "";
     msgs.appendChild(lastAssistant);
     log.forEach(function (m) {
       if (m.role === "assistant") appendTrailStrip(m.trail);
-      var el = bubbleEl(m.role, m.content);
+      var el = bubbleEl(m.role, m.content, m.guide_stop || '');
       msgs.appendChild(el);
       if (m.role === "assistant") lastAssistant = el;
       if (m.role === "assistant" && m.knowledge_card) {
@@ -469,6 +475,7 @@
       }
     });
     refreshTitle();
+    if (window.Blam8GuidedSetup) window.Blam8GuidedSetup.messagesChanged();
     // Opening the panel shows the latest assistant message from its first line,
     // like a live reply (Kris 30 Sep: the long welcome opened at its bottom).
     if (!log.length || log[log.length - 1].role === "assistant") pinToTop(lastAssistant);
@@ -790,7 +797,7 @@
     sizeMobileSheet();
   }
 
-  function setOpen(open) {
+  function setOpen(open, options) {
     // Save the drag's actual height before display:none makes its bounds zero.
     if (!open) finishSheetDrag();
     panel.classList.toggle("hidden", !open);
@@ -805,7 +812,7 @@
       if (isStale()) clearThread(); else renderAll();
       maybeSetupGreet();
       maybeOnbAutoAsk();
-      setTimeout(function () { input.focus(); }, 50);
+      if(!options || options.focus!==false)setTimeout(function () { input.focus(); }, 50);
     }
   }
 
@@ -1071,6 +1078,7 @@
     cta.classList.remove("hidden");
   }
   async function fetchSetupStatus() {
+    if(window.Blam8GuidedSetup){await window.Blam8GuidedSetup.ready;if(window.Blam8GuidedSetup.exists())return;}
     try {
       var until = parseInt(sessionStorage.getItem(KEY_SETUP_SNOOZE) || "0", 10);
       if (until && Date.now() < until) return;
@@ -1889,7 +1897,9 @@
     var reply, link = null, submit = null, recommend = null, spoke = true, closedStep = null, heldFor = [];
     try {
       var sendHelp = setupCards ? window.Blam8SetupCards.request : postJsonWithRetry;
-      var data = await sendHelp("/concierge/help", { question: text, history: history,
+      var data = window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()
+        ? await window.Blam8GuidedSetup.turn(text, history)
+        : await sendHelp("/concierge/help", { question: text, history: history,
                                path: window.location.pathname, auto: !!auto, card_mode: !!setupCards });
       reply = data.reply; link = data.link || null; submit = data.submit || null;
       recommend = data.recommend || null;
@@ -1900,14 +1910,22 @@
       if (!reply || !String(reply).trim()) throw new Error("empty reply");
     } catch (e) {
       spoke = false;
-      reply = "Sorry — I couldn't answer just now. Reload the page and I'll try again, or email hello@blam8.com and the team will help.";
+      reply = window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()
+        ? (e.message || "I couldn’t interpret that reply. Your answer is still in the conversation; you can retry or use the setting’s editor.")
+        : "Sorry — I couldn't answer just now. Reload the page and I'll try again, or email hello@blam8.com and the team will help.";
     }
     hideTyping();
-    log.push({ role: "assistant", content: reply }); saveLog(log);
+    log.push({ role: "assistant", content: reply,
+      guide_stop: window.Blam8GuidedSetup ? window.Blam8GuidedSetup.currentStop() : '' }); saveLog(log);
     var replyEl = bubbleEl("assistant", reply);
     msgs.appendChild(replyEl);
     appendHeldLine(heldFor);
-    if (setupCards) setupCards.load();
+    if (setupCards) {
+      var cardLoad=setupCards.load();
+      if(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active())Promise.resolve(cardLoad).then(function(){
+        replyEl.scrollIntoView({block:'start',behavior:'instant'});
+      });
+    }
     // Never a nav chip to the page we're standing on (Julius, 2026-08-02) —
     // it duplicates the recommend card's own link and reads as clutter.
     if (link && link.href && link.label && link.href !== window.location.pathname) appendNavLink(link);
@@ -2182,7 +2200,8 @@
     sending = true; sendBtn.disabled = true; input.value = ""; autosize();
 
     if (!silentUser) {
-      log.push({ role: "user", content: text }); saveLog(log);
+      log.push({ role: "user", content: text,
+        guide_stop: window.Blam8GuidedSetup ? window.Blam8GuidedSetup.currentStop() : '' }); saveLog(log);
       refreshTitle();
       msgs.appendChild(bubbleEl("user", text));
     }
@@ -2205,7 +2224,10 @@
   // ── wiring ────────────────────────────────────────────────────────────────
   // The bottom-right logo is a normal tap/click launcher.
   bubble.addEventListener("click", function () { setOpen(panel.classList.contains("hidden")); });
-  closeBtn.addEventListener("click", function () { setOpen(false); });
+  closeBtn.addEventListener("click", function () {
+    if(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active())window.Blam8GuidedSetup.pause();
+    else setOpen(false);
+  });
   var clearBtn = document.getElementById("bc-clear");
   if (clearBtn) clearBtn.addEventListener("click", function () { clearThread(); if (input) input.focus(); });
   form.addEventListener("submit", function (e) { e.preventDefault(); send(); });
@@ -2837,10 +2859,11 @@
     setupCards = new window.Blam8SetupCards.Panel({ messages: msgs, form: form,
       onApplying: function (card) { setupFormGuard.notify(card); },
       onApplied: function () { fetchSetupStatus(); } });
+    if(window.Blam8GuidedSetup)window.Blam8GuidedSetup.attach(setupCards,function(){if(panel.classList.contains('hidden'))setOpen(true,{focus:false});});
   }
 
   var openFlag = sessionStorage.getItem(KEY_OPEN);
-  if (openFlag === "1" || (ONB_MODE && openFlag !== "0")) setOpen(true);
+  if (openFlag === "1" || (ONB_MODE && openFlag !== "0")) setOpen(true,{focus:!document.querySelector('[data-guided-active]')});
 
   // Held for later, on the wizard's knowledge step: rules and facts stated at
   // earlier steps arrive as a ready note card — saved with the owner's click,

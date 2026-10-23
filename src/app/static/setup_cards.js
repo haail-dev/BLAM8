@@ -47,6 +47,7 @@
     this.onApplying = options.onApplying || function () {};
     this.data = { cards: [], views: {}, options: {} }; this.generation = 0; this.busy = false;
     this.mode = null; this.editing = false; this.waiting = false;
+    this.groupPreviews = {};
     this.dots = node("div", null, "bc-setup-dots");
     this.tray = node("section", null, "bc-setup-tray"); this.tray.hidden = true;
     this.tray.setAttribute("aria-label", "Setup proposals");
@@ -82,6 +83,7 @@
     this.data.cards.forEach(function (card) {
       card.lines.forEach(function (line) {
         if (line.status !== "proposed" && line.status !== "held") return;
+        if(window.Blam8GuidedSetup && window.Blam8GuidedSetup.active() && !window.Blam8GuidedSetup.matches(card,line))return;
         var here = self.onPage(card.page);
         var held = line.status === "held" && !here;
         if ((mode === "held") === held) result.push({ card: card, line: line });
@@ -107,6 +109,8 @@
   };
   Panel.prototype.paint = function () {
     var self = this; this.stale = false; this.dots.replaceChildren();
+    var guided=window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active();
+    if(guided)this.mode='suggested';
     ["suggested", "held"].forEach(function (mode) {
       var count = self.pending(mode).length;
       if (!count) return;
@@ -124,12 +128,14 @@
     this.tray.replaceChildren(); this.tray.hidden = !this.mode || this.waiting;
     if (this.mode) this.paintTray();
     this.place();
+    if(guided) this.dots.hidden=true;
+    if(guided)window.Blam8GuidedSetup.project(this.data);
   };
   Panel.prototype.paintTray = function () {
     var self = this, items = this.pending(this.mode), heading = this.mode === "held" ? "Held" : "Suggested";
     var header = node("div", null, "bc-setup-heading");
     header.appendChild(node("strong", heading + " · " + items.length + " pending"));
-    header.appendChild(button("Close", function () { self.mode = null; self.editing = false; self.paint(); }));
+    if(!(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active()))header.appendChild(button("Close", function () { self.mode = null; self.editing = false; self.paint(); }));
     this.tray.appendChild(header);
     var byPage = {};
     items.forEach(function (item) { (byPage[item.card.page] || (byPage[item.card.page] = [])).push(item); });
@@ -139,17 +145,29 @@
       var all = view.all;
       // Accept all means all pending lines on this page, not a hidden subset.
       var allIDs = card.lines.filter(function (l) { return l.status === "proposed" || l.status === "held"; }).map(function (l) { return l.id; });
+      var guided=window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active();
+      var groupPreview=guided&&allIDs.length===group.length&&all&&!all.error?all:null;
+      if(guided&&allIDs.length!==group.length&&group.length>1){
+        var visible=group.map(function(item){return item.line.id;}),key=card.id+':'+card.revision+':'+visible.join(',');
+        var cached=self.groupPreviews[key];
+        if(!cached){self.groupPreviews[key]={loading:true};request('/concierge/setup-cards/'+card.page+'/preview',{
+          revision:card.revision,ids:visible}).then(function(preview){self.groupPreviews[key]=preview;self.paint();})
+          .catch(function(err){self.groupPreviews[key]={error:err.message};self.paint();});}
+        else if(!cached.loading&&!cached.error){groupPreview=cached;title.appendChild(button('Accept displayed changes',function(){self.accept(card,visible,cached);}));}
+        else if(cached.error)title.appendChild(node('p',cached.error,'bc-setup-problem'));
+      }
       if (self.mode === "suggested" && all && !all.error && allIDs.length === group.length) {
-        title.appendChild(button("Accept all", function () { self.accept(card, allIDs, all); }));
+        title.appendChild(button(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active()?"Accept displayed changes":"Accept all", function () { self.accept(card, allIDs, all); }));
       }
       self.tray.appendChild(title);
-      group.forEach(function (item) { self.paintLine(item, view); });
+      group.forEach(function (item) { self.paintLine(item, view, guided && !!title.querySelector('button'), groupPreview); });
     });
   };
-  Panel.prototype.paintLine = function (item, view) {
+  Panel.prototype.paintLine = function (item, view, hasGroupAccept, groupPreview) {
     var self = this, line = item.line, card = item.card, row = node("article", null, "bc-setup-line");
     row.dataset.lineId = line.id;
     var preview = view.rows[line.id], effective = preview && !preview.error ? preview.changes[0] : null;
+    if(groupPreview)effective=groupPreview.changes.find(function(v){return v.id===line.id;})||effective;
     if (!effective && view.all && !view.all.error) effective = view.all.changes.find(function (v) { return v.id === line.id; });
     row.appendChild(node("p", effective ? effective.display : line.display));
     if (effective) (effective.notes || []).forEach(function (note) { row.appendChild(node("p", note)); });
@@ -162,34 +180,45 @@
       evidence.appendChild(node("p", field + ": " + source.kind.replace(/_/g, " ") + " — " + source.reference));
     });
     row.appendChild(evidence);
-    if (preview && preview.error) row.appendChild(node("p", preview.error, "bc-setup-problem"));
+    var grouped=hasGroupAccept&&groupPreview&&effective;
+    if (preview && preview.error && !grouped) row.appendChild(node("p", preview.error, "bc-setup-problem"));
+    else if(preview&&preview.error&&grouped)row.appendChild(node('p','Included in the displayed changes. Accept this group together.'));
     else if (!effective) (line.problems || []).forEach(function (p) { row.appendChild(node("p", p, "bc-setup-problem")); });
     var actions = node("div", null, "bc-setup-actions");
-    if (this.mode === "suggested" && preview && !preview.error) actions.appendChild(button("Accept", function () { self.accept(card, [line.id], preview); }));
+    if (!hasGroupAccept && this.mode === "suggested" && preview && !preview.error) actions.appendChild(button("Accept", function () { self.accept(card, [line.id], preview); }));
     actions.appendChild(button("Edit", function () { self.edit(row, card, line, effective && effective.fields); }));
     actions.appendChild(button("Leave", function () { self.mutate(card, "/changes", { revision: card.revision, changes: [{ op: "remove", id: line.id }] }); }));
-    if (this.mode === "held" || (preview && preview.error)) {
+    if (this.mode === "held" || (preview && preview.error && !grouped)) {
       var link = node("a", "Open page"); link.href = view.href; actions.appendChild(link);
     }
     row.appendChild(actions); this.tray.appendChild(row);
   };
   Panel.prototype.mutate = async function (card, action, body) {
     if (this.busy || this.stale || this.waiting) return;
+    if(action==='/accept'&&window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active()&&!window.Blam8GuidedSetup.beforeApply())return;
     this.busy = true; this.disable(); ++this.generation;
     try {
       if (action === "/accept") this.onApplying(card);
       var result = await request("/concierge/setup-cards/" + encodeURIComponent(card.page) + action, body);
       this.editing = false;
+      if(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.exists())await window.Blam8GuidedSetup.changed();
       if (action === "/accept") {
         this.onApplied(result.card);
         // The open page still shows what it loaded with: show what was saved.
         if (this.onPage(card.page)) window.location.reload();
       }
       await this.load();
+      this.guidedDraft=null;
     } catch (err) {
       // A lost response is uncertain, not a failed save to repeat. Keep the
       // proposed editor visible and require a fresh read before any next write.
       this.stale = true; this.fail(err.message + " Reload to check what was kept.");
+      if(window.Blam8ProposalForms)window.Blam8ProposalForms.clear();
+      if(this.guidedDraft&&this.guidedDraft.control.isConnected){
+        this.guidedDraft.control.value=this.guidedDraft.raw;
+        this.guidedDraft.control.dispatchEvent(new Event('input',{bubbles:true}));
+        this.fail(err.message+' Your unsaved edit is kept on the page. Reload the card to check its result before saving.');
+      }
     } finally { this.busy = false; }
   };
   Panel.prototype.accept = function (card, ids, preview) {

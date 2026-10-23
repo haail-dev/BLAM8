@@ -10,6 +10,7 @@
   // describes this device's own completed work, not a change elsewhere.
   var sent = {};
   var here = location.pathname, flow = here.indexOf('/onboarding/') === 0;
+  var guided = !!document.querySelector('[data-guided-active]');
   var tuningPaths = ['/app/diary/settings','/app/diary/intake','/app/diary/dependants','/app/crm/settings','/app/invoices/settings'];
   var notice;
   // Never captured or restored. settings_snapshot and invoice_snapshot are a
@@ -27,6 +28,9 @@
   }
   function channel() { return flow ? 'flow' : 'assistant'; }
   function fields(form) {
+    if (window.Blam8ProposalForms && !window.Blam8ProposalForms.isQuiet()) {
+      return window.Blam8ProposalForms.ordinary(form,function(){return fields(form);});
+    }
     var values={};
     Array.from(form.elements).forEach(function(el){
       if (!el.name || SKIP.test(el.name) || /^(file|password|submit|button)$/.test(el.type)) return;
@@ -59,6 +63,7 @@
         Object.keys(saved.values || {}).forEach(function(name){
           var values=saved.values[name];
           if (!Array.isArray(values) || SKIP.test(name)) return;
+          if(window.Blam8ProposalForms && window.Blam8ProposalForms.restoreField(f,name,values))return;
           var els=Array.from(f.elements).filter(function(el){return el.name===name;});
           if (!els.length && /^guided_(unknown|expand)_/.test(name)) {
             var hidden=document.createElement('input');hidden.type='hidden';hidden.name=name;f.appendChild(hidden);els=[hidden];
@@ -85,7 +90,7 @@
     var data=state.payload || {};
     if (name==='flow' && flow) {
       if (dirty) { conflict=true; warn('This setup changed on another device. Your edits are still here. Reload to use the shared version before continuing.'); return; }
-      if (data.path && data.path!==here && !conflict) { location.replace(data.path); return; }
+      if (!guided && data.path && data.path!==here && !conflict) { location.replace(data.path); return; }
       // Stored drafts changed on another device: show them. The device that
       // sent the operation already holds its result and keeps its page.
       if(old && data.refresh && data.refresh!==old.payload.refresh && !sent[data.refresh]){location.reload();return;}
@@ -111,6 +116,20 @@
     finally { polling=false; }
   }
   function serial(work) { var next=queue.catch(function(){}).then(work);queue=next;return next; }
+  function waitForAssistant() {
+    // A wizard Continue can be clicked while its automatic assistant turn owns
+    // the flow revision. Submit only after that turn has read back its receipt.
+    // The form and chosen submitter stay intact while waiting.
+    var until=Date.now()+30000;
+    return new Promise(function(resolve,reject){
+      function check(){
+        if(!adapter||!adapter.busy()){resolve();return;}
+        if(Date.now()>=until){reject(Error('The assistant is still working.'));return;}
+        setTimeout(check,50);
+      }
+      check();
+    });
+  }
   async function writeNow(name,patch) {
     if (conflict) throw Error('Reload the shared session before continuing.');
     var body={operation:uuid(),revision:states[name].revision,patch:patch};
@@ -128,6 +147,7 @@
   }
   function write(name,patch) { return serial(async function(){await api.ready;return writeNow(name,patch);}); }
   function changed(e) {
+    if(window.Blam8ProposalForms && (window.Blam8ProposalForms.isQuiet() || window.Blam8ProposalForms.owns(e.target)))return;
     if (!flow || applying || !e.target.closest('main form') || /^_sync_/.test(e.target.name || '')) return;
     dirty=true; clearTimeout(timer);
     timer=setTimeout(function(){api.flush().catch(function(){});},350);
@@ -174,7 +194,7 @@
   };
   api.ready=(async function(){
     if (document.readyState==='loading') await new Promise(function(resolve){document.addEventListener('DOMContentLoaded',resolve,{once:true});});
-    flow=flow || (tuningPaths.indexOf(here)!==-1 && !!document.querySelector('[data-setup-strip]'));
+    flow=flow || guided || (tuningPaths.indexOf(here)!==-1 && !!document.querySelector('[data-setup-strip]'));
     var name=channel(), state=await read(name);
     states[name]=state;
     if (flow && !state.payload.path) {
@@ -192,7 +212,7 @@
     apply(name,Object.assign({},state,{revision:state.revision}));
     if (flow) {
       var data=state.payload;
-      if (data.path && data.path!==here) location.replace(data.path);
+      if (!guided && data.path && data.path!==here) location.replace(data.path);
       else { restore(data.form || {}); if(window.Blam8KnowledgeGuide && data.guide)window.Blam8KnowledgeGuide.restore(data.guide); }
     }
     // Input/change listeners must not start a guide from a partially hydrated form.
@@ -210,7 +230,7 @@
     if (submissions.has(f)) return;
     submissions.add(f);
     var submitter=e.submitter;
-    api.flush().then(function(){
+    waitForAssistant().then(function(){return api.flush();}).then(function(){
       // Native submission still owns its reentrancy guard during microtasks.
       // Resume in a later task, after that original submit dispatch finishes.
       return new Promise(function(resolve){setTimeout(resolve,0);});
@@ -222,7 +242,9 @@
       f.dataset.syncSubmitting='1';
       try { f.requestSubmit(submitter); }
       finally { delete f.dataset.syncSubmitting; }
-    }).catch(function(){warn('This action has not been submitted. Reconnect or reload the shared session first.');})
+    }).catch(function(err){warn(err&&err.message==='The assistant is still working.'?
+      'The assistant is still working. Your form is kept; try Continue when it finishes.':
+      'This action has not been submitted. Reconnect or reload the shared session first.');})
       .finally(function(){submissions.delete(f);});
   },true);
   document.addEventListener('click',function(e){

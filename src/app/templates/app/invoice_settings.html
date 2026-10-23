@@ -31,7 +31,7 @@
 {# 6xl page: the concierge side dock (_concierge.html) starts sliding the
    page left at page-width + 46rem — 72rem + 46rem here. #}
 <style>:root { --bc-clear: 118rem; }</style>
-<div class="max-w-6xl mx-auto p-4 sm:p-6 grid gap-6 lg:grid-cols-2 items-start">
+<div class="max-w-6xl mx-auto p-4 sm:p-6 grid gap-6 lg:grid-cols-2 items-start" data-guided-editor="invoice_settings">
 <div class="space-y-4 min-w-0">
   {# The tuning walk-through's auto-ask hook (Julius 2026-09-02): these are
      facts only the owner knows, so the assistant can't fill them — arriving
@@ -276,7 +276,7 @@
          a block of lessons, prepaid hours, a class pass. Every knob a setting. -->
     {% set pkgs = s.extras.packages or [] %}
     {% set pref = s.extras.package_prefs or {} %}
-    <details class="{{ fold }}" id="packages">
+    <details class="{{ fold }}" id="packages" data-guided-editor="packages">
       {{ face('Packages', (pkgs|length ~ ' package' ~ ('' if pkgs|length == 1 else 's') ~ ' · ' ~ (pkgs|map(attribute='name')|join(', '))) if pkgs else 'none — every job invoiced on its own') }}
       <div class="{{ foldbody }}">
         <input type="hidden" name="pkg_form" value="1">

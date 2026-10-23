@@ -1,0 +1,66 @@
+/* Guided setup keeps the current decision, conversation and card in one scroll
+   region. The composer and application navigation each own a separate row. */
+.guided-running { --guided-border:#dce2eb; --guided-surface:#fff; --guided-muted:#526078; }
+[data-theme="dark"] .guided-running { --guided-border:#364152; --guided-surface:#1c222c; --guided-muted:#b0bdd0; }
+.guided-stream{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;background:var(--guided-surface);scrollbar-width:thin}
+.guided-question{padding:1rem;font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
+.guided-progress{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--guided-muted);margin-bottom:.5rem}
+.guided-title{font-size:1rem;font-weight:650;margin-bottom:.5rem}
+.guided-why,.guided-status{font-size:.8rem;color:var(--guided-muted);margin-top:.65rem}
+.guided-status:empty{display:none}
+.guided-status:not(:empty){padding:.65rem;border-left:3px solid #3b82f6;background:rgb(59 130 246 / .07);border-radius:0 .4rem .4rem 0}
+.guided-conversation{padding:0 1rem}
+.guided-history{font-size:.75rem;color:var(--guided-muted);padding:.3rem 0;text-decoration:underline}
+.guided-conversation:not(.guided-show-history) .guided-earlier{display:none}
+.guided-conversation #bc-messages:empty{padding:0!important}
+.guided-page-toggle{display:none}
+.guided-conversation>summary,.guided-more>summary,.guided-why>summary{cursor:pointer;color:var(--guided-muted);font-size:.8rem;padding:.25rem 0}
+.guided-running #bc-messages{overflow:visible;flex:none;min-height:0;padding:.75rem 0!important;background:transparent}
+.guided-running [data-bc-greeting],.guided-running #bc-caveat{display:none}
+.guided-running .bc-setup-dots{display:none!important}
+.guided-running [data-proposed]{outline:2px solid #3b82f6;outline-offset:2px}
+.guided-running [data-proposed]:disabled{color:inherit!important;opacity:1!important;-webkit-text-fill-color:currentColor}
+.guided-running [data-bc-setup-host]>div:not(.bc-setup-dots){max-width:100%}
+.guided-running .bc-setup-tray{flex:none;max-height:none;overflow:visible;margin:0 1rem 1rem;padding:.85rem;box-shadow:none;border-color:var(--guided-border);font-size:.8rem}
+.guided-running .bc-setup-error{margin:0 1rem .5rem;border-radius:.5rem}
+.guided-running .bc-setup-heading{gap:.6rem}
+.guided-running .bc-setup-heading>strong{font-size:.85rem}
+.guided-running .bc-setup-actions{justify-content:flex-start}
+.guided-direct-answer{display:block;width:100%;border:1px solid var(--guided-border);border-radius:.5rem;padding:.6rem;margin:.5rem 0;color:inherit;background:var(--guided-surface)}
+.guided-actions{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+.guided-actions button,.guided-proposed-note button{border:1px solid var(--guided-border,#94a3b8);border-radius:.5rem;padding:.5rem .75rem;font-size:.8rem}
+.guided-actions .guided-primary{background:#2455df;color:white;border-color:#2455df}
+.guided-actions button:disabled{opacity:.5;cursor:wait}
+.guided-more{margin-top:.5rem}
+.guided-owning-link{display:inline-block;color:#2563eb;text-decoration:underline;margin-top:.5rem}
+.guided-target{outline:2px solid #3b82f6;outline-offset:4px;scroll-margin-block:1rem}
+.guided-proposed-note{display:block;font-size:.75rem;color:#1d4ed8;margin:.35rem 0}
+.guided-proposed-note button{font:inherit;padding:.15rem .4rem}
+.guided-resume{position:fixed;right:1rem;top:3rem;z-index:80;border:1px solid #94a3b8;border-radius:.6rem;padding:.6rem .85rem;background:#1d4ed8;color:white;font-size:.875rem}
+.guided-resume[hidden]{display:none}
+.guided-running #bc-panel{display:flex!important;position:fixed;right:1rem;bottom:1rem;width:23rem;max-width:calc(100vw - 2rem);height:min(46rem,calc(var(--guided-viewport,100dvh) - 5rem))!important;max-height:calc(var(--guided-viewport,100dvh) - 5rem)!important;transition:none}
+.guided-running #bc-panel>header{flex:none}
+.guided-running #bc-form{flex:none}
+.guided-running #blam8-concierge{right:1rem;bottom:1rem}
+.guided-running main.app-sky{padding-right:25rem!important}
+.guided-running #bc-cta,.guided-running #bc-clear{display:none}
+.guided-running button:focus-visible,.guided-running a:focus-visible,.guided-running summary:focus-visible{outline:3px solid #60a5fa;outline-offset:2px}
+[data-theme="dark"] .guided-proposed-note,[data-theme="dark"] .guided-owning-link{color:#93c5fd}
+@media(max-width:767px){
+ .guided-running #bc-panel{left:0;right:0;bottom:calc(var(--strip-h,60px) + var(--strip-inset,0px) + var(--guided-keyboard-inset,0px))!important;width:auto!important;max-width:none!important;height:min(30rem,calc(var(--guided-viewport,100dvh) * var(--guided-ratio,.56)))!important;max-height:calc(var(--guided-viewport,100dvh) - 6rem)!important;border-radius:1rem 1rem 0 0}
+ .guided-running.guided-page-expanded{--guided-ratio:.3}
+ .guided-running.guided-keyboard nav[aria-label="Primary"]{visibility:hidden}
+ .guided-running.guided-keyboard #bc-panel{bottom:var(--guided-keyboard-inset,0px)!important;--guided-ratio:.6}
+ .guided-page-toggle{display:inline-block;font-size:.75rem;color:var(--guided-muted);text-decoration:underline;margin-bottom:.4rem}
+ .guided-running nav[aria-label="Primary"]{position:fixed!important;left:0;right:0;bottom:0;width:100%}
+ .guided-running main.app-sky{padding-right:0!important;padding-bottom:1rem;scroll-padding-block:1rem;overscroll-behavior:contain}
+ .guided-question{padding:.85rem}
+ .guided-running .bc-setup-tray{margin:0 .85rem .85rem}
+ .guided-running #bc-resize-handle{display:none}
+ .guided-running #bc-panel>header{cursor:default}
+}
+@media(prefers-reduced-motion:reduce){.guided-target{scroll-behavior:auto}}
+
+.guided-navigation{padding:0 1rem 1rem}.guided-navigation .guided-actions{margin-top:0}
+
+.guided-section{font-size:.75rem;color:var(--guided-muted);margin:-.2rem 0 .65rem}

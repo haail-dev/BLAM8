@@ -160,6 +160,7 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
              _g("Settings, people & knowledge", "signed-in", [
                  _p("/app/settings", "Settings", "auto-send, notifications, the installable app, everything else"),
                  _p('/app/setup', 'Resume setup review', 'independently saved groups; review does not grant operational readiness'),
+                 _p('/app/setup/guide', 'Guided setup', 'questions, explicit proposals and explanations on actual settings pages'),
                  _p('/app/setup/{group}', 'Setup group', 'Diary, Records and workflows, or Charges and payments', via='/app/setup'),
                  _p("/app/mailboxes", "Mailboxes", "every connected mailbox, by department"),
                  _p("/app/mailboxes/add", "Add a mailbox", "the price, before the consent screen"),
@@ -284,6 +285,7 @@ def build(comparisons: list[dict], help_topics: list[dict], setups: list[dict]) 
 # GET routes that are not pages, with the reason. The test refuses an entry here that
 # no longer exists, so this list can't rot either.
 EXCLUDED = {
+    '/app/setup/guide/state': 'authenticated current guide question and progress, JSON',
     "/device-sync/{channel}": "signed-in device synchronisation state for onboarding and assistant clients, JSON",
     "/concierge/business/status/{proposal_id}": "one confirmed-action receipt, JSON",
     "/admin/": "alias of /admin",

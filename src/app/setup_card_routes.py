@@ -204,7 +204,9 @@ def change_card(page: str, body: ChangeRequest, ctx: TenantCtx = Depends(require
     try:
         current = store.load(ctx.tenant_id, page, client=ctx.client)
         card = cards.change(page, current, body.revision, str(uuid4()), body.changes)
-        return {"card": store.save(ctx.tenant_id, page, body.revision, card, client=ctx.client)}
+        from app.guided_setup_routes import commit_linked_card
+        linked = commit_linked_card(ctx, page, body.revision, card)
+        return {"card": linked or store.save(ctx.tenant_id, page, body.revision, card, client=ctx.client)}
     except Exception as exc:
         _error(exc)
 
@@ -249,7 +251,9 @@ def accept_card(page: str, body: AcceptRequest, ctx: TenantCtx = Depends(require
             from app.config import settings
             patch, tokens = asyncio.run(setup_card_knowledge.prepare(patch))
             usage.record_voyage(ctx.tenant_id, settings.voyage_model, tokens, operation='embed_ingest')
-        return {"card": store.save(ctx.tenant_id, page, body.revision, card,
+        from app.guided_setup_routes import commit_linked_card
+        linked = commit_linked_card(ctx, page, body.revision, card, snapshot=cfg, patch=patch)
+        return {"card": linked or store.save(ctx.tenant_id, page, body.revision, card,
                                   expected_settings=cfg if cfg is not None else {}, settings_patch=patch, client=ctx.client)}
     except Exception as exc:
         _error(exc)

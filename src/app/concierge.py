@@ -1093,6 +1093,7 @@ class HelpReply(NamedTuple):
     held: list = []
     setup_changes: list | None = None
     evidence: list | None = None
+    guide_answers: list | None = None
 
 
 def _held_rule_for_help() -> str:
@@ -1143,6 +1144,7 @@ def _customer_block(tenant: dict | None) -> str:
     assistant tailors help to THIS business without asking what it already knows. Includes
     the live setup snapshot (when passed) so 'what do I do next?' is answered from what's
     actually done and what's still missing."""
+    import json
     if not tenant:
         return ""
     bits = []
@@ -1560,6 +1562,18 @@ async def answer_help(question: str, history: list[dict] | None = None,
         from app import setup_card_model
         system.append({"type": "text", "text": tenant["setup_card_context"]})
         output_schema = setup_card_model.schema(HELP_SCHEMA)
+    if tenant and tenant.get('guided_question'):
+        from copy import deepcopy
+        output_schema = deepcopy(output_schema)
+        output_schema['properties']['guide_answers'] = {'type':'array','items':{'type':'object',
+            'properties':{'question':{'type':'string'},'state':{'type':'string','enum':['answered','unknown','deferred','not_applicable']},
+                'value':{'anyOf':[{'type':'string'},{'type':'number'},{'type':'boolean'},{'type':'null'}]}},
+            'required':['question','state','value'],'additionalProperties':False}}
+        output_schema['required'].append('guide_answers')
+        system.append({'type':'text','text':'For this factual guide question only, return guide_answers with its exact question ID, '
+            'a typed value and explicit state. Extract only the owner’s answer; ask to clarify ambiguity. '
+            'For a product or unrelated question return an empty list. Never interpret an instruction to continue as a business answer. '
+            'Question data: '+json.dumps(tenant['guided_question'],ensure_ascii=False)})
     messages = (history or []) + [{"role": "user", "content": question}]
     if investigator is not None:
         system.append({'type': 'text', 'text': help_investigation.instructions()})
@@ -1625,7 +1639,8 @@ async def answer_help(question: str, history: list[dict] | None = None,
                      usage=totals if investigator is not None else msg.usage, model=msg.model,
                      no_dependants=False if suppress_setup else _help_no_dependants(text),
                      held=[] if suppress_setup else _help_held(text), setup_changes=None if suppress_setup else _help_setup_changes(text),
-                     evidence=list(investigator.checked) if investigator is not None else [])
+                     evidence=list(investigator.checked) if investigator is not None else [],
+                     guide_answers=(json.loads(text).get('guide_answers') if tenant and tenant.get('guided_question') and not suppress_setup else None))
 
 
 def _help_setup_changes(text):

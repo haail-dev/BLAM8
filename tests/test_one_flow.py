@@ -128,12 +128,13 @@ def test_finish_lands_on_the_first_open_tuning_step(client, monkeypatch, review_
     monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
     monkeypatch.setattr(onboarding.db, "upsert_tenant_config", lambda *a, **k: None)
+    monkeypatch.setattr(onboarding,'_prepare_guided_setup',lambda ctx:'/app/setup/guide')
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: list(STEPS))
     assert review_store.rows == []  # completion is permitted only after pending review is checked
     r = client.post("/onboarding/knowledge/text", data={"label": "", "content": "", "then": "continue"},
                     follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "/app/diary/intake"              # not /app/
+    assert r.headers["location"] == "/app/setup/guide"  # explicit introduction before actual Diary
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: [dict(s, done=True) for s in STEPS])
     r = client.post("/onboarding/knowledge/text", data={"label": "", "content": "", "then": "continue"},
                     follow_redirects=False)
@@ -148,8 +149,7 @@ def test_knowledge_button_says_next_with_the_first_step(client, monkeypatch, rev
     monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: [dict(STEPS[0], done=False)] + STEPS[1:])
     r = client.get("/onboarding/knowledge")
-    line = next(l for l in r.text.splitlines() if "data-onb-continue" in l)
-    assert ">Next: Diary &amp; scheduling settings</button>" in line or "Next: Diary" in r.text
+    assert ">Next: Guided setup</button>" in r.text
     assert "Finish setup</button>" not in r.text
 
 

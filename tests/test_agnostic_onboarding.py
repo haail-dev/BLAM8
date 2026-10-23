@@ -123,7 +123,7 @@ def journey(database, monkeypatch, request, tmp_path):
 
     def execute(sql, *args):
         with driver.connect(dsn, autocommit=True) as conn:
-            conn.execute(sql, args)
+            conn.execute(sql, args or None)
 
     yield SimpleNamespace(http=http, action=action, answer=answer, state=current, row=row,
                           query=query, execute=execute, tenant=tenant, other=other, rpc=rpc)

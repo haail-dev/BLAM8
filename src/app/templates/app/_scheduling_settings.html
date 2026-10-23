@@ -275,7 +275,7 @@
        the agent books the RIGHT slot length per service instead of one fixed slot. Empty =
        the single fixed-slot diary (the slot length above), unchanged. Office tenants only. #}
     {% if not fleet_mode %}
-        <details class="group/row border-t border-slate-200">
+        <details class="group/row border-t border-slate-200" data-guided-decision="diary_settings/service">
       {% if diary_stay_mode %}
       {{ sface('Appointments', ((_svc ~ ' appointment' ~ ('' if _svc == 1 else 's')) ~ (' · front desk rule' if front_desk.enabled else '')) if _svc else 'None — stays only') }}
       {% else %}
@@ -506,7 +506,7 @@
        Different KINDS of bookable unit, each its own pool (stay sizes, room types, hire
        stock, bays, staff). Empty = one shared pool of "Bookings per slot". Office only. #}
     {% if not fleet_mode %}
-        <details class="group/row border-t border-slate-200">
+        <details class="group/row border-t border-slate-200" data-guided-decision="diary_settings/resource">
       {{ sface('Resource types', (_res ~ ' type' ~ ('' if _res == 1 else 's')) if _res else 'One shared pool') }}
       <div class="px-5 pb-5 pt-1 space-y-4">
 <div>

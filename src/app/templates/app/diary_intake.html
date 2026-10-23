@@ -62,7 +62,7 @@
 
   <p class="px-1 text-xs text-slate-400 leading-relaxed">{% if dep_kind %}Things to know about each {{ dep_kind }} — a saved preference or expiry date — belong under {% else %}Is a booking about something that belongs to the customer — a person, item or other named subject? Say what to know about each one under {% endif %}{% if setup_walk_active %}<span class="font-medium">Dependants</span> — the next step{% else %}<a href="/app/diary/dependants" class="text-brand font-medium">Dependants</a>{% endif %}; the rows here are what changes each visit.</p>
 
-  <form method="post" action="/app/diary/intake" class="space-y-4">
+  <form method="post" action="/app/diary/intake" class="space-y-4" data-guided-editor="booking_details">
     <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 

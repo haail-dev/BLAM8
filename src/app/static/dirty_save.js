@@ -26,7 +26,7 @@
 (function () {
   function signature(form) {
     var parts = [];
-    new FormData(form).forEach(function (v, k) {
+    (window.Blam8ProposalForms ? window.Blam8ProposalForms.data(form) : new FormData(form)).forEach(function (v, k) {
       /* Files have no readable value; name+size distinguishes a swapped pick. */
       parts.push(k + '=' + (v instanceof File ? v.name + ':' + v.size : v));
     });

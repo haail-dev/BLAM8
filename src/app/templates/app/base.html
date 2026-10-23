@@ -602,7 +602,8 @@
   <script src="/static/setup_stepper.js?v={{ asset_rev }}" defer></script>
   {% endif %}
 
-  {% if onboarding_routes is defined and request.url.path in onboarding_routes %}
+  {% if guided_setup_meta %}<div data-guided-active="{{ guided_setup_meta.status }}" hidden></div>{% endif %}
+  {% if onboarding_routes is defined and request.url.path in onboarding_routes and not guided_setup_meta %}
   {% set review_target = onboarding_routes[request.url.path] %}
   <div class="px-4 py-1 text-xs"><a href="/app/setup/{{ review_target[0] }}#{{ review_target[1] }}" class="text-brand underline">Return to grouped setup review →</a></div>
   {% endif %}
