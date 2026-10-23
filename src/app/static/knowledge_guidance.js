@@ -59,7 +59,7 @@
       data.guide_actions=data.actions || [];
       data.guide_save=!!data.save_ready;
       var item=data.focus || {}, noteId=item.kind==='note'||item.kind==='support'?item.id:item.note_id || item.target;
-      if(item.kind==='layout_batch'||item.kind==='source_batch'){var sources=f.querySelector('.kr-source-coverage');if(sources)sources.open=true;}
+      if(item.kind==='passage'){var sources=f.querySelector('.kr-source-coverage');if(sources)sources.open=true;}
       var workspace=window.Blam8KnowledgeReview;
       if(workspace && workspace.focusNote && noteId)workspace.focusNote(f,noteId,item.kind==='overlap'?'more':item.kind==='support'||item.kind==='passage'?'source':null);
       else {

@@ -209,11 +209,9 @@ def present(context, row, form, *, receipt=''):
                 + '\n'.join(p['text'] for p in item['passages'][:4]))
         actions = [('Leave reviewed labels in audit', 'Leave reviewed layout labels in the audit')]
     elif kind == 'source_batch':
-        text = (f"{item['remaining']} material source ambiguities still need a grouped decision. "
-                'Open Source audit in the review form to inspect the full text and provenance. '
-                'These are the material ambiguities across the notes. Correct the affected notes or give the decisions together; optional unknown details do not block Save. '
-                'Unknown passages stay in the review audit and are not added to agent Knowledge.\n\n'
-                + '\n'.join(p['text'][:180] for p in item['passages'][:3]))
+        text = ('Your notes are reviewed. The website also contains details that are not confirmed in those notes. '
+                'You can leave these unknown and keep just the notes you reviewed, or inspect the additional details. '
+                'The original website evidence stays available for reference; leaving details unknown does not add facts.')
         actions = [('Review source details', 'Review these source details individually'),
                    ('Leave these details unknown', 'Leave these source details unknown')]
     elif kind == 'overlap':
@@ -224,16 +222,15 @@ def present(context, row, form, *, receipt=''):
         text = f"One detail is still unknown: {item['text']}\n\nTell me the answer, or leave it unknown for now."
         actions = [('Leave unknown', 'Leave this unknown')]
     elif kind == 'ready':
-        text = (f"Your {review['summary']['notes']} note decisions are ready for a final check. "
-                'Sources and shared caveats will stay attached to retained notes; details left unknown stay unknown. '
-                'Nothing from this review is saved to Knowledge yet. Use Save reviewed decisions when you are ready, or ask to change a decision.')
+        text = ('Ready to save your reviewed notes. Save once to make them available to your agent. '
+                'Notes you left out will not be added, and unanswered details stay unknown.')
     else:
         text = 'There is still a decision to resolve before saving: '+item['text']
     note_id = item.get('note_id') if kind=='overlap' else item.get('id') if kind in {'note','support'} else item.get('target')
     if note_id and any(k.startswith('source_') and v=='note:'+note_id for k,v in form.items()):
         actions.append(('Undo added website wording for this note', 'Undo added website wording for this note'))
     if kind not in {'blocked', 'ready'}:
-        text += '\n\nThese are review choices in the form; nothing is saved to Knowledge yet.'
+        text += '\n\nDraft review · save when you’ve finished.'
     return {'reply': '\n\n'.join(filter(None, [receipt, text])), 'focus': item,
             'focus_hash': identity(item), 'actions': [{'label': a, 'message': b, 'action': SHORTCUTS[b.casefold()]} for a,b in actions],
             'batch_id': row['id'], 'version': context['version'],

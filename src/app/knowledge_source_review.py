@@ -208,7 +208,12 @@ def validate(card, evidence, raw):
     return {'revision': card['revision'], 'review': deepcopy(raw), 'changes': changes,
             'overlaps': [[{'id': i, 'label': available[i]['label']} for i in ids] for ids in overlaps],
             'questions': shown_questions,
-            'summary': summary}
+            'summary': summary,
+            'presentation_summary': (
+                f"{len(changes)} correction(s) ready to review. Nothing has changed yet."
+                if changes else 'No new corrections to apply. Your notes are unchanged.')
+                + (' Some suggestions could not be verified; see Review details.'
+                   if omitted_changes or omitted_overlaps or omitted_questions else '')}
 
 
 def content_segments(card, line):

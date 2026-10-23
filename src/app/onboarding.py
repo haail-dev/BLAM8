@@ -735,6 +735,10 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
     from app import knowledge_coverage, knowledge_review
     review_context = knowledge_review.load(ctx.tenant_id)
     sources = [{**s,"chunks":s.get("chunks",1)} for s in review_context["sources"] if s.get("mailbox_id") is None]
+    # Display owner-facing titles; retain stable retrieval identifiers in evidence.
+    saved_labels = {n['admitted_source']: n['label'] for r in review_context['reviews']
+                    if r['state'] == 'saved' for n in r['payload']['entries'] if n.get('admitted_source')}
+    sources = [{**s, 'display_label': saved_labels.get(s['source'], s['source'])} for s in sources]
     texts = [{"source":s["source"],"text":s["content"]} for s in sources]
     cov = knowledge_coverage.coverage(texts)
     pending_reviews = [knowledge_review.review_view(review_context, r) for r in review_context["reviews"] if r["state"] == "pending"]
@@ -767,6 +771,7 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
         "knowledge", sources=sources, configured=kb.is_configured(), coverage=cov,
         review_coverage=knowledge_review.topic_view(review_context), pending_reviews=pending_reviews,
         source_texts=text_by_source,
+        saved_review_ids=[r['id'] for r in review_context['reviews'] if r['state']=='saved'],
         coverage_ask=coverage_ask, site_url=website, auto_site=auto_site,
         site_state=knowledge_review.website_state(review_context),
         site_done=site_read, site_note_count=len(site_sources), held_notes=held_notes,
@@ -967,6 +972,9 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             if admitted:
                 setup_held.mark_used(ctx.tenant_id, "knowledge", client=ctx.client)
         else:
+            expected_recheck = form.get('correction_recheck_version')
+            if expected_recheck and expected_recheck != context['version']:
+                raise HTTPException(409, 'The review changed after your correction. Check the current notes before continuing; nothing was saved to Knowledge.')
             if form.get('version')==context['version']:
                 context,row,form = knowledge_review.checkpoint(ctx.tenant_id,context,row,form)
             # A stale preview is an explicit read-only comparison, never a write retried against a newer revision.
@@ -977,6 +985,8 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=view,
                 review_coverage=knowledge_review.topic_view(context), preview_complete=True))
     except HTTPException as exc:
+        if request.headers.get('accept') == 'application/json':
+            return JSONResponse({'detail':exc.detail},status_code=exc.status_code)
         return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row,form),
             review_coverage=knowledge_review.topic_view(context),error=exc.detail),status_code=exc.status_code)
     except Exception:

@@ -1,8 +1,10 @@
 {% extends "onboarding/base.html" %}
 {% block title %}Knowledge · Set up BLAM8{% endblock %}
-{% block heading %}{{ "Review Knowledge" if pending_reviews else "Give it your facts" }}{% endblock %}
-{% block subheading %}{% if not pending_reviews %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endif %}{% endblock %}
+{% block heading %}{{ "Review Knowledge" if pending_reviews else ("Your Knowledge" if sources else "Give it your facts") }}{% endblock %}
+{% block subheading %}{% if not pending_reviews %}{% if sources %}Your agent can use these saved facts. You can read them below or add more any time.{% else %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endif %}{% endif %}{% endblock %}
 {% block content %}
+<span hidden data-knowledge-saved-reviews='{{ (saved_review_ids or []) | tojson }}'></span>
+{% if sources and not pending_reviews %}<div data-knowledge-saved-status role="status" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Knowledge saved</strong><p>{{ sources|length }} note{{ '' if sources|length == 1 else 's' }} saved. No drafts waiting for review. You can continue when you’re ready.</p></div>{% endif %}
 <style>
   .knowledge-review, #site-box { container-type:inline-size; }
   #site-box > .flex { display:grid;grid-template-columns:minmax(0,1fr) auto; }
@@ -68,10 +70,11 @@
   {% for s in sources %}
   <details class="group px-3 py-2 text-sm" data-kb-note>
     <summary class="flex cursor-pointer items-center justify-between gap-3 list-none">
-      <span class="font-medium text-navy truncate" data-kb-source="{{ s.source }}">{{ s.source }}</span>
-      <span class="flex-none text-xs text-slate-400">{{ s.chunks }} chunk{{ '' if s.chunks == 1 else 's' }} · <span class="group-open:hidden">read</span><span class="hidden group-open:inline">close</span></span>
+      <span class="font-medium text-navy truncate" data-kb-source="{{ s.source }}">{{ s.display_label or s.source }}</span>
+      <span class="flex-none text-xs text-brand"><span class="group-open:hidden">View note</span><span class="hidden group-open:inline">Close</span></span>
     </summary>
     <p class="mt-1.5 whitespace-pre-wrap text-xs text-slate-600">{{ (source_texts or {}).get(s.source) or '(nothing to show)' }}</p>
+    <details class="mt-2 text-xs text-slate-500"><summary class="cursor-pointer">Source details</summary><p class="break-words">{{ s.source }}</p><p>{{ s.chunks }} stored section{{ '' if s.chunks == 1 else 's' }}</p></details>
   </details>
   {% endfor %}
 </div>
@@ -95,7 +98,7 @@
    done"): once "Website — …" notes exist the box becomes one line, and
    Read again reveals it for a re-run. #}
 {% set site_state = site_state or {'state': 'saved' if site_done else 'idle', 'pending_notes': 0, 'saved_notes': site_note_count or 0} %}
-<div id="site-lifecycle" class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}" data-pending-notes="{{ site_state.pending_notes }}" data-review-href="{{ site_state.review_href or '#knowledge-pending-reviews' }}">
+<div id="site-lifecycle"{% if sources and not pending_reviews and site_state.state=='saved' %} hidden{% endif %} class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}" data-pending-notes="{{ site_state.pending_notes }}" data-review-href="{{ site_state.review_href or '#knowledge-pending-reviews' }}">
   <p data-site-heading class="font-semibold">{% if site_state.state=='pending' %}Website drafts ready to review{% elif site_state.state=='saved' %}Website notes saved{% else %}Start from your website{% endif %}</p>
   <p data-site-description>{% if site_state.state=='pending' %}{{ site_state.pending_notes }} drafts pending. Nothing from these drafts is saved to Knowledge.{% elif site_state.state=='saved' %}{{ site_state.saved_notes }} website notes saved to Knowledge.{% if site_state.clarification_notes %} {{ site_state.clarification_notes }} separate clarification notes saved.{% endif %}{% else %}Read key pages and prepare notes for your review.{% endif %}</p>
   <a data-site-review {% if not site_state.pending_notes %}style="display:none"{% endif %} href="{{ site_state.review_href or '#knowledge-pending-reviews' }}"{% if not site_state.pending_notes %} hidden{% endif %} class="mt-2 inline-block font-semibold text-brand">Review {{ site_state.pending_notes }} drafts</a>

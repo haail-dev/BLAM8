@@ -455,6 +455,15 @@
     lastAssistant.dataset.bcGreeting = "";
     msgs.appendChild(lastAssistant);
     log.forEach(function (m) {
+      // Keep the transcript for reference, but don't present a completed
+      // review's old "not saved" instructions as the current state.
+      if (m.role === 'assistant' && m.knowledge_card && knowledgeBatchSaved(m.knowledge_card.batch_id)) {
+        var history = document.createElement('details');
+        history.className = 'rounded-lg border border-slate-200 p-3 text-xs text-slate-500';
+        var summary = document.createElement('summary'); summary.textContent = 'Earlier Knowledge review · completed';
+        history.appendChild(summary); history.appendChild(bubbleEl(m.role, m.content));
+        msgs.appendChild(history); return;
+      }
       if (m.role === "assistant") appendTrailStrip(m.trail);
       var el = bubbleEl(m.role, m.content, m.guide_stop || '');
       msgs.appendChild(el);
@@ -471,6 +480,13 @@
         });
       }
     });
+    var savedStatus = document.querySelector('[data-knowledge-saved-status]');
+    var latestEntry = log[log.length - 1];
+    if (savedStatus && (!latestEntry || latestEntry.knowledge_card && knowledgeBatchSaved(latestEntry.knowledge_card.batch_id))) {
+      lastAssistant = bubbleEl('assistant', savedStatus.textContent.trim());
+      lastAssistant.setAttribute('data-knowledge-current-status', '');
+      msgs.appendChild(lastAssistant);
+    }
     refreshTitle();
     if (window.Blam8GuidedSetup) window.Blam8GuidedSetup.messagesChanged();
     // Opening the panel shows the latest assistant message from its first line,
@@ -1383,6 +1399,12 @@
   // re-run 2026-09-13: identical lines under two replies read as a repeat).
   var heldExplained = false;
   var pendingKnowledgeChoice = null;
+  function knowledgeBatchSaved(id) {
+    var marker = document.querySelector('[data-knowledge-saved-reviews]');
+    if (!marker) return false;
+    try { return JSON.parse(marker.getAttribute('data-knowledge-saved-reviews')).includes(id); }
+    catch (_) { return false; }
+  }
   function knowledgeCardCurrent(card) {
     var guide = window.Blam8KnowledgeGuide;
     var latest = log.slice().reverse().find(function(entry){return entry.knowledge_card;});
