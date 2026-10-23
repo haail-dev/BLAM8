@@ -4,7 +4,7 @@
 {% block subheading %}{% if not pending_reviews %}{% if sources %}Your agent can use these saved facts. You can read them below or add more any time.{% else %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endif %}{% endif %}{% endblock %}
 {% block content %}
 <span hidden data-knowledge-saved-reviews='{{ (saved_review_ids or []) | tojson }}'></span>
-{% if sources and not pending_reviews %}<div data-knowledge-saved-status role="status" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Knowledge saved</strong><p>{{ sources|length }} note{{ '' if sources|length == 1 else 's' }} saved. No drafts waiting for review. You can continue when you’re ready.</p></div>{% endif %}
+{% if sources and not pending_reviews %}<div data-knowledge-saved-status role="status" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Knowledge saved</strong> <p>{{ sources|length }} note{{ '' if sources|length == 1 else 's' }} saved. No drafts waiting for review. You can continue when you’re ready.</p></div>{% endif %}
 <style>
   .knowledge-review, #site-box { container-type:inline-size; }
   #site-box > .flex { display:grid;grid-template-columns:minmax(0,1fr) auto; }

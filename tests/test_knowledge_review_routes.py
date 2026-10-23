@@ -24,6 +24,7 @@ def test_saved_page_uses_note_titles_and_authoritative_status(client, review_sto
     assert page.select_one('[data-kb-note] > summary').get_text(' ',strip=True) == 'Service hours View note Close'
     assert source in page.select_one('[data-kb-note] details').get_text()
     assert '1 note saved. No drafts waiting for review.' in page.select_one('[data-knowledge-saved-status]').get_text()
+    assert page.select_one('[data-knowledge-saved-status]').get_text().startswith('Knowledge saved 1 note')
     assert row['id'] in page.select_one('[data-knowledge-saved-reviews]')['data-knowledge-saved-reviews']
     assert 'topics have saved notes' not in response.text
     # Starting another batch must not falsely say all reviews are complete.
