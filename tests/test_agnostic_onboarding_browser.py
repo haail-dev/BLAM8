@@ -38,6 +38,8 @@ def render_group(theme, *, long=False):
         page = re.sub(r'<link rel="stylesheet" href="/static/' + re.escape(name) + r'[^\"]*">', lambda m: '<style>' + body + '</style>', page)
     body = (ROOT / 'src/app/static/setup_stepper.js').read_text(encoding='utf-8')
     page = re.sub(r'<script src="/static/setup_stepper\.js[^\"]*" defer></script>', lambda m: '<script>' + body + '</script>', page)
+    dirty = (ROOT / 'src/app/static/dirty_save.js').read_text(encoding='utf-8')
+    page = re.sub(r'<script src="/static/dirty_save\.js[^\"]*" defer></script>', lambda m: '<script>' + dirty + '</script>', page)
     page = re.sub(r'<script\b[^>]*\bsrc=[^>]*></script>', '', page)
     page = page.replace('<html lang="en"', '<html data-theme="' + theme + '" lang="en"')
     return page.replace('<head>', '<head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data:">')
@@ -68,12 +70,16 @@ def test_group_disclosures_focus_long_labels_and_geometry(tmp_path, theme, width
     const controls=[...group.querySelectorAll('input:not([type=hidden]),select,textarea,button')].filter(e=>e.getBoundingClientRect().width>0);
     controls.forEach(e=>{const r=e.getBoundingClientRect();check(r.left>=-1 && r.right<=innerWidth+1,'control outside viewport')});
     const text=group.innerText;check(text.includes('Activities'),'section label readable');
+    const review=section.querySelector('input[name=operation][value=review]')?.closest('form');
+    if(review){const save=review.querySelector('[data-save-row]');check(save?.hidden,'unchanged section save hidden');
+      const choice=review.querySelector('[name=state]'),old=choice.value;choice.value='reviewed';review.dispatchEvent(new Event('change',{bubbles:true}));check(!save.hidden,'changed section save appears');
+      choice.value=old;review.dispatchEvent(new Event('change',{bubbles:true}));check(save.hidden,'undo hides section save again');}
     check(!text.includes('Answer state')&&!text.includes('Scope and saved activities')&&!text.includes('Add activity scope')&&!text.includes('operational readiness'),'plain primary wording');
     check(!group.querySelector('[data-question-id="response.urgent"]'),'no unselected urgent-response question');
     check(!group.querySelector('[data-question-id="service.price"]'),'activity question not leaked into organisation scope');
     document.getElementById('layout-result').textContent=JSON.stringify({failures,width:innerWidth,theme:document.documentElement.dataset.theme,form_count:forms.length,open_question_count:group.querySelectorAll('[data-question-id][open]').length});
     '''
-    page = page.replace('</body>', '<pre id="layout-result"></pre><script>' + assertions + '</script></body>')
+    page = page.replace('</body>', '<pre id="layout-result"></pre><script>document.addEventListener("DOMContentLoaded",()=>{' + assertions + '},{once:true});</script></body>')
     (tmp_path / 'content.html').write_text(page, encoding='utf-8')
     fixture = tmp_path / 'layout.html'
     fixture.write_text('<!doctype html><style>body{margin:0}iframe{border:0;display:block}</style>'

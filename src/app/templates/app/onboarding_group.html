@@ -46,12 +46,12 @@
       <form method="post" action="/app/setup/action">{{ hidden('capability', {'capability':sub.capability}) }}
         <label>{{ review_capabilities[sub.capability] }}<select name="decision">
           {% for value, label in [('undecided','Choose'),('needed','Yes'),('off','Not needed'),('deferred','Decide later')] %}<option value="{{ value }}"{% if sub.decision == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
-        </select></label><button type="submit">Save choice</button>
+        </select></label><button type="submit" data-save-row>Save choice</button>
       </form>
       {% if sub.decision != 'undecided' %}</div></details>{% endif %}
       {% if sub.needs %}<details><summary>Anything else to include?</summary><div class="review-body">
         {% for need in sub.needs %}<form method="post" action="/app/setup/action">{{ hidden('need', {'need':need.id}) }}
-          <label>{{ need.label }}<select name="selected" required><option value="" disabled{% if not need.chosen and not need.selected %} selected{% endif %}>Choose if relevant</option><option value="false"{% if need.chosen and not need.selected %} selected{% endif %}>Not needed</option><option value="true"{% if need.selected %} selected{% endif %}>Include this</option></select></label><button type="submit">Save</button>
+          <label>{{ need.label }}<select name="selected" required><option value="" disabled{% if not need.chosen and not need.selected %} selected{% endif %}>Choose if relevant</option><option value="false"{% if need.chosen and not need.selected %} selected{% endif %}>Not needed</option><option value="true"{% if need.selected %} selected{% endif %}>Include this</option></select></label><button type="submit" data-save-row>Save</button>
           <details><summary>When this matters</summary><p>{{ need.why }}</p></details>
         </form>{% endfor %}
       </div></details>{% endif %}
@@ -69,7 +69,7 @@
             {% else %}<textarea name="value" rows="2" maxlength="2000">{{ q.answer.value if q.answer and q.answer.state == 'answered' and q.answer.value is not none else '' }}</textarea>{% endif %}
             </label>
             <label><span class="sr-only">How would you like to answer?</span><select name="state">{% for value, label in [('answered','Answer now'),('unknown','Not sure'),('deferred','Decide later'),('not_applicable',"Doesn’t apply"),('unanswered','Clear answer')] %}<option value="{{ value }}"{% if q.answer and q.answer.state == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-            <button type="submit">Save answer</button>
+            <button type="submit" data-save-row{% if not q.answer %} data-save-always{% endif %}>Save answer</button>
           </form>
           {% if q.adapter and q.answer and q.answer.state == 'answered' %}<form method="post" action="/app/setup/action">{{ hidden('propose', {'answer':q.key}) }}<button type="submit">Review suggested changes</button></form>{% endif %}
           <details><summary>Why we ask{% if q.answer %} and where this came from{% endif %}</summary><div class="review-body"><p>{{ q.why }}</p>{% if q.answer %}<p>{{ q.answer.provenance.kind|replace('_',' ') }}</p>{% endif %}</div></details>
@@ -77,12 +77,12 @@
       </details>{% endfor %}
       {% if sub.decision == 'deferred' %}<p>Left for later. You can return to this section whenever you need it.</p>{% elif sub.decision == 'undecided' %}<p>Choose Yes to see the relevant questions.</p>{% endif %}
       <details><summary>Change this section’s name</summary><div class="review-body">
-        <form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<label>Section name<input name="text" maxlength="80" value="{{ sub.label }}"></label><button type="submit">Save name</button></form>
+        <form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<label>Section name<input name="text" maxlength="80" value="{{ sub.label }}"></label><button type="submit" data-save-row>Save name</button></form>
         <form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<button type="submit" name="text" value="">Use the original name</button></form>
         {% if sub.id == 'records.relationships' and label_suggestion %}<form method="post" action="/app/setup/action">{{ hidden('label', {'substep':sub.id}) }}<p>From the records you already use:</p><button name="text" value="{{ label_suggestion }}" type="submit">Use {{ label_suggestion }}</button></form>{% endif %}
       </div></details>
       {% if sub.decision not in ('off','deferred') %}<form method="post" action="/app/setup/action">{{ hidden('review', {'substep':sub.id}) }}
-        <label>Finish this section<select name="state">{% for value, label in [('unreviewed','Still to do'),('reviewed','Reviewed'),('deferred','Leave for later')] %}<option value="{{ value }}"{% if sub.review == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button type="submit">Save</button>
+        <label>Finish this section<select name="state">{% for value, label in [('unreviewed','Still to do'),('reviewed','Reviewed'),('deferred','Leave for later')] %}<option value="{{ value }}"{% if sub.review == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button type="submit" data-save-row>Save</button>
       </form>{% endif %}
     </div>
   </details>{% endfor %}
