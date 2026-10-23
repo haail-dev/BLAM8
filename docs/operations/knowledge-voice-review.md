@@ -58,3 +58,10 @@ Regression boundaries: `test_knowledge_voice_simplification.py`, the existing
 Knowledge route/source/admission/database suites, Voice/browser readiness tests,
 and business-agnostic guard. Model outputs and embeddings in offline tests are
 synthetic; no claim of general semantic accuracy or live-model performance is made.
+
+Automatic lexical coverage retains conjunctions and prepositions: days joined by
+"and" are not a range joined by "to", and reversing "from"/"to" changes direction.
+Normalized fallback clauses must match in full, not as a subsequence with extra
+scope words. Unproven paraphrases remain unresolved until explicit owner review.
+Removal previews cannot count a different relationship as a retained duplicate;
+dropping that source occurrence requires a visible factual exclusion decision.

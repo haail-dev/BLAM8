@@ -88,6 +88,20 @@ def test_removal_preserves_other_retained_destination():
     assert change["source_choices"][0]["destinations"] == ["Other"]
 
 
+@pytest.mark.parametrize('original,changed', [
+    ('Bookings are available Monday and Friday.', 'Bookings are available Monday to Friday.'),
+    ('Deliveries from Camden to Islington.', 'Deliveries to Camden from Islington.'),
+])
+def test_different_relationship_cannot_justify_harmless_duplicate_removal(original, changed):
+    row, source, card, raw = scoped(FIRST + '\n\n' + original, unit=original, other=changed)
+    change = review.validate(card, source, raw)['changes'][0]
+    choice = change['source_choices'][0]
+    assert choice['action'] == 'excluded' and choice['text'] == original
+    assert change['patches']['source_' + choice['id']] == 'exclude'
+    assert change['patches']['source_reason_' + choice['id']] == REQUEST
+    assert row['payload']['entries'][0]['content'].endswith(original)
+
+
 @pytest.mark.parametrize(
     "unit,content",
     [

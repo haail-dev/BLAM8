@@ -51,9 +51,12 @@ async def test_representative_headings_are_auditable_without_per_label_questions
         assert interactions<=16
     assert interactions==10
     _,payload=knowledge_review.plan(ctx,row,form)
-    assert sum(s['status']=='layout_fragment' for s in payload['source_decisions'])==8
+    assert sum(s['status']=='layout_fragment' for s in payload['source_decisions'])==9
+    # The Contact heading is layout, not factual coverage from the isolated
+    # word "contact" inside "Third separate contact route."
+    assert next(s for s in payload['source_decisions'] if s['text']=='Contact')['status']=='layout_fragment'
     assert all(s['reviewed'] for s in payload['source_decisions'] if s['status']=='layout_fragment')
     assert sum(s['status']=='deferred_unknown' for s in payload['source_decisions'])==11
-    assert sum(s['status']=='literal_in_note' for s in payload['source_decisions'])==2
+    assert sum(s['status']=='literal_in_note' for s in payload['source_decisions'])==1
     questions=[q for t in payload['topic_reviews'].values() for q in t['questions']]
     assert len(questions)==4 and all(q['status']=='unknown' for q in questions)

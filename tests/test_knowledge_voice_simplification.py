@@ -21,6 +21,34 @@ from tests.test_booking_capacity_database import cluster
 VALID={'agent_name':'Office team','tone':'Warm and professional','sign_off':'Kind regards,\nThe team'}
 
 
+RELATIONSHIP_CHANGES = [
+    ('Bookings are available Monday and Friday.', 'Bookings are available Monday to Friday.'),
+    ('Deliveries from Camden to Islington.', 'Deliveries to Camden from Islington.'),
+    ('Bookings are available Monday and Friday.', 'Bookings are available Monday to Thursday and Friday.'),
+    ('Visits in Camden.', 'Visits from Camden.'),
+    ('Payment by Friday.', 'Payment on Friday.'),
+]
+
+
+@pytest.mark.parametrize('original,changed', RELATIONSHIP_CHANGES)
+def test_relationship_changes_are_not_automatic_source_coverage(original, changed):
+    assert not fidelity.represented_fact(original, changed)
+    assert not fidelity.represented_fact(changed, original)
+
+
+@pytest.mark.parametrize('original,changed', RELATIONSHIP_CHANGES)
+def test_changed_relationship_blocks_final_knowledge_admission(original, changed):
+    ctx,row=context([entry(content=changed)])
+    row['payload']['source_units']=fidelity.inventory([{'url':'https://example.test','text':original}])
+    fields=form(ctx,row)
+    before=deepcopy(ctx)
+    view=review.review_view(ctx,row,fields)
+    assert view['source_view']['unresolved']==1
+    with pytest.raises(HTTPException,match='unaccounted for'):
+        review.plan(ctx,row,fields)
+    assert ctx==before
+
+
 @pytest.fixture
 def voice_client(monkeypatch):
     saved={}

@@ -32,7 +32,9 @@ def fact_sequence(text):
     Ignore sentence framing only. Numbers, names, units, negation and scope
     remain mandatory. Unrecognised paraphrases need an explicit owner review.
     """
-    framing = set('a an the we our you your it its this these that those is are be of and to for in on at by from'.split())
+    # Prepositions and conjunctions carry relationships, direction and ranges.
+    # They are facts, even when the same names/numbers occur on both sides.
+    framing = set('a an the we our you your it its this these that those is are be'.split())
     aliases = {'reports': 'report', 'reporting': 'report', 'repairs': 'repair',
                'properties': 'property', 'invoices': 'invoice', 'photos': 'photo',
                'hours': 'hour', 'fees': 'fee', 'prices': 'price'}
@@ -52,10 +54,10 @@ def represented_fact(text, content):
     # Match a bounded clause, never a bag of words across unrelated notes.
     # The same vocabulary can express opposite facts: negation must agree.
     negatives = {'no', 'not', 'never', 'without', 'cannot'}
-    def contained(clause):
-        remaining=iter(fact_sequence(clause))
-        return all(any(candidate==word for candidate in remaining) for word in fact_sequence(text))
-    return bool(tokens) and any(contained(clause)
+    # Extra words can change scope too ("Monday and Friday" versus "Monday
+    # to Thursday and Friday"). A subsequence is not evidence of equivalence.
+    sequence = fact_sequence(text)
+    return bool(tokens) and any(sequence == fact_sequence(clause)
         and tokens & negatives == fact_tokens(clause) & negatives
         for clause in re.split(r'\n\n|(?<=[.!?])\s+', content))
 
