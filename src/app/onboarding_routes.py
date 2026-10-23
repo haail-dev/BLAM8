@@ -5,11 +5,12 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app import onboarding_contract as contract, onboarding_state as state_store
-from app.auth import TenantCtx, require_onboarded
+from app.auth import TenantCtx, require_onboarded, require_subscription
 from app.security import require_csrf, require_csrf_header, rate_limit
 from app.templating import templates
 
-router = APIRouter(prefix='/app/setup', dependencies=[Depends(rate_limit('onboarding_review', limit=100, window_s=60))])
+router = APIRouter(prefix='/app/setup', dependencies=[Depends(require_subscription),
+    Depends(rate_limit('onboarding_review', limit=100, window_s=60))])
 
 
 class Action(BaseModel):
@@ -80,6 +81,8 @@ def page_context(context, group, scope_type='organisation', scope_id='organisati
     proposals = [p for p in state['proposals'].values() if any(
         a['substep'].startswith(group['key'] + '.') for key, a in state['answers'].items() if key == p['answer'])]
     for proposal in proposals:
+        from app import settings_recommend
+        proposal['settings_href'] = settings_recommend.PAGES[proposal['page']]['href']
         proposal['display_changes'] = [display_change(change) for change in proposal['changes']]
         for change, shown in zip(proposal['changes'], proposal['display_changes']):
             shown['receipt'] = proposal.get('line_receipts', {}).get(change['id'])

@@ -2,6 +2,7 @@
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
@@ -395,6 +396,22 @@ def test_model_failure_and_malformed_output_leave_deterministic_review_usable(jo
     assert j.state()['answers'][key]['value'] == 'Owner-stated work'
 
 
+def test_expired_subscription_blocks_group_reads_and_review_writes(journey, monkeypatch):
+    from app import auth, trial
+    from app.config import settings
+    j = journey
+    monkeypatch.setattr(settings, 'require_subscription_gate', True)
+    monkeypatch.setattr(auth, '_subscription_tenant', lambda ctx: {'id': j.tenant, 'subscription_status': 'canceled'})
+    monkeypatch.setattr(trial, 'is_active', lambda row: False)
+    for path in ('/app/setup', '/app/setup/diary', '/app/setup/records', '/app/setup/charges'):
+        response = j.http.get(path, follow_redirects=False)
+        assert response.status_code == 303 and response.headers['location'] == '/billing/plans'
+    response = j.http.post(API, json=dict(revision=0, operation='capability',
+        data={'capability': 'payments', 'decision': 'off'}), follow_redirects=False)
+    assert response.status_code == 303 and response.headers['location'] == '/billing/plans'
+    assert j.state()['revision'] == 0 and j.row('invoice_settings', j.tenant) is None
+
+
 def test_first_stage_owner_context_is_reused_once_without_permission_inference(journey):
     j = journey
     # The existing first-stage form remains the owner of this saved value.
@@ -549,6 +566,12 @@ def test_existing_card_surface_receipt_can_be_reconciled_without_second_write(jo
     j.action('reconcile', {'proposal': proposal['id']})
     assert j.state()['proposals'][proposal['id']]['status'] == 'applied'
     assert j.row('scheduling_config', j.tenant) == before
+    j.execute('update scheduling_config set horizon_days=75 where tenant_id=%s', j.tenant)
+    page = j.http.get('/app/setup/diary').text
+    shown = re.search(r'<section[^>]*data-proposal-id="' + proposal['id'] + r'".*?</section>', page, re.S).group()
+    assert '<dt>Current</dt>' not in shown and '<dt>After</dt>' not in shown
+    assert 'Proposed at preview' in shown and 'View current saved settings' in shown
+    assert j.row('scheduling_config', j.tenant)['horizon_days'] == 75
     j.answer('setting.diary_settings.horizon_days', 55)  # The original answer is editable again.
 
 
@@ -589,7 +612,11 @@ def test_partial_external_selection_reconciles_actual_terminal_results_without_r
     assert receipt['status'] == 'partial' and receipt['line_receipts'] == {term: 'applied', footer: 'left'}
     assert j.row('invoice_settings', j.tenant) == before
     assert before['payment_terms'] == 'Due in 14 days' and before['footer_note'] is None
-    assert 'Some changes handled separately' in j.http.get('/app/setup/charges').text
+    page = j.http.get('/app/setup/charges').text
+    shown = re.search(r'<section[^>]*data-proposal-id="' + proposal['id'] + r'".*?</section>', page, re.S).group()
+    assert 'Some changes handled separately' in shown
+    assert 'Proposed — not applied' in shown and '<dt>After</dt>' not in shown
+    assert 'Saved' in shown and 'Left unchanged' in shown
     j.answer('setting.invoice_settings.footer_note', 'A deliberate later answer')
 
 
@@ -610,3 +637,16 @@ def test_cancel_leaves_remaining_lines_after_an_external_partial_apply(journey):
     assert j.state()['proposals'][proposal['id']]['status'] == 'partial'
     assert j.row('invoice_settings', j.tenant) == before
     assert before['payment_terms'] == 'Due in 21 days' and before['footer_note'] is None
+
+
+def test_cancelled_receipt_labels_unapplied_values_as_proposals(journey):
+    j = journey
+    key = j.answer('setting.diary_settings.horizon_days', 45)
+    j.action('propose', {'answer': key})
+    proposal = next(iter(j.state()['proposals'].values()))
+    j.action('cancel', {'proposal': proposal['id']})
+    page = j.http.get('/app/setup/diary').text
+    shown = re.search(r'<section[^>]*data-proposal-id="' + proposal['id'] + r'".*?</section>', page, re.S).group()
+    assert 'Changes left unchanged' in shown and 'Proposed — not applied' in shown
+    assert '<dt>After</dt>' not in shown and '<dt>Current</dt>' not in shown
+    assert j.row('scheduling_config', j.tenant) is None

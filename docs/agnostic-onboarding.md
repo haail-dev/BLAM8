@@ -95,6 +95,9 @@ applies or retries settings.
 Leaving remaining changes also works after another surface applies only part
 of a proposal: pending lines are left, applied settings remain saved, and the
 partial outcome is explicit.
+Receipt values are labelled as the original preview, with unapplied lines
+explicitly marked not applied. A settings-page link shows current saved values;
+historical proposals are never labelled as the current configuration.
 
 Related answered invoice choices are previewed together. Native first-save,
 tax and deposit dependencies still require explicit answers; the preview never
@@ -105,6 +108,8 @@ The HTTP API rejects unknown IDs/extra fields, checks settings permission and
 View as, and derives tenant identity from authentication. The new atomic RPC
 is service-only; ordinary database clients cannot submit executable card
 patches or read the sensitive history table. Diagnostics omit answer contents.
+All grouped read/write routes inherit the existing application subscription
+gate, including expired-trial denial before loading or saving review data.
 
 ## Compatibility and migration
 

@@ -95,7 +95,9 @@
   </div></details>{% endif %}
   {% for proposal in review_proposals %}<section class="review-row review-body" data-proposal-id="{{ proposal.id }}">
     <h2 class="font-semibold">{{ {'proposed':'Review these changes','applied':'Changes saved','cancelled':'Changes left unchanged','partial':'Some changes handled separately'}[proposal.status] }}</h2>
-    {% for change in proposal.display_changes %}<p>{{ change.title }}{% if change.receipt %} · {{ 'Saved' if change.receipt == 'applied' else 'Left unchanged' }}{% endif %}</p>{% for value in change['values'] %}<p>{{ value.label }}</p><dl class="review-diff"><dt>{{ 'Current' if proposal.status == 'proposed' else 'Before' }}</dt><dd>{{ value.before }}</dd><dt>{{ 'Proposed' if proposal.status == 'proposed' else 'After' }}</dt><dd>{{ value.after }}</dd></dl>{% endfor %}{% endfor %}
+    {% for change in proposal.display_changes %}<p>{{ change.title }}{% if change.receipt %} · {{ 'Saved' if change.receipt == 'applied' else 'Left unchanged' }}{% endif %}</p>{% for value in change['values'] %}<p>{{ value.label }}</p><dl class="review-diff"><dt>Saved at preview</dt><dd>{{ value.before }}</dd><dt>{{ 'Proposed — not applied' if change.receipt == 'left' or proposal.status == 'cancelled' else 'Proposed at preview' }}</dt><dd>{{ value.after }}</dd></dl>{% endfor %}{% endfor %}
+    {% if proposal.status != 'proposed' %}<p>These are the original preview values.</p>{% endif %}
+    <a href="{{ proposal.settings_href }}">View current saved settings →</a>
     {% if proposal.status == 'proposed' %}<p>Only the changes shown here will be saved. Other settings stay as they are.</p>
     <form method="post" action="/app/setup/action">{{ hidden('apply', {'proposal':proposal.id}) }}<button type="submit">Apply these changes</button></form>
     <form method="post" action="/app/setup/action">{{ hidden('cancel', {'proposal':proposal.id}) }}<button type="submit">Leave remaining changes</button></form>
