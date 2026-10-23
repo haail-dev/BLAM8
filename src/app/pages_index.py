@@ -296,6 +296,7 @@ EXCLUDED = {
     "/admin/logout": "an action: signs the admin out",
     "/auth/sso/{provider}": "SSO leg: redirects to the provider",
     "/auth/callback": "SSO leg: the provider returns here",
+    "/auth/native/start": "SSO leg for the iOS apps: opens in their sign-in sheet",
     "/oauth/connect": "mailbox consent leg",
     "/oauth/callback": "mailbox consent leg (Microsoft)",
     "/oauth/google/callback": "mailbox consent leg (Google)",

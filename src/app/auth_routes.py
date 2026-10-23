@@ -4,12 +4,12 @@ Passwordless by design: GoTrue's OAuth (PKCE) hands back a session we keep in
 httpOnly cookies. There is no email/password or registration — the first SSO
 sign-in creates the user, and ensure_tenant_for_user creates their company.
 """
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 
 from datetime import datetime, timezone
 
-from app import auth, db, navcache, partners, people_routes, slots
+from app import auth, db, native_auth, navcache, partners, people_routes, slots
 from app.config import settings
 from app.security import rate_limit, require_csrf
 from app.templating import templates
@@ -193,7 +193,21 @@ def _record_signup_attribution(request: Request, response, user: dict,
 async def sso_callback(request: Request):
     """Provider -> GoTrue -> here with ?code=. Exchange it (+ the PKCE verifier
     cookie) for a session, ensure the user's tenant, then land them in the app
-    (require_onboarded sends brand-new users on to the onboarding wizard)."""
+    (require_onboarded sends brand-new users on to the onboarding wizard).
+
+    A sign-in started by an iOS app (/auth/native/start) is instead handed
+    back to that app; see native_auth."""
+    raw_native = request.cookies.get(native_auth.NATIVE_COOKIE)
+    pending = native_auth.parse_pending(raw_native)
+    if pending:
+        return await _native_callback(request, pending)
+    resp = await _web_callback(request)
+    if raw_native:
+        native_auth.clear_cookie(resp)   # unusable native marker: ignored, then dropped
+    return resp
+
+
+async def _web_callback(request: Request):
     if request.query_params.get("error"):
         return RedirectResponse("/login?error=Sign-in%20was%20cancelled%20or%20failed", status_code=303)
     code = request.query_params.get("code")
@@ -206,6 +220,14 @@ async def sso_callback(request: Request):
     except ValueError:
         return RedirectResponse(
             "/login?error=Could%20not%20complete%20sign-in.%20Please%20try%20again.", status_code=303)
+    return _complete_sign_in(request, session)
+
+
+def _complete_sign_in(request: Request, session: dict, landing: str = "/app"):
+    """Start the BLAM8 session for an identity GoTrue has just confirmed:
+    partner landing or tenant (with any invite), attribution, then cookies.
+    Shared by the web SSO callback and the iOS apps' completion step, which
+    runs in the app's own web view so its invite/referral cookies apply."""
     user = session.get("user") or {}
     existing_tenant_id = db.get_tenant_for_user(user["id"])
     is_new = not existing_tenant_id
@@ -232,13 +254,79 @@ async def sso_callback(request: Request):
         resp = RedirectResponse("/login?error=Your%20access%20to%20this%20business%20has%20been%20switched%20off.%20Ask%20whoever%20runs%20it.", status_code=303)
         auth.clear_session_cookies(resp)
         return resp
-    resp = RedirectResponse("/app", status_code=303)
+    resp = RedirectResponse(landing, status_code=303)
     auth.set_session_cookies(resp, session)
     auth.seed_identity(session)     # the landing request need not ask GoTrue /user again
     auth.clear_pkce_cookie(resp)
     if join_token:
         people_routes.clear_join_cookie(resp)
     _record_signup_attribution(request, resp, user, tenant_id, is_new)
+    return resp
+
+
+# ── iOS app sign-in (docs/architecture/native-sign-in.md) ────────────────────
+@router.get("/auth/native/start", dependencies=[Depends(rate_limit("native_sso", 20, 300))])
+def native_sso_start(provider: str = "", scheme: str = "",
+                     next_path: str = Query("", alias="next"), challenge: str = ""):
+    """Begin SSO for an iOS app, inside the system sign-in sheet. Same GoTrue
+    redirect as the web (no Supabase allow-list change), plus a marker cookie
+    telling the callback to hand the result back to the app."""
+    if scheme not in native_auth.NATIVE_SCHEMES:
+        return PlainTextResponse("Unknown app.", status_code=400)
+    if (provider not in auth.SSO_PROVIDERS or next_path not in native_auth.NATIVE_NEXT_PATHS
+            or not native_auth.valid_challenge(challenge)):
+        return RedirectResponse(native_auth.callback_url(
+            scheme, error="That sign-in request was not valid. Please try again."), status_code=303)
+    url, verifier = auth.sso_authorize_url(provider, f"{settings.app_base_url}/auth/callback")
+    resp = RedirectResponse(url, status_code=303)
+    auth.set_pkce_cookie(resp, verifier)
+    native_auth.set_cookie(resp, native_auth.Pending(scheme, challenge, next_path))
+    return resp
+
+
+async def _native_callback(request: Request, pending: native_auth.Pending):
+    """The sheet's end of a native sign-in: exchange the code exactly as the web
+    does, but park the session under a one-time code for the app rather than
+    starting it here. No tenant work: that needs the app's own cookies."""
+    code = request.query_params.get("code")
+    verifier = request.cookies.get(auth.PKCE_COOKIE)
+    error = None
+    if request.query_params.get("error"):
+        error = "Sign-in was cancelled or failed."
+    elif not code or not verifier:
+        error = "That sign-in link expired. Please try again."
+    else:
+        try:
+            session = await auth.exchange_code_for_session(code, verifier)
+        except ValueError:
+            error = "Could not complete sign-in. Please try again."
+    if error:
+        target = native_auth.callback_url(pending.scheme, error=error)
+    else:
+        target = native_auth.callback_url(
+            pending.scheme, code=native_auth.issue(session, pending.challenge, pending.next))
+    resp = RedirectResponse(target, status_code=303)
+    auth.clear_pkce_cookie(resp)
+    native_auth.clear_cookie(resp)
+    return resp
+
+
+@router.post("/auth/native/complete", dependencies=[Depends(rate_limit("native_complete", 20, 300))])
+async def native_sso_complete(request: Request):
+    """The app's web view redeems its one-time code with the verifier only it
+    holds, then signs in exactly as the web callback would. POST keeps both
+    values out of URLs and access logs. No CSRF token: the shell posts this
+    directly, and the verifier binding already means only the app that began
+    the sign-in can finish it."""
+    form = await request.form()
+    redeemed = native_auth.redeem(str(form.get("code") or ""), str(form.get("verifier") or ""))
+    if not redeemed:
+        resp = RedirectResponse(
+            "/login?error=That%20sign-in%20expired.%20Please%20try%20again.", status_code=303)
+    else:
+        session, landing = redeemed
+        resp = _complete_sign_in(request, session, landing=landing)
+    resp.headers["Cache-Control"] = "no-store"
     return resp
 
 
