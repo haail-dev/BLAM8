@@ -106,7 +106,8 @@ assert.equal(cards().length,0);
 assert(msgs.children.some(el=>el.tagName==='DETAILS'&&el.children[0].textContent.includes('completed')));
 assert.equal(msgs.children.at(-1).textContent,savedStatus.textContent);
 c.log.push({role:'assistant',content:'A later answer about your business.'});c.renderAll();
-assert.equal(msgs.children.at(-1).textContent,'A later answer about your business.');c.log.pop();
+assert.equal(msgs.children.at(-1).textContent,savedStatus.textContent);
+assert(msgs.children.some(el=>el.tagName==='DETAILS'&&el.children.some(child=>child.textContent==='A later answer about your business.')));c.log.pop();
 // Another pending batch must retain its review controls; a saved ID is not blanket approval.
 savedMarker.setAttribute('data-knowledge-saved-reviews',JSON.stringify(['another-batch']));
 c.document.querySelector=selector=>selector==='[data-knowledge-saved-reviews]'?savedMarker:null;

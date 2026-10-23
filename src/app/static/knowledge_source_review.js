@@ -29,7 +29,7 @@
   function lock(on) {
     busy = on;
     if (on) {
-      locked = Array.from(document.querySelectorAll('[data-knowledge-review] input,[data-knowledge-review] textarea,[data-knowledge-review] select,[data-knowledge-review] button,#kb-note button,form[action="/onboarding/knowledge/upload"] button,#site-go,[data-onb-continue],[data-leave-knowledge]'));
+      locked = Array.from(document.querySelectorAll('[data-knowledge-review] input,[data-knowledge-review] textarea,[data-knowledge-review] select,[data-knowledge-review] button,#kb-note button,form[action="/onboarding/knowledge/upload"] button,#site-go,[data-onb-continue]'));
       locked.forEach(function (el) { el.dataset.sourceWasDisabled = el.disabled ? '1' : '0'; el.disabled = true; });
     } else {
       locked.forEach(function (el) { el.disabled = el.dataset.sourceWasDisabled === '1'; delete el.dataset.sourceWasDisabled; });
@@ -139,6 +139,7 @@
           if(first)workspace.focusNote(updated,first.id);
           var status=updated.querySelector('[data-review-status]');
           if(status)status.textContent='Correction applied and checked. Review the updated note, then Save when you’ve finished.';
+          if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged('Correction applied and checked. Review the updated note, then Save.');
           if(first){var note=updated.querySelector('[data-draft="'+first.id+'"]');if(note && note.scrollIntoView)note.scrollIntoView({behavior:'smooth',block:'center'});}
         }else say(form,'Correction applied, but its recheck could not be confirmed. Use Check changes and overlaps before saving.');
       }
@@ -151,17 +152,13 @@
     var askButton = event.target.closest('[data-source-ask]'), applyButton = event.target.closest('[data-source-apply]');
     if (askButton) { var form = askButton.closest('form'); ask(form, form.querySelector('[data-source-question]').value).catch(function (err) { say(form, err.message); }); }
     if (applyButton) apply(applyButton.closest('form'));
-    var next = event.target.closest('[data-onb-continue],[data-leave-knowledge]');
+    var next = event.target.closest('[data-onb-continue]');
     if (!next || !document.querySelector('[data-knowledge-source-mode]')) return;
-    var note = document.getElementById('kb-note'), later = document.querySelector('[data-knowledge-later]');
-    var message = later.querySelector('[data-knowledge-navigation-status]');
-    if (busy || submitting || window.blam8KnowledgeImportBusy || note.elements.content.value.trim() || (forms().length && !next.hasAttribute('data-leave-knowledge'))) {
-      event.preventDefault(); event.stopImmediatePropagation(); later.hidden = false;
-      message.textContent = busy || submitting || window.blam8KnowledgeImportBusy ? 'Wait for the current review operation.' : note.elements.content.value.trim() ? 'Your pasted note is unsaved. Choose Review note, or clear the box before continuing.' : 'Review the drafts or choose to leave them for later.';
-      return;
-    }
-    if (next.hasAttribute('data-leave-knowledge')) {
-      var choice = node('input', ''); choice.type = 'hidden'; choice.name = 'knowledge_draft_decision'; choice.value = 'keep'; note.appendChild(choice);
+    var note = document.getElementById('kb-note');
+    var message = document.querySelector('[data-knowledge-navigation-status]');
+    if (busy || submitting || window.blam8KnowledgeImportBusy || note.elements.content.value.trim() || forms().length || !document.querySelector('[data-knowledge-saved-status]')) {
+      event.preventDefault(); event.stopImmediatePropagation();
+      if(message)message.textContent = busy || submitting || window.blam8KnowledgeImportBusy ? 'Wait for the current review operation.' : note.elements.content.value.trim() ? 'Your pasted note is unsaved. Review it or clear it before continuing.' : 'Review and save your Knowledge before continuing.';
     }
   }, true);
   document.addEventListener('submit', function (event) {

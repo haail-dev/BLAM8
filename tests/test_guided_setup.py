@@ -638,6 +638,8 @@ def test_knowledge_continue_creates_intro_once_and_resumes_after_ack(journey,mon
     monkeypatch.setattr(db,'set_onboarded',lambda *a,**k:onboarded.append(True))
     monkeypatch.setattr(db,'upsert_tenant_config',lambda *a,**k:None)
     monkeypatch.setattr(db,'active_modules',lambda *a,**k:{'scheduling','crm'})
+    from app import knowledge_review
+    monkeypatch.setattr(knowledge_review,'load',lambda tid:dict(sources=[dict(source='Reviewed facts',content='Confirmed business facts.',mailbox_id=None)],reviews=[],version='saved-facts'))
     before=j.state()
     refused=j.http.post('/onboarding/knowledge/text',data={'content':'','then':'continue'},follow_redirects=False)
     assert refused.status_code==422 and 'Complete Voice' in refused.text

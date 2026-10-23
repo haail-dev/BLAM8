@@ -95,3 +95,12 @@ is an optional exploration, not a competing completion counter. A server-rendere
 saved status appears only when saved notes exist and no review is pending. The
 assistant collapses cards belonging to server-confirmed saved review IDs into
 history and shows that same current status; it does not rewrite the transcript.
+
+
+Knowledge completion requires saved facts and no pending review batches. Deferral
+keeps a note pending within this step; it cannot bypass completion. Server-side
+finish and Continue enforce the same rule as the page and assistant controls.
+Owner corrections may name just the changed value: unchanged draft words retain
+their provenance, while each introduced token must be present in the owner request.
+Explicit exact duplicate removals preserve another occurrence. Apply remains a
+previewed draft operation, automatically rechecks, and still requires review and Save.

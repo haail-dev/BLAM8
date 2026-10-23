@@ -21,6 +21,10 @@ def _represented(text, content):
     text, content = normal(text.translate(typography)), normal(content.translate(typography))
     if text in content:
         return True
+    # A complete sentence may be retained as a clause joined with a comma.
+    # Match its exact words and a real clause boundary, never a loose substring.
+    if text.endswith('.') and re.search(r'(?<!\w)'+re.escape(text[:-1])+r'(?=[,;.!?])', content):
+        return True
     if re.match(r'^(Our|We|The|Your|You|It|This|These|That|Those)\b', text):
         return text[0].lower() + text[1:] in content
     return False

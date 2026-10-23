@@ -48,6 +48,10 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         from app import onboarding, onboarding_state
         from copy import deepcopy
         seed_reviewed_voice(j)
+        from app import knowledge_review
+        saved_facts=[dict(source='Reviewed facts',content='Confirmed business facts.',mailbox_id=None,chunks=1)]
+        monkeypatch.setattr(knowledge_review,'load',lambda tid:dict(sources=saved_facts,reviews=[],version='saved-facts'))
+        monkeypatch.setattr(db,'list_knowledge_sources',lambda *a,**k:saved_facts)
         context=onboarding_state.load(j.ctx);state=deepcopy(context['state']);state.pop('guide')
         onboarding_state.save(j.ctx,context['state'],state)
         j.execute('alter table tenant_config add column if not exists business_brief text')

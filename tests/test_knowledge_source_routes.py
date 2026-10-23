@@ -114,7 +114,7 @@ def test_csrf_is_enforced(source_client):
 
 
 @pytest.mark.parametrize('enabled',[True,False])
-def test_continue_does_not_stage_unsaved_note_and_requires_explicit_pending_choice(source_client, monkeypatch,enabled):
+def test_continue_never_bypasses_pending_or_empty_knowledge(source_client, monkeypatch,enabled):
     client, row, evidence, context, calls, _ = source_client
     monkeypatch.setattr(db, 'list_knowledge_sources', lambda *a, **k: [])
     monkeypatch.setattr(kb, 'is_configured', lambda: True)
@@ -127,7 +127,13 @@ def test_continue_does_not_stage_unsaved_note_and_requires_explicit_pending_choi
     r = client.post('/onboarding/knowledge/text', data={'then':'continue'}, follow_redirects=False)
     assert r.status_code == 303 and 'pending' in r.headers['location']
     r = client.post('/onboarding/knowledge/text', data={'then':'continue','knowledge_draft_decision':'keep'}, follow_redirects=False)
-    assert r.headers['location'] == '/finished' and not calls
+    assert '/onboarding/knowledge?err=' in r.headers['location'] and not calls
+    context['reviews'] = []
+    r = client.post('/onboarding/knowledge/text', data={'then':'continue'}, follow_redirects=False)
+    assert '/onboarding/knowledge?err=' in r.headers['location']
+    context['sources'] = [{'source':'Owner note','content':'Confirmed fact.'}]
+    r = client.post('/onboarding/knowledge/text', data={'then':'continue'}, follow_redirects=False)
+    assert r.headers['location'] == '/finished'
 
 
 def test_capture_stages_snapshot_and_drafts_atomically(monkeypatch):
@@ -167,3 +173,11 @@ def test_source_draft_final_write_requires_permission_even_after_flag_disabled(s
     monkeypatch.setattr(routes.people, 'can_do', lambda *a: False)
     result = client.post('/onboarding/knowledge/review/'+row['id'],data={'version':'v1','operation':operation})
     assert result.status_code == 403 and calls == []
+
+
+@pytest.mark.parametrize('sources,pending', [([],False), ([{'source':'Owner note'}],True)])
+def test_direct_finish_cannot_bypass_knowledge_review(monkeypatch, sources, pending):
+    monkeypatch.setattr(onboarding.voice_completion, 'require_saved', lambda ctx: None)
+    monkeypatch.setattr(knowledge_review, 'load', lambda tenant: {'sources':sources, 'reviews':[{'state':'pending'}] if pending else []})
+    response=onboarding._finish(SimpleNamespace(tenant_id='tenant'))
+    assert response.status_code==303 and '/onboarding/knowledge?err=' in response.headers['location']

@@ -122,7 +122,9 @@
   function syncNotes(form){
     if(!form.dataset.reviewEnhanced){noteSections(form).forEach(function(section){if(section.querySelector('[data-note-status]'))noteTool(section,null);});form.dataset.reviewEnhanced='1';}
     var remaining=form.querySelector('[data-review-remaining]');if(remaining)remaining.textContent=noteSections(form).filter(function(section){return !form.elements['action_'+section.dataset.draft].value;}).length;
+    var label=form.querySelector('[data-review-remaining-label]');if(label && remaining)label.textContent=Number(remaining.textContent)===1?'note remaining':'notes remaining';
     noteSections(form).forEach(function(section){
+      var overlap=section.querySelector('[data-overlap-status]');if(overlap){var checks=Array.from(section.querySelectorAll('[data-duplicate-candidate] input[type="checkbox"]'));overlap.textContent=checks.length && checks.every(function(c){return c.checked;})?'Overlap reviewed':'Overlap to check';}
       var id=section.dataset.draft,status=section.querySelector('[data-note-status]');
       if(!status)return;
       var action=form.elements['action_'+id],later=form.elements['review_later_'+id];
@@ -170,6 +172,7 @@
       button.disabled=true;
       try{
         var data=await guide.ask('Show the current note',form);
+        if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged(data.reply || 'Review choice recorded. Save when you have finished.');
         var focus=data.focus || {};
         var next=focus.kind==='note'||focus.kind==='support'?focus.id:focus.note_id || focus.target;
         if(deferred && next===id){

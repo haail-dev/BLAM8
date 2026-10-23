@@ -5,8 +5,9 @@
     if (state.busy) return {ready:false, blocker:'busy', reason:'Wait for the current operation to finish.'};
     if (state.pendingCards) return {ready:false, reason:'Save or clear the pending notes card before continuing.'};
     if (state.step === 'knowledge') {
+      if (state.savedKnowledge === false) return {ready:false, blocker:'knowledge_required', reason:'Review and save your Knowledge before continuing.'};
       if (state.unsavedNote) return {ready:false, reason:'Your pasted note is unsaved. Review it or clear it before continuing.'};
-      if (state.pendingReviews) return {ready:false, blocker:'pending_reviews', reason:'Review the pending drafts or explicitly choose to leave them for later.'};
+      if (state.pendingReviews) return {ready:false, blocker:'pending_reviews', reason:'Review and save every pending draft before continuing.'};
     }
     if (!state.valid) return {ready:false, reason:'Complete the required form fields before continuing.'};
     return {ready:true, reason:''};
@@ -26,8 +27,9 @@
     var voice=journey && journey.current==='voice' && window.Blam8VoiceCompletion ? window.Blam8VoiceCompletion.read() : null;
     if(voice && (!voice.valid || voice.saving))return {journey:journey,action:action,ready:false,reason:voice.reason,blocker:voice.saving?'busy':'required'};
     var state=availability({step:journey && journey.current, action:!!action,
-      busy:!!(action && action.disabled || window.blam8KnowledgeImportBusy || sourceReview && sourceReview.working()),
+      busy:!!(action && action.disabled && (!journey || journey.current !== 'knowledge') || window.blam8KnowledgeImportBusy || sourceReview && sourceReview.working()),
       pendingCards:pendingCards || 0, valid:valid, unsavedNote:!!(note && note.value.trim()),
+      savedKnowledge:!!document.querySelector('[data-knowledge-saved-status]'),
       pendingReviews:document.querySelectorAll('[data-knowledge-review]').length});
     return {journey:journey, action:action, ready:state.ready, reason:state.reason, blocker:state.blocker};
   }
