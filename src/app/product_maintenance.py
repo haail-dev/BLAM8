@@ -69,6 +69,10 @@ SOURCE_CAPABILITIES = {
     'src/app/gptlive.py': 'owner.assistant',
     'src/app/templates/app/diary_dependants.html': 'subjects',
     'src/app/templates/app/invoice_settings.html': 'money',
+    # Sign-in for the installed iOS apps (docs/architecture/native-sign-in.md).
+    'src/app/auth_routes.py': 'installable',
+    'src/app/native_auth.py': 'installable',
+    'docs/architecture/native-sign-in.md': 'installable',
 }
 
 
