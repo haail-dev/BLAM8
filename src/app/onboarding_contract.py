@@ -290,5 +290,3 @@ def need_selected(state, identity):
         answer = state['answers'].get(answer_key('activity.authority', 'organisation', 'organisation'), {})
         return answer.get('state') == 'answered' and answer.get('value') == 'review_booking_settings'
     return False
-
-
