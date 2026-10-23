@@ -341,9 +341,8 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     except Exception:
         logging.getLogger("blautom8.onboarding").warning(
             "could not stamp draft_hold at finish for %s", ctx.tenant_id, exc_info=True)
-    # One flow of nine (Kris 2026-09-13): the wizard's last button is "Next:
-    # <first tuning step>", and it lands THERE — not on Today with a strip
-    # that could be dismissed. Today only when nothing is left to tune.
+    # Knowledge hands over to the directed in-app settings walkthrough.
+    # Existing tenants with no remaining settings review continue to Today.
     return RedirectResponse(target, status_code=303)
 
 

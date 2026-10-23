@@ -172,18 +172,15 @@
   // inbox connected at step 2 is a separate choice from the login, and what to
   // tell the assistant now (Kris 2026-09-13: a greeting that only asked a
   // question left people unsure what the assistant was for).
-  // Honest count (Kris 2026-09-13): the wizard is four steps, but five more
-  // follow inside the app (src/app/setup_handoff.py: diary, booking requirements,
-  // Dependants, CRM, invoicing — every sign-up has scheduling + CRM on, so
-  // the count is the same for every business; the TAILORING is inside each
-  // step). A "four steps" that turned into nine reads as a bait.
+  // Describe both phases without promising a fixed count of later decisions;
+  // those follow the available modules and the owner's relevance choices.
   var ONB_INTRO = "Welcome to BLAM8! I'm the AI assistant — you talk, I fill the forms in, you check them. Setup is in two parts.\n"
     + "Here, four short steps:\n"
     + "1. About you — this step\n"
     + "2. Your customer inbox — connecting the mailbox customers email (separate from the account you just signed in with)\n"
     + "3. Voice — how your replies should sound\n"
     + "4. Knowledge — the facts it can quote: prices, hours, policies (your website can fill most of this)\n"
-    + "Then inside the app, five more with me, tailored to your business: your diary, booking requirements, what your bookings are about (dogs, cars, children…), contacts, and getting paid. Nine in all, none hidden.\n"
+    + "Then we'll continue on the app's real pages: Diary, Records and workflows, and Charges and payments where relevant. I'll guide each question and show proposed values. You can edit, accept or leave each suggestion. Next moves the walkthrough.\n"
     + "To start: what does your business do, and who are your customers?";
   // The mailbox step's Gmail gate is a page state (invite box present or
   // not) — the message mentions a code only when the box is really there

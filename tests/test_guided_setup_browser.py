@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 from app import dashboard, db, device_sync as sync
 from app.auth import TenantCtx, require_onboarded, require_tenant
 from app.main import app
-from tests.test_guided_setup import cluster,database,journey,guide_journey,model,change
+from tests.test_guided_setup import cluster,database,journey,guide_journey,model,change,seed_reviewed_voice
 from tests.test_device_sync import Store
 from tests.test_knowledge_guidance_browser import chromium_binary,devtools_port
 
@@ -47,6 +47,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
     if area=='handoff':
         from app import onboarding, onboarding_state
         from copy import deepcopy
+        seed_reviewed_voice(j)
         context=onboarding_state.load(j.ctx);state=deepcopy(context['state']);state.pop('guide')
         onboarding_state.save(j.ctx,context['state'],state)
         j.execute('alter table tenant_config add column if not exists business_brief text')

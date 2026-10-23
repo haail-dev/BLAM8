@@ -9,6 +9,13 @@ from app.auth import TenantCtx
 from tests.test_agnostic_onboarding import cluster, database, journey, REAL_MANAGER
 
 
+def seed_reviewed_voice(j):
+    for field in ('agent_name','tone','sign_off'):
+        j.execute('alter table tenant_config add column if not exists '+field+' text')
+    j.execute('update tenant_config set agent_name=%s,tone=%s,sign_off=%s where tenant_id=%s',
+              'Office team','Professional','Regards',j.tenant)
+
+
 @pytest.fixture
 def guide_journey(journey, monkeypatch):
     j=journey
@@ -626,6 +633,11 @@ def test_knowledge_continue_creates_intro_once_and_resumes_after_ack(journey,mon
     monkeypatch.setattr(db,'set_onboarded',lambda *a,**k:onboarded.append(True))
     monkeypatch.setattr(db,'upsert_tenant_config',lambda *a,**k:None)
     monkeypatch.setattr(db,'active_modules',lambda *a,**k:{'scheduling','crm'})
+    before=j.state()
+    refused=j.http.post('/onboarding/knowledge/text',data={'content':'','then':'continue'},follow_redirects=False)
+    assert refused.status_code==422 and 'Complete Voice' in refused.text
+    assert not onboarded and j.state()==before and not j.state().get('guide')
+    seed_reviewed_voice(j)
     r=j.http.post('/onboarding/knowledge/text',data={'content':'','then':'continue'},follow_redirects=False)
     assert r.status_code==303 and r.headers['location']=='/app/setup/guide'
     assert onboarded==[True] and j.state()['guide']['current']=='intro' and not j.state()['guide']['intro_ack']
