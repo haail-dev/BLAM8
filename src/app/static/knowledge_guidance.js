@@ -44,14 +44,15 @@
       }
       Object.keys(data.patches || {}).forEach(function(name){
         var field=f.elements[name];
-        if(!field && (name.indexOf('guided_unknown_')===0 || name.indexOf('guided_expand_')===0 || name==='guided_layout_review')){field=document.createElement('input');field.type='hidden';field.name=name;f.appendChild(field);}
+        if(!field && (name.indexOf('guided_unknown_')===0 || name.indexOf('guided_expand_')===0 || name==='guided_layout_review' || name.indexOf('reviewed_')===0)){field=document.createElement('input');field.type='hidden';field.name=name;f.appendChild(field);}
         if(!field)throw new Error('The review controls changed. Check changes and overlaps before trying again.');
         if(field.type==='checkbox')field.checked=data.patches[name]===field.value;
         else field.value=data.patches[name];
         field.dispatchEvent(new Event('change',{bubbles:true}));
       });
+      if(data.checkpoint){f.elements.version.value=data.checkpoint.version;f.dataset.contextVersion=data.checkpoint.version;Object.keys(data.checkpoint.reviewed || {}).forEach(function(name){var field=f.elements[name];if(!field){field=document.createElement('input');field.type='hidden';field.name=name;f.appendChild(field);}field.value=data.checkpoint.reviewed[name];});}
       if(data.edit_requested && !window.Blam8KnowledgeGuide.edit(data.focus_hash,data.focus.id))throw new Error('The note changed before its editor could open. Show the current note.');
-      focus={key:key,version:base.version,hash:data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!data.save_ready};
+      focus={key:key,version:data.version || base.version,hash:data.focus_hash,form:f,signature:JSON.stringify(values(f)),saveReady:!!data.save_ready};
       if(!question.trim() && data.shared_caveats && data.shared_caveats.length) {
         data.reply='We will review the actual notes together. '+data.shared_caveats[0]+' All '+data.shared_caveats.length+' source caveats stay attached to retained notes; you can inspect the full list with the notes.\n\n'+data.reply;
       }

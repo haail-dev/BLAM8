@@ -23,6 +23,8 @@
     var valid=!form || action.formNoValidate || Array.from(form.elements).every(function(el){return !el.willValidate || el.validity.valid;});
     var note=document.querySelector('#kb-note [name="content"]');
     var sourceReview=window.Blam8KnowledgeSourceReview;
+    var voice=journey && journey.current==='voice' && window.Blam8VoiceCompletion ? window.Blam8VoiceCompletion.read() : null;
+    if(voice && (!voice.valid || voice.saving))return {journey:journey,action:action,ready:false,reason:voice.reason,blocker:voice.saving?'busy':'required'};
     var state=availability({step:journey && journey.current, action:!!action,
       busy:!!(action && action.disabled || window.blam8KnowledgeImportBusy || sourceReview && sourceReview.working()),
       pendingCards:pendingCards || 0, valid:valid, unsavedNote:!!(note && note.value.trim()),

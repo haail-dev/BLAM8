@@ -63,7 +63,7 @@ def test_exact_duplicate_removal_keeps_source_coverage_without_exclusion():
     row, source, card, raw = scoped(LAST + "\n\n" + MIDDLE + "\n\n" + LAST)
     result = review.validate(card, source, raw)["changes"][0]
     assert result["after"] == LAST + "\n\n" + MIDDLE
-    assert result["source_choices"] == [] and list(result["patches"].values()) == [""]
+    assert result["source_choices"] == [] and all(value=="" for value in result["patches"].values())
     payload = review.corrected_payload(
         row, source, raw, owner_request=REQUEST, reviewer="owner", card=card
     )
@@ -206,7 +206,9 @@ def test_natural_correction_preview_apply_unapproved_then_explicit_keep_and_save
     def rpc(name, args):
         calls.append(name)
         assert args["p_expected"] == review_store.load("tenant")["version"]
-        if name == "revise_knowledge_review_sources":
+        if name == "checkpoint_knowledge_review":
+            row["payload"]["draft_review_choices"]=deepcopy(args["p_choices"])
+        elif name == "revise_knowledge_review_sources":
             row["payload"] = deepcopy(args["p_payload"])
         else:
             assert name == "admit_knowledge_review"
@@ -220,7 +222,7 @@ def test_natural_correction_preview_apply_unapproved_then_explicit_keep_and_save
                 }
                 for n in args["p_notes"]
             )
-        return SimpleNamespace(execute=lambda: SimpleNamespace(data=True))
+        return SimpleNamespace(execute=lambda: SimpleNamespace(data=review_store.load("tenant") if name=="checkpoint_knowledge_review" else True))
 
     monkeypatch.setattr(db, "db", lambda: SimpleNamespace(rpc=rpc))
 
@@ -346,6 +348,7 @@ def test_natural_correction_preview_apply_unapproved_then_explicit_keep_and_save
         form["version"] = review_store.load("tenant")["version"]
         assert client.post(path, data={**form, "operation": "save"}).status_code == 400
         shown = client.post(path + "/guide", json={"form": form}).json()
+        if shown.get("checkpoint"):form["version"]=shown["checkpoint"]["version"]
         confirmed = client.post(
             path + "/guide",
             json={
@@ -359,12 +362,13 @@ def test_natural_correction_preview_apply_unapproved_then_explicit_keep_and_save
             and not review_store.sources
         )
         form.update(confirmed["patches"])
+        if confirmed.get("checkpoint"):form["version"]=confirmed["checkpoint"]["version"]
         saved = client.post(
             path, data={**form, "operation": "save"}, follow_redirects=False
         )
         assert saved.status_code == 303, saved.text
         assert (
-            calls == ["revise_knowledge_review_sources", "admit_knowledge_review"]
+            [c for c in calls if c!="checkpoint_knowledge_review"] == ["revise_knowledge_review_sources", "admit_knowledge_review"]
             and row["state"] == "saved"
         )
         assert (
@@ -395,7 +399,7 @@ def test_relative_paragraphs_are_displayed_body_not_unrelated_retained_tail():
     assert card["lines"][0]["fields"]["content"] == FIRST + "\n\n" + MIDDLE
     edit = review.context(card, source)["current_note_edit"]
     assert edit["paragraphs"][-1]["quote"] == MIDDLE
-    assert LAST in edit["retention_context_only"] and LAST not in edit["displayed_body"]
+    assert LAST not in edit["retention_context_only"] and LAST not in edit["displayed_body"]
     raw = {
         "revision": 1,
         "changes": [

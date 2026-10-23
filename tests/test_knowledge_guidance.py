@@ -36,23 +36,17 @@ def test_guided_review_reaches_existing_admission_without_touching_stored_drafts
     assert first['focus']['kind']=='note' and row['payload']['entries'][0]['content'] in first['reply']
     assert 'literal in note' not in first['reply'] and not form.get('action_one')
     kept=act(ctx,row,form,'keep')
-    assert form['action_one']=='keep' and kept['focus']['kind']=='support'
-    supported=act(ctx,row,form,'retain_support')
-    payment = next(u for u in row['payload']['source_units'] if '14 days' in u['text'])
+    assert form['action_one']=='keep' and kept['focus']['kind']=='source_batch'
+    assert len(kept['focus']['passages'])==2
+    # Fix the missing payment fact explicitly; evidence links never append it.
+    form['content_one'] = row['payload']['entries'][0]['content']+' Payment is due within 14 days.'
     navigation = next(u for u in row['payload']['source_units'] if u['text']=='Return to home.')
-    assert form['source_'+payment['id']]=='note:one'
-    assert not form.get('source_'+navigation['id'])
-    assert supported['focus']['kind']=='source_batch' and supported['focus']['remaining']==1
-    supported=act(ctx,row,form,'expand_sources')
-    supported=act(ctx,row,form,'exclude',reason='This is a navigation link, not wording I want in my note.')
-    assert 'Fictional test facts only.' in supported['shared_caveats']
-    for _ in range(40):
-        if supported['focus']['kind']=='ready':break
-        assert supported['focus']['kind']=='question'
-        supported=act(ctx,row,form,'unknown')
-    assert supported['save_ready'] and 'nothing' in supported['reply'].lower()
+    form['source_'+navigation['id']]='exclude'
+    form['source_reason_'+navigation['id']]='Navigation label.'
+    supported=guide.present(ctx,row,form)
+    assert supported['save_ready']
     notes,payload=knowledge_review.plan(ctx,row,form)
-    assert 'Payment is due within 14 days.' in notes[0]['content']
+    assert notes[0]['content'].count('Payment is due within 14 days.')==1
     assert 'Fictional test facts only.' in notes[0]['source_context']
     assert all(q['status']=='unknown' for t in payload['topic_reviews'].values() for q in t['questions'])
     assert ctx==original  # No persistence/LLM admission from any guide turn.
@@ -171,7 +165,7 @@ def test_natural_duplicate_reason_uses_owner_text_through_guide_route(source_cli
         'url':'https://example.test/service',
         'text':'Our small team keeps the landlord and resident informed as an enquiry moves forward.'}])
     route_context.clear();route_context.update(ctx)
-    form.update(action_one='keep', guided_expand_one='1')
+    form.update(action_one='keep', guided_expand_sources='1')
     url='/onboarding/knowledge/review/'+row['id']+'/guide'
     before=deepcopy(route_context)
     shown=client.post(url,json={'form':form}).json()
@@ -193,7 +187,7 @@ def test_natural_duplicate_reason_uses_owner_text_through_guide_route(source_cli
     result=response.json();unit=shown['focus']['id']
     assert result['patches']=={'source_'+unit:'exclude','source_reason_'+unit:question}
     assert result['focus_hash']!=shown['focus_hash']
-    assert calls==[] and route_context==before and row['state']=='pending'
+    assert all(name=='checkpoint_knowledge_review' for name,_ in calls) and route_context==before and row['state']=='pending'
 
 
 @pytest.mark.asyncio
@@ -285,7 +279,7 @@ def test_guide_route_reads_tenant_notes_and_prepares_only_local_choices(source_c
     selected=client.post(url,json={'form':{'version':'v1'},'question':'Keep this note','focus_hash':shown['focus_hash']})
     assert selected.status_code==200
     assert selected.json()['patches']=={'action_'+row['payload']['entries'][0]['id']:'keep'}
-    assert calls==[] and ctx==before
+    assert all(name=='checkpoint_knowledge_review' for name,_ in calls) and ctx==before
 
 
 @pytest.mark.parametrize('provider_intent', ['keep','discard'])
@@ -319,7 +313,7 @@ def test_model_keep_cannot_authorize_note_decision(source_client,monkeypatch,que
     assert result['focus_hash']==shown['focus_hash'] and not result['save_ready']
     assert not result.get('correction_requested')
     assert 'recorded as a keep' not in result['reply'] and 'Marked' not in result['reply']
-    assert ctx==before and calls==[] and row['state']=='pending'
+    assert ctx==before and all(name=='checkpoint_knowledge_review' for name,_ in calls) and row['state']=='pending'
 
 
 @pytest.mark.parametrize('question,decision', [('Keep this note','keep'),('Discard this note','discard')])
@@ -332,7 +326,7 @@ def test_exact_note_action_confirms_without_model(source_client,monkeypatch,ques
     response=client.post(url,json={'form':form,'question':question,'focus_hash':shown['focus_hash']})
     assert response.status_code==200
     assert response.json()['patches']=={'action_'+shown['focus']['id']:decision}
-    assert calls==[] and row['state']=='pending'
+    assert all(name=='checkpoint_knowledge_review' for name,_ in calls) and row['state']=='pending'
 
 
 @pytest.mark.parametrize('previous', ['','keep','discard'])
@@ -358,7 +352,7 @@ def test_edit_interpretation_preserves_prior_decisions(source_client,monkeypatch
     if 'review_decision' in result:
         assert provider_intent=='edit'
         assert result['review_decision']['action']=='edit' and result['review_decision']['state']=='editing'
-    assert form['action_'+first]==previous and ctx==before and calls==[]
+    assert form['action_'+first]==previous and ctx==before and all(name=='checkpoint_knowledge_review' for name,_ in calls)
 
 
 def test_explicit_confirmation_still_requires_current_focus(source_client,monkeypatch):
@@ -369,7 +363,7 @@ def test_explicit_confirmation_still_requires_current_focus(source_client,monkey
     shown=client.post(url,json={'form':form}).json()
     form['content_'+shown['focus']['id']]='Owner changed the note after reading it.'
     response=client.post(url,json={'form':form,'question':'Keep this note','focus_hash':shown['focus_hash']})
-    assert response.status_code==409 and calls==[]
+    assert response.status_code==409 and all(name=='checkpoint_knowledge_review' for name,_ in calls)
 
 
 def test_preview_preserves_guide_progress_without_exposing_more_audit_labels(source_client):
@@ -381,7 +375,7 @@ def test_preview_preserves_guide_progress_without_exposing_more_audit_labels(sou
     html=response.json()['review_html']
     assert 'name="guided_unknown_q" value="1"' in html
     assert 'name="guided_expand_note" value="1"' in html
-    assert calls==[]
+    assert all(name=='checkpoint_knowledge_review' for name,_ in calls)
 
 
 @pytest.mark.parametrize('case,expected',[('flag',404),('permission',403),('viewing',403),('stale',409),('saved',409),('missing',404),('csrf',403)])
@@ -398,7 +392,7 @@ def test_guide_reuses_tenant_permission_csrf_and_version_gates(source_client,mon
     elif case=='missing':ctx['reviews']=[]
     else:app.dependency_overrides.pop(require_csrf_header)
     response=client.post('/onboarding/knowledge/review/'+row['id']+'/guide',json={'form':{'version':'v1'}})
-    assert response.status_code==expected and calls==[]
+    assert response.status_code==expected and all(name=='checkpoint_knowledge_review' for name,_ in calls)
 
 
 @pytest.mark.parametrize('intent', ['keep', 'discard', 'edit'])
@@ -484,4 +478,4 @@ def test_unconfirmed_model_choice_has_no_history_until_exact_confirmation(source
     assert accepted['patches']=={'action_'+shown['focus']['id']:'keep'}
     assert accepted['review_decision']==dict(batch_id=row['id'],version=ctx['version'],
         focus_hash=shown['focus_hash'],kind='note',id=shown['focus']['id'],action='keep',state='prepared')
-    assert len(provider_calls)==1 and ctx==before and calls==[] and row['state']=='pending'
+    assert len(provider_calls)==1 and ctx==before and all(name=='checkpoint_knowledge_review' for name,_ in calls) and row['state']=='pending'

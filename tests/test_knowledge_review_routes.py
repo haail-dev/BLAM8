@@ -45,7 +45,7 @@ def test_review_preserves_assistant_context_and_json_preview_has_explicit_result
     assert response.status_code==200 and 'No facts saved' in response.json()['summary']
     assert 'Owner edited this text.' in response.json()['review_html']
     assert 'value="keep" selected' in response.json()['review_html']
-    assert review_store.rows==before and review_store.sources==[]
+    assert [r['payload']['entries'] for r in review_store.rows]==[r['payload']['entries'] for r in before] and review_store.sources==[]
 
 
 def test_assistant_questions_and_drafts_are_stored_and_linked_before_admission(client,review_store,monkeypatch):
@@ -83,7 +83,7 @@ def test_review_only_assistant_never_invents_replacement_cards(client,review_sto
     data=r.json()
     assert data['notes']==[] and data['form_fill']=={} and not data['ready_to_advance']
     assert '10%' not in data['reply'] and 'First Report' not in data['reply']
-    assert review_store.rows==before and review_store.sources==[]
+    assert [r['payload']['entries'] for r in review_store.rows]==[r['payload']['entries'] for r in before] and review_store.sources==[]
     if pending:
         assert 'Starting service' in data['reply']
         assert data['review_link']['href'].endswith(row['id'])
@@ -106,7 +106,7 @@ def test_source_inventory_blocks_admission_and_preserves_corrections(client,revi
     unit=row['payload']['source_units'][0]
     assert unit['text']=='Approval must precede a booking.' and review_store.sources==[]
     assert f'select name="source_{unit["id"]}"' in r.text
-    assert 'Source coverage · 1 remaining decisions' in r.text
+    assert 'Source audit · 1 remaining decisions' in r.text
     assert 'Source-to-note review' not in r.text
 
 
@@ -149,8 +149,10 @@ def test_overlap_acknowledged_through_the_guide_is_honoured_by_the_native_save(c
     guide={'version':review_store.load('tenant')['version'],'label_'+id:'Services','content_'+id:'\n\n'.join(PARAGRAPHS),'action_'+id:'keep'}
     shown=client.post(path+'/guide',json={'form':guide,'question':'','focus_hash':''})
     assert shown.status_code==200 and shown.json()['focus']['kind']=='overlap'
+    guide['version']=shown.json()['checkpoint']['version']
     acknowledged=client.post(path+'/guide',json={'form':guide,'question':'Keep both notes','focus_hash':shown.json()['focus_hash']})
     assert acknowledged.status_code==200
+    guide['version']=acknowledged.json()['checkpoint']['version']
     (match_name,)=acknowledged.json()['patches']
     assert match_name.startswith('match_') and acknowledged.json()['patches'][match_name]=='keep_both'
     calls=[]

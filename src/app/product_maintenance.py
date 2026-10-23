@@ -23,6 +23,10 @@ OPERATOR_SOURCES = {'src/app/admin_outreach.py': (
 # Additional runtime sources associated with feature evidence but excluded from
 # the product catalogue so review metadata cannot change its serialized content.
 SOURCE_CAPABILITIES = {
+    'src/app/voice_completion.py':'product.help',
+    'src/app/static/voice_completion.js':'product.help',
+    'src/app/templates/onboarding/voice.html':'product.help',
+    'docs/operations/knowledge-voice-review.md':'knowledge.review',
     'src/app/onboarding_contract.py': 'product.help',
     'src/app/onboarding_state.py': 'product.help',
     'src/app/onboarding_routes.py': 'product.help',

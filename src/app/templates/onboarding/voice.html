@@ -5,7 +5,10 @@
 {% block content %}
 {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
 {% set label = "block text-sm font-semibold text-navy" %}
+{% set voice_valid = voice_valid|default(false) %}
+<style>[data-onb-continue]:disabled{opacity:.45;cursor:not-allowed}</style>
 
+  <p id="voice-completion-status" role="status" aria-live="polite">Choose an agent or team name, tone and sign-off. Extra voice notes are optional.</p>
 {% if learning_status == "running" %}
 <!-- Analysis in flight: poll until it lands, then reload into the review. -->
 <div class="rounded-xl border border-slate-200 bg-white p-6 text-center space-y-4">
@@ -16,7 +19,6 @@
 </div>
 <div class="flex items-center justify-between pt-4">
   <a href="/onboarding/mailbox" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
-  <a href="/onboarding/knowledge" class="text-sm font-medium text-slate-500 hover:text-navy transition">Skip</a>
 </div>
 <script>
   (function poll() {
@@ -58,9 +60,10 @@
     <a href="/onboarding/mailbox" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
     <div class="flex items-center gap-3">
       <button type="button" id="voice-adjust" class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-navy hover:bg-slate-50 transition">Adjust settings</button>
-      <form method="post" action="/onboarding/voice/accept">
+      <form method="post" action="/onboarding/voice/accept" data-voice-accept>
+        <input type="hidden" name="voice_expected" value="{{ voice_expected }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-        <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Looks good — continue</button>
+        <button type="submit" data-onb-continue{% if not voice_valid %} disabled{% endif %} aria-describedby="voice-completion-status" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Looks good — continue</button>
       </form>
     </div>
   </div>
@@ -91,6 +94,7 @@
 {% endif %}
 
 <form method="post" action="/onboarding/voice" class="space-y-4 {% if learning_status in ('ready', 'accepted') and profile %}hidden{% endif %}" id="voice-form">
+  <input type="hidden" name="voice_expected" value="{{ voice_expected }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
   {% if held_filled %}
   {# Held for later (src/app/setup_held.py): what they said at an earlier step,
@@ -105,26 +109,25 @@
   </details>
   <div>
     <label class="{{ label }}" for="agent_name">What the agent calls itself</label>
-    <input id="agent_name" name="agent_name" class="{{ field }}" value="{{ cfg.agent_name or '' }}" placeholder="the office team">
+    <input id="agent_name" name="agent_name" required aria-describedby="voice-completion-status" class="{{ field }}" value="{{ cfg.agent_name or '' }}" placeholder="the office team">
   </div>
   <div>
     <label class="{{ label }}" for="tone">Tone of voice</label>
-    <input id="tone" name="tone" class="{{ field }}" value="{{ cfg.tone or '' }}" placeholder="warm and professional">
+    <input id="tone" name="tone" required aria-describedby="voice-completion-status" class="{{ field }}" value="{{ cfg.tone or '' }}" placeholder="warm and professional">
   </div>
   <div>
     <label class="{{ label }}" for="sign_off">Sign-off</label>
-    <textarea id="sign_off" name="sign_off" rows="3" class="{{ field }}" placeholder="Kind regards,&#10;The team">{{ cfg.sign_off or '' }}</textarea>
+    <textarea id="sign_off" name="sign_off" required aria-describedby="voice-completion-status" rows="3" class="{{ field }}" placeholder="Kind regards,&#10;The team">{{ cfg.sign_off or '' }}</textarea>
   </div>
   <div>
     <label class="{{ label }}" for="voice_notes">How you write <span class="font-normal text-slate-400">({% if profile %}learned from your sent emails{% else %}style only{% endif %})</span></label>
     <textarea id="voice_notes" name="voice_notes" rows="4" class="{{ field }}" placeholder="e.g. Short and friendly, first names, gets straight to the point.">{{ cfg.voice_notes or '' }}</textarea>
-    <p class="mt-1 text-xs text-slate-400">Rules the agent must follow — a trial day before a first stay, a price it must never quote — belong in Knowledge, the next step; the assistant keeps any you mention for you.</p>
+    <p class="mt-1 text-xs text-slate-400">Business facts and rules belong in Knowledge, the next step. Extra style notes here are optional.</p>
   </div>
   <div class="flex items-center justify-between pt-1">
     <a href="/onboarding/mailbox" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
     <div class="flex items-center gap-4">
-      <a href="/onboarding/knowledge" class="text-sm font-medium text-slate-500 hover:text-navy transition">Skip</a>
-      <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</button>
+      <button type="submit" data-onb-continue{% if not voice_valid %} disabled{% endif %} aria-describedby="voice-completion-status" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</button>
     </div>
   </div>
 </form>
@@ -144,4 +147,6 @@
 {% endif %}
 
 {% endif %}
+<script id="voice-required" type="application/json">{{ voice_required|default({"agent_name":"agent or team name","tone":"tone of voice","sign_off":"sign-off"})|tojson }}</script>
+<script src="/static/voice_completion.js?v={{ asset_rev }}" defer></script>
 {% endblock %}

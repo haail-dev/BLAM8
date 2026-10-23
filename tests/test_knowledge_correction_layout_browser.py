@@ -54,8 +54,7 @@ def test_correction_cards_apply_and_source_choices_in_native_browser(tmp_path,th
       check(document.documentElement.scrollWidth<=innerWidth+1,'narrow document overflow');
       const source=document.querySelector('.kr-source-coverage select');source.value='unknown';
       check(new FormData(form).get(source.name)==='unknown','source decision native submission');
-      const layout=form.elements.guided_layout_review;layout.checked=true;
-      check(new FormData(form).get('guided_layout_review')==='acknowledged','group acknowledgement native submission');
+      check(!form.elements.guided_layout_review,'Cosmetic labels do not need mandatory approval');
       // Changing the form invalidates the preview, without an Apply request.
       button.click();check(document.querySelector('[data-source-status]').textContent.includes('changed'),'stale preview rejected');
       await window.Blam8KnowledgeSourceReview.ask('Owner confirms closing time is now 4 pm.');

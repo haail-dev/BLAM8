@@ -88,7 +88,16 @@ async def guide(review_id: UUID, body: GuideRequest, ctx: TenantCtx = Depends(re
     if knowledge_guidance.needs_model(body.question) and not fairuse.onboarding_allowed(ctx.tenant_id, 'concierge_onboard', client=ctx.client):
         raise HTTPException(429, 'Today\'s setup review allowance is used. Your review choices remain on the page.')
     try:
-        return await knowledge_guidance.turn(ctx.tenant_id, context, row, body.form, body.question, body.focus_hash)
+        result = await knowledge_guidance.turn(ctx.tenant_id, context, row, body.form, body.question, body.focus_hash)
+        if not result.get('correction_requested') and (result.get('patches') or not knowledge_guidance.needs_model(body.question)):
+            merged = {**body.form, **result.get('patches',{})}
+            fresh, stored, choices = knowledge_review.checkpoint(ctx.tenant_id, context, row, merged)
+            # Recompute focus under the confirmed revision; never replay a stale choice.
+            shown = knowledge_guidance.present(fresh, stored, choices)
+            result.update({k:shown[k] for k in ('focus','focus_hash','version','save_ready')})
+            result['checkpoint'] = {'version':fresh['version'],
+                'reviewed':{k:v for k,v in choices.items() if k.startswith('reviewed_')}}
+        return result
     except Exception as exc:
         _review_error(exc)
 

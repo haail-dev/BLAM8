@@ -9,12 +9,12 @@ handled, and fills the form — industry, brief, goals), the system-of-record
 is set (see app.auth.require_onboarded). The classic industry picker survives
 at /onboarding/industry as the manual fallback.
 
-Steps after the mailbox are optional — each can be skipped and refined later from
-the dashboard. Everything captured is structured tenant config (no per-tenant
+Voice requires owner-reviewed name, tone and sign-off before advancing. Everything captured is structured tenant config (no per-tenant
 code), which also doubles as the integration roadmap signal across tenants.
 """
 import asyncio
 import logging
+import json
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
@@ -31,7 +31,7 @@ from app import operating_systems
 from app import partners
 from app import sign_off
 from app import storage
-from app import voice_learning
+from app import voice_learning, voice_completion
 from app.auth import require_tenant, TenantCtx
 from app.config import settings
 from app.security import require_csrf
@@ -296,7 +296,7 @@ def _step_ctx(step: str, **extra) -> dict:
     if "connected" in extra:
         saved["mailbox"] = bool(extra["connected"])
     if "cfg" in extra:
-        saved["voice"] = bool((extra["cfg"] or {}).get("voice_profile_source"))
+        saved["voice"] = extra.get("voice_saved",voice_completion.complete(extra["cfg"] or {}))
     return {"steps": STEPS, "step": step, "stepper": stepper,
             "journey": onboarding_journey.describe(step, connected=extra.get("connected"), saved=saved,
                                                      next_target=extra.get("next_target")),
@@ -328,6 +328,7 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     Written explicitly rather than left to the column default, so it holds however
     the tenant_config row came to exist — including rows created before the column
     did."""
+    voice_completion.require_saved(ctx)
     db.set_onboarded(ctx.tenant_id, client=ctx.client)
     # Best-effort: the column already defaults to held, so this is the belt to
     # that braces. A config-write blip must not 500 the very last step of
@@ -373,7 +374,7 @@ def home(ctx: TenantCtx = Depends(require_tenant)):
     # the learned profile, save the form, adjust the learned one) stamps
     # voice_profile_source; nothing before the step does.
     cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
-    if cfg.get("voice_profile_source"):
+    if voice_completion.complete(cfg):
         return RedirectResponse("/onboarding/knowledge", status_code=303)
     return RedirectResponse("/onboarding/voice", status_code=303)
 
@@ -633,6 +634,7 @@ def voice_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
                     "sign_off": "sign-off"}
     return templates.TemplateResponse(request, "onboarding/voice.html", _step_ctx(
         "voice", cfg=form_cfg, learning_status=status, profile=profile,
+        voice_saved=voice_completion.complete(cfg), voice_valid=voice_completion.complete(form_cfg), voice_required=voice_completion.REQUIRED, voice_expected=json.dumps(voice_completion.snapshot(cfg)),
         sample=cfg.get("voice_sample_draft"), analysed=analysed,
         soft=analysed < voice_learning.SOFT_EMAILS,
         held_filled=held_filled,
@@ -650,11 +652,20 @@ def voice_status(ctx: TenantCtx = Depends(require_tenant)):
 
 
 @router.post("/voice/accept", dependencies=[Depends(require_csrf)])
-def voice_accept(ctx: TenantCtx = Depends(require_tenant)):
-    """'Looks good — continue': the learned profile becomes the live voice."""
-    if voice_learning.apply_profile(ctx.tenant_id, client=ctx.client):
-        return RedirectResponse("/onboarding/knowledge", status_code=303)
-    return RedirectResponse("/onboarding/voice", status_code=303)
+async def voice_accept(request: Request, ctx: TenantCtx = Depends(require_tenant)):
+    """Accept precisely the reviewed learned profile under the form's saved version."""
+    form=await request.form()
+    def _blocking():
+        cfg=db.get_tenant_config(ctx.tenant_id,client=ctx.client) or {}
+        if not cfg.get('voice_profile') or cfg.get('voice_learning_status') not in ('ready','accepted'):
+            raise HTTPException(409,'This learned profile changed. Review Voice again before accepting it.')
+        values=voice_learning.profile_to_config(cfg['voice_profile'])
+        values.update(voice_profile_source='auto_learned',voice_learning_status='accepted')
+        if not (cfg.get('examples') or '').strip() and (cfg.get('voice_sample_draft') or '').strip():
+            values['examples']=cfg['voice_sample_draft']
+        voice_completion.save(ctx,form.get('voice_expected'),values)
+        return RedirectResponse('/onboarding/knowledge',status_code=303)
+    return await run_in_threadpool(_blocking)
 
 
 @router.post("/voice/learn", dependencies=[Depends(require_csrf)])
@@ -681,6 +692,7 @@ async def voice_post(request: Request, ctx: TenantCtx = Depends(require_tenant))
         cfg = {f: (form.get(f) or "").strip() or None for f in VOICE_FIELDS}
         # One canonical form for the sign-off (a textarea posts CRLF), as in Settings.
         cfg["sign_off"] = sign_off.normalise(cfg.get("sign_off")) or None
+        voice_completion.require(cfg)
         existing = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
         if existing.get("voice_profile") and existing.get("voice_learning_status") in ("ready", "accepted"):
             # They started from the learned values and hand-tuned — auto + manual.
@@ -688,7 +700,7 @@ async def voice_post(request: Request, ctx: TenantCtx = Depends(require_tenant))
             cfg["voice_learning_status"] = "accepted"
         else:
             cfg["voice_profile_source"] = "manual"
-        db.upsert_tenant_config(ctx.tenant_id, cfg, client=ctx.client)
+        voice_completion.save(ctx,form.get('voice_expected'),cfg)
         from app import setup_held
         setup_held.mark_used(ctx.tenant_id, "voice", client=ctx.client)
         return RedirectResponse("/onboarding/knowledge", status_code=303)
@@ -698,6 +710,8 @@ async def voice_post(request: Request, ctx: TenantCtx = Depends(require_tenant))
 # ── 4 · knowledge (reuses the KB ingest) ─────────────────────────────────────
 @router.get("/knowledge")
 def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
+    if not voice_completion.complete(db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}):
+        return RedirectResponse("/onboarding/voice", status_code=303)
     from app import knowledge_coverage, knowledge_review
     review_context = knowledge_review.load(ctx.tenant_id)
     sources = [{**s,"chunks":s.get("chunks",1)} for s in review_context["sources"] if s.get("mailbox_id") is None]
@@ -720,15 +734,9 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
     site_sources = {s["source"] for s in site_notes} | {n["admitted_source"] for r in site_reviews for n in r["payload"]["entries"] if n.get("admitted_source")}
     site_read = bool(site_notes or site_reviews)
     auto_site = bool(website and kb.is_configured() and not site_read and not pending_reviews)
-    # The interview opens itself: the page carries the ask for what's missing
-    # and the panel sends it on arrival (services run 2026-09-04: the static
-    # greeting waited for "what do you need from me?"). With a site on file the
-    # ask never leads with "do you have a website?" — and while auto_site the
-    # panel holds the ask until the read has finished (concierge.js), so the
-    # assistant doesn't interview for prices the site is about to supply.
-    coverage_ask = (knowledge_coverage.ask_text(cov["missing"],
-                                                website=kb.is_configured() and not website)
-                    if cov["missing"] else "")
+    # Optional gaps stay grouped in the coverage view. Do not start a generic
+    # closing policy interview after the owner has reviewed the actual facts.
+    coverage_ask = ''
     # Held for later: rules and facts stated at earlier steps arrive as a
     # ready note card (the panel renders it from this on arrival).
     from app import setup_held
@@ -851,7 +859,7 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
     if settings.knowledge_source_review_enabled:
         if evidence_pages is None:
             raise HTTPException(503, 'Source capture could not be confirmed. Nothing was staged.')
-    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"), capture_manifest=result.get('capture_manifest'),
+    row = knowledge_review.stage(ctx.tenant_id, result["entries"], origin="Website: " + result["site"], questions=result.get("questions"),source_units=result.get("source_units"), authority_context=knowledge_review.load(ctx.tenant_id), capture_manifest=result.get('capture_manifest'),
         **({'evidence_pages': evidence_pages} if evidence_pages is not None else {}))
     fragments = _knowledge_review_fragments(request, ctx)
     return JSONResponse({**result, **fragments, "review_id": row["id"]})
@@ -923,7 +931,9 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
     context = knowledge_review.load(ctx.tenant_id)
     row = _knowledge_review_row(context,review_id)
     form = await request.form()
-    if row['payload'].get('source_snapshot') and form.get('operation') != 'preview':
+    if row['state']=='saved':
+        return RedirectResponse(row['payload'].get('return_to','/onboarding/knowledge'),status_code=303)
+    if row['payload'].get('source_snapshot'):
         from app.knowledge_source_routes import require_source_writer
         require_source_writer(ctx)
     try:
@@ -937,6 +947,9 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
             if admitted:
                 setup_held.mark_used(ctx.tenant_id, "knowledge", client=ctx.client)
         else:
+            if form.get('version')==context['version']:
+                context,row,form = knowledge_review.checkpoint(ctx.tenant_id,context,row,form)
+            # A stale preview is an explicit read-only comparison, never a write retried against a newer revision.
             view = knowledge_review.review_view(context,row,form)
             if request.headers.get('accept') == 'application/json':
                 html = templates.env.get_template('_knowledge_review.html').render(request=request,review=view)

@@ -69,7 +69,7 @@
         (change.source_choices || []).forEach(function(choice){
           detail.appendChild(node('p','Source passage: '+choice.text));
           detail.appendChild(node('p','Source: '+choice.sources.join(', ')));
-          detail.appendChild(node('p',choice.action==='superseded'?'Superseded by your correction: keep this source passage in the audit, outside active Knowledge.':choice.action==='excluded'?'Proposed source choice: leave out of all retained notes.':'Retained in: '+choice.destinations.join(', ')));
+          detail.appendChild(node('p',choice.action==='superseded'?'Superseded by your correction: keep this source passage in the audit, outside active Knowledge.':choice.action==='excluded'?'Removed factual claim: this will be excluded from all active notes if you Apply and then Save. Review the full claim below; this is not merely a formatting change.':'Retained in: '+choice.destinations.join(', ')));
           if(choice.reason)detail.appendChild(node('p','Your exact reason: '+choice.reason));
         });
         change.passages.forEach(function (p) { detail.appendChild(node('blockquote', p.quote)); detail.appendChild(node('p', p.url)); });

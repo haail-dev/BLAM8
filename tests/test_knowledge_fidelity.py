@@ -41,10 +41,10 @@ def test_structural_labels_and_typography_are_compact_but_facts_stay_unresolved(
     ctx,row=context([entry(content="We arrange inspections according to the owner's agreement. We close at 4 pm.")])
     row['payload']['source_units']=fidelity.inventory([page])
     view=fidelity.view(row,row['payload']['entries'],{})
-    assert sum(u['status']=='layout_fragment' for u in view['units'])==3
+    assert sum(u['status']=='layout_fragment' for u in view['units'])==1
     assert sum(u['status']=='literal_in_note' for u in view['units'])==1
     remaining=[u['text'] for u in view['units'] if u['status']=='unresolved']
-    assert len(remaining)==7 and 'We close at 5 pm.' in remaining and 'Optional work costs £30.' in remaining
+    assert len(remaining)==9 and 'We close at 5 pm.' in remaining and 'Optional work costs £30.' in remaining
     assert all(u['sources']==['https://example.test'] and u['spans'] for u in view['units'])
 
 
@@ -53,15 +53,16 @@ def test_layout_group_needs_review_and_factual_labels_can_be_recovered():
     ctx,row=context([entry(content='A confirmed note.')])
     row['payload']['source_units']=fidelity.inventory([{'url':'https://example.test',**extract('<h2>Payment by transfer</h2>')}])
     choices=form(ctx,row)
-    with pytest.raises(HTTPException,match='grouped layout'):
+    with pytest.raises(HTTPException,match='unaccounted'):
         kr.plan(ctx,row,choices)
     unit=row['payload']['source_units'][0]
     # Heuristic classification never removes the owner's opportunity to retain
     # a factual heading; it has the same native controls and original evidence.
     choices['source_'+unit['id']]='note:one'
+    choices['content_one']='A confirmed note. Payment by transfer'
     notes,payload=kr.plan(ctx,row,choices)
     assert 'Payment by transfer' in notes[0]['content']
-    assert payload['source_decisions'][0]['status']=='retained_verbatim'
+    assert payload['source_decisions'][0]['status']=='retained_evidence'
 
 
 @pytest.mark.parametrize('choice',['exclude','unknown'])
@@ -119,6 +120,7 @@ def test_citations_and_topic_coverage_do_not_hide_omitted_constraints():
 
 def test_explicit_mapping_retains_exact_words_and_qualifications_without_new_cards():
     ctx,row=source_review(); f=form(ctx,row);f['source_default']='note:one'
+    f['content_one']=' '.join(u['text'] for u in row['payload']['source_units'] if u['kind']!='qualification')
     notes,payload=kr.plan(ctx,row,f)
     assert len(notes)==1 and notes[0]['label'].startswith('Prices · one')
     assert 'fictional sample facts' in notes[0]['source_context']
@@ -135,8 +137,10 @@ def test_explicit_mapping_retains_exact_words_and_qualifications_without_new_car
 
 def test_exclusions_need_reasons_and_cannot_strip_source_qualifications():
     ctx,row=source_review(); f=form(ctx,row);f['source_default']='note:one'
+    f['content_one']=' '.join(u['text'] for u in row['payload']['source_units'] if u['kind']!='qualification')
     unit=row['payload']['source_units'][2];key='source_'+unit['id']
     f[key]='exclude'
+    f['content_one']=f['content_one'].replace(unit['text'],'')
     with pytest.raises(HTTPException,match='Explain'):kr.plan(ctx,row,f)
     f['source_reason_'+unit['id']]='Reviewer rejects this statement as obsolete.'
     _,payload=kr.plan(ctx,row,f)
@@ -154,7 +158,7 @@ def test_saved_merge_carries_both_sources_qualifications_into_rechunking():
         'admitted_source':'Prices','mailbox_id':None,'admitted_content_hash':kr.fingerprint(source['content']),
         'source_context':old_context,'provenance':[{'source':'https://old.example.test'}]}]}})
     target=next(m for m in kr.candidates(row['payload']['entries'][0],ctx,row['id']) if m['kind']=='saved')
-    f=form(ctx,row);f['action_one']='merge_saved:'+target['id'];f['source_default']='note:one'
+    f=form(ctx,row);f['content_one']=' '.join(u['text'] for u in row['payload']['source_units'] if u['kind']!='qualification');f['action_one']='merge_saved:'+target['id'];f['source_default']='note:one'
     notes,payload=kr.plan(ctx,row,f)
     assert old_context in notes[0]['source_context'] and 'fictional sample facts' in notes[0]['source_context']
     assert payload['entries'][0]['source_context']==notes[0]['source_context']
@@ -176,7 +180,7 @@ def test_editing_away_literal_fact_invalidates_coverage_and_discard_cannot_be_ta
 async def test_every_embedded_chunk_carries_source_qualification(monkeypatch):
     from app import setup_card_knowledge as store
     ctx,row=source_review();f=form(ctx,row);f['source_default']='note:one'
-    f['content_one']='A long factual description. '*250
+    f['content_one']='A long factual description. '*250+' '.join(u['text'] for u in row['payload']['source_units'] if u['kind']!='qualification')
     notes,_=kr.plan(ctx,row,f);seen=[]
     async def embed(texts):
         seen.extend(texts)

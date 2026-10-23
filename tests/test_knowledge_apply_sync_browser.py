@@ -68,6 +68,10 @@ def apply_app(sync_case, monkeypatch):
 
     class ReviewStore(Store):
         def rpc(self, name, args):
+            if name == "checkpoint_knowledge_review":
+                assert args['p_expected']==review_ctx['version']
+                review_row['payload']['draft_review_choices']=deepcopy(args['p_choices'])
+                return SimpleNamespace(execute=lambda:SimpleNamespace(data=deepcopy(review_ctx)))
             if name != "revise_knowledge_review_sources":
                 return super().rpc(name, args)
             assert args["p_expected"] == review_ctx["version"] and args["p_review"] == review_row["id"]

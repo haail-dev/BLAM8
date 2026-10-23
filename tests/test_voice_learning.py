@@ -334,51 +334,61 @@ def test_voice_status_endpoint(client, monkeypatch):
     assert client.get("/onboarding/voice/status").json() == {"status": "running"}
 
 
-def test_voice_accept_applies_and_continues(client, monkeypatch):
-    monkeypatch.setattr(vl, "apply_profile", lambda tid, client=None: True)
-    r = client.post("/onboarding/voice/accept", follow_redirects=False)
-    assert (r.status_code, r.headers["location"]) == (303, "/onboarding/knowledge")
+def _voice_save_env(monkeypatch,cfg):
+    from types import SimpleNamespace
+    from app import voice_completion,setup_held
+    _voice_env(monkeypatch,cfg)
+    monkeypatch.setattr(db,'get_member',lambda *a,**kw:None)
+    writes=[]
+    def rpc(name,args):
+        assert name=='save_onboarding_voice' and args['p_expected']==voice_completion.snapshot(cfg)
+        writes.append(args['p_values']);cfg.update(args['p_values'])
+        return SimpleNamespace(execute=lambda:SimpleNamespace(data=True))
+    monkeypatch.setattr(db,'db',lambda:SimpleNamespace(rpc=rpc))
+    monkeypatch.setattr(setup_held,'mark_used',lambda *a,**kw:None)
+    return writes
 
 
-def test_voice_accept_without_profile_returns_to_step(client, monkeypatch):
-    monkeypatch.setattr(vl, "apply_profile", lambda tid, client=None: False)
-    r = client.post("/onboarding/voice/accept", follow_redirects=False)
-    assert r.headers["location"] == "/onboarding/voice"
+def _voice_post(client,cfg,values,endpoint='/onboarding/voice'):
+    from app import voice_completion
+    return client.post(endpoint,data={**values,'voice_expected':json.dumps(voice_completion.snapshot(cfg))},follow_redirects=False)
 
 
-def test_voice_manual_save_marks_hybrid_over_a_learned_profile(client, monkeypatch):
-    writes = []
-    _voice_env(monkeypatch, {"voice_profile": _profile(), "voice_learning_status": "ready"})
-    monkeypatch.setattr(db, "upsert_tenant_config",
-                        lambda tid, cfg, client=None: writes.append(cfg))
-    r = client.post("/onboarding/voice", data={"tone": "brisk"}, follow_redirects=False)
-    assert r.headers["location"] == "/onboarding/knowledge"
-    assert writes[-1]["voice_profile_source"] == "hybrid"
-    assert writes[-1]["tone"] == "brisk"
+def test_voice_accept_applies_and_continues(client,monkeypatch):
+    cfg={'voice_profile':_profile(),'voice_learning_status':'ready'}
+    writes=_voice_save_env(monkeypatch,cfg)
+    result=_voice_post(client,cfg,{},'/onboarding/voice/accept')
+    assert (result.status_code,result.headers['location'])==(303,'/onboarding/knowledge')
+    assert writes[0]['voice_profile_source']=='auto_learned'
 
 
-def test_voice_manual_save_without_profile_is_manual(client, monkeypatch):
-    writes = []
-    _voice_env(monkeypatch, {})
-    monkeypatch.setattr(db, "upsert_tenant_config",
-                        lambda tid, cfg, client=None: writes.append(cfg))
-    client.post("/onboarding/voice", data={"tone": "brisk"}, follow_redirects=False)
-    assert writes[-1]["voice_profile_source"] == "manual"
+def test_voice_accept_without_profile_returns_to_step(client,monkeypatch):
+    cfg={};writes=_voice_save_env(monkeypatch,cfg)
+    assert _voice_post(client,cfg,{},'/onboarding/voice/accept').status_code==409 and not writes
 
 
-def test_voice_save_stores_the_sign_off_in_one_canonical_form(client, monkeypatch):
-    """A browser textarea posts CRLF and stray spaces; the stored value is LF, trimmed."""
-    writes = []
-    _voice_env(monkeypatch, {})
-    monkeypatch.setattr(db, "upsert_tenant_config",
-                        lambda tid, cfg, client=None: writes.append(cfg))
-    client.post("/onboarding/voice", data={"sign_off": "Kind regards,\r\nThe team \r\n"},
-                follow_redirects=False)
-    assert writes[-1]["sign_off"] == "Kind regards,\nThe team"
-    client.post("/onboarding/voice", data={"sign_off": " \r\n "}, follow_redirects=False)
-    assert writes[-1]["sign_off"] is None          # blank = nothing configured
-    client.post("/onboarding/voice", data={"tone": "brisk"}, follow_redirects=False)
-    assert writes[-1]["sign_off"] is None
+def test_voice_manual_save_marks_hybrid_over_a_learned_profile(client,monkeypatch):
+    cfg={'voice_profile':_profile(),'voice_learning_status':'ready'}
+    writes=_voice_save_env(monkeypatch,cfg)
+    result=_voice_post(client,cfg,{'agent_name':'Office team','tone':'brisk','sign_off':'Regards'})
+    assert result.headers['location']=='/onboarding/knowledge'
+    assert writes[0]['voice_profile_source']=='hybrid' and writes[0]['tone']=='brisk'
+
+
+def test_voice_manual_save_without_profile_is_manual(client,monkeypatch):
+    cfg={};writes=_voice_save_env(monkeypatch,cfg)
+    assert _voice_post(client,cfg,{'agent_name':'Office team','tone':'brisk','sign_off':'Regards'}).status_code==303
+    assert writes[0]['voice_profile_source']=='manual'
+
+
+def test_voice_save_stores_the_sign_off_in_one_canonical_form(client,monkeypatch):
+    cfg={};writes=_voice_save_env(monkeypatch,cfg)
+    values={'agent_name':'Office team','tone':'brisk','sign_off':'Kind regards,\r\nThe team \r\n'}
+    assert _voice_post(client,cfg,values).status_code==303
+    assert writes[0]['sign_off']=='Kind regards,\nThe team'
+    assert _voice_post(client,cfg,{**values,'sign_off':' \r\n '}).status_code==422
+    assert _voice_post(client,cfg,{'agent_name':'Office team','tone':'brisk'}).status_code==422
+    assert len(writes)==1
 
 
 def test_settings_voice_discard_route(client, monkeypatch):

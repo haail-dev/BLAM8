@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const events={}, requests=[], tokens=new Map();
-function el(){return {dataset:{},hidden:false,disabled:false,textContent:'',value:'',listeners:{},
+function el(){return {dataset:{},style:{},hidden:false,disabled:false,textContent:'',value:'',listeners:{},
   addEventListener(n,f){this.listeners[n]=f;},appendChild(){},prepend(){},focus(){},querySelectorAll(){return [];}};}
 let active;
 function form(content='c1', evidence='e1', context='v1'){

@@ -139,7 +139,8 @@ def knowledge_candidates(knowledge):
             review_topic = saved['payload']['topic_reviews'][topic['key']]
             evidence = knowledge_review.fingerprint([(s['source'], s.get('mailbox_id'), s['content'])
                 for s in sorted(knowledge['sources'], key=lambda s: (s['source'], s.get('mailbox_id') or ''))])
-            current = review_topic.get('evidence') == evidence
+            current = (review_topic['scoped_evidence']==knowledge_review.topic_evidence(topic['key'],knowledge['sources'])
+                       if 'scoped_evidence' in review_topic else review_topic.get('evidence')==evidence)
             explicit = any(item['question'] == question for item in saved['payload'].get('questions', []))
             if status == 'unknown' and not explicit:
                 continue
@@ -156,7 +157,8 @@ def knowledge_candidates(knowledge):
                 answer=q.get('answer', ''), state=('answered' if status == 'answered' and current else
                     'not_applicable' if status == 'not_applicable' and current else 'unknown'),
                 canonical=canonical,
-                evidence_revision=knowledge['version'], source_review=saved['id']))
+                evidence_revision=knowledge_review.fingerprint(q['id'],q.get('answer',''),status,current,
+                    review_topic.get('scoped_evidence',review_topic.get('evidence'))), source_review=saved['id']))
     return result
 
 

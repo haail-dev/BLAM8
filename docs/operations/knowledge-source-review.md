@@ -1,3 +1,6 @@
+> Current review changes: see [Knowledge and Voice review](knowledge-voice-review.md).
+> Source retention now links evidence without appending duplicate sentences; optional policy gaps do not form a mandatory closing questionnaire.
+
 # Source-backed Knowledge corrections
 
 Website imports can retain the text actually read so an owner can ask for

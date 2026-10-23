@@ -684,11 +684,13 @@ ONBOARDING_STEPS = {
         "title": "your knowledge base",
         "guidance": (
             (
-                "Here the agent learns the facts it may quote. Don't send them to paste text: INTERVIEW them "
-                "for the kinds of fact that are NOT YET covered (the coverage list below), at most THREE short "
+                "Here the agent learns the facts it may quote. Optional gaps belong in the grouped unknown-details view. "
+                "Do not start a generic closing policy questionnaire. Only interview when the owner asks for help adding facts; ask at most THREE short "
                 "questions a turn — number them and count; a fourth is a broken turn (run #10 asked four) — in "
                 "their trade's words — prices it must quote, the rules it must enforce, how a first booking "
-                "works, how often work repeats, how people pay, safety or refusals, where they work, hours. "
+                "works, how people pay, safety or refusals, where they work, hours. Reuse approved notes and owner answers. "
+                "Agreement-specific intervals are a valid answer; never demand a universal inspection frequency. "
+                "Setup questions belong in the corresponding existing Diary, records/workflows or charges/payments section. "
                 "Then write the notes yourself from what they said — each as its own entry in `notes` with a "
                 "short label and the fact stated plainly in the business's own voice (use 'We' or 'Our', never "
                 "'the business'), numbers exact — and say in `reply` that a card with the notes is ready to "

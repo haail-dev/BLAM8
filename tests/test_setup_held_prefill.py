@@ -132,12 +132,12 @@ def test_knowledge_step_carries_held_notes_for_the_panels_card(client, monkeypat
     monkeypatch.setattr(kb, "is_configured", lambda: True)
     monkeypatch.setattr(onboarding.db, "list_knowledge_sources", lambda tid, client=None: [])
     monkeypatch.setattr(onboarding.db, "knowledge_source_texts", lambda tid, client=None: [])
-    monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {"setup_held": HELD})
+    monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {"setup_held": HELD,"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     r = client.get("/onboarding/knowledge")
     assert 'id="held-notes"' in r.text
     carrier = r.text.split('data-onb-held-notes=')[1].split("></div>")[0]
     assert "Trial day | Every new dog has a trial day" in carrier
     assert carrier.startswith("'")                                   # single-quoted: tojson escapes '
     # nothing held → no carrier
-    monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {})
+    monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     assert 'id="held-notes"' not in client.get("/onboarding/knowledge").text

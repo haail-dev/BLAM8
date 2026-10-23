@@ -64,7 +64,7 @@ def test_the_onboarding_knowledge_step_carries_notes_and_the_interview():
     assert schema["properties"]["notes"]["items"]["required"] == ["label", "content"]
     assert "notes" not in concierge.onboarding_schema("voice")["properties"]
     g = concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
-    assert "INTERVIEW them" in g and "write the notes yourself" in g
+    assert "Only interview when the owner asks" in g and "write the notes yourself" in g
     p = concierge.build_onboarding_prompt("knowledge", {}, coverage=kc.coverage([]))
     assert "Knowledge coverage" in p and "NOT YET — ask:" in p
 

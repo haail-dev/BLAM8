@@ -101,7 +101,7 @@ def removal(card, identity, content, references):
             fidelity.QUALIFICATION.search(paragraph["quote"])
             or fidelity.CONSTRAINT.search(paragraph["quote"])
         ) and not any(
-            fidelity._represented(paragraph["quote"], text) for text in retained
+            fidelity.represented_fact(paragraph["quote"], text) for text in retained
         ):
             raise setup_cards.Invalid(
                 "This edit would remove a source caveat or negative limitation. It remains attached; review a narrower edit."
@@ -112,13 +112,13 @@ def removal(card, identity, content, references):
     )
     form = edit["form"]
     for unit in edit["units"]:
-        if not fidelity._represented(unit["text"], content):
+        if not fidelity.represented_fact(unit["text"], content):
             continue
         destinations = [
             n
             for n in [{"id": identity, "label": "This note", "content": after}]
             + edit["others"]
-            if fidelity._represented(unit["text"], n["content"])
+            if fidelity.represented_fact(unit["text"], n["content"])
         ]
         if destinations:
             # A duplicate occurrence can disappear without excluding its facts.
@@ -137,7 +137,7 @@ def removal(card, identity, content, references):
                     }
                 )
             continue
-        if not fidelity._represented(unit["text"], removed):
+        if not fidelity.represented_fact(unit["text"], removed):
             raise setup_cards.Invalid(
                 "The paragraph contains only part of a source statement. Its other clauses cannot be excluded with this edit. Review a narrower correction."
             )
@@ -145,6 +145,8 @@ def removal(card, identity, content, references):
             raise setup_cards.Invalid(
                 "This edit would drop a unique source caveat or negative limitation. Nothing changed."
             )
+        if fidelity.critical_terms(unit['text']) - set().union(*(set(re.findall(r"\w+|[£$€%]", text.casefold())) for text in retained)):
+            raise setup_cards.Invalid('This cleanup would remove a critical source fact: '+unit['text']+' Keep its names, numbers, units and conditions in a retained note. Nothing changed.')
         reason = edit["owner_request"].strip()
         if not reason or len(reason) > 1000:
             raise setup_cards.Invalid(

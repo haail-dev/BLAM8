@@ -128,6 +128,7 @@ def test_a_junk_mode_is_ignored_rather_than_obeyed(client, monkeypatch):
 # ── Onboarding hands over held ─────────────────────────────────────────────
 def test_finishing_onboarding_holds_drafting(monkeypatch):
     import app.onboarding as onboarding
+    monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     saved = {}
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
     monkeypatch.setattr(onboarding.db, "upsert_tenant_config",
@@ -140,6 +141,7 @@ def test_a_broken_config_write_still_lets_signup_finish(monkeypatch):
     """The column already defaults to held, so this write is the belt to that
     braces — it must never 500 the last step of signing up."""
     import app.onboarding as onboarding
+    monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
     def boom(*a, **k):
         raise RuntimeError("write failed")
