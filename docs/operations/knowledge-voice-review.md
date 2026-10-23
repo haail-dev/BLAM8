@@ -65,3 +65,15 @@ Normalized fallback clauses must match in full, not as a subsequence with extra
 scope words. Unproven paraphrases remain unresolved until explicit owner review.
 Removal previews cannot count a different relationship as a retained duplicate;
 dropping that source occurrence requires a visible factual exclusion decision.
+
+Review hydration must not count as an owner edit. Device sync restores existing
+text and its review stamps together; the note controller ignores synthetic
+restore input events. Genuine label/content edits still clear only that note's
+decision, and server-side fingerprints and CAS still reject obsolete approvals.
+The native startup regression renders stored decisions before replaying the
+shared form, then validates its Save fields and checks real edit invalidation.
+
+Knowledge guide and source-correction output schemas are included in the provider
+subset guard, including their dynamic variants. The guide enforces the thirty
+answer limit in `apply_many`, before processing choices; it must not send the
+unsupported `maxItems` keyword to the model provider.

@@ -18,6 +18,7 @@
     ready();
   }
   function ready(){window.dispatchEvent(new Event('blam8:onboarding-readiness'));}
+  function restoring(){return window.Blam8DeviceSync && window.Blam8DeviceSync.isRestoring();}
   function notice(form,text){if(!form)return;var el=form.querySelector('[data-review-status]');if(el)el.textContent=text;}
   function signature(form){return ['contentVersion','evidenceVersion','contextVersion'].map(function(k){return form.dataset[k] || '';}).join('/');}
   function showStored(old,next){
@@ -183,6 +184,9 @@
   document.querySelectorAll('[data-knowledge-review]').forEach(syncNotes);compactShell();
   document.addEventListener('change',function(event){var form=event.target.closest('[data-knowledge-review]');if(form)syncNotes(form);});
   document.addEventListener('input',function(event){
+    // Hydration replays input/change for native controls. It is not an owner
+    // edit: the stored review stamps still bind decisions to their exact text.
+    if(restoring())return;
     var form=event.target.closest('[data-knowledge-review]');if(!form)return;
     var name=event.target.name || '';
     if(name.startsWith('content_') || name.startsWith('label_')){
@@ -215,8 +219,8 @@
     try{var r=await fetch('/onboarding/knowledge/reviews',{cache:'no-store'});if(!r.ok)throw new Error();replace(await r.json());}
     catch(e){document.querySelectorAll('[data-knowledge-review]').forEach(function(f){notice(f,'Review refresh could not be confirmed. Your local edits remain; reload only after preserving them.');});}
   });
-  document.addEventListener('input',function(e){var f=e.target.closest('[data-knowledge-review]');if(f)f.dataset.reviewDirty='1';ready();});
-  document.addEventListener('change',function(e){var f=e.target.closest('[data-knowledge-review]');if(f)f.dataset.reviewDirty='1';ready();});
+  document.addEventListener('input',function(e){if(restoring())return;var f=e.target.closest('[data-knowledge-review]');if(f)f.dataset.reviewDirty='1';ready();});
+  document.addEventListener('change',function(e){if(restoring())return;var f=e.target.closest('[data-knowledge-review]');if(f)f.dataset.reviewDirty='1';ready();});
   if(!go || !input)return;
   var status=document.getElementById('site-status'), box=document.getElementById('site-box');
   function say(text){status.hidden=false;status.textContent=text;}

@@ -24,6 +24,7 @@ from app.concierge import (BUSINESS_SCHEMA, CONCIERGE_SCHEMA, FIX_SCHEMA,
                            HELP_SCHEMA, ONBOARDING_STEPS, onboarding_schema)
 from app.crm_extract import EXTRACT_SCHEMA
 from app import events_os
+from app import knowledge_guidance, knowledge_source_review
 from app.crm_intel import _analyze_schema, _INTEL_EXTENSIONS
 from app.party_extract import EXTRACT_SCHEMA as PARTY_EXTRACT_SCHEMA
 from app.portal_chat import PORTAL_SCHEMA
@@ -66,7 +67,15 @@ ALL_SCHEMAS = {
     "practice_noshow.NO_SHOW_SCHEMA": NO_SHOW_SCHEMA,
     "shop_ocr.OCR_SCHEMA": OCR_SCHEMA,
     "voice_learning.VOICE_PROFILE_SCHEMA": VOICE_PROFILE_SCHEMA,
+    "knowledge_guidance.SCHEMA": knowledge_guidance.SCHEMA,
+    "knowledge_source_review.SCHEMA": knowledge_source_review.SCHEMA,
 }
+ALL_SCHEMAS.update({f"knowledge_guidance.turn[{size}]": knowledge_guidance._turn_schema('x' * size)
+                    for size in (0, 1000, 1001, 4000)})
+ALL_SCHEMAS.update({f"knowledge_source_review.edit[{owner},{scoped}]": knowledge_source_review.edit_schema({
+    **({'knowledge_owner_request': 'Replace the outdated hours.'} if owner else {}),
+    **({'knowledge_edit_scope': {'paragraphs': [{'reference': 'paragraph-1'}]}} if scoped else {}),
+}) for owner in (False, True) for scoped in (False, True)})
 ALL_SCHEMAS.update({f"concierge.onboarding_schema[{step}]": onboarding_schema(step)
                     for step in ONBOARDING_STEPS})
 ALL_SCHEMAS.update({f"crm_intel._analyze_schema[{ev},{se}]": _analyze_schema((_INTEL_EXTENSIONS["event"],) if ev else (), se)
