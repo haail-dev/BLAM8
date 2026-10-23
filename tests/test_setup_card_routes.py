@@ -25,6 +25,7 @@ def client(monkeypatch):
     monkeypatch.setattr(store, "load_all", lambda tid, **kw: {"diary_settings": deepcopy(state["card"])})
     monkeypatch.setattr(store, "save", save)
     monkeypatch.setattr(db, "get_scheduling_config", lambda *a, **kw: deepcopy(state["cfg"]))
+    monkeypatch.setattr(db, "get_tenant_config", lambda *a, **kw: {})
     monkeypatch.setattr(db, "visible_modules", lambda *a, **kw: {"scheduling"})
     monkeypatch.setattr(db, "list_requirement_groups", lambda *a, **kw: [])
     c = TestClient(app)

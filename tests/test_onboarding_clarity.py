@@ -311,8 +311,9 @@ def test_first_greeting_orients_before_it_asks():
     for line in ("1. About you", "2. Your customer inbox", "3. Voice", "4. Knowledge"):
         assert line in intro
     assert "separate from the account you just signed in with" in intro
-    # honest count (Kris 2026-09-13): four here, five more in the app
-    assert "five more with me" in intro and "Nine in all" in intro
+    assert "Diary, Records and workflows, and Charges and payments" in intro
+    assert "edit, accept or leave" in intro and "Next moves the walkthrough" in intro
+    assert "five more" not in intro and "Nine in all" not in intro
     assert "We'll check each note and any decisions it needs together." in js
     assert "Drafts and corrections stay pending until you save your reviewed decisions." in js
     assert "Hit Finish setup" not in js and "After Finish setup" not in js   # one flow of nine

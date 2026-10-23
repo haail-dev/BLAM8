@@ -22,3 +22,7 @@
 .bc-setup-applied pre{white-space:pre-wrap;overflow-wrap:anywhere}
 .bc-setup-tray[hidden],.bc-setup-dots[hidden],.bc-setup-error[hidden]{display:none}
 [data-bc-setup-host]>div:not(.bc-setup-dots){min-width:0;max-width:calc(100% - 76px)}
+[data-theme="dark"] .bc-setup-tray{background:#1c222c;color:#f3f4f6;border-color:#475569}
+[data-theme="dark"] .bc-setup-tray button,[data-theme="dark"] .bc-setup-error button{background:#293240;color:#f3f4f6;border-color:#64748b}
+[data-theme="dark"] .bc-setup-line details,[data-theme="dark"] .bc-setup-applied{color:#cbd5e1}
+[data-theme="dark"] .bc-setup-editor input:not([type=checkbox]),[data-theme="dark"] .bc-setup-editor select,[data-theme="dark"] .bc-setup-editor textarea{background:#293240;color:#f3f4f6;border-color:#64748b}

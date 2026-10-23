@@ -14,7 +14,7 @@
   {% if err %}<div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{{ err }}</div>{% endif %}
 
   {% for entity, title, blurb in entities %}
-  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
+  <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-4" {% if entity == 'contact' %}data-guided-editor="crm_fields"{% endif %}>
     <div>
       <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ title }}</p>
       <p class="text-xs text-slate-400 mt-0.5">{{ blurb }}</p>

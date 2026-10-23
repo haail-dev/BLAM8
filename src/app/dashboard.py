@@ -173,8 +173,13 @@ def _tour_for(ctx: TenantCtx, tenant: dict, page: str, force: bool = False,
                 "t:" + ctx.tenant_id + ":tcfg-strip", 15.0,
                 lambda: db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {})
             tours = tcfg.get("tours") or {}
+            guided = (tcfg.get('onboarding_state') or {}).get('guide') or {}
+            if guided.get('status') == 'active':
+                return None, ''
             if tours.get(page):
                 return None, ""
+            # An orientation introduces the page; it does not explain every
+            # legacy tour topic or certify unseen topics as completed.
             if after and not tours.get(after):
                 return None, ""          # one page at a time, in order (Today first)
         plural = ""
@@ -441,7 +446,13 @@ def _ctx(active: str, ctx: TenantCtx, **extra) -> dict:
                 "pc:" + ctx.tenant_id, 120.0, _fill_member_count(ctx)) > 1
         except Exception:
             view_as_ok = False
+    try:
+        guide_meta = (navcache.get_or_fill('t:'+ctx.tenant_id+':tcfg-strip', 15.0,
+            _fill_tcfg_strip(ctx)).get('onboarding_state') or {}).get('guide')
+    except Exception:
+        guide_meta = None
     return {"active": active, "draft_count": draft_count,
+            "guided_setup_meta": guide_meta,
             "platform_admin": platform_admin,
             "view_as_ok": view_as_ok,
             "scheduling_on": "scheduling" in mods,
@@ -1930,7 +1941,10 @@ def diary_view(request: Request, msg: str = "",
         q = urlencode({k: v for k, v in request.query_params.items() if v})
         return RedirectResponse(f"/app/board?{q}" if q else "/app/board", status_code=303)
     if not _intake_configured(ctx):
-        return RedirectResponse("/app/diary/intake", status_code=303)
+        guide = ((db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}).get('onboarding_state') or {}).get('guide') or {}
+        orientation = guide.get('status') == 'active' and guide.get('intro_ack') and guide.get('current') == 'orientation.diary'
+        if not orientation:
+            return RedirectResponse("/app/diary/intake", status_code=303)
     t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
     data = scheduling.diary(ctx.tenant_id, client=ctx.client)
     # Deep links (Kris 2026-09-20): the thread's "Booked slot" line lands on

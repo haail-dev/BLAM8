@@ -6385,7 +6385,7 @@ begin
   end if;
   if p_card_write is not null then
     if jsonb_typeof(p_card_write) is distinct from 'object' or
-       p_card_write->>'page' not in ('diary_settings','invoice_settings','crm_settings') then
+       p_card_write->>'page' not in ('diary_settings','booking_details','dependants','crm_fields','crm_settings','invoice_settings','packages') then
       raise exception 'BLAM8_ONBOARDING_INVALID';
     end if;
     perform change_setup_card(p_tenant,p_card_write->>'page',(p_card_write->>'revision')::bigint,

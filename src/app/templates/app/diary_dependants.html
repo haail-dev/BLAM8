@@ -34,7 +34,7 @@
   </div>
   {% endif %}
 
-  <form method="post" action="/app/diary/dependants" class="space-y-4" id="dep-form">
+  <form method="post" action="/app/diary/dependants" class="space-y-4" id="dep-form" data-guided-editor="dependants">
     <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 

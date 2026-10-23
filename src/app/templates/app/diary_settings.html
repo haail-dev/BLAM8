@@ -4,7 +4,7 @@
 {% set back = ('/app/diary/intake', 'Booking requirements') if mode_only else ('/app/diary', 'Diary') %}
 {% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
 {% block content %}
-<div class="max-w-3xl mx-auto p-6 space-y-5">
+<div class="max-w-3xl mx-auto p-6 space-y-5" data-guided-editor="diary_settings">
   {% if not fleet_mode %}
   <section class="bg-white rounded-xl border border-slate-200 overflow-hidden" id="booking-mode">
     <div class="px-5 py-4">

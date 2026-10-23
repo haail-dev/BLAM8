@@ -8,6 +8,7 @@
 {# Public assistant launcher: the animated BLAM8 mark sits in the bottom-right
    corner; opening it docks the chat to the right. Public site + onboarding only:
    the app hides it (base.html) and opens App help from the search box. #}
+{% if concierge_authed %}<script src="/static/proposal_forms.js?v={{ asset_rev }}"></script>{% endif %}
 {% if concierge_authed and device_sync_enabled() %}
 <script src="/static/device_sync.js?v={{ asset_rev }}"></script>
 {% endif %}
@@ -275,6 +276,8 @@
 <link rel="stylesheet" href="/static/setup_cards.css?v={{ asset_rev }}">
 <link rel="stylesheet" href="/static/concierge_busy.css?v={{ asset_rev }}">
 <script src="/static/setup_cards.js?v={{ asset_rev }}" defer></script>
+{% if concierge_in_app %}<link rel="stylesheet" href="/static/guided_setup.css?v={{ asset_rev }}">
+<script src="/static/guided_setup.js?v={{ asset_rev }}" defer></script>{% endif %}
 <script src="/static/concierge.js?v={{ asset_rev }}" defer></script>
 {% if landing_glass_logo and not public_glass_header %}
 <script src="/static/assistant-glass-logo.js?v={{ asset_rev }}" defer></script>

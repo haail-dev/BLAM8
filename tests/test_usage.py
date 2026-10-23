@@ -57,6 +57,8 @@ def test_source_for_maps_every_trigger_surface():
     assert source_for("email", "draft") == "inbound_email"
     assert source_for("email", "redraft") == "owner"
     assert source_for("concierge", "concierge_business") == "owner"
+    assert source_for("concierge", "guide") == "owner"
+    assert source_for("concierge", "concierge_help") == "owner"
     assert source_for("concierge", "concierge_discovery") == "owner"
     assert source_for("concierge", "concierge_discovery_rewrite") == "owner"
     assert source_for("concierge", "concierge_ask") == "prospect"

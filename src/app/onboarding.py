@@ -329,6 +329,9 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     the tenant_config row came to exist — including rows created before the column
     did."""
     voice_completion.require_saved(ctx)
+    from app import setup_handoff
+    nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
+    target = _prepare_guided_setup(ctx) if nxt else '/app/'
     db.set_onboarded(ctx.tenant_id, client=ctx.client)
     # Best-effort: the column already defaults to held, so this is the belt to
     # that braces. A config-write blip must not 500 the very last step of
@@ -338,18 +341,28 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     except Exception:
         logging.getLogger("blautom8.onboarding").warning(
             "could not stamp draft_hold at finish for %s", ctx.tenant_id, exc_info=True)
-    # One flow of nine (Kris 2026-09-13): the wizard's last button is "Next:
-    # <first tuning step>", and it lands THERE — not on Today with a strip
-    # that could be dismissed. Today only when nothing is left to tune.
-    from app import setup_handoff
-    nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
-    return RedirectResponse(nxt["href"] if nxt else "/app/", status_code=303)
+    # Knowledge hands over to the directed in-app settings walkthrough.
+    # Existing tenants with no remaining settings review continue to Today.
+    return RedirectResponse(target, status_code=303)
+
+
+def _prepare_guided_setup(ctx: TenantCtx) -> str:
+    """Knowledge's explicit Continue owns initial guide metadata, never a GET."""
+    from copy import deepcopy
+    from app import guided_setup, onboarding_state
+    context=onboarding_state.load(ctx)
+    if not context['state'].get('guide'):
+        after=deepcopy(context['state'])
+        after['guide']=guided_setup.neutral()
+        context['state']=onboarding_state.save(ctx,context['state'],after)
+    current=guided_setup.describe(context)
+    return current['stop']['href']
 
 
 def _next_step_target(ctx: TenantCtx) -> dict:
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
-    return {"label": nxt["label"], "href": nxt["href"]} if nxt else {"label": "Today", "href": "/app/"}
+    return {"label": "Guided setup", "href": "/app/setup/guide"} if nxt else {"label": "Today", "href": "/app/"}
 
 
 def _next_step_label(ctx: TenantCtx) -> str:
@@ -365,6 +378,13 @@ def home(ctx: TenantCtx = Depends(require_tenant)):
     knowledge). Fully-onboarded tenants go straight to the dashboard."""
     t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
     if t.get("onboarded_at"):
+        try:
+            from app import guided_setup, onboarding_state
+            context=onboarding_state.load(ctx)
+            if (context['state'].get('guide') or {}).get('status') in ('active','paused'):
+                return RedirectResponse(guided_setup.describe(context)['stop']['href'],status_code=303)
+        except Exception:
+            pass  # Existing completed accounts retain the ordinary app fallback.
         return RedirectResponse("/app", status_code=303)
     if not t.get("industry"):
         return RedirectResponse("/onboarding/interview", status_code=303)
