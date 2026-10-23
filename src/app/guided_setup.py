@@ -332,6 +332,7 @@ def describe(context):
         remaining_sections=sum(context['state']['reviews'].get(sub['id'],{}).get('state') not in ('reviewed','off','deferred')
                                for group in groups for sub in group['substeps']),
         revision=context['state']['revision'], guide=guide, stop=stop,
+        knowledge_conflicts=knowledge_conflicts(context['state'],stop),
         index=index, count=len(sequence), pending=(dict(guide['pending'][decision_id],
             settings_version=context['state']['proposals'][guide['pending'][decision_id]['proposal']]['settings_version'])
             if decision_id in guide['pending'] else None),
@@ -351,6 +352,21 @@ def current(context, identity):
     return description['guide'], description['stop']
 
 
+def knowledge_conflicts(state,stop):
+    result=[]
+    for identity,entry in state['imports'].items():
+        if entry.get('status')!='conflict':
+            continue
+        question=entry.get('question','')
+        belongs=question==stop.get('question_id') or (question.startswith('setting.') and
+            '/'.join(question.split('.')[1:]) in stop.get('catalogue',[]))
+        if not belongs:
+            continue
+        result.append(dict(id=identity,question=question,message=entry['message'],earlier=entry['earlier'],
+            candidate=entry.get('candidate')))
+    return result
+
+
 def unresolved_required(context, substep):
     """Absence of an answer is unresolved, even after every explanation was seen."""
     state=context['state'];progress=read(state) or neutral()
@@ -359,6 +375,9 @@ def unresolved_required(context, substep):
         return ['relevance.'+substep]
     missing=[]
     for stop in steps(context):
+        if stop.get('substep')==substep and knowledge_conflicts(state,stop):
+            missing.append(stop['id'])
+            continue
         if stop.get('substep')!=substep or not stop.get('required'):
             continue
         decision=progress['decisions'].get(stop['id'])

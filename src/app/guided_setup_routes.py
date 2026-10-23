@@ -61,6 +61,7 @@ def typed_answer(body:TypedAnswer,ctx:TenantCtx=Depends(require_onboarded)):
         value=contract.answer_value(spec,body.value) if body.state=='answered' else None
         state=deepcopy(context['state'])
         state_store._confirmed_answer(state,spec,current['scope_type'],current['scope_id'],body.state,value,ctx.user_id)
+        resolve_owner_import(state,spec['id'])
         state['guide']['decisions'][stop['id']]=body.state
         return save(ctx,context,state)
     except (ValueError,KeyError) as exc:
@@ -72,6 +73,12 @@ def context_for(ctx, revision=None):
     context = state_store.load(ctx)
     if revision is not None and revision != context['state']['revision']:
         raise HTTPException(409, 'The guide changed. Your text is kept; reload its current question before trying again.')
+    if any(a['provenance'].get('source_question') and not a['provenance'].get('owner_accepted')
+           for a in context['state']['answers'].values()):
+        context = state_store.load(ctx, knowledge=True)
+        if revision is not None and revision != context['state']['revision']:
+            raise HTTPException(409, 'Setup changed. Reload the current question.')
+        reconcile_knowledge(ctx,context,context['state'])
     return context
 
 
@@ -102,6 +109,7 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
         if context['state']['revision'] != body.revision:
             raise HTTPException(409, 'Setup changed. Reload before starting the walkthrough.')
     state = deepcopy(context['state'])
+    card_write = None
     try:
         if body.operation != 'scope' and (body.scope_id is not None or body.scope_type is not None):
             raise ValueError('Scope fields belong to the scope action only.')
@@ -122,6 +130,8 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 if body.choice is not None:
                     raise ValueError('Retry Knowledge does not choose an answer.')
                 reuse_confirmed_answers(ctx,context,state)
+            elif body.operation in ('knowledge_use_updated','knowledge_keep_earlier'):
+                card_write = resolve_knowledge_choice(ctx,context,state,stop,body)
             elif body.operation in ('associate','refresh_preview'):
                 if stop['kind'] not in ('decision','explanation') or body.choice is not None:
                     raise ValueError('Choose a current settings decision.')
@@ -129,7 +139,7 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 card = setup_card_store.load(ctx.tenant_id,stop['page'],client=ctx.client)
                 if not card:
                     raise ValueError('No existing card is available for this question.')
-                link_card(ctx,context,state,stop,card,card)
+                link_card(ctx,context,state,stop,card,card,preserve_knowledge=True)
             elif body.operation == 'scope':
                 if body.choice is not None:
                     raise ValueError('Unexpected scope choice.')
@@ -213,7 +223,7 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 raise ValueError('Unknown guide operation.')
     except (ValueError, KeyError) as exc:
         raise HTTPException(400, str(exc) if isinstance(exc, ValueError) else 'Invalid guide data.') from None
-    card_write = prepare_known_choice(ctx, context, state)
+    card_write = card_write or prepare_known_choice(ctx, context, state)
     return save(ctx, context, state, card_write)
 
 
@@ -237,17 +247,12 @@ def reuse_confirmed_answers(ctx, context, state):
                 'organisation', 'organisation', 'answered', value, ctx.user_id,
                 provenance=dict(kind='about_you_owner_review', reference='business_brief',
                                 evidence_revision=sha256(value.encode()).hexdigest()))
-    state['guide']['knowledge_unavailable'] = bool(context.get('knowledge_unavailable'))
+    reconcile_knowledge(ctx,context,state)
     for question in state_store.knowledge_candidates(context.get('knowledge')):
         identity = question.get('canonical') or question['id']
         key = state_store.key_for(identity, 'organisation', 'organisation')
         prior = state['answers'].get(key)
         if prior:
-            if prior['provenance'].get('source_question') == question['id'] and (
-                    prior['provenance'].get('evidence_revision') != question['evidence_revision']):
-                state['imports'][question['id']] = dict(status='conflict',
-                    evidence_revision=question['evidence_revision'],
-                    message='Knowledge has changed. Review the saved answer before using it.')
             continue
         spec = contract.question(identity) if question.get('canonical') else question
         if not question.get('canonical'):
@@ -260,6 +265,83 @@ def reuse_confirmed_answers(ctx, context, state):
             evidence_revision=question['evidence_revision'], question=identity)
 
 
+def resolve_owner_import(state,question):
+    for imported in state['imports'].values():
+        if imported.get('question')==question:
+            imported['status']='owner_confirmed'
+
+
+def reconcile_knowledge(ctx,context,state):
+    """Invalidate imported authority, retaining history and all saved settings.
+
+    Reads derive this view without persisting it. The next explicit mutation
+    commits it atomically. Acceptance also checks this view, so an old card or
+    a missing source cannot bypass the unresolved answer.
+    """
+    unavailable=bool(context.get('knowledge_unavailable'))
+    if state.get('guide'):
+        state['guide']['knowledge_unavailable']=unavailable
+    candidates={q['id']:q for q in state_store.knowledge_candidates(context.get('knowledge'))}
+    for key,answer in list(state['answers'].items()):
+        provenance=answer['provenance'];identity=provenance.get('source_question')
+        if not identity or provenance.get('owner_accepted'):
+            continue
+        candidate=candidates.get(identity)
+        if not unavailable and candidate and candidate['evidence_revision']==provenance.get('evidence_revision') and provenance['kind']!='knowledge_conflict':
+            continue
+        imported=state['imports'].setdefault(identity,{})
+        earlier=deepcopy(imported.get('earlier') or {k:answer[k] for k in ('state','value')})
+        imported.update(status='conflict',question=answer['question'],earlier=earlier,
+            evidence_revision=candidate['evidence_revision'] if candidate else None,
+            candidate=deepcopy(candidate) if not unavailable else None,
+            message='Knowledge could not be checked. Review this earlier answer before using it.' if unavailable else
+                    'Knowledge changed or was removed. Review this earlier answer before using it.')
+        if provenance['kind']!='knowledge_conflict':
+            history=deepcopy(answer.get('history',[]))
+            history.append({k:v for k,v in (answer|{'state':'superseded','previous_state':answer['state']}).items() if k!='history'})
+            state['answers'][key]={**answer,'state':'unknown','value':None,'revision':answer['revision']+1,
+                'history':history,'provenance':{**provenance,'kind':'knowledge_conflict'}}
+        state['reviews'].pop(answer['substep'],None)
+        if state.get('guide'):
+            state['guide']['decisions'].pop('question.'+answer['question'],None)
+
+
+def resolve_knowledge_choice(ctx,context,state,stop,body):
+    conflict=next((c for c in guide.knowledge_conflicts(state,stop) if c['id']==body.choice),None)
+    if not conflict:
+        raise ValueError('Review a changed Knowledge answer for this current question.')
+    imported=state['imports'][body.choice]
+    chosen=imported.get('candidate') if body.operation=='knowledge_use_updated' else imported['earlier']
+    if not chosen or chosen['state'] not in ('answered','not_applicable'):
+        raise ValueError('No current reviewed answer is available. Answer this question explicitly or defer it.')
+    spec=state_store.resolve_question(state,imported['question'])
+    value=chosen.get('answer',chosen.get('value')) if chosen['state']=='answered' else None
+    value=contract.answer_value(spec,value) if chosen['state']=='answered' else None
+    key=state_store.key_for(spec['id'],'organisation','organisation')
+    pending=next((p for p in state['proposals'].values() if p['status']=='proposed' and key in p.get('answers',{})),None)
+    if pending:
+        adapter=spec.get('adapter')
+        if not adapter or adapter[1]!='setting' or chosen['state']!='answered':
+            raise ValueError('Leave the pending suggestion before changing this answer.')
+        card=setup_card_store.load(ctx.tenant_id,pending['page'],client=ctx.client)
+        if not card or card['id']!=pending['card_id']:
+            raise ValueError('The pending suggestion changed. Reload it before resolving Knowledge.')
+        line=next((l for l in card['lines'] if l['id'] in pending['line_ids'] and l['name']=='setting' and l['fields']['key']==adapter[2] and l['status'] in setup_cards.PENDING),None)
+        if not line:
+            raise ValueError('The pending suggestion changed. Reload it before resolving Knowledge.')
+        changed=setup_cards.change(card['page'],card,card['revision'],str(uuid4()),[
+            dict(op='set',id=line['id'],fields={'value':value},sources={'value':dict(kind='owner_said',reference='Owner explicitly resolved changed Knowledge')})])
+        target=guide.registry()[stop.get('decision_id',stop['id'])]
+        link_card(ctx,context,state,target,card,changed,confirmed_lines={line['id']})
+        return dict(page=card['page'],revision=card['revision'],card=changed,expected_settings=None,settings_patch=None)
+    state_store._confirmed_answer(state,spec,'organisation','organisation',chosen['state'],value,ctx.user_id)
+    resolve_owner_import(state,spec['id'])
+    decision=stop.get('decision_id',stop['id'])
+    state['guide']['pending'].pop(decision,None)
+    state['guide']['decisions'].pop(decision,None)
+    return None
+
+
 def prepare_known_choice(ctx, context, state):
     """An exact prior scalar answer can populate a card, never saved settings.
 
@@ -269,6 +351,8 @@ def prepare_known_choice(ctx, context, state):
     progress=state.get('guide') or {}
     stop=guide.registry().get(progress.get('current'))
     if not stop or progress.get('status')!='active' or stop['id'] in progress.get('pending',{}) or stop['id'] in progress.get('decisions',{}):
+        return None
+    if guide.knowledge_conflicts(state,stop):
         return None
     changes=[]
     for identity in stop['catalogue']:
@@ -289,11 +373,11 @@ def prepare_known_choice(ctx, context, state):
     # An existing pending row is authoritative. Associate it without replacing
     # a more recent card edit with an older ledger answer.
     if card and any(l['status'] in setup_cards.PENDING and _allowed(stop,card,dict(op='set',id=l['id'])) for l in card['lines']):
-        link_card(ctx,context,state,stop,card,card)
+        link_card(ctx,context,state,stop,card,card,preserve_knowledge=True)
         return None
     revision=(card or {}).get('revision',0)
     changed=setup_cards.change(stop['page'],card,revision,str(uuid4()),changes)
-    link_card(ctx,context,state,stop,card,changed)
+    link_card(ctx,context,state,stop,card,changed,preserve_knowledge=True)
     return dict(page=stop['page'],revision=revision,card=changed,expected_settings=None,settings_patch=None)
 
 
@@ -326,6 +410,8 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         current, stop = guide.current(context, body.stop)
         if current['status'] != 'active' or body.path != stop['href'].split('#')[0]:
             raise ValueError('Open the current guide page before answering.')
+        if guide.knowledge_conflicts(context['state'],stop):
+            raise ValueError('Resolve the changed Knowledge answer shown here before asking for another suggestion. You can also answer a factual question directly.')
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
     from app import concierge, concierge_routes, usage
@@ -342,6 +428,9 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         return dict(**guide.describe(context), reply='I couldn’t interpret that just now. Your reply is kept. Try again or use the existing settings editor for this question.', fallback=True)
     usage.record_anthropic(ctx.tenant_id, result.model, result.usage, operation='concierge_help', module='concierge')
     try:
+        latest=context_for(ctx,body.revision)
+        if guide.knowledge_conflicts(latest['state'],stop):
+            raise setup_cards.Stale('Knowledge changed while preparing the suggestion. Review its current answer first.')
         entries, _ = setup_card_model.normalise(setup_card_model.unpack(result.setup_changes or []), cards)
         if stop['kind']=='fact' and not entries:
             values = result.guide_answers or []
@@ -357,6 +446,7 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
             value=contract.answer_value(spec,item['value']) if item['state']=='answered' else None
             state=deepcopy(context['state'])
             state_store._confirmed_answer(state,spec,current['scope_type'],current['scope_id'],item['state'],value,ctx.user_id)
+            resolve_owner_import(state,spec['id'])
             state['guide']['decisions'][stop['id']]=item['state']
             output=save(ctx,context,state)
             return dict(**output,reply='Your answer is kept for this question and scope. It has not changed settings.',fallback=False)
@@ -415,7 +505,7 @@ def _deduplicate(card,patches):
     return result
 
 
-def link_card(ctx, context, state, stop, before, card):
+def link_card(ctx, context, state, stop, before, card, *, preserve_knowledge=False, confirmed_lines=()):
     """Link exact native lines to scoped answers, updating their superseded history.
 
     The original owner statement stays in history when an edited operational
@@ -425,15 +515,23 @@ def link_card(ctx, context, state, stop, before, card):
                 _allowed(stop, card, dict(op='set', id=l['id']))]
     if not selected:
         return
+    if preserve_knowledge and guide.knowledge_conflicts(state,stop):
+        raise setup_cards.Invalid('Resolve the changed Knowledge answer before refreshing this suggestion.')
     snapshot = setup_card_routes._snapshot(card['page'], context['cfg'], ctx, card=card)
     try:
         preview = setup_card_routes._preview(card, [l['id'] for l in selected], snapshot)
     except setup_cards.Invalid:
         preview = dict(settings_version=setup_card_routes._version(snapshot), changes=[])
     answers = {}
+    previous_fields={l['id']:l['fields'] for l in (before or {}).get('lines',[])}
     for line in selected:
         for spec,scope_type,scope_id,value in _line_answers(context,state,stop,card,line):
             key = state_store.key_for(spec['id'], scope_type, scope_id)
+            prior=state['answers'].get(key,{})
+            explicit=not preserve_knowledge and (line['id'] in confirmed_lines or previous_fields.get(line['id'])!=line['fields'])
+            inherited=prior.get('provenance',{}) if not explicit else {}
+            if inherited.get('kind')=='knowledge_conflict':
+                raise setup_cards.Invalid('Resolve the changed Knowledge answer before editing other choices in this group.')
             # A validated card edit supersedes its linked setting answer, while
             # preserving a distinct purpose, policy or original business fact.
             for p in state['proposals'].values():
@@ -444,9 +542,14 @@ def link_card(ctx, context, state, stop, before, card):
             source_key=spec.get('adapter',('', '', ''))[-1] if spec.get('adapter') else None
             sources=[line['sources'].get(source_key)] if source_key else list(line['sources'].values())
             status='unknown' if any(s and s.get('kind')=='assumed' for s in sources) else 'answered'
+            provenance=dict(kind='validated_proposal', reference=line['id'], card_id=card['id'],
+                            card_revision=card['revision'], sources=deepcopy(line['sources']))
+            if inherited.get('source_question'):
+                provenance.update({k:inherited[k] for k in ('source_question','evidence_revision')})
             state_store._confirmed_answer(state, spec, scope_type, scope_id, status, value,
-                ctx.user_id, provenance=dict(kind='validated_proposal', reference=line['id'], card_id=card['id'],
-                                             card_revision=card['revision'], sources=deepcopy(line['sources'])))
+                ctx.user_id, provenance=provenance)
+            if not inherited.get('source_question'):
+                resolve_owner_import(state,spec['id'])
             answers[key] = state['answers'][key]['revision']
     previous = (state['guide']['pending'].get(stop['id']) or {}).get('proposal')
     identity = str(uuid4())
@@ -520,7 +623,7 @@ def commit_linked_card(ctx, page, revision, card, *, snapshot=None, patch=None):
     if not current or not any(p.get('card_id') == card['id'] for p in current['pending'].values()):
         return None
     require_manager(ctx)
-    context = state_store.load(ctx)
+    context = context_for(ctx)
     state = deepcopy(context['state'])
     last=card.get('last_action') or {}
     touched=set(last.get('ids') or [c['id'] for c in last.get('changes',[])])
@@ -536,6 +639,8 @@ def commit_linked_card(ctx, page, revision, card, *, snapshot=None, patch=None):
         if proposal['status']=='superseded':
             continue
         if snapshot is not None:
+            if any(state['answers'][key]['provenance']['kind']=='knowledge_conflict' for key in proposal['answers']):
+                raise setup_cards.Stale('Knowledge changed. Resolve the earlier answer in the guide before accepting this suggestion.')
             if setup_card_routes._version(snapshot) != proposal['settings_version']:
                 raise setup_cards.Stale('Saved settings changed since this guided proposal. Review the current difference explicitly before accepting.')
             if proposal['card_revision'] != revision:
@@ -568,6 +673,9 @@ def commit_linked_card(ctx, page, revision, card, *, snapshot=None, patch=None):
                 for spec,scope_type,scope_id,value in _line_answers(context,state,stop,card,line):
                     key=state_store.key_for(spec['id'],scope_type,scope_id)
                     answer=state['answers'].get(key)
+                    if answer:
+                        answer['provenance']['owner_accepted']=True
+                        resolve_owner_import(state,spec['id'])
                     if not answer or answer['state']=='answered':
                         continue
                     previous_status=proposal['status'];proposal['status']='confirming'
@@ -578,7 +686,7 @@ def commit_linked_card(ctx, page, revision, card, *, snapshot=None, patch=None):
                     proposal['answers'][key]=state['answers'][key]['revision']
                     proposal['answer_revision']=proposal['answers'][proposal['answer']]
         else:
-            link_card(ctx, context, state, stop, None, card)
+            link_card(ctx, context, state, stop, None, card,preserve_knowledge=True)
     state_store.save(ctx, context['state'], state, card_write=dict(page=page, revision=revision, card=card,
         expected_settings=snapshot, settings_patch=patch))
     return card

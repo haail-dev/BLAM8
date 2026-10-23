@@ -17,7 +17,7 @@ async function click(selector){const p=await evaluate(`(()=>{const e=document.qu
  for(const type of ['mousePressed','mouseReleased'])await cdp('Input.dispatchMouseEvent',{type,button:'left',clickCount:1,...p});}
 async function button(text){await until(`[...document.querySelectorAll('button')].some(e=>e.textContent===${JSON.stringify(text)}&&!e.disabled&&e.getClientRects().length)`);await evaluate(`(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.textContent===${JSON.stringify(text)}&&!e.disabled&&e.getClientRects().length);e.dataset.nativeTarget='';})()`);await click('[data-native-target]');await evaluate("document.querySelector('[data-native-target]')?.removeAttribute('data-native-target')");}
 async function key(key,code,vk,modifiers=0){for(const type of ['keyDown','keyUp'])await cdp('Input.dispatchKeyEvent',{type,key,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk,modifiers,...(key==='Enter'&&type==='keyDown'?{text:'\r',unmodifiedText:'\r'}:{})});}
-async function type(selector,text){await click(selector);await key('a','KeyA',65,2);await cdp('Input.insertText',{text});}
+async function type(selector,text){await until(`document.querySelector(${JSON.stringify(selector)})&&!document.querySelector(${JSON.stringify(selector)}).disabled`);await click(selector);await key('a','KeyA',65,2);await cdp('Input.insertText',{text});}
 async function shot(name){
  const geometry=await evaluate(`(()=>{
    const rect=s=>document.querySelector(s)?.getBoundingClientRect();
@@ -74,6 +74,18 @@ try{
    assert(await evaluate('!document.querySelector(".guided-question").textContent.includes("Your answer — false")'));
    await shot('05-exact-resume');
    console.log('Actual Knowledge Continue, one-time handover, incomplete-intake Diary orientation, answer reuse, proposed mode, explanation and Accept passed');
+ }else if(area==='knowledge_conflict'){
+   await until('document.querySelector(".guided-knowledge-conflict")?.innerText.includes("Within 14 days")');
+   assert(await evaluate('document.querySelector(".guided-knowledge-conflict").innerText.includes("Before work begins") && !document.querySelector("[name=payment_terms][data-proposed]")'));
+   await shot('02-knowledge-conflict');
+   await button('Use updated answer');
+   await until('!document.querySelector(".guided-knowledge-conflict") && document.querySelector("[name=payment_terms][data-proposed]")?.value==="Before work begins"');
+   await until('(()=>{const r=document.querySelector("[name=payment_terms]").getBoundingClientRect();return r.top>=0&&r.bottom<=document.querySelector("#bc-panel").getBoundingClientRect().top})()');
+   assert(await evaluate('!document.querySelector("[data-guided-refresh]")'));
+   await shot('03-resolved-proposal');
+   await button('Accept displayed changes');
+   await until('document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelector("[name=payment_terms]")?.value==="Before work begins"');
+   await shot('04-resolved-saved');
  }else if(area==='hours'){
    const original=await evaluate('Array.from(Blam8ProposalForms.data(document.querySelector("#scheduling")).getAll("working_days"))');
    await type('#bc-input','Bookings are available on Mondays and Wednesdays only.');await key('Enter','Enter',13);

@@ -64,3 +64,4 @@
 .guided-navigation{padding:0 1rem 1rem}.guided-navigation .guided-actions{margin-top:0}
 
 .guided-section{font-size:.75rem;color:var(--guided-muted);margin:-.2rem 0 .65rem}
+.guided-knowledge-conflict{border:1px solid #b45309;border-radius:.5rem;padding:.75rem;margin:.75rem 0}.guided-knowledge-conflict p{margin-bottom:.5rem}.guided-knowledge-conflict button{margin:.25rem .5rem .25rem 0;border:1px solid var(--guided-border);border-radius:.35rem;padding:.4rem .5rem}

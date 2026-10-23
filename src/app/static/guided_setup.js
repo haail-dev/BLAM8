@@ -78,13 +78,16 @@
     if(busy)return;
     busy=true;
     controlsBusy(true);
+    var composer=Array.from(document.querySelectorAll('#bc-input,#bc-form button[type="submit"]')).map(function(e){var prior=e.disabled;e.disabled=true;return [e,prior];});
     try{
       var body={revision:state.revision,stop:state.stop?state.stop.id:'intro',operation:operation};if(choice)body.choice=choice;
-      state=await request('/action',body);clear();paint();if(panel)panel.paint();
+      state=await request('/action',body);clear();if(panel)await panel.load();
+      if(operation==='knowledge_use_updated'||operation==='knowledge_keep_earlier')revealed=null;
+      paint();
       if(operation==='pause'&&window.blam8ConciergeClose)window.blam8ConciergeClose();
       if(operation!=='pause')navigate();
     }catch(e){note(e.message+' Your page and text are kept.');}
-    finally{busy=false;controlsBusy(false);}
+    finally{busy=false;controlsBusy(false);composer.forEach(function(pair){pair[0].disabled=pair[1];});}
   }
   function ensureHost(){
     if(host)return;
@@ -129,6 +132,16 @@
     (stop.kind==='fact'?state.answers||[]:[]).forEach(function(a){host.appendChild(el('p',
       (a.provenance&&['knowledge_owner_review','about_you_owner_review'].indexOf(a.provenance.kind)!==-1?'Already covered — ':'Your answer — ')+
       (typeof a.value==='boolean'?(a.value?'Yes':'No'):String(a.value)),'guided-why'));});
+    (state.knowledge_conflicts||[]).forEach(function(conflict){
+      var box=el('section',null,'guided-knowledge-conflict');box.setAttribute('role','status');
+      box.appendChild(el('p',conflict.message));
+      box.appendChild(el('p','Earlier answer: '+String(conflict.earlier.value==null?'Not applicable':conflict.earlier.value)));
+      if(conflict.candidate&&conflict.candidate.state==='answered')box.appendChild(el('p','Updated Knowledge: '+String(conflict.candidate.answer)));
+      box.appendChild(el('p','Choose which answer to use, or edit the suggestion. Settings still need explicit acceptance.'));
+      if(['answered','not_applicable'].indexOf(conflict.earlier.state)!==-1)box.appendChild(button('Use earlier answer',function(){action('knowledge_keep_earlier',conflict.id);}));
+      if(conflict.candidate&&['answered','not_applicable'].indexOf(conflict.candidate.state)!==-1)box.appendChild(button('Use updated answer',function(){action('knowledge_use_updated',conflict.id);}));
+      host.appendChild(box);
+    });
     if(stop.why&&!pending){var why=el('details',null,'guided-why');why.appendChild(el('summary','Why this matters'));why.appendChild(el('p',stop.why));host.appendChild(why);}
     if(stop.kind==='fact'){
       var direct=el('details'),summary=el('summary','Answer directly');direct.appendChild(summary);
@@ -226,6 +239,8 @@
   function project(data){
     if(!active()||state.stop.href.split('#')[0]!==location.pathname)return;
     clear();var t=target();if(t)reveal(t);else if(state.stop.anchor)note('This control is unavailable here. Use its owning page or defer this decision; it remains unresolved.');
+    if(host){var obsoleteRefresh=host.querySelector('[data-guided-refresh]');if(obsoleteRefresh)obsoleteRefresh.remove();}
+    if((state.knowledge_conflicts||[]).length){note('Knowledge changed. Resolve the earlier answer before accepting or displaying it as a current proposal.');return;}
     var newCard=(data.cards||[]).find(function(card){return selection(card).length&&(!state.pending||card.id!==state.pending.card_id);});
     if(newCard){
       var key=newCard.id+':'+state.stop.id;
@@ -287,7 +302,7 @@
     attach:function(cards,open){panel=cards;opener=open;Promise.all([api.ready,
       window.Blam8DeviceSync?window.Blam8DeviceSync.ready:Promise.resolve()]).then(function(){paint();cards.paint();resumeLocation();});},
     selection:selection,matches:matches,project:project,
-    beforeApply:function(){return confirmDiscard('Accepting this suggestion');},
+    beforeApply:function(){if((state.knowledge_conflicts||[]).length){note('Resolve the changed Knowledge answer before accepting.');return false;}return confirmDiscard('Accepting this suggestion');},
     changed:async function(){try{await refresh();}catch(e){clear();note(e.message);}},
     turn:async function(question,history){
       if(busy)throw Error('Wait for the current guide action.');busy=true;
@@ -307,7 +322,7 @@
   setInterval(async function(){
     if(!state||!state.guide||document.hidden||busy||panel&&(panel.busy||panel.editing)||
       document.activeElement&&/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))return;
-    try{var next=await request('/state');if(next.revision>state.revision){state=next;clear();paint();if(panel)panel.load();resumeLocation();}}catch(_){}
+    try{var next=await request('/state');if(next.revision>state.revision||JSON.stringify(next.knowledge_conflicts)!==JSON.stringify(state.knowledge_conflicts)){state=next;clear();paint();if(panel)panel.load();resumeLocation();}}catch(_){}
   },2500);
   document.addEventListener('keydown',function(e){if(e.key==='Escape'&&active()&&host&&host.contains(e.target))action('pause');});
 })();

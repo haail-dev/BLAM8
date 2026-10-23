@@ -54,6 +54,12 @@ with an Expand page control. No cloned form or screenshot replaces the editor.
 Starting the guide carries forward reviewed Knowledge answers with their source
 and exact identity, plus the owner's About you description. Unknown or stale
 source answers remain unresolved. No extraction alone acquires approval.
+Changed or removed Knowledge invalidates its imported answer in the current
+guide view, retains the earlier value in history and blocks old pending-card
+acceptance. The owner can explicitly choose the earlier or updated answer;
+this revises the same pending card and still requires Accept to save settings.
+Owner-edited or accepted settings retain their independent authority. Reads
+derive freshness without writing metadata; explicit mutations persist it.
 Section reviews link directly to unanswered required decisions. A fresh tenant
 can see the read-only Diary orientation before configuring its later intake
 step; this does not bypass validation for creating a booking.

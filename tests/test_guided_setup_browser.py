@@ -39,6 +39,10 @@ def test_weekday_collection_projects_exact_members_without_serialising_proposals
     run_browser(guide_journey,monkeypatch,tmp_path,390,844,'light','hours')
 
 
+def test_changed_knowledge_requires_visible_resolution_before_native_accept(guide_journey,monkeypatch,tmp_path):
+    run_browser(guide_journey,monkeypatch,tmp_path,390,844,'light','knowledge_conflict')
+
+
 def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
     if area=='handoff':
         from app import onboarding, onboarding_state
@@ -79,6 +83,15 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         choices={'show_vat':False,'vat_rate':0,'prices_include_vat':False,'show_business_details':False,
             'show_payment_terms':True,'payment_terms':'On completion','default_quote_valid_days':30}
         proposed=change('invoice_settings',0,[dict(fields={'key':k,'value':v}) for k,v in choices.items()])
+        if area=='knowledge_conflict':
+            from copy import deepcopy
+            from app import onboarding_state
+            j.execute('insert into invoice_settings(tenant_id,payment_terms) values(%s,%s)',j.tenant,'Existing saved terms')
+            q=dict(id='knowledge.payment-question',canonical='setting.invoice_settings.payment_terms',state='answered',
+                   answer='Within 14 days',evidence_revision='v1',source_review='review')
+            monkeypatch.setattr(onboarding_state,'knowledge_candidates',lambda _: [deepcopy(q)])
+            j.guide_action('retry_knowledge')
+            q.update(answer='Before work begins',evidence_revision='v2')
     j.execute((ROOT/'db/migrations/20261004_setup_forms.sql').read_text())
     j.execute((ROOT/'db/migrations/20261020_device_sync.sql').read_text())
     user=str(uuid4());ctx=TenantCtx(j.tenant,None,user)
@@ -172,6 +185,9 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         elif area=='records':
             saved=j.query('select to_jsonb(g) from requirement_groups g where tenant_id=%s',j.tenant,all=True)
             assert len(saved)==1 and saved[0][0]['fields'][0]['label']=='Owner reference'
+        elif area=='knowledge_conflict':
+            saved=j.row('invoice_settings',j.tenant)
+            assert saved['payment_terms']=='Before work begins'
         else:
             saved=j.row('invoice_settings',j.tenant)
             assert saved['payment_terms']=='After completion' and saved['show_vat'] is False

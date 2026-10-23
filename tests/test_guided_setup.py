@@ -133,6 +133,15 @@ def test_start_reuses_actual_saved_knowledge_and_about_you_without_applying(jour
     before=j.state()
     r=j.http.post('/app/setup/guide/action',json=dict(revision=before['revision'],stop='intro',operation='start'))
     assert r.status_code==400 and j.state()==before
+    # Exercise the real Knowledge adapter, not only a synthetic candidate list.
+    saved['sources'][0]['content']='Inspection intervals depend on the agreement.'
+    saved['version']='review-v2'
+    r=j.http.post('/app/setup/guide/action',json=dict(revision=j.state()['revision'],
+        stop=j.state()['guide']['current'],operation='retry_knowledge'))
+    assert r.status_code==200,r.text
+    stale=next(a for a in j.state()['answers'].values() if a['question']==known['question'])
+    assert stale['state']=='unknown' and stale['value'] is None
+    assert stale['history'][-1]['value']=='Monthly'
 
 
 def test_explanations_preserve_one_proposal_and_resume_the_exact_control(guide_journey,monkeypatch):
@@ -182,6 +191,141 @@ def test_knowledge_retry_is_visible_without_losing_position_or_owner_answers(gui
     monkeypatch.setattr(knowledge_review,'load',lambda tid:dict(sources=[],reviews=[],metadata=[],version='empty'))
     j.guide_action('retry_knowledge')
     assert j.state()['guide']['knowledge_unavailable'] is False and j.state()['answers']==before
+
+
+@pytest.mark.parametrize('removed',[False,True])
+def test_changed_or_removed_knowledge_is_unresolved_before_proposal_review_and_model(guide_journey,monkeypatch,removed):
+    j=guide_journey
+    q=dict(id='knowledge.payment-question',canonical='setting.invoice_settings.payment_terms',state='answered',
+           answer='Within 14 days',evidence_revision='v1',source_review='review')
+    candidates=[q]
+    monkeypatch.setattr(onboarding_state,'knowledge_candidates',lambda _:deepcopy(candidates))
+    j.guide_action('retry_knowledge')
+    j.answer('setting.invoice_settings.default_quote_valid_days',30)
+    key=onboarding_state.key_for(q['canonical'],'organisation','organisation')
+    q.update(answer='Before work begins',evidence_revision='v2')
+    if removed:candidates.clear()
+    j.guide_action('retry_knowledge')
+    answer=j.state()['answers'][key]
+    assert answer['state']=='unknown' and answer['value'] is None
+    assert answer['history'][-1]['value']=='Within 14 days'
+    stop=next(s['id'] for s in guided_setup.registry().values() if 'invoice_settings/payment_terms' in s['catalogue'])
+    j.move(stop);j.guide_action('resume')
+    assert not (j.row('tenant_config',j.tenant).get('setup_cards') or {}).get('invoice_settings')
+    d=j.http.get('/app/setup/guide/state').json()
+    assert not any(a['question']==q['canonical'] for a in d['answers'])
+    assert d['knowledge_conflicts'][0]['earlier']['value']=='Within 14 days'
+    context=routes.context_for(j.ctx)
+    model_answer=next(a for a in guided_setup.model_data(context,d['stop'])['answers'] if a['question']==q['canonical'])
+    assert model_answer['state']=='unknown' and model_answer['value'] is None
+    turn(j,'Use the terms you already know',expected=400)
+    j.move('review.charges.terms');j.guide_action('review',expected=400)
+    assert stop in [s['id'] for s in j.http.get('/app/setup/guide/state').json()['unresolved']]
+    j.move(stop)
+    j.guide_action('knowledge_keep_earlier' if removed else 'knowledge_use_updated',q['id'])
+    card=j.row('tenant_config',j.tenant)['setup_cards']['invoice_settings']
+    terms=next(l for l in card['lines'] if l['fields']['key']=='payment_terms')
+    assert terms['fields']['value']==('Within 14 days' if removed else 'Before work begins')
+    assert j.row('invoice_settings',j.tenant) is None
+
+
+def test_existing_knowledge_card_requires_resolution_before_accept_or_refresh(guide_journey,monkeypatch):
+    j=guide_journey
+    j.execute('insert into invoice_settings(tenant_id,payment_terms) values(%s,%s)',j.tenant,'Existing saved terms')
+    q=dict(id='knowledge.payment-question',canonical='setting.invoice_settings.payment_terms',state='answered',
+           answer='Within 14 days',evidence_revision='v1',source_review='review')
+    monkeypatch.setattr(onboarding_state,'knowledge_candidates',lambda _: [deepcopy(q)])
+    j.guide_action('retry_knowledge')
+    stop=next(s['id'] for s in guided_setup.registry().values() if 'invoice_settings/payment_terms' in s['catalogue'])
+    j.move(stop);j.guide_action('resume')
+    card=j.row('tenant_config',j.tenant)['setup_cards']['invoice_settings'];ids=[l['id'] for l in card['lines']]
+    q.update(answer='Before work begins',evidence_revision='v2')
+    before=j.state()
+    assert j.http.get('/app/setup/guide/state').json()['knowledge_conflicts']
+    assert j.state()==before  # Read-only freshness is not a hidden metadata write.
+    preview_response=j.http.post('/concierge/setup-cards/invoice_settings/preview',json=dict(revision=card['revision'],ids=ids))
+    assert preview_response.status_code==200,preview_response.text
+    preview=preview_response.json()
+    r=j.http.post('/concierge/setup-cards/invoice_settings/accept',json=dict(revision=card['revision'],ids=ids,settings_version=preview['settings_version']))
+    assert r.status_code==409 and 'Knowledge changed' in r.text
+    j.guide_action('refresh_preview',expected=400)
+    assert j.row('invoice_settings',j.tenant)['payment_terms']=='Existing saved terms'
+    j.guide_action('knowledge_use_updated',q['id'])
+    changed=j.row('tenant_config',j.tenant)['setup_cards']['invoice_settings']
+    assert changed['lines'][0]['id']==card['lines'][0]['id'] and changed['lines'][0]['fields']['value']=='Before work begins'
+    assert not j.http.get('/app/setup/guide/state').json()['knowledge_conflicts']
+    accept_current(j,'invoice_settings')
+    assert j.row('invoice_settings',j.tenant)['payment_terms']=='Before work begins'
+    q.update(answer='Another source change',evidence_revision='v3')
+    j.guide_action('retry_knowledge')
+    assert not j.http.get('/app/setup/guide/state').json()['knowledge_conflicts']
+    assert j.row('invoice_settings',j.tenant)['payment_terms']=='Before work begins'
+
+
+def test_independent_owner_answer_survives_knowledge_refresh(guide_journey,monkeypatch):
+    j=guide_journey
+    q=dict(id='knowledge.payment-question',canonical='setting.invoice_settings.payment_terms',state='answered',
+           answer='Within 14 days',evidence_revision='v1',source_review='review')
+    monkeypatch.setattr(onboarding_state,'knowledge_candidates',lambda _: [deepcopy(q)])
+    j.guide_action('retry_knowledge');j.answer(q['canonical'],'On completion')
+    q.update(answer='Before work begins',evidence_revision='v2')
+    j.guide_action('retry_knowledge')
+    answer=j.state()['answers'][onboarding_state.key_for(q['canonical'],'organisation','organisation')]
+    assert answer['value']=='On completion' and answer['state']=='answered'
+
+
+@pytest.mark.parametrize('resolution',['edit','earlier','leave_then_updated'])
+def test_knowledge_conflict_cannot_be_cleared_by_editing_another_setting(guide_journey,monkeypatch,resolution):
+    j=guide_journey
+    j.execute('insert into invoice_settings(tenant_id,payment_terms) values(%s,%s)',j.tenant,'Existing saved terms')
+    q=dict(id='knowledge.payment-question',canonical='setting.invoice_settings.payment_terms',state='answered',
+           answer='Within 14 days',evidence_revision='v1',source_review='review')
+    monkeypatch.setattr(onboarding_state,'knowledge_candidates',lambda _: [deepcopy(q)])
+    j.guide_action('retry_knowledge');j.answer('setting.invoice_settings.default_quote_valid_days',30)
+    stop=next(s['id'] for s in guided_setup.registry().values() if 'invoice_settings/payment_terms' in s['catalogue'])
+    j.move(stop);j.guide_action('resume')
+    card=j.row('tenant_config',j.tenant)['setup_cards']['invoice_settings']
+    terms=next(l for l in card['lines'] if l['fields']['key']=='payment_terms')
+    other=next(l for l in card['lines'] if l['fields']['key']=='default_quote_valid_days')
+    q.update(answer='Before work begins',evidence_revision='v2')
+    def edit(line,value):
+        return j.http.post('/concierge/setup-cards/invoice_settings/changes',json=dict(revision=card['revision'],changes=[
+            dict(op='set',id=line['id'],fields={'value':value},sources={'value':dict(kind='owner_said',reference='Owner edited this value')})]))
+    blocked=edit(other,45)
+    assert blocked.status_code==422 and 'Resolve the changed Knowledge' in blocked.text
+    assert j.row('tenant_config',j.tenant)['setup_cards']['invoice_settings']==card
+    expected='Within 14 days'
+    if resolution=='edit':
+        expected='On completion'
+        result=edit(terms,expected);assert result.status_code==200,result.text
+    elif resolution=='earlier':
+        j.guide_action('knowledge_keep_earlier',q['id'])
+    else:
+        result=j.http.post('/concierge/setup-cards/invoice_settings/changes',json=dict(revision=card['revision'],changes=[
+            dict(op='remove',id=l['id']) for l in card['lines']]))
+        assert result.status_code==200,result.text
+        expected='Before work begins';j.guide_action('knowledge_use_updated',q['id'])
+    assert not j.http.get('/app/setup/guide/state').json()['knowledge_conflicts']
+    assert j.row('invoice_settings',j.tenant)['payment_terms']=='Existing saved terms'
+    accept_current(j,'invoice_settings')
+    assert j.row('invoice_settings',j.tenant)['payment_terms']==expected
+
+
+def test_unavailable_knowledge_never_certifies_an_imported_answer(guide_journey,monkeypatch):
+    from app import knowledge_review
+    j=guide_journey
+    q=dict(id='knowledge.payment-question',canonical='setting.invoice_settings.payment_terms',state='answered',
+           answer='Within 14 days',evidence_revision='v1',source_review='review')
+    monkeypatch.setattr(onboarding_state,'knowledge_candidates',lambda _: [deepcopy(q)])
+    j.guide_action('retry_knowledge')
+    def unavailable(tid):raise routes.HTTPException(503,'synthetic Knowledge failure')
+    monkeypatch.setattr(knowledge_review,'load',unavailable)
+    stop=next(s['id'] for s in guided_setup.registry().values() if 'invoice_settings/payment_terms' in s['catalogue'])
+    j.move(stop);j.guide_action('resume')
+    d=j.http.get('/app/setup/guide/state').json()
+    assert d['guide']['knowledge_unavailable'] and d['knowledge_conflicts'][0]['candidate'] is None
+    j.guide_action('knowledge_use_updated',q['id'],expected=400)
+    assert not (j.row('tenant_config',j.tenant).get('setup_cards') or {}).get('invoice_settings')
 
 
 def test_start_opens_diary_then_actual_settings_and_get_never_mutates(guide_journey):
