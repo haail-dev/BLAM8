@@ -28,11 +28,8 @@ def test_first_keep_does_not_absorb_other_notes_or_navigation():
     assert response['focus']['kind']=='note' and response['focus']['id']=='maintenance'
     assert not any(k.startswith('source_') for k in form)
     kept=act(ctx,row,form,'keep')
-    assert kept['focus']['kind']=='support'
-    assert all('Maintenance reports' in p['text'] for p in kept['focus']['passages'])
-    act(ctx,row,form,'retain_support')
-    assert not any(v=='note:overview' for k,v in form.items() if k.startswith('source_'))
-    assert guide.present(ctx,row,form)['focus']['id']=='prices'
+    assert kept['focus']['kind']=='note' and kept['focus']['id']=='prices'
+    assert not any(k.startswith('source_') for k in form)
     assert row==before
 
 
@@ -51,7 +48,11 @@ def test_large_support_group_requires_individual_passage_review():
         'text':'\n'.join(f'Maintenance reports must include detail {i} before staff explain the next step.' for i in range(5))}])
     form.update(action_overview='keep',action_maintenance='keep')
     shown=guide.present(ctx,row,form)
-    assert shown['focus']['kind']=='passage' and shown['focus']['target']=='maintenance'
+    assert shown['focus']['kind']=='note' and shown['focus']['id']=='prices'
+    act(ctx,row,form,'keep')
+    shown=guide.present(ctx,row,form)
+    if shown['focus']['kind']=='overlap':act(ctx,row,form,'keep_both');shown=guide.present(ctx,row,form)
+    assert shown['focus']['kind']=='source_batch' and shown['focus']['remaining']==5
     assert 'Keep the original website wording' not in [a['label'] for a in shown['actions']]
     assert len(shown['reply'])<1000 and not any(k.startswith('source_') for k in form)
 
@@ -133,7 +134,7 @@ def test_correction_reads_the_same_local_retention_state_without_persisting_it(s
         'version':'v1','question':'Review this local choice.','edits':{first['id']:{'content':first['content'],'label':first['label']}},'form':local})
     assert response.status_code==200 and calls==[]
     effective=next(n for n in seen[0]['local_review']['notes'] if n['id']==first['id'])
-    assert unit['text'] in effective['effective_content']
+    assert effective['effective_content']==first['content']  # Evidence choices do not append source text.
     assert seen[0]['lines'][0]['content']==first['content'] and unit['text'] not in first['content']
     assert seen[0]['local_review']['source_choices']['source_'+unit['id']]=='note:'+first['id']
 

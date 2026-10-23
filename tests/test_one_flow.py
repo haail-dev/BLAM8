@@ -125,6 +125,7 @@ def client():
 
 
 def test_finish_lands_on_the_first_open_tuning_step(client, monkeypatch, review_store):
+    monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
     monkeypatch.setattr(onboarding.db, "upsert_tenant_config", lambda *a, **k: None)
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: list(STEPS))
@@ -144,7 +145,7 @@ def test_knowledge_button_says_next_with_the_first_step(client, monkeypatch, rev
     monkeypatch.setattr(kb, "is_configured", lambda: False)
     monkeypatch.setattr(onboarding.db, "list_knowledge_sources", lambda tid, client=None: [])
     monkeypatch.setattr(onboarding.db, "knowledge_source_texts", lambda tid, client=None: [])
-    monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {})
+    monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: [dict(STEPS[0], done=False)] + STEPS[1:])
     r = client.get("/onboarding/knowledge")
     line = next(l for l in r.text.splitlines() if "data-onb-continue" in l)

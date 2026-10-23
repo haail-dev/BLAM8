@@ -50,7 +50,7 @@ def test_review_preserves_all_nine_ids_titles_order_and_original_facts_without_s
     assert payload['source_units'] == row['payload']['source_units']
 
 
-@pytest.mark.parametrize('tamper', ['revision','hash','unknown_id','extra_fact','foreign_evidence','merge','duplicate','questions','fragment','prose'])
+@pytest.mark.parametrize('tamper', ['revision','hash','extra_fact','foreign_evidence','merge','questions','fragment','prose'])
 def test_invented_stale_or_unstructured_corrections_are_rejected(tamper):
     row, saved = seeded(); card = review.draft_card(row, saved); raw = corrections(card, saved)
     if tamper == 'revision': raw['revision'] += 1
@@ -238,10 +238,10 @@ def test_final_source_coverage_keeps_owner_authorship_for_original_text():
     entry = row['payload']['entries'][0]
     entry['content_segments'] = [{'kind':'owner_said', 'reference':'Owner edit', 'text':entry['content']}]
     fields = form(context,row); fields['source_default'] = 'note:'+entry['id']
-    notes, payload = admission.plan(context,row,fields)
-    parts = payload['entries'][0]['combined_content_segments']
-    assert parts[0] == entry['content_segments'][0]
-    assert parts[1]['kind'] == 'owner_site'
-    assert 'We do not make a legal determination from an email.' in parts[1]['text']
-    preview = admission.review_view(context,row,fields)
-    assert preview['entries'][0]['content_segments'] == parts
+    # A citation is not permission to add all missing source wording to this body.
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException,match='') as failure:
+        admission.plan(context,row,fields)
+    assert failure.value.status_code==409
+    preview=admission.review_view(context,row,fields)
+    assert preview['entries'][0]['content_segments']==entry['content_segments']

@@ -37,7 +37,8 @@ def test_every_advancing_step_marks_its_continue(step):
 def test_voice_marks_both_of_its_advance_buttons():
     # The learned-profile review and the Adjust form each advance the wizard, and
     # exactly one is ever on screen — the panel mirrors the visible one.
-    assert _html("voice").count("data-onb-continue") == 2
+    import re
+    assert len(re.findall(r"<button[^>]*data-onb-continue",_html("voice"))) == 2
 
 
 def test_the_marker_sits_on_the_button_that_actually_advances():

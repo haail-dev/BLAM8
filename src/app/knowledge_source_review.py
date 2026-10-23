@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import json
 import re
 
-from app import setup_cards, knowledge_source_evidence, knowledge_note_edits, knowledge_owner_corrections
+from app import setup_cards, knowledge_source_evidence, knowledge_note_edits, knowledge_owner_corrections, knowledge_review
 
 
 def obj(properties):
@@ -102,13 +102,14 @@ def validate(card, evidence, raw):
     allowed_refs = {p['reference'] for p in supplied['passages']}
     if not isinstance(raw['changes'], list) or len(raw['changes']) > 30:
         raise setup_cards.Invalid('Too many review changes.')
-    changes, seen, unchanged = [], set(), 0
+    changes, seen, unchanged, omitted_changes = [], set(), 0, 0
     for change in raw['changes']:
         if not isinstance(change, dict) or set(change) - {'id', 'content_hash', 'insertions', 'citations', 'removals', 'owner_replacements'} or not {'id', 'content_hash', 'insertions'} <= set(change):
             raise setup_cards.Invalid('Supply existing card IDs and source insertions only.')
         identity = change['id']
         if not isinstance(identity, str) or identity not in available or identity in seen:
-            raise setup_cards.Invalid('Review each existing card at most once.')
+            omitted_changes += 1
+            continue
         seen.add(identity)
         line = available[identity]
         if change['content_hash'] != line['content_hash']:
@@ -166,16 +167,20 @@ def validate(card, evidence, raw):
             checked_citations.append(checked)
         if not passages and not checked_citations and not removed and not replaced:
             continue
+        if content != line['content']:
+            patches.update({'action_'+identity:'','reviewed_'+identity:''})
         changes.append({'id': identity, 'label': line['label'], 'before': line['content'],
                         'after': content, 'passages': passages, 'citations': checked_citations,
+                        'patches':patches,
                         **({'remaining':remaining,'removals':removed,'owner_replacements':replaced,
-                            'source_choices':source_choices,'patches':patches} if removed or replaced else {})})
+                            'source_choices':source_choices} if removed or replaced else {})})
     overlaps = raw['overlaps']
     if not isinstance(overlaps, list) or len(overlaps) > 30:
         raise setup_cards.Invalid('Too many overlap annotations.')
-    for ids in overlaps:
-        if not isinstance(ids, list) or not 2 <= len(ids) <= 30 or any(not isinstance(i, str) or i not in available for i in ids) or len(set(ids)) != len(ids):
-            raise setup_cards.Invalid('Overlap annotations must name distinct existing cards.')
+    valid_overlaps = [ids for ids in overlaps if isinstance(ids, list) and 2 <= len(ids) <= 30
+        and all(isinstance(i, str) and i in available for i in ids) and len(set(ids)) == len(ids)]
+    omitted_overlaps = len(overlaps) - len(valid_overlaps)
+    overlaps = valid_overlaps
     questions = raw['questions']
     if not isinstance(questions, list) or any(not isinstance(q, str) for q in questions):
         raise setup_cards.Invalid('Unanswered questions must be a list of text.')
@@ -192,6 +197,10 @@ def validate(card, evidence, raw):
         summary += ' These are citation changes only; no note wording is changed.'
     if any(c.get('owner_replacements') for c in changes):
         summary += ' Owner replacements supersede the listed website wording only after Apply and final Save. Unrelated wording is preserved.'
+    if omitted_changes:
+        summary += f' {omitted_changes} correction annotation(s) named unavailable or repeated note IDs and were ignored. The verified proposals below remain available; no automatic retry was made.'
+    if omitted_overlaps:
+        summary += f' {omitted_overlaps} invalid overlap annotation(s) were ignored. Verified corrections are shown below; inspect overlaps manually or request one new review. No automatic retry was made.'
     if unchanged:
         summary += f' {unchanged} unchanged or already-recorded item(s) need no draft update.'
     if omitted_questions:
@@ -264,7 +273,7 @@ def apply(card, evidence, raw, *, turn):
                         'sources': {'content': deepcopy(old['sources']['content'])}})
     result = setup_cards.change('knowledge', card, card['revision'], turn, changes)
     result.setdefault('knowledge_content_provenance', {}).update(provenance)
-    result['knowledge_last_review'] = {'snapshot_id': evidence['id'], 'overlaps': deepcopy(raw['overlaps'])}
+    result['knowledge_last_review'] = {'snapshot_id': evidence['id'], 'overlaps': [[n['id'] for n in pair] for pair in preview['overlaps']]}
     if len(json.dumps(result, allow_nan=False)) > 120_000:
         raise setup_cards.Invalid('The card is too large.')
     return result
@@ -369,6 +378,8 @@ def corrected_payload(row, evidence, raw, edits=None, *, owner_request='', revie
         for change in checked['changes']:
             if change['id']==entry['id'] and removed_citations: change['removed_citations']=deepcopy(removed_citations)
         entry.update(line['fields'])
+        payload.setdefault('draft_review_choices',{}).update({'label_'+entry['id']:entry['label'],
+            'content_'+entry['id']:entry['content']})
         entry['content_source'] = deepcopy(line['sources']['content'])
         entry['content_segments'] = [
             {**segment['source'], 'text': entry['content'][segment['start']:segment['end']]}
@@ -391,6 +402,10 @@ def corrected_payload(row, evidence, raw, edits=None, *, owner_request='', revie
     patches = {k:v for change in checked['changes'] for k,v in change.get('patches', {}).items()}
     if patches:
         payload['draft_review_choices'] = {**payload.get('draft_review_choices', {}), **patches}
+        for unit in payload.get('source_units',[]):
+            if 'source_'+unit['id'] in patches:
+                payload['draft_review_choices']['source_revision_'+unit['id']]=knowledge_review.source_revision(
+                    {'payload':payload},unit,payload['draft_review_choices'])
     payload['last_source_review'] = result['knowledge_last_review']
     history=payload.setdefault('source_review_history',[])
     if len(history)>=20:

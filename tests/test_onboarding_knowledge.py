@@ -53,7 +53,7 @@ def store(monkeypatch, review_store):
     monkeypatch.setattr(kb, "is_configured", lambda: True)
     monkeypatch.setattr(db, "list_knowledge_sources", lambda tid, client=None: list(sources))
     # the step reads the website given at the interview (2026-09-13)
-    monkeypatch.setattr(db, "get_tenant_config", lambda tid, client=None: {})
+    monkeypatch.setattr(db, "get_tenant_config", lambda tid, client=None: {"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(dashboard.knowledge_forms,"read",lambda ctx: [{**s,"version":"a"*32} for s in sources])
     return sources
 

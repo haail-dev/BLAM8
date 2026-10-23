@@ -48,7 +48,7 @@ def test_website_saved_state_uses_actual_saved_notes_separately_from_pending():
     row['state']='saved';row['payload']['entries'][0]['admitted_source']='Saved source'
     assert kr.website_state(ctx)['state']=='idle'
     ctx['sources']=[{'source':'Saved source','content':'A fact.'}]
-    assert kr.website_state(ctx)=={'state':'saved','pending_notes':0,'saved_notes':1,'review_href':None}
+    assert kr.website_state(ctx)=={'state':'saved','pending_notes':0,'saved_notes':1,'clarification_notes':0,'review_href':None}
 
 
 def citation_review(row,saved):

@@ -72,7 +72,7 @@ def test_the_opening_ask_offers_the_website_first_when_the_page_has_the_reader()
     assert kc.ask_text(some, website=True).startswith("Interview me")
     assert kc.ask_text(everything, website=False).startswith("Interview me")
     src = (ROOT / "src/app" / "onboarding.py").read_text(encoding="utf-8")
-    assert "website=kb.is_configured()" in src
+    assert "coverage_ask = ''" in src  # The helper remains opt-in; no automatic policy interview.
 
 
 # ── #8 #9 the note-writing rules ─────────────────────────────────────────────

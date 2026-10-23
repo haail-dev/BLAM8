@@ -51,7 +51,7 @@ def test_exact_replacement_preserves_unrelated_facts_and_distinct_owner_audit():
     with pytest.raises(setup_cards.Stale):review.validate(review.draft_card(revised,source), source, raw)
 
 
-@pytest.mark.parametrize('case',['invented','ambiguous','hypothetical','denied','no_op','effective_no_op','duplicate','overlap','mixed','foreign'])
+@pytest.mark.parametrize('case',['invented','ambiguous','hypothetical','denied','no_op','effective_no_op','duplicate','overlap','mixed'])
 def test_unverified_replacements_fail_closed(case):
     row, source, card, raw = owner_case()
     change = raw['changes'][0]

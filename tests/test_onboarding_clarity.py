@@ -239,7 +239,7 @@ def _knowledge_env(monkeypatch, website: str | None, sources: list[str]):
     monkeypatch.setattr(onboarding.db, "knowledge_source_texts",
                         lambda tid, client=None: [{"source": s, "text": ""} for s in sources])
     monkeypatch.setattr(onboarding.db, "get_tenant_config",
-                        lambda tid, client=None: {"website": website})
+                        lambda tid, client=None: {"website": website,"agent_name":"Office team","tone":"Professional","sign_off":"Regards, team"})
 
 
 def test_knowledge_reads_the_step_one_site_on_arrival(client, monkeypatch):
@@ -252,10 +252,7 @@ def test_knowledge_reads_the_step_one_site_on_arrival(client, monkeypatch):
     # The server schedules the read; only the running browser operation may
     # claim it is reading. Reloaded pending/saved states come from storage.
     assert 'data-state="idle"' in r.text and 'data-site-heading' in r.text
-    # the chat interview waits for the read — and never asks for the site again
-    assert 'data-onb-autoask-after="site"' in r.text
-    ask = r.text.split('data-onb-autoask="')[1].split('"')[0]
-    assert "Start from your website" not in ask
+    assert 'data-onb-autoask=' not in r.text  # No unsolicited generic policy interview.
 
 
 def test_knowledge_does_not_re_read_a_site_already_saved(client, monkeypatch):
@@ -265,7 +262,7 @@ def test_knowledge_does_not_re_read_a_site_already_saved(client, monkeypatch):
     assert 'data-onb-site=""' in r.text
     assert 'data-onb-autoask-after' not in r.text              # interview starts straight away
     # done = one line, the box collapsed behind Read again (Kris 2026-09-13)
-    assert 'id="site-done"' in r.text and "2 notes saved" in r.text
+    assert 'id="site-done"' in r.text and "2 website notes saved" in r.text
     assert 'id="site-box"' in r.text and 'data-state="saved"' in r.text
     assert "Website notes saved" in r.text
     box_tag = r.text.split('id="site-box"')[1].split(">")[0]
@@ -285,8 +282,8 @@ def test_knowledge_without_a_site_still_offers_it_by_chat(client, monkeypatch):
     _knowledge_env(monkeypatch, None, [])
     r = client.get("/onboarding/knowledge")
     assert 'data-auto-site="1"' not in r.text
-    ask = r.text.split('data-onb-autoask="')[1].split('"')[0]
-    assert "Start from your website" in ask                    # nothing on file → ask by chat
+    assert 'data-onb-autoask=' not in r.text
+    assert 'Read my site' in r.text
 
 
 def test_the_page_signals_the_read_and_the_panel_waits_for_it():

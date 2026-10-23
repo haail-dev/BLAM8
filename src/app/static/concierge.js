@@ -607,6 +607,7 @@
         if (later && later.hidden) later.hidden = false; // reveal the existing explicit choice; never select it
       }
       var reason = notice(state.reason || "No Continue action is available on this page.", state.blocker === "busy");
+      if(state.journey && state.journey.current==='voice'){var disabled=document.createElement('button');disabled.type='button';disabled.disabled=true;disabled.className='w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white opacity-50 cursor-not-allowed';disabled.textContent='Continue';disabled.setAttribute('aria-describedby','voice-completion-status');cta.appendChild(disabled);}
       cta.appendChild(reason);
       cta.classList.remove("hidden");
       return;
@@ -644,7 +645,7 @@
         }, 4000);
       });
       cta.appendChild(go);
-      var p = notice("Or check the form over first — it's filled in behind me.");
+      var p = notice("Review the visible form before saving your choices.");
       p.className += " mt-1.5";
       cta.appendChild(p);
     } else {
@@ -1515,6 +1516,7 @@
       reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
+    if (ONB_STEP === "voice") applyFill(fill);
     var entry = { role: "assistant", content: reply };
     if (data && data.focus_hash && knowledgeGuide && data.batch_id && data.version) {
       entry.knowledge_card = {batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
@@ -1528,7 +1530,7 @@
       settleKnowledgeChoice(null);
     }
     appendHeldLine(heldFor);
-    applyFill(fill);
+    if (ONB_STEP !== "voice") applyFill(fill);
     if (reviewLink) {
       msgs.appendChild(navLinkNode(reviewLink));
       window.dispatchEvent(new CustomEvent("blam8:knowledge-review"));

@@ -97,8 +97,8 @@
 {% set site_state = site_state or {'state': 'saved' if site_done else 'idle', 'pending_notes': 0, 'saved_notes': site_note_count or 0} %}
 <div id="site-lifecycle" class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}" data-pending-notes="{{ site_state.pending_notes }}" data-review-href="{{ site_state.review_href or '#knowledge-pending-reviews' }}">
   <p data-site-heading class="font-semibold">{% if site_state.state=='pending' %}Website drafts ready to review{% elif site_state.state=='saved' %}Website notes saved{% else %}Start from your website{% endif %}</p>
-  <p data-site-description>{% if site_state.state=='pending' %}{{ site_state.pending_notes }} drafts pending. Nothing from these drafts is saved to Knowledge.{% elif site_state.state=='saved' %}{{ site_state.saved_notes }} notes saved to Knowledge.{% else %}Read key pages and prepare notes for your review.{% endif %}</p>
-  <a data-site-review href="{{ site_state.review_href or '#knowledge-pending-reviews' }}"{% if not site_state.pending_notes %} hidden{% endif %} class="mt-2 inline-block font-semibold text-brand">Review {{ site_state.pending_notes }} drafts</a>
+  <p data-site-description>{% if site_state.state=='pending' %}{{ site_state.pending_notes }} drafts pending. Nothing from these drafts is saved to Knowledge.{% elif site_state.state=='saved' %}{{ site_state.saved_notes }} website notes saved to Knowledge.{% if site_state.clarification_notes %} {{ site_state.clarification_notes }} separate clarification notes saved.{% endif %}{% else %}Read key pages and prepare notes for your review.{% endif %}</p>
+  <a data-site-review {% if not site_state.pending_notes %}style="display:none"{% endif %} href="{{ site_state.review_href or '#knowledge-pending-reviews' }}"{% if not site_state.pending_notes %} hidden{% endif %} class="mt-2 inline-block font-semibold text-brand">Review {{ site_state.pending_notes }} drafts</a>
 </div>
 {% if site_done and site_state.state=='saved' %}
 <div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm" id="site-done">

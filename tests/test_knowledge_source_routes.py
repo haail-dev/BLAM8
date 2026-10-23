@@ -29,6 +29,10 @@ def source_client(monkeypatch):
     monkeypatch.setattr(routes.fairuse, 'onboarding_allowed', lambda *a, **k: True)
     def rpc(name, body):
         calls.append((name, body))
+        if name=='checkpoint_knowledge_review':
+            result=deepcopy(context)
+            next(r for r in result['reviews'] if r['id']==body['p_review'])['payload']['draft_review_choices']=deepcopy(body['p_choices'])
+            return SimpleNamespace(execute=lambda:SimpleNamespace(data=result))
         return SimpleNamespace(execute=lambda: SimpleNamespace(data=True))
     monkeypatch.setattr(db, 'db', lambda: SimpleNamespace(rpc=rpc))
     async def answer(tenant, question, card, source):

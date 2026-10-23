@@ -15,7 +15,7 @@ def test_the_page_carries_the_ask_and_the_panel_sends_it():
     src = Path("src/app/onboarding.py").read_text(encoding="utf-8")
     # the website route is offered by chat only while no site is on file — one
     # given at step 1 is read on arrival instead (2026-09-13)
-    assert 'website=kb.is_configured() and not website)' in src
+    assert "coverage_ask = ''" in src  # Optional gaps no longer start a generic interview.
 
 
 def test_the_ask_covers_the_missing_kinds_three_at_a_time():

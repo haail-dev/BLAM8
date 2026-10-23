@@ -52,7 +52,7 @@ def test_mailbox_voice_not_done_resumes_at_voice(client, monkeypatch):
 @pytest.mark.parametrize("source", ["auto_learned", "hybrid", "manual"])
 def test_voice_done_resumes_at_knowledge(client, monkeypatch, source):
     _state(monkeypatch, {"industry": "x"}, connected=True,
-           cfg={"voice_profile_source": source})
+           cfg={"voice_profile_source": source,"agent_name":"Office team","tone":"Professional","sign_off":"Regards, team"})
     assert _where(client) == "/onboarding/knowledge"
 
 

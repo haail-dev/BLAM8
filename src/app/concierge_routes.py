@@ -586,14 +586,14 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
     question = body.question.strip()[:MAX_INAPP_QUESTION_CHARS]
     history = concierge.sanitize_history(
         [t.model_dump() for t in body.history], MAX_HISTORY_TURNS, MAX_TURN_CHARS)
-    from app import onboarding_journey
+    from app import onboarding_journey, voice_completion
     saved, connected = {}, None
     try:
         t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
         cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
         connected = bool(db.get_connection_status(ctx.tenant_id, client=ctx.client))
         saved = {"interview": bool(t.get("industry")), "mailbox": connected,
-                 "voice": bool(cfg.get("voice_profile_source")), "knowledge": bool(t.get("onboarded_at"))}
+                 "voice": voice_completion.complete(cfg), "knowledge": bool(t.get("onboarded_at"))}
     except Exception:
         pass  # Unknown completion is never described as false or complete.
     journey = onboarding_journey.describe(body.step, connected=connected, saved=saved)
@@ -650,8 +650,17 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
             row = knowledge_review.stage(ctx.tenant_id,list(result.notes or []),origin="Assistant interview",
                                          questions=getattr(result,"unanswered",[]))
             review_link = {"label":"Review pending Knowledge", "href":f"/onboarding/knowledge/review/{row['id']}"}
-        return OnboardResponse(reply=result.reply, form_fill=result.form_fill,
-                               ready_to_advance=result.ready_to_advance,
+        response_reply, response_ready = result.reply, result.ready_to_advance
+        if body.step == "voice":
+            from app import voice_completion
+            values = {**body.current, **result.form_fill}
+            response_ready = voice_completion.complete(values)
+            if result.form_fill:
+                response_reply = 'Review the suggested values in the Voice form. ' + ('Your required answers are ready for review; Continue saves them.' if response_ready else 'Still needed: '+', '.join(voice_completion.missing(values))+'.')
+            elif re.search(r'fill|ready|complete|skip',result.reply,re.I):
+                response_reply = ('Review your visible Voice choices, then Continue to save.' if response_ready else 'Still needed in the Voice form: '+', '.join(voice_completion.missing(values))+'. Extra voice notes are optional.')
+        return OnboardResponse(reply=response_reply, form_fill=result.form_fill,
+                               ready_to_advance=response_ready,
                                notes=list(result.notes or []), held_for=held_for, review_link=review_link, journey=journey)
     return await run_in_threadpool(_blocking)
 

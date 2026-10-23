@@ -100,9 +100,9 @@
     lifecycle.dataset.state=state.state;
     var title={idle:'Start from your website',reading:'Reading your website',pending:'Website drafts ready to review',saved:'Website notes saved',error:'Website read failed',unconfirmed:'Website read outcome unconfirmed'};
     lifecycle.querySelector('[data-site-heading]').textContent=title[state.state];
-    lifecycle.querySelector('[data-site-description]').textContent=state.message || (state.state==='pending' ? state.pending_notes+' drafts pending. Nothing from these drafts is saved to Knowledge.' : state.state==='saved' ? state.saved_notes+' notes saved to Knowledge.' : 'Read key pages and prepare notes for your review.');
+    lifecycle.querySelector('[data-site-description]').textContent=state.message || (state.state==='pending' ? state.pending_notes+' drafts pending. Nothing from these drafts is saved to Knowledge.' : state.state==='saved' ? state.saved_notes+' website notes saved to Knowledge.'+(state.clarification_notes?' '+state.clarification_notes+' separate clarification notes saved.':'') : 'Read key pages and prepare notes for your review.');
     var link=lifecycle.querySelector('[data-site-review]');
-    link.hidden=!knownSite.pending_notes;link.textContent='Review '+knownSite.pending_notes+' drafts';link.href=knownSite.review_href || '#knowledge-pending-reviews';
+    link.hidden=!knownSite.pending_notes;link.style.display=knownSite.pending_notes?'':'none';link.textContent='Review '+knownSite.pending_notes+' drafts';link.href=knownSite.review_href || '#knowledge-pending-reviews';
     if(go){go.disabled=state.state==='reading';go.textContent=state.state==='reading'?'Reading…':state.state==='unconfirmed'?'Check stored drafts':state.state==='error'?'Try again':state.state==='idle'?'Read my site':'Read again';}
   }
   function noteSections(form){return Array.from(form.querySelectorAll('[data-draft]'));}
@@ -118,6 +118,7 @@
   }
   function syncNotes(form){
     if(!form.dataset.reviewEnhanced){noteSections(form).forEach(function(section){if(section.querySelector('[data-note-status]'))noteTool(section,null);});form.dataset.reviewEnhanced='1';}
+    var remaining=form.querySelector('[data-review-remaining]');if(remaining)remaining.textContent=noteSections(form).filter(function(section){return !form.elements['action_'+section.dataset.draft].value;}).length;
     noteSections(form).forEach(function(section){
       var id=section.dataset.draft,status=section.querySelector('[data-note-status]');
       if(!status)return;
@@ -181,7 +182,15 @@
   });
   document.querySelectorAll('[data-knowledge-review]').forEach(syncNotes);compactShell();
   document.addEventListener('change',function(event){var form=event.target.closest('[data-knowledge-review]');if(form)syncNotes(form);});
-  document.addEventListener('input',function(event){var form=event.target.closest('[data-knowledge-review]');if(form)syncNotes(form);});
+  document.addEventListener('input',function(event){
+    var form=event.target.closest('[data-knowledge-review]');if(!form)return;
+    var name=event.target.name || '';
+    if(name.startsWith('content_') || name.startsWith('label_')){
+      var id=name.slice(name.indexOf('_')+1),action=form.elements['action_'+id],stamp=form.elements['reviewed_'+id];
+      if(action && action.value){action.value='';if(stamp)stamp.value='';notice(form,'This note changed. Review its new wording before Save. Other note decisions remain.');}
+    }
+    syncNotes(form);
+  });
   window.Blam8KnowledgeReview={replace:replace,signature:signature,focusNote:focusNote,syncNotes:syncNotes,noteTool:noteTool};
   document.addEventListener('submit',async function(event){
     var form=event.target, button=event.submitter;

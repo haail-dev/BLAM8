@@ -1,5 +1,18 @@
 # Verified behaviours — what is PROVEN to work, and what guards it
 
+## Knowledge review and Voice: local verification (23 October 2026)
+
+Local synthetic evidence, awaiting review and deliberate migration/release. See
+[Knowledge/Voice contract](operations/knowledge-voice-review.md) for semantic
+limits, scoped question reuse, migration rollback and tour integration.
+
+| Behaviour | Guard |
+|---|---|
+| Required Voice name, tone and sign-off share UI/server validation; stale or failed saves cannot advance | `tests/test_knowledge_voice_simplification.py`, `tests/test_voice_completion_browser.py` |
+| Evidence stays separate from readable facts; critical facts and exact owner corrections survive review | `tests/test_knowledge_voice_simplification.py`, existing Knowledge source/admission/database suites |
+| Scoped draft decisions and setup-question receipts survive unrelated edits; real competing writes fail | Knowledge checkpoint SQL tests and `tests/test_agnostic_onboarding.py` |
+
+
 ## Grouped onboarding: local verification, awaiting integration (23 October 2026)
 
 The later setup review uses Diary, Records and workflows, and Charges and
