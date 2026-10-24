@@ -1,13 +1,9 @@
 """First-walk finding F19, 1 Oct 2026: the Dependants editor offered "One of"
 but had no box for the options, and a stored dropdown lost its options on the
 next page save."""
-import pathlib
-
 import pytest
 
 from app import requirement_groups as rg
-
-TEMPLATE = pathlib.Path(__file__).resolve().parent.parent / "src/app/templates/app/diary_dependants.html"
 
 
 def _parse(**kw):
@@ -29,11 +25,19 @@ def test_old_shape_post_keeps_stored_options():
     assert g[0]["fields"][0]["options"] == ["Option one", "Option two"]
 
 
-def test_template_has_options_input_in_row_loop_and_row_template():
-    """First-walk finding F19, 1 Oct 2026."""
-    html = TEMPLATE.read_text(encoding="utf-8")
-    loop, tpl = html.split('<template id="field-template">')
-    assert 'name="f_options"' in loop and 'name="f_options"' in tpl
+def test_saved_rows_and_new_rows_both_render_the_options_input(client, monkeypatch):
+    """First-walk finding F19, 1 Oct 2026: a saved row and a newly added row
+    (the field template) both carry the options box. One macro renders both."""
+    import app.dashboard as dashboard
+    rows = [{"id": "g1", "label": "Item", "label_plural": "Items", "cardinality": "many", "fields": [
+        {"label": "Choice", "type": "dropdown", "options": ["Option one", "Option two"], "durability": "once"}]}]
+    monkeypatch.setattr(dashboard.db, "list_requirement_groups", lambda t, client=None: list(rows))
+    monkeypatch.setattr(dashboard.setup_forms, "load", lambda *a: {"page": "dependants", "config": {}, "groups": rows,
+                                                                    "instances": [], "definitions": []})
+    html = client.get("/app/diary/dependants").text
+    saved, added = html.split('<template id="field-template">')
+    assert 'name="f_options" value="Option one, Option two"' in saved
+    assert 'name="f_options"' in added.split("</template>")[0]
 
 
 @pytest.fixture

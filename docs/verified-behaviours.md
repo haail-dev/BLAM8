@@ -1,5 +1,18 @@
 # Verified behaviours — what is PROVEN to work, and what guards it
 
+## Related records page reads without the assistant (24 October 2026)
+
+The page opens on a plain question and asks for the owner's own name for what
+they keep track of. Each detail is one line, its name and how long it stays true
+(Ask once, Check each time, Runs out on a date). The rest folds under More:
+answer type, must be collected, I approve changes, and for a detail that runs
+out, the gate, proof and reminder lead. The plural is worked out from the name
+unless the owner sets one. Limits appear only when reached. Field names and
+saved values are unchanged. Progress levels are unchanged. Guards:
+`test_requirement_groups.py`, `test_dependants_dropdown_options.py` (saved and
+new rows both render the choices box) and the native Records replay in
+`test_guided_setup_browser.py`.
+
 ## Records before Diary in guided setup (24 October 2026)
 
 Later setup runs Records and workflows (step 5), Diary (6), then Charges and
