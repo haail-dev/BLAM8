@@ -147,6 +147,7 @@ assert(!guide.isCurrent('other-hash','batch','v1'));
 const sourceCoverage={open:false}, originalQuery=form.querySelector;
 form.querySelector=selector=>selector==='.kr-source-coverage'?sourceCoverage:originalQuery(selector);
 fields.guided_layout_review={name:'guided_layout_review',type:'checkbox',value:'acknowledged',checked:false,dispatchEvent(){}};
+index=requests.length;loading=guide.ask('Show the current note',form);finish(index,result({},'layout-current'));await loading;
 index=requests.length;loading=guide.ask('Leave reviewed layout labels in the audit',form);
 finish(index,{...result({guided_layout_review:'acknowledged'},'layout-reviewed'),focus:{kind:'source_batch',id:'unassigned'}});
 await loading;
@@ -156,3 +157,17 @@ assert(!sourceCoverage.open);
 
 index=requests.length;loading=guide.ask('Review these source details individually',form);
 finish(index,{...result({},'passage-view'),focus:{kind:'passage',id:'one'}});await loading;assert(sourceCoverage.open);
+
+// An inline edit refreshes context before interpreting the owner's next typed correction.
+fields.content_one.value='Updated owner wording.';
+index=requests.length;loading=guide.ask('Please change the closing time to four.',form);
+assert.equal(JSON.parse(requests[index].options.body).question,'Show the current note');
+finish(index,result({},'fresh-inline'));
+await new Promise(resolve=>setImmediate(resolve));
+assert.equal(JSON.parse(requests[index+1].options.body).question,'Please change the closing time to four.');
+assert.equal(JSON.parse(requests[index+1].options.body).focus_hash,'fresh-inline');
+finish(index+1,{correction_requested:true});await loading;
+fields.content_one.value='Changed again.';
+const beforeStale=requests.length;
+await assert.rejects(guide.ask('Keep this note',form),/changed/);
+assert.equal(requests.length,beforeStale); // Never replay a stale approval against refreshed text.

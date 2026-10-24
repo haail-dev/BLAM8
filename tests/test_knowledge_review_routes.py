@@ -212,3 +212,38 @@ def test_overlap_acknowledged_through_the_guide_is_honoured_by_the_native_save(c
     (name,rpc),=calls
     assert name=='admit_knowledge_review' and rpc['p_payload']['entries'][0]['matches'][0]['key']==match_name.removeprefix('match_')
     assert '\r' not in rpc['p_notes'][0]['content']
+
+
+def test_json_save_confirms_success_and_clears_shared_draft_via_location(client,review_store,monkeypatch):
+    from app import setup_held
+    row=review_store.stage('tenant',[{'label':'Hours','content':'We open at nine.'}])
+    async def admit(*a,**kw):return 1
+    monkeypatch.setattr(kr,'admit',admit)
+    monkeypatch.setattr(setup_held,'mark_used',lambda *a,**kw:None)
+    response=client.post('/onboarding/knowledge/review/'+row['id'],data={'operation':'save'},headers={'Accept':'application/json'})
+    assert response.status_code==200 and response.json()['saved'] is True
+    assert response.headers['location']==response.json()['return_to']=='/onboarding/knowledge'
+    row['state']='saved'
+    response=client.post('/onboarding/knowledge/review/'+row['id'],data={'operation':'save'},headers={'Accept':'application/json'})
+    assert response.status_code==200 and response.json()['saved'] is True
+
+
+def test_json_save_error_retains_actionable_detail(client,review_store):
+    row=review_store.stage('tenant',[{'label':'Hours','content':'We open at nine.'}])
+    response=client.post('/onboarding/knowledge/review/'+row['id'],data={'operation':'save','version':review_store.load('tenant')['version'],'review_scope':'notes'},headers={'Accept':'application/json'})
+    assert response.status_code==400
+    assert 'every draft' in response.json()['detail']
+    assert row['state']=='pending'
+
+
+def test_current_review_validation_is_distinct_from_revision_conflict(client,review_store):
+    from app.knowledge_fidelity import inventory
+    row=review_store.stage('tenant',[{'label':'Hours','content':'We open at nine.'}],source_units=inventory([{'url':'https://example.test','text':'Extra work costs £70.'}]))
+    note=row['payload']['entries'][0]['id'];unit=row['payload']['source_units'][0]['id']
+    form={'version':review_store.load('tenant')['version'],'operation':'save','review_scope':'notes','action_'+note:'keep','source_'+unit:'covered:missing'}
+    url='/onboarding/knowledge/review/'+row['id']
+    response=client.post(url,data=form,headers={'Accept':'application/json'})
+    assert response.status_code==409 and response.headers['X-Blam8-Review-Validation']=='1'
+    form['version']='stale'
+    response=client.post(url,data=form,headers={'Accept':'application/json'})
+    assert response.status_code==409 and 'X-Blam8-Review-Validation' not in response.headers

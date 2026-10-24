@@ -24,6 +24,7 @@ def test_inline_edit_keeps_one_copy_and_other_review_decisions(tmp_path, width, 
     controller = (ROOT/'src/app/static/knowledge_onboarding_review.js').read_text(encoding='utf-8')
     css = (ROOT/'src/app/static/tw.css').read_text(encoding='utf-8')
     script = r'''
+    (async()=>{
     const failures=[],check=(v,m)=>{if(!v)failures.push(m)};
     const form=document.querySelector('form'),section=form.querySelector('[data-draft="one"]');
     const content=form.elements.content_one,heading=form.elements.label_one,preview=section.querySelector('[data-note-preview]');
@@ -54,7 +55,18 @@ def test_inline_edit_keeps_one_copy_and_other_review_decisions(tmp_path, width, 
     check(!visible(content)&&visible(preview),'source view restores readable content');
     tool.click();
     check(document.documentElement.scrollWidth<=WIDTH,'no horizontal overflow');
+    let attempts=0,submitted;
+    window.fetch=async(url,options)=>{attempts++;submitted=options.body;return {ok:attempts>1,json:async()=>attempts===1?{detail:'Review the changed note before saving.'}:{saved:true,return_to:'#saved'}};};
+    const save=form.querySelector('button[value=save]');
+    form.requestSubmit(save);await new Promise(r=>setTimeout(r,0));
+    check(form.querySelector('[data-review-status]').textContent==='Review the changed note before saving.','Save error stays visible');
+    check(content.value==='We confirm only after review.','failed Save preserves edited text');
+    check(!save.disabled,'failed Save releases control');
+    check(submitted.get('review_scope')==='notes','visible Save scope reaches admission');
+    form.requestSubmit(save);await new Promise(r=>setTimeout(r,0));
+    check(location.hash==='#saved','confirmed Save follows success destination');
     const result=document.createElement('pre');result.id='result';result.dataset.status=failures.length?'FAIL':'PASS';result.textContent=JSON.stringify(failures);document.body.appendChild(result);
+    })();
     '''.replace('WIDTH', str(width))
     page = '<html data-theme='+json.dumps(theme)+'><head><style>'+css+'</style></head><body>'+body+'<script>'+controller+'</script><script>'+script+'</script></body></html>'
     (tmp_path/'page.html').write_text(page, encoding='utf-8')

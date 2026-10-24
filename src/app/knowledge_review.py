@@ -457,6 +457,24 @@ def review_view(context, row, form=None):
     return result
 
 
+def notes_only_sources(row, entries, form):
+    """Defer untouched extra evidence under the visible notes-only Save scope.
+
+    Never approve evidence or repair an explicit invalid decision. Represented
+    facts and shared qualifications remain subject to the normal fidelity rules.
+    """
+    result = dict(form)
+    if form.get('review_scope') != 'notes' or form.get('source_default'):
+        return result
+    from app import knowledge_fidelity
+    for unit in knowledge_fidelity.view(row, entries, form)['units']:
+        key = 'source_' + unit['id']
+        if (unit['status'] == 'unresolved' and not unit.get('entries')
+                and unit['kind'] != 'qualification' and not form.get(key)):
+            result[key] = 'unknown'
+    return result
+
+
 def plan(context, row, form):
     """Recompute candidates from edited drafts; every current match needs a choice."""
     form = review_form(row, form)
@@ -474,6 +492,7 @@ def plan(context, row, form):
         if action not in {"keep","discard"} and not str(action).startswith(("merge_pending:","merge_saved:")):
             raise HTTPException(400,"Choose whether to retain, merge or discard every draft.")
     effective = effective_entries(context,row,entries,form)
+    form = notes_only_sources(row, effective, form)
     source_decisions=resolve_source_statements(row,effective,form,complete=True)
     notes, outcomes = [], [{**n,"decision":form["action_"+n["id"]]} for n in entries]
     for n in effective:
@@ -529,7 +548,14 @@ def plan(context, row, form):
 
 
 async def admit(tenant, row, context, form, *, reviewer=None):
-    notes, payload = plan(context, row, form)
+    try:
+        notes, payload = plan(context, row, form)
+    except HTTPException as exc:
+        # A current draft can fail content validation without a device conflict.
+        # Persisted-state/CAS failures below must still require reconciliation.
+        if row['state']=='pending' and form.get('version')==context['version']:
+            exc.headers={**(exc.headers or {}),'X-Blam8-Review-Validation':'1'}
+        raise
     payload.update(reviewed_by=reviewer, reviewed_at=datetime.now(timezone.utc).isoformat())
     from app import setup_card_knowledge, usage
     prepared, tokens = await setup_card_knowledge.prepare({"notes": notes}) if notes else ({"notes": []}, 0)

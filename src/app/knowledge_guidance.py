@@ -143,6 +143,9 @@ def current(context, row, form):
     entries = review['entries']
     retained = [n for n in entries if form.get('action_'+n['id']) == 'keep']
     unresolved = [u for u in review['source_view']['units'] if u['status'] == 'unresolved']
+    if form.get('review_scope') == 'notes' and not form.get('guided_expand_sources'):
+        # The final Save leaves unused evidence unknown; no extra interview gate.
+        unresolved = []
     assigned = {}
     for unit in unresolved:
         targets = source_targets(unit, entries)

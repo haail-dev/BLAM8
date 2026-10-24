@@ -1395,6 +1395,7 @@
   // re-run 2026-09-13: identical lines under two replies read as a repeat).
   var heldExplained = false;
   var pendingKnowledgeChoice = null;
+  var currentKnowledgeFormCard = null;
   function knowledgeBatchSaved(id) {
     var marker = document.querySelector('[data-knowledge-saved-reviews]');
     if (!marker) return false;
@@ -1404,7 +1405,7 @@
   function knowledgeCardCurrent(card) {
     var guide = window.Blam8KnowledgeGuide;
     var latest = log.slice().reverse().find(function(entry){return entry.knowledge_card;});
-    return !!(latest && latest.knowledge_card === card && guide && guide.isCurrent(card.focus_hash, card.batch_id, card.version));
+    return !!((currentKnowledgeFormCard ? currentKnowledgeFormCard === card : latest && latest.knowledge_card === card) && guide && guide.isCurrent(card.focus_hash, card.batch_id, card.version));
   }
   function paintKnowledgeCard(group, card, live) {
     group.querySelectorAll('[data-knowledge-guide-choice]').forEach(function (button) {
@@ -1504,6 +1505,8 @@
   }
 
   async function onboardTurn(text, history) {
+    currentKnowledgeFormCard=null;
+    msgs.querySelectorAll('[data-knowledge-current-status]').forEach(function(el){el.remove();});
     var current = readCurrent();
     var reply, fill = {}, advance = false, notes = [], spoke = true, heldFor = [], reviewLink = null;
     try {
@@ -2859,12 +2862,19 @@
 
   // Start from actual stored drafts when they arrive. Keep browser integration
   // outside the onboarding-turn function and its standalone replay boundary.
-  window.blam8KnowledgeReviewChanged = function (message) {
+  window.blam8KnowledgeReviewChanged = function (data) {
     // A form receipt updates chat without a model call or a second mutation.
     msgs.querySelectorAll('[data-knowledge-current-status]').forEach(function(el){el.remove();});
-    var receipt=bubbleEl('assistant', message);
+    var receipt=bubbleEl('assistant', data.reply || 'Review updated.');
     receipt.setAttribute('data-knowledge-current-status','');
-    msgs.appendChild(receipt);pinToTop(receipt);
+    msgs.appendChild(receipt);
+    if(data.focus && data.focus_hash){
+      currentKnowledgeFormCard={batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
+        focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || data.actions || [],save:!!data.save_ready};
+      var card=knowledgeCardNode(currentKnowledgeFormCard,true);
+      card.setAttribute('data-knowledge-current-status','');msgs.appendChild(card);
+    }
+    settleKnowledgeChoice(null);pinToTop(receipt);
     showContinueHint();
   };
   window.blam8KnowledgeGuideStart = async function () {

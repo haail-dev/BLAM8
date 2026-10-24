@@ -188,7 +188,7 @@
         'X-Blam8-Automatic':api.automatic ? '1' : '0'})});
       var result=await fetch(url,options);
       if (result.headers.get('X-Blam8-Revision')) states[name]=await read(name);
-      if (result.status===409 && !api.automatic) { conflict=true; warn('This work changed or is running on another device. Reload before continuing.'); }
+      if (result.status===409 && !api.automatic && result.headers.get('X-Blam8-Review-Validation')!=='1') { conflict=true; warn('This work changed or is running on another device. Reload before continuing.'); }
       return result;
     }
   };

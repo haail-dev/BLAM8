@@ -7,7 +7,8 @@ class Element {
   constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.attributes={};this.dataset={};this.listeners={};this.disabled=false;this.textContent='';}
   setAttribute(k,v){this.attributes[k]=String(v);}
   getAttribute(k){return this.attributes[k];}
-  appendChild(child){this.children.push(child);return child;}
+  appendChild(child){child.parent=this;this.children.push(child);return child;}
+  remove(){if(this.parent)this.parent.children=this.parent.children.filter(n=>n!==this);}
   set innerHTML(_){this.children=[];}
   addEventListener(name,fn){this.listeners[name]=fn;}
   click(){if(!this.disabled)this.listeners.click?.();}
@@ -112,3 +113,14 @@ assert(msgs.children.some(el=>el.tagName==='DETAILS'&&el.children.some(child=>ch
 savedMarker.setAttribute('data-knowledge-saved-reviews',JSON.stringify(['another-batch']));
 c.document.querySelector=selector=>selector==='[data-knowledge-saved-reviews]'?savedMarker:null;
 c.renderAll();assert(cards().length>0);
+
+// Main-form reviews replace a single current card without inventing chat turns.
+vm.runInContext(between('window.blam8KnowledgeReviewChanged = function','window.blam8KnowledgeGuideStart ='),c);
+current=data('note','form-current');
+const oldLogLength=c.log.length;
+c.window.blam8KnowledgeReviewChanged(current);
+assert(buttons(cards().at(-1)).every(b=>!b.disabled));
+current=data('note','form-next');c.window.blam8KnowledgeReviewChanged(current);
+assert.equal(msgs.querySelectorAll('[data-knowledge-current-status]').length,2); // prose and controls only
+assert.equal(c.log.length,oldLogLength);
+assert(buttons(cards().at(-1)).every(b=>!b.disabled));
