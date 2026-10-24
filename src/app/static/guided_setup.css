@@ -49,7 +49,7 @@
 .guided-running button:focus-visible,.guided-running a:focus-visible,.guided-running summary:focus-visible{outline:3px solid #60a5fa;outline-offset:2px}
 [data-theme="dark"] .guided-proposed-note,[data-theme="dark"] .guided-owning-link{color:#93c5fd}
 @media(max-width:767px){
- .guided-running #bc-panel{left:0;right:0;bottom:calc(var(--strip-h,60px) + var(--strip-inset,0px) + var(--guided-keyboard-inset,0px))!important;width:auto!important;max-width:none!important;height:min(30rem,calc(var(--guided-viewport,100dvh) * var(--guided-ratio,.56)))!important;max-height:calc(var(--guided-viewport,100dvh) - 6rem)!important;border-radius:1rem 1rem 0 0}
+ .guided-running #bc-panel{left:0;right:0;bottom:calc(var(--strip-h,60px) + var(--strip-inset,0px) + var(--guided-keyboard-inset,0px))!important;width:auto!important;max-width:none!important;height:var(--guided-sheet-height,min(30rem,calc(var(--guided-viewport,100dvh) * var(--guided-ratio,.56))))!important;max-height:calc(var(--guided-viewport,100dvh) - 6rem)!important;border-radius:1rem 1rem 0 0}
  .guided-running.guided-page-expanded{--guided-ratio:.3}
  .guided-running.guided-keyboard nav[aria-label="Primary"]{visibility:hidden}
  .guided-running.guided-keyboard #bc-panel{bottom:var(--guided-keyboard-inset,0px)!important;--guided-ratio:.6}
@@ -58,8 +58,6 @@
  .guided-running main.app-sky{padding-right:0!important;padding-bottom:1rem;scroll-padding-block:1rem;overscroll-behavior:contain}
  .guided-question{padding:.85rem}
  .guided-running .bc-setup-tray{margin:0 .85rem .85rem}
- .guided-running #bc-resize-handle{display:none}
- .guided-running #bc-panel>header{cursor:default}
 }
 @media(prefers-reduced-motion:reduce){.guided-target{scroll-behavior:auto}}
 

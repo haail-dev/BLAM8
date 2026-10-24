@@ -66,7 +66,11 @@ Related catalogue controls are grouped into owner decisions. A proposal adds
 durable explanation stops for its affected native controls, with the same card
 available throughout. The current conversation stays visible; earlier discussion
 can be expanded. On phones the actual relevant page stays above the assistant,
-with an Expand page control. No cloned form or screenshot replaces the editor.
+with an Expand page control. The assistant's header remains a resize handle:
+dragging it (or its arrow keys) sets the sheet height, which the guide keeps for
+the session and clears when Expand page is used. In the onboarding shell the
+Diary page's card heading is visually hidden, since its progress step already
+names it. No cloned form or screenshot replaces the editor.
 
 Starting the guide carries forward reviewed Knowledge answers with their source
 and exact identity, plus the owner's About you description. Unknown or stale
