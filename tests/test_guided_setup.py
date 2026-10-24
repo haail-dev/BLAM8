@@ -675,3 +675,9 @@ def test_knowledge_continue_creates_intro_once_and_resumes_after_ack(journey,mon
     assert r.status_code==200 and j.state()['guide']['current']=='orientation.diary'
     after=j.state();assert onboarding._prepare_guided_setup(ctx)=='/app/diary'
     assert j.state()==after
+
+def test_guided_stream_scrolls_without_scrollbar_chrome():
+    css=(__import__('pathlib').Path(__file__).resolve().parents[1]/'src/app/static/guided_setup.css').read_text(encoding='utf-8')
+    stream=css.split('.guided-stream{')[1].split('}')[0]
+    assert 'overflow-y:auto' in stream and 'scrollbar-width:none' in stream
+    assert '.guided-stream::-webkit-scrollbar{display:none}' in css
