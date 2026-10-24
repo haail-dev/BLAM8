@@ -22,9 +22,10 @@
     /* Installed-app fix (same as the app shell): the wizard renders under the
        phone's status bar in standalone â€” grow the navy header by the safe-area
        inset so bar and strip read as one surface. Zero in a normal browser. */
+    :root { --onboarding-bar:2.5rem; }
     header[data-bc-full-width] {
-      height: calc(3rem + env(safe-area-inset-top, 0px));
-      padding-top: env(safe-area-inset-top, 0px);
+      height: calc(var(--onboarding-bar) + var(--top-reserve));
+      padding-top: var(--top-reserve);
     }
     /* The onboarding shell scrolls the body, so _concierge.html reserves the
        right dock column on <body>. Do not reserve the same column again on the
@@ -43,17 +44,17 @@
       body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-onboarding-column] { max-width:none; }
       body[data-onboarding-shell] #blam8-concierge #bc-panel {
         position:fixed;
-        top:calc(3rem + env(safe-area-inset-top, 0px) + var(--onboarding-gutter));
+        top:calc(var(--onboarding-bar) + var(--top-reserve) + var(--onboarding-gutter));
         right:var(--onboarding-gutter);
         bottom:var(--onboarding-gutter);
         width:var(--onboarding-chat-width);
-        height:calc(100dvh - 3rem - env(safe-area-inset-top, 0px) - 2 * var(--onboarding-gutter)) !important;
-        max-height:calc(100dvh - 3rem - env(safe-area-inset-top, 0px) - 2 * var(--onboarding-gutter)) !important;
+        height:calc(100dvh - var(--onboarding-bar) - var(--top-reserve) - 2 * var(--onboarding-gutter)) !important;
+        max-height:calc(100dvh - var(--onboarding-bar) - var(--top-reserve) - 2 * var(--onboarding-gutter)) !important;
       }
     }
     [data-stepper-total] { position:relative; --label-start:0px; --label-end:0px; }
     /* Kris 2026-10-24: no band behind the stepper; the page background shows through. */
-    body[data-onboarding-shell] [data-stepper-total] { position:sticky;top:calc(3rem + env(safe-area-inset-top, 0px));z-index:30; }
+    body[data-onboarding-shell] [data-stepper-total] { position:sticky;top:calc(var(--onboarding-bar) + var(--top-reserve));z-index:30; }
     .onboarding-stepper-row { display:grid;grid-template-columns:repeat(var(--stepper-count),minmax(0,1fr));height:2.8rem; }
     [data-stepper-inspecting] .onboarding-stepper-row { height:4.2rem; }
     .onboarding-stepper-item { min-width:0; }

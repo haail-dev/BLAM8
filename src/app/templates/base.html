@@ -99,15 +99,15 @@
        (its icons are light; white would swallow them) and start the page — and
        the stuck header — below it. In a normal browser the insets are 0 and
        none of this draws. */
-    body { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+    body { padding-top: var(--top-reserve); padding-bottom: env(safe-area-inset-bottom, 0px); }
     body::before {
       content: ""; position: fixed; top: 0; left: 0; right: 0;
-      height: env(safe-area-inset-top, 0px);
+      height: var(--top-reserve);
       background: #0B1220; z-index: 60; pointer-events: none;
     }
     .public-glass-brand { position: relative; display: inline-block; flex: none; width: 44px; height: 44px; }
     .public-glass-brand img, .public-glass-brand canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
-    header.sticky { top: env(safe-area-inset-top, 0px); }
+    header.sticky { top: var(--top-reserve); }
   </style>
   {% block head_extra %}{% endblock %}
 </head>

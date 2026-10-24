@@ -152,6 +152,6 @@ def test_a_walk_left_mid_way_offers_the_way_back():
     # rides under the header there (first-sign-up film 2026-09-30: it covered
     # the draft's last line).
     assert "body:has([data-stage-draft]) .tour-return {" in shell
-    assert "bottom: auto; top: calc(2.25rem + env(safe-area-inset-top, 0px) + .5rem); }" in shell
+    assert "bottom: auto; top: calc(2.25rem + var(--top-reserve) + .5rem); }" in shell
     page = _read("src/app/templates/app/conversations.html")
     assert "sessionStorage.setItem('blam8_tour_pos:inbox', '1')" in page          # a left swipe counts the swipe stop done
