@@ -68,6 +68,12 @@
   var sendBtn = document.getElementById("bc-send");
   var titleEl = document.getElementById("bc-title");
   var usageEl = document.getElementById("bc-usage");
+  // The onboarding Continue floats over the foot of the thread
+  // (_concierge.html); its height lets the thread pad so the last message can
+  // scroll clear of it.
+  if (cta && panel && window.ResizeObserver) new ResizeObserver(function () {
+    panel.style.setProperty("--bc-cta-h", cta.offsetHeight + "px");
+  }).observe(cta);
   var setupCards = null;
   var questionLimit = 20;
   var questionsRemaining = null;

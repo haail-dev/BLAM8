@@ -13,3 +13,12 @@ def test_disabled_voice_continue_has_no_reason_line_under_it():
     branch = JS.split("if(state.journey && state.journey.current==='voice'){", 1)[1].split('cta.classList.remove("hidden");', 1)[0]
     assert "aria-describedby','voice-completion-status'" in branch
     assert 'else cta.appendChild(notice(state.reason' in branch
+
+
+def test_continue_floats_over_a_fading_thread_foot():
+    tpl = (Path(__file__).resolve().parents[1] / 'src/app/templates/_concierge.html').read_text(encoding='utf-8')
+    block = tpl.split('{% if concierge_onboarding_step or setup_strip %}', 1)[1].split('{% endif %}', 1)[0]
+    assert 'margin-top:calc(-1 * var(--bc-cta-h, 0px))' in block and 'background:transparent' in block and 'border-top:0' in block
+    assert 'rgb(var(--c-bg-slate-50)/0)' in block and 'pointer-events:none' in block
+    assert '#bc-messages { padding-bottom:calc(.75rem + var(--bc-cta-h, 0px)); }' in block
+    assert 'panel.style.setProperty("--bc-cta-h", cta.offsetHeight + "px");' in JS
