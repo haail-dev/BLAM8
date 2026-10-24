@@ -112,17 +112,17 @@
        surface in both themes. Its own row is 2.25rem — the title's line with
        6px either side, the menu button's 32px inside it (Kris 2026-09-20:
        "make it thinner, by removing the padding above the text"; the 44px
-       row it had spent 10px above and below a 24px line). The inset above
-       it is the phone's own and stays. */
+       row it had spent 10px above and below a 24px line). Above it sits the
+       shared --top-reserve: the phone's inset down to the camera cut-out. */
     #app-bar {
-      height: calc(2.25rem + env(safe-area-inset-top, 0px));
-      padding-top: env(safe-area-inset-top, 0px);
+      height: calc(2.25rem + var(--top-reserve));
+      padding-top: var(--top-reserve);
     }
     body::before {
       content: "";
       position: fixed;
       top: 0; left: 0; right: 0;
-      height: env(safe-area-inset-top, 0px);
+      height: var(--top-reserve);
       background: rgb(var(--c-bg-navy, 11 18 32));
       z-index: 60;
       pointer-events: none;
@@ -955,7 +955,7 @@
    * 2026-09-30: it covered "…payment is due on completion by card"). On a
    * page with a staged draft the pill rides under the header instead. */
   body:has([data-stage-draft]) .tour-return {
-    bottom: auto; top: calc(2.25rem + env(safe-area-inset-top, 0px) + .5rem); }
+    bottom: auto; top: calc(2.25rem + var(--top-reserve) + .5rem); }
   /* First walk of a page (src/app/static/tour.js, Kris 2026-09-13): the box in
    * question breathes a brand outline — the inbox's "needs you" breath, in
    * blue — and a bubble tied to it says what the box does. */
@@ -1015,7 +1015,7 @@
       t.setAttribute('role', 'alert');
       t.setAttribute('data-send-err-toast', '');
       t.textContent = 'Not sent \u2014 ' + why;
-      t.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.25rem);' +
+      t.style.cssText = 'position:fixed;left:50%;top:calc(var(--top-reserve) + 3.25rem);' +
         'transform:translateX(-50%);z-index:60;background:#be123c;color:#fff;font:600 14px/1.35 system-ui,sans-serif;' +
         'padding:10px 16px;border-radius:14px;box-shadow:0 6px 20px rgb(0 0 0 / .25);max-width:calc(100vw - 32px);transition:opacity .4s';
       document.body.appendChild(t);
@@ -1038,7 +1038,7 @@
       t.setAttribute('role', 'status');
       t.setAttribute('data-sent-toast', '');
       t.textContent = 'Sent \u2713';
-      t.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 3.25rem);' +
+      t.style.cssText = 'position:fixed;left:50%;top:calc(var(--top-reserve) + 3.25rem);' +
         'transform:translateX(-50%);z-index:60;background:#059669;color:#fff;font:600 14px/1 system-ui,sans-serif;' +
         'padding:10px 16px;border-radius:9999px;box-shadow:0 6px 20px rgb(0 0 0 / .25);transition:opacity .4s';
       document.body.appendChild(t);
@@ -1179,7 +1179,7 @@
      gets ONE clearance: the home-indicator inset or a small floor, not the
      inset stacked on the panel's own 1rem. */
   @media (max-width: 767px) {
-    #cz-head { padding-top: calc(0.625rem + env(safe-area-inset-top, 0px)); }
+    #cz-head { padding-top: calc(0.625rem + var(--top-reserve)); }
     #cz-modal #cz-root { padding-bottom: max(0.25rem, calc(env(safe-area-inset-bottom, 0px) - 1rem)); }
     /* The /app/concierge page: the fixed navy strip (body::after) already owns the home-indicator inset
        under the page, so the panel's own py-4 foot (1rem) was pure extra space under the links. */

@@ -96,8 +96,8 @@ def test_wizard_bar_spans_full_width_beside_the_chat_panel():
     assert 'data-signed-in-as' in bar and 'href="/logout"' in bar
     assert 'onboarding-email' in bar and 'flex-none text-sm' in bar
     assert ':root { --onboarding-bar:2.5rem; }' in html
-    assert 'height: calc(var(--onboarding-bar) + env(safe-area-inset-top, 0px));' in html
-    assert '3rem + env(safe-area-inset-top' not in html
+    assert 'height: calc(var(--onboarding-bar) + var(--top-reserve));' in html
+    assert 'env(safe-area-inset-top' not in html
     assert 'text-overflow:ellipsis' in html
     shared = _read('src/app/templates/_concierge.html')
     assert '[data-bc-full-width]' in shared and 'margin-right: calc(-1 * clamp(' in shared
