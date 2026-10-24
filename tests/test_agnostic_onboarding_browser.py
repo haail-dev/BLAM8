@@ -31,9 +31,10 @@ def render_group(theme, *, long=False):
     page = env.get_template('app/onboarding_group.html').render(request=request, asset_rev='offline',
         csrf_token=lambda r: 'offline', concierge_on=False, active='settings',
         device_sync_enabled=lambda: False, review_groups=groups,
+        onboarding_app_progress=setup_handoff.onboarding_progress,
         setup_strip_raw={'steps': groups, 'onboarded_at': '2026-10-23', 'dismissed_at': None},
         setup_strip_fn=setup_handoff.strip, **onboarding_routes.page_context(context, groups[0]))
-    for name in ('onboarding_group.css', 'setup_stepper.css'):
+    for name in ('onboarding_group.css', 'setup_stepper.css', 'guided_setup.css'):
         body = (ROOT / 'src/app/static' / name).read_text(encoding='utf-8')
         page = re.sub(r'<link rel="stylesheet" href="/static/' + re.escape(name) + r'[^\"]*">', lambda m: '<style>' + body + '</style>', page)
     body = (ROOT / 'src/app/static/setup_stepper.js').read_text(encoding='utf-8')
@@ -53,6 +54,8 @@ def test_group_disclosures_focus_long_labels_and_geometry(tmp_path, theme, width
     assertions = r'''
     const failures=[];const check=(ok,message)=>{if(!ok)failures.push(message)};
     check(document.documentElement.scrollWidth<=innerWidth+1,'horizontal overflow');
+    check(document.querySelectorAll('[data-step-name-toggle]').length===7,'seven onboarding steps');
+    check(!!document.querySelector('[data-onboarding-brand]')&&!document.querySelector('[data-setup-strip]'),'shared onboarding header');
     const group=document.querySelector('[data-onboarding-group]');
     check(group && group.querySelectorAll('[data-review-substep]').length===3,'three sections');
     const section=group.querySelector('[data-review-substep]');

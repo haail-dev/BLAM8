@@ -107,6 +107,10 @@
     parent.insertBefore(host,parent.querySelector('#bc-messages'));
   }
   function paint(){
+    if(state&&state.stop&&state.stop.substep&&state.progress){
+      document.dispatchEvent(new CustomEvent('onboarding:progress',{detail:{
+        current:state.stop.substep.split('.')[0],groups:state.progress}}));
+    }
     ensureHost();if(!host)return;host.replaceChildren();
     var hasGuide=!!(state&&state.guide), running=active();
     document.body.classList.toggle('guided-running',running);

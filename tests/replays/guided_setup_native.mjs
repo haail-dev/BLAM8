@@ -19,28 +19,42 @@ async function button(text){await until(`[...document.querySelectorAll('button')
 async function key(key,code,vk,modifiers=0){for(const type of ['keyDown','keyUp'])await cdp('Input.dispatchKeyEvent',{type,key,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk,modifiers,...(key==='Enter'&&type==='keyDown'?{text:'\r',unmodifiedText:'\r'}:{})});}
 async function type(selector,text){await until(`document.querySelector(${JSON.stringify(selector)})&&!document.querySelector(${JSON.stringify(selector)}).disabled`);await click(selector);await key('a','KeyA',65,2);await cdp('Input.insertText',{text});}
 async function shot(name){
+ const screenshot=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(output+'/'+name+'.png',Buffer.from(screenshot.data,'base64'));
  const geometry=await evaluate(`(()=>{
    const rect=s=>document.querySelector(s)?.getBoundingClientRect();
    const panel=rect('#bc-panel'),form=rect('#bc-form'),stream=rect('.guided-stream'),nav=rect('nav[aria-label="Primary"]');
    const messages=document.querySelector('#bc-messages'),tray=document.querySelector('.bc-setup-tray');
+   const header=rect('header[data-bc-full-width]'),progress=rect('[data-stepper-total]');
    return {fits:panel.top>=0&&panel.bottom<=innerHeight+1&&panel.left>=0&&panel.right<=innerWidth+1,
      separate:stream.bottom<=form.top+1&&form.bottom<=panel.bottom+1,
      navClear:!nav||nav.height===0||panel.bottom<=nav.top+1,
      singleScroll:getComputedStyle(messages).overflowY==='visible'&&getComputedStyle(tray).overflowY==='visible',
      title:document.querySelector('#bc-title').textContent,
+     shell:document.querySelectorAll('[data-onboarding-shell]').length===1&&document.querySelectorAll('main').length===1&&
+       document.querySelectorAll('[data-step-name-toggle]').length===7&&document.querySelectorAll('[aria-current="step"]').length===1&&
+       !document.querySelector('[data-setup-strip],main.app-sky')&&!!document.querySelector('[data-onboarding-card]')&&
+       document.querySelector('[data-onboarding-brand]').textContent==='BLAM8Automate'&&
+       !!document.querySelector('header[data-bc-full-width] img[src*="blam8-assistant-glass"]'),
+     noOverflow:document.documentElement.scrollWidth<=innerWidth+1,
+     chromeVisible:header.top>=-1&&progress.top>=header.bottom-1&&progress.bottom<innerHeight,
      greetingHidden:[...document.querySelectorAll('[data-bc-greeting]')].every(e=>!e.getClientRects().length)};
  })()`);
- assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden,JSON.stringify(geometry));
+ assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden&&geometry.shell&&geometry.noOverflow&&geometry.chromeVisible,JSON.stringify(geometry));
  assert(geometry.title.includes('Setup'));
- const r=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(output+'/'+name+'.png',Buffer.from(r.data,'base64'));}
+ const expectedStep=area==='records'?6:['charges','knowledge_conflict'].includes(area)?7:5;
+ assert((await evaluate('document.querySelector("[data-current-step]").getAttribute("aria-label")')).startsWith('Step '+expectedStep+':'));
+ }
 try{
  await cdp('Page.enable');await cdp('Emulation.setDeviceMetricsOverride',{width:+widthText,height:+heightText,deviceScaleFactor:1,mobile:false});
  await cdp('Page.bringToFront');await cdp('Emulation.setFocusEmulationEnabled',{enabled:true});
  if(area==='handoff'){
    await until('document.querySelector("[data-onb-continue]") && window.Blam8DeviceSync?.isReady() && window.Blam8OnboardingJourney?.read(0).ready');
+   const chrome=await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`);
    if(await evaluate('!document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-close');
    await click('[data-onb-continue]');
    await until('location.pathname==="/app/setup/guide" && document.querySelector("[data-guided-start]:not(:disabled)") && window.Blam8GuidedSetup && window.Blam8DeviceSync?.isReady()');
+   assert.deepEqual(await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`),chrome);
+   const intro=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(output+'/00-introduction.png',Buffer.from(intro.data,'base64'));
    await click('[data-guided-start]');
    await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
    await shot('00-diary-handoff');
@@ -214,4 +228,11 @@ try{
  fs.writeFileSync(output+'/native-measurements.json',JSON.stringify(measured,null,2));
  console.log('Trusted answer, projection, native submit guard, direct edit, Next/Back, pause/resume and exact Accept passed');
  }
+ // A new section on the same native page updates display state only.
+ const beforeProgress=await evaluate('location.href');
+ await evaluate(`document.dispatchEvent(new CustomEvent('onboarding:progress',{detail:{current:'charges',groups:[{key:'diary',done:true},{key:'records',done:false},{key:'charges',done:false}]}}))`);
+ assert(await evaluate(`document.querySelector('[data-current-step]').getAttribute('aria-label')==='Step 7: Charges and payments, current step' && document.querySelector('[data-tuning-step="diary"] .onboarding-step-toggle').getAttribute('aria-label').endsWith(', completed') && !document.querySelector('[data-tuning-step="records"] .onboarding-step-toggle').getAttribute('aria-label').includes('completed')`));
+ await click('[data-tuning-step="diary"] [data-step-name-toggle]');
+ assert(await evaluate(`document.querySelector('[data-tuning-step="diary"] [data-step-name-toggle]').getAttribute('aria-expanded')==='true' && document.querySelectorAll('[data-current-step]').length===1`));
+ assert.equal(await evaluate('location.href'),beforeProgress);
 }catch(e){try{await shot('failure');fs.writeFileSync(output+'/failure-geometry.json',JSON.stringify(await evaluate('({main:document.querySelector("main")?.getBoundingClientRect().toJSON(),panel:document.getElementById("bc-panel")?.getBoundingClientRect().toJSON(),height:innerHeight,width:innerWidth})'),null,2));}catch(_){}throw e;}finally{socket.close();}

@@ -32,6 +32,8 @@
        on half-width windows. The remaining body width is the page column and
        the wizard card can size naturally within it. */
     header[data-bc-full-width] { padding-left: .5rem; padding-right: .5rem; }
+    body[data-onboarding-shell] header[data-bc-full-width] { position:sticky;top:0;z-index:40; }
+    html:has(body[data-onboarding-shell]) { scroll-padding-top:7rem; }
     @media (min-width: 768px) {
       body[data-onboarding-shell] { --onboarding-gutter:10px; --onboarding-chat-width:22rem; }
       /* Override the shared dock's single body reserve, never add a second one. */
@@ -50,6 +52,7 @@
       }
     }
     [data-stepper-total] { position:relative; --label-start:0px; --label-end:0px; }
+    body[data-onboarding-shell] [data-stepper-total] { position:sticky;top:calc(3rem + env(safe-area-inset-top, 0px));z-index:30;background:rgb(var(--c-bg-slate-100));box-shadow:0 -12px 0 rgb(var(--c-bg-slate-100)); }
     .onboarding-stepper-row { display:grid;grid-template-columns:repeat(var(--stepper-count),minmax(0,1fr));height:2.8rem; }
     [data-stepper-inspecting] .onboarding-stepper-row { height:4.2rem; }
     .onboarding-stepper-item { min-width:0; }
@@ -100,11 +103,9 @@
   <main data-onboarding-main class="flex-1 flex items-start justify-center px-4 pt-2.5 pb-10">
     <div data-onboarding-column class="w-full max-w-2xl">
       {% set labels = {'interview':'About you','mailbox':'Customer inbox','voice':'Voice','knowledge':'Knowledge','data':'Live data'} %}
-      {# One flow of nine (Kris 2026-09-13): the wizard's four, then the five
-         tuning steps inside the app greyed as upcoming â€” the same nine the app
-         shell's strip counts, so "done" never appears after step four. #}
+      {# One seven-step flow: the four initial steps, then three setup groups. #}
       {% set tuning = tuning or [] %}
-      {% set total = step_count + (tuning | length) %}
+      {% set total = onboarding_progress|length if onboarding_progress else step_count + (tuning | length) %}
       {# Names disclose information only; the existing form owns progression. #}
       {% macro step_circle(number, label, current=false, completed=false, upcoming=false, key='') %}
       <div class="onboarding-stepper-item text-xs font-medium {% if current %}text-brand{% elif completed %}text-emerald-600{% else %}text-slate-400{% endif %}"{% if key %} data-tuning-step="{{ key }}"{% endif %}>
@@ -118,23 +119,29 @@
       {% endmacro %}
       <div class="mb-1.5" data-stepper-total="{{ total }}">
         <div class="onboarding-stepper-row" style="--stepper-count: {{ total }}">
+          {% if onboarding_progress %}
+          {% for item in onboarding_progress %}
+          {{ step_circle(loop.index, item.label, item.current, item.completed, not item.completed, item.key) }}
+          {% endfor %}
+          {% else %}
           {% for s in steps %}
           {{ step_circle(loop.index, labels[s], s == stepper, loop.index0 < step_index) }}
           {% endfor %}
           {% for t in tuning %}
           {{ step_circle(step_count + loop.index, t.label, upcoming=true, key=t.key) }}
           {% endfor %}
+          {% endif %}
         </div>
         <div class="onboarding-progress" aria-hidden="true"></div>
       </div>
 
       <!-- card -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
+      <div data-onboarding-card class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
         {% block card_header %}
         <h1 data-onboarding-heading class="text-xl font-bold text-navy">{% block heading %}{% endblock %}</h1>
         {% endblock %}
         <p data-onboarding-helper class="mt-1 text-sm text-slate-500"{% if pending_reviews %} hidden{% endif %}>{% block subheading %}{% endblock %}</p>
-        <div class="mt-3">{% block content %}{% endblock %}</div>
+        <div data-onboarding-content class="mt-3">{% block content %}{% endblock %}</div>
       </div>
 
       {# No wizard footer: the human-approval line lives on the Mailbox
@@ -195,6 +202,26 @@
         stepper.toggleAttribute('data-stepper-inspecting', expanded);
         layout();
       }
+      // Guide decisions can move between groups while staying on one native page.
+      document.addEventListener('onboarding:progress', function (event) {
+        var progress=event.detail;
+        buttons.forEach(function (button, index) {
+          var item=button.closest('[data-tuning-step]');
+          if(!item) return;
+          var key=item.dataset.tuningStep, group=progress.groups.find(function(g){return g.key===key;});
+          if(!group) return;
+          var current=key===progress.current, completed=group.done, label=document.getElementById(button.getAttribute('aria-controls'));
+          button.toggleAttribute('data-current-step',current);
+          if(current) button.setAttribute('aria-current','step'); else button.removeAttribute('aria-current');
+          label.toggleAttribute('data-inspected-label',!current);
+          button.setAttribute('aria-label','Step '+(index+1)+': '+label.textContent+(current?', current step':completed?', completed':', upcoming'));
+          item.className='onboarding-stepper-item text-xs font-medium '+(current?'text-brand':completed?'text-emerald-600':'text-slate-400');
+          var dot=button.querySelector('span');
+          dot.className='inline-flex h-6 w-6 flex-none items-center justify-center rounded-full text-[11px] font-semibold '+(current?'bg-brand text-white':completed?'bg-emerald-500 text-white':'border border-dashed border-slate-300 text-slate-400');
+          dot.textContent=completed?'\u2713':String(index+1);
+        });
+        disclose(null);
+      });
       buttons.forEach(function (button) {
         button.addEventListener('click', function () {
           disclose(button.getAttribute('aria-expanded') === 'true' ? null : button);
@@ -223,7 +250,9 @@
   })();
 </script>
 {% set concierge_authed = true %}
-{% set concierge_onboarding_step = step %}
+{% set concierge_in_app = onboarding_progress|default(none) is not none %}
+{% set concierge_onboarding_step = step if not concierge_in_app else '' %}
+{% block onboarding_app_support %}{% endblock %}
 <script id="onboarding-journey" type="application/json">{{ journey|default(none)|tojson }}</script>
 <script src="/static/onboarding_journey.js?v={{ asset_rev }}"></script>
 {% include "_concierge.html" %}

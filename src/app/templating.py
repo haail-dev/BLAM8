@@ -18,6 +18,8 @@ class _TimedTemplates(Jinja2Templates):
 templates = _TimedTemplates(directory=str(Path(__file__).parent / "templates"))
 from app.onboarding_contract import ROUTES as _onboarding_routes
 templates.env.globals['onboarding_routes'] = _onboarding_routes
+from app.setup_handoff import onboarding_progress as _onboarding_progress
+templates.env.globals['onboarding_app_progress'] = _onboarding_progress
 
 # `{{ some_date | pretty_date }}` → "11th Sep 26" (src/app/dates.py). Registered
 # here so every template shares the wording the agents write into their own
