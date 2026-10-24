@@ -11,6 +11,16 @@ from tests.test_agnostic_onboarding import cluster, database, journey  # noqa: F
 WEEK = {d: ['09:00', '16:00'] for d in ('mon', 'tue', 'wed', 'thu', 'fri')}
 
 
+@pytest.fixture
+def at_discovery(guide_journey):
+    """Records comes first; an owner not ready for it leaves each section for later."""
+    j = guide_journey
+    for _ in range(3):
+        j.guide_action('relevance', 'deferred')
+    assert j.state()['guide']['current'] == 'diary.discover.diaries'
+    return j
+
+
 def scripted(monkeypatch, *replies):
     """Synthetic structured model replies, in order; an Exception entry raises."""
     calls, queue = [], list(replies)
@@ -51,8 +61,8 @@ def diary_id(j, label):
     return next(d['id'] for d in j.state()['diaries'].values() if d['label'] == label)
 
 
-def test_the_24_october_sentence_is_understood_and_saved(guide_journey, monkeypatch):
-    j = guide_journey
+def test_the_24_october_sentence_is_understood_and_saved(at_discovery, monkeypatch):
+    j = at_discovery
     j.diary('choose', labels=['Repair visits'])
     repairs = diary_id(j, 'Repair visits')
     assert stop(j)['stop']['id'] == f'diary.ask.{repairs}.example'
@@ -77,8 +87,8 @@ def test_the_24_october_sentence_is_understood_and_saved(guide_journey, monkeypa
     assert 'setup_changes' not in json.dumps(calls[0]['output_config'])
 
 
-def test_several_answers_for_two_diaries_save_in_one_revision(guide_journey, monkeypatch):
-    j = guide_journey
+def test_several_answers_for_two_diaries_save_in_one_revision(at_discovery, monkeypatch):
+    j = at_discovery
     j.diary('choose', labels=['Repair visits', 'Follow-ups'])
     repairs, follow = diary_id(j, 'Repair visits'), diary_id(j, 'Follow-ups')
     scripted(monkeypatch, dict(reply='', new_diaries=[], answers=[
@@ -96,8 +106,8 @@ def test_several_answers_for_two_diaries_save_in_one_revision(guide_journey, mon
     assert key('diary.capacity', 'diary', repairs) not in state['answers']
 
 
-def test_free_text_on_the_diaries_question_names_diaries_only_from_owner_words(guide_journey, monkeypatch):
-    j = guide_journey
+def test_free_text_on_the_diaries_question_names_diaries_only_from_owner_words(at_discovery, monkeypatch):
+    j = at_discovery
     scripted(monkeypatch, dict(reply='Anything else?', new_diaries=[
         dict(label='Repair visits', example='Leaking tap'), dict(label='Compliance calendar', example=None)],
         answers=[answer('diary.starter', 'Repair visits', 'we_arrange')]))
@@ -116,8 +126,8 @@ def test_free_text_on_the_diaries_question_names_diaries_only_from_owner_words(g
     assert len(j.state()['diaries']) == 2 and j.state()['guide']['current'].startswith('diary.ask.')
 
 
-def test_controls_follow_the_skip_rules_and_reach_the_profile(guide_journey):
-    j = guide_journey
+def test_controls_follow_the_skip_rules_and_reach_the_profile(at_discovery):
+    j = at_discovery
     j.diary('choose', labels=['Renewals'])
     renewals = diary_id(j, 'Renewals')
     j.diary('answer', state='answered', value='Gas safety, 4 Elm Road')
@@ -136,8 +146,8 @@ def test_controls_follow_the_skip_rules_and_reach_the_profile(guide_journey):
     assert d['discovery']['profile']['hours'].startswith('Hours: Monday to Friday, 09:00 to 16:00.')
 
 
-def test_confirming_an_unbookable_profile_skips_booking_settings(guide_journey):
-    j = guide_journey
+def test_confirming_an_unbookable_profile_skips_booking_settings(at_discovery):
+    j = at_discovery
     j.diary('choose', labels=['Repair visits'])
     for value in ('Leaking tap', 'we_arrange', ['people'], 1, 'window', {'amount': 2, 'unit': 'hours'}, 'no', 'someone_else', 'The resident'):
         j.diary('answer', state='answered', value=value)
@@ -158,9 +168,9 @@ def test_confirming_an_unbookable_profile_skips_booking_settings(guide_journey):
 @pytest.mark.parametrize('starter,occupies,shape,expect_notice,expect_hours,expect_mode', [
     ('customers', ['places'], 'days', True, True, True),
     ('we_arrange', ['people'], 'window', False, True, False)])
-def test_a_ready_profile_opens_only_the_settings_it_needs(guide_journey, starter, occupies, shape, expect_notice,
+def test_a_ready_profile_opens_only_the_settings_it_needs(at_discovery, starter, occupies, shape, expect_notice,
                                                           expect_hours, expect_mode):
-    j = guide_journey
+    j = at_discovery
     j.diary('choose', labels=['Work'])
     for value in ('One job', starter, occupies, 2, shape, {'amount': 1, 'unit': 'days'}, 'no', 'no'):
         j.diary('answer', state='answered', value=value)
@@ -176,8 +186,8 @@ def test_a_ready_profile_opens_only_the_settings_it_needs(guide_journey, starter
     assert state['guide']['current'] != 'diary.profile'
 
 
-def test_adding_more_returns_to_the_list_and_confirm_belongs_to_the_summary(guide_journey):
-    j = guide_journey
+def test_adding_more_returns_to_the_list_and_confirm_belongs_to_the_summary(at_discovery):
+    j = at_discovery
     j.guide_action('next', expected=400)  # the list must be chosen first
     j.diary('choose', labels=['Visits'])
     visits = diary_id(j, 'Visits')
@@ -190,8 +200,8 @@ def test_adding_more_returns_to_the_list_and_confirm_belongs_to_the_summary(guid
     j.diary('choose', state='not_applicable', expected=400)
 
 
-def test_model_failure_keeps_state_and_offers_the_controls(guide_journey, monkeypatch):
-    j = guide_journey
+def test_model_failure_keeps_state_and_offers_the_controls(at_discovery, monkeypatch):
+    j = at_discovery
     j.diary('choose', labels=['Visits'])
     scripted(monkeypatch, RuntimeError('offline'))
     before = j.state()
@@ -200,16 +210,16 @@ def test_model_failure_keeps_state_and_offers_the_controls(guide_journey, monkey
     assert j.state() == before
 
 
-def test_a_stale_revision_is_refused(guide_journey):
-    j = guide_journey
+def test_a_stale_revision_is_refused(at_discovery):
+    j = at_discovery
     current = j.state()
     r = j.http.post('/app/setup/guide/diary', json=dict(revision=current['revision'] + 5, stop='diary.discover.diaries',
                                                         operation='choose', labels=['Visits']))
     assert r.status_code == 409 and j.state() == current
 
 
-def test_removing_a_diary_updates_the_list_and_stops_its_answers_blocking(guide_journey):
-    j = guide_journey
+def test_removing_a_diary_updates_the_list_and_stops_its_answers_blocking(at_discovery):
+    j = at_discovery
     j.diary('choose', labels=['Visits', 'Stock takes'])
     stock = diary_id(j, 'Stock takes')
     visits = diary_id(j, 'Visits')
@@ -222,8 +232,8 @@ def test_removing_a_diary_updates_the_list_and_stops_its_answers_blocking(guide_
     assert state['guide']['current'] == f'diary.ask.{stock}.example'
 
 
-def test_suggestions_keep_only_cited_trusted_facts(guide_journey, monkeypatch):
-    j = guide_journey
+def test_suggestions_keep_only_cited_trusted_facts(at_discovery, monkeypatch):
+    j = at_discovery
     assert stop(j)['discovery']['suggestions'] == []  # nothing saved yet, so no fallback suggestion
     scripted(monkeypatch, dict(suggestions=[
         dict(label='Bookings', reason='You have diary booking.', signal_ids=['module:scheduling'], date_source=None, service=None),
@@ -240,8 +250,8 @@ def test_suggestions_keep_only_cited_trusted_facts(guide_journey, monkeypatch):
     assert created['label_provenance'] == 'owner_selected_suggestion' and created['suggestion']['signal_ids'] == ['module:scheduling']
 
 
-def test_unreadable_hours_keep_the_owners_words_as_a_proposal(guide_journey, monkeypatch):
-    j = guide_journey
+def test_unreadable_hours_keep_the_owners_words_as_a_proposal(at_discovery, monkeypatch):
+    j = at_discovery
     j.diary('choose', labels=['Visits'])
     scripted(monkeypatch, dict(reply='', new_diaries=[], answers=[
         answer('diary.hours', None, {'working': {'fri': ['22:00', '02:00']}})]))
