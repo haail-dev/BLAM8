@@ -208,6 +208,20 @@ def shared_passages(a, b):
     return [right[k] for k in right if k in left]
 
 
+def comparison_sources(target, comparisons):
+    """Rank actual quoted support first; retain other audit sources without claiming support."""
+    quotes = [' '.join(p['right'].split()).casefold() for p in comparisons]
+    direct, other = [], []
+    for proof in target.get('provenance', []):
+        source = proof.get('source')
+        if not source:
+            continue
+        excerpt = ' '.join((proof.get('excerpt') or '').split()).casefold()
+        supported = excerpt and any(q in excerpt for q in quotes)
+        (direct if supported else other).append(source)
+    return list(dict.fromkeys(direct + other))
+
+
 def candidates(entry, context, own_review=None, entries=None, *, include_merge_targets=False):
     targets = [{"id": "brief", "label": "Business brief", "content": context.get("brief", ""),
                 "kind": "brief", "provenance": [{"source": "Saved business brief"}]}]
@@ -238,7 +252,7 @@ def candidates(entry, context, own_review=None, entries=None, *, include_merge_t
                       "overlap": sorted(set(re.findall(r"\w+", a.lower())) & set(re.findall(r"\w+", b.lower())))[:24],
                       "excerpt": b[:1200], 'exact_passages': passages, 'comparisons': comparisons,
                       'comparison_title': 'Check a possible fact difference' if difference else 'Repeated text',
-                      'source_labels': list(dict.fromkeys(p.get('source', '') for p in target.get('provenance', []) if p.get('source'))),
+                      'source_labels': comparison_sources(target, comparisons),
                       "reason": "Similar statements contain different numbers or conditions. Check whether their scope differs or one needs correcting." if difference else
                           "The quoted wording appears in both places. Keep both if each note needs it, or edit or merge the repeated text."})
     return found

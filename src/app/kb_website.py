@@ -27,7 +27,7 @@ import httpx
 
 from app import agent, knowledge as kb, knowledge_capture, knowledge_collection, llm, usage
 from app.config import settings
-from app.knowledge_note_structure import SUBJECT_NOTES
+from app.knowledge_note_structure import SUBJECT_NOTES, partition_subjects
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ DISTILL_SCHEMA = {
                     "label": {"type": "string"},
                     "content": {"type": "string"},
                     "topics": {"type":"array", "items":{"type":"string","enum":["prices","rules","process","cadence","payment","safety","coverage","hours"]}},
-                    "sources": {"type":"array","items":{"type":"object","properties":{"url":{"type":"string"},"excerpt":{"type":"string"},"claim":{"type":"string"}},"required":["url","excerpt","claim"],"additionalProperties":False}},
+                    "sources": {"type":"array","items":{"type":"object","properties":{"url":{"type":"string"},"excerpt":{"type":"string"},"claim":{"type":"string"},"subject":{"type":"string"}},"required":["url","excerpt","claim","subject"],"additionalProperties":False}},
                 },
                 "required": ["label", "content", "topics", "sources"],
                 "additionalProperties": False,
@@ -110,6 +110,13 @@ SYSTEM += ("\nFor every note, identify relevant topic keys and cite page URLs wi
            "Ask only about details not already stated in the supplied pages. A source saying a rule varies "
            "by agreement is an answer about scope, not a reason to ask for one universal value.")
 SYSTEM += "\n" + SUBJECT_NOTES
+SYSTEM += (" For each source citation, supply subject: a short specific title answering the single "
+           "question addressed by its claim. Assign subjects per complete claim, not per page or "
+           "overview paragraph. Reuse the same subject for clauses of one price schedule or procedure. "
+           "Claims must partition the entire note content exactly into complete sentences or complete "
+           "paragraphs, including punctuation. Keep dependent conditions and exceptions in the same "
+           "claim and subject. Do not give all clauses an umbrella label such as Business Overview. "
+           "The application will separate fully covered claims into their assigned subject notes.")
 SYSTEM += (" Cite only the complete source statements relevant to that note's subject, not an entire "
            "multi-subject paragraph when separate complete statements support it. Preserve all "
            "material conditions in those statements. Check that every distinct source fact appears "
@@ -358,6 +365,10 @@ async def distill(tenant_id: str, site: str, pages: list[dict], *,
         return incomplete('The website draft response could not be verified. No drafts were staged; this does not mean the source has no facts.')
     if not isinstance(entries,list) or len(entries)>MAX_ENTRIES:
         return incomplete('The website draft response exceeds one review batch. No notes were silently dropped; try a smaller source section.')
+    entries = [part for entry in entries if isinstance(entry, dict)
+               for part in partition_subjects(entry)]
+    if len(entries) > MAX_ENTRIES:
+        return incomplete('The subject notes exceed one review batch. No facts were dropped; try a smaller source section.')
     result = DistilledEntries([
         {"label": (e.get("label") or "").strip() or "Website note",
          "content": e["content"].strip(), "topics": e.get("topics", []),

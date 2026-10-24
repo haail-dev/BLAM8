@@ -61,7 +61,8 @@
         <div><p class="font-medium">{{ m.label }} · {{ 'Saved brief' if m.kind == 'brief' else ('Saved note' if m.kind == 'saved' else 'Draft note') }}</p><blockquote class="mt-1 whitespace-pre-wrap break-words">“{{ pair.right }}”</blockquote></div>
       </div>
       {% endfor %}
-      {% for source in m.source_labels %}<p class="mt-2 break-words">Source: {{ source }}</p>{% endfor %}
+      {% for source in m.source_labels[:2] %}<p class="mt-2 break-words">Source: {{ source }}</p>{% endfor %}
+      {% if m.source_labels|length > 2 %}<details class="mt-2"><summary class="cursor-pointer text-brand">All {{ m.source_labels|length }} sources</summary>{% for source in m.source_labels[2:] %}<p class="mt-2 break-words">Source: {{ source }}</p>{% endfor %}</details>{% endif %}
       <label class="mt-2 block"><input type="checkbox" name="match_{{ m.key }}" value="keep_both"{% if review.form.get("match_"+m.key)=="keep_both" %} checked{% endif %}> I reviewed this match: keep both intentionally.</label>
     </div>
     {% endfor %}

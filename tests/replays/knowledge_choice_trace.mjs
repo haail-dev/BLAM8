@@ -91,8 +91,11 @@ assert(!buttons(editing).find(b=>b.getAttribute('data-knowledge-guide-choice')==
 assert.equal(c.log.find(m=>m.knowledge_card?.state==='editing').knowledge_card.selected,'edit');
 // Restore the actual bounded transcript metadata with no executable stale actions.
 c.log=JSON.parse(saved);current=null;c.renderAll();
-chosen(cards()[0],'keep');chosen(cards()[1],'keep_both');assert(buttons(cards().at(-1)).every(b=>b.disabled));
-const before=calls.length;buttons(cards()[0])[0].click();assert.equal(calls.length,before);
+assert.equal(cards().length,0); // stale controls are not restored into history
+assert.equal(msgs.querySelectorAll('[data-knowledge-history]').length,1);
+assert(c.log.some(m=>m.knowledge_card?.selected==='keep'));
+assert(c.log.some(m=>m.knowledge_card?.selected==='keep_both'));
+const before=calls.length;card.children[0]?.click();assert.equal(calls.length,before);
 assert(!saved.includes('Owner text'));assert.equal(c.sending,false);
 console.log('Knowledge card trace: click, typed/transcript, all choices, failures, identity, edit and restored history verified.');
 
@@ -112,7 +115,9 @@ assert(msgs.children.some(el=>el.tagName==='DETAILS'&&el.children.some(child=>ch
 // Another pending batch must retain its review controls; a saved ID is not blanket approval.
 savedMarker.setAttribute('data-knowledge-saved-reviews',JSON.stringify(['another-batch']));
 c.document.querySelector=selector=>selector==='[data-knowledge-saved-reviews]'?savedMarker:null;
-c.renderAll();assert(cards().length>0);
+current=data('note','restored-live');c.log.push({role:'assistant',content:current.reply,knowledge_card:{batch_id:current.batch_id,version:current.version,focus_hash:current.focus_hash,focus:current.focus,actions:current.guide_actions}});
+c.renderAll();assert.equal(cards().length,1);assert(buttons(cards()[0]).every(b=>!b.disabled));
+assert.equal(msgs.querySelectorAll('[data-knowledge-history]').length,1);
 
 // Main-form reviews replace a single current card without inventing chat turns.
 vm.runInContext(between('window.blam8KnowledgeReviewChanged = function','window.blam8KnowledgeGuideStart ='),c);
@@ -124,3 +129,10 @@ current=data('note','form-next');c.window.blam8KnowledgeReviewChanged(current);
 assert.equal(msgs.querySelectorAll('[data-knowledge-current-status]').length,2); // prose and controls only
 assert.equal(c.log.length,oldLogLength);
 assert(buttons(cards().at(-1)).every(b=>!b.disabled));
+
+// Closing/reopening reconstructs the same ephemeral current card, not an empty panel.
+c.renderAll();
+assert.equal(msgs.querySelectorAll('[data-knowledge-current-status]').length,2);
+assert.equal(cards().length,1);
+assert(buttons(cards()[0]).every(b=>!b.disabled));
+assert.equal(c.log.length,oldLogLength);
