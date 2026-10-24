@@ -2,11 +2,14 @@
 
 PostgreSQL serializes claims; no lock depends on the web process. Events are
 only refresh hints. Clients read durable state on reconnect and periodically.
-An interrupted operation stays unresolved rather than risking a second write.
+An interrupted operation stays unresolved rather than risking a second write,
+for a bounded window; a handler that fails in this process records its error.
 """
 
 import hashlib
 import json
+import logging
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid5, NAMESPACE_URL
 from urllib.parse import urlsplit
 
@@ -14,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.concurrency import run_in_threadpool
 from fastapi.routing import APIRoute
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from app import db, events
@@ -27,9 +31,26 @@ from app.auth import (
 from app.config import settings
 from app.security import require_csrf, require_csrf_header, rate_limit
 
+log = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/device-sync", dependencies=[Depends(rate_limit("device_sync", 240, 60))]
 )
+
+# How long an unconfirmed claim (its process stopped before recording an
+# outcome) blocks the channel. Longer than any synced handler runs; streaming
+# handlers are excluded by the client.
+ABANDONED_AFTER = timedelta(minutes=15)
+INTERRUPTED = {
+    "status": 409,
+    "headers": {"content-type": "application/json"},
+    "body": json.dumps(
+        {
+            "detail": "This action stopped before its result was saved. "
+            "Check the page, then try again if it is still needed."
+        }
+    ),
+}
 
 
 def identity(ctx):
@@ -55,10 +76,43 @@ def read(ctx, channel):
     return rows[0] if rows else {"revision": 0, "payload": {}}
 
 
-def rpc(name, args):
+def release_abandoned(ctx, channel):
+    """Give a long-unconfirmed claim a terminal receipt so it stops blocking.
+
+    The operation itself is never run again: replaying its id returns the
+    INTERRUPTED receipt. The revision is unchanged, because nothing was written.
+    """
+    cutoff = (datetime.now(timezone.utc) - ABANDONED_AFTER).isoformat()
+    try:
+        rows = (
+            db.db()
+            .table("device_sync_operations")
+            .update({"response": INTERRUPTED})
+            .eq("tenant_id", ctx.tenant_id)
+            .eq("user_id", ctx.user_id)
+            .eq("channel", channel)
+            .is_("response", "null")
+            .lt("started_at", cutoff)
+            .execute()
+            .data
+        )
+    except Exception:
+        log.warning("device sync: could not release abandoned claims", exc_info=True)
+        return False
+    for row in rows or []:
+        log.warning(
+            "device sync: released unconfirmed operation %s (tenant %s, channel %s, started %s)",
+            row.get("id"), ctx.tenant_id, channel, row.get("started_at"),
+        )
+    return bool(rows)
+
+
+def rpc(name, args, recover=None):
     try:
         return db.db().rpc(name, args).execute().data
     except Exception as exc:
+        if recover and "SYNC_RUNNING" in str(exc) and recover():
+            return rpc(name, args)
         if any(
             code in str(exc) for code in ("SYNC_STALE", "SYNC_RUNNING", "SYNC_REUSED")
         ):
@@ -81,6 +135,7 @@ def claim(ctx, channel, operation, revision, fingerprint):
             "p_revision": revision,
             "p_fingerprint": fingerprint,
         },
+        recover=lambda: release_abandoned(ctx, channel),
     )
 
 
@@ -408,8 +463,16 @@ class SyncRoute(APIRoute):
                     media_type="application/json",
                 )
             except Exception:
-                # Do not release a request whose side effects are unknown.
-                raise
+                # The handler failed here, so its outcome is known: an error.
+                # Record it as the receipt like any other error response. A
+                # replay of this operation returns it instead of running the
+                # handler again, and the channel is not left claimed, which
+                # would refuse every later edit on every device.
+                log.exception(
+                    "device sync: handler failed for %s %s (operation %s)",
+                    request.method, request.url.path, operation,
+                )
+                result = PlainTextResponse("Internal Server Error", status_code=500)
             patch = {}
             if result.status_code < 400:
                 if (
