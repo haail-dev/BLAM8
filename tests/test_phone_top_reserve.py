@@ -11,7 +11,7 @@ def _read(rel):
 def test_reserve_trims_the_inset_to_the_camera_cut_out_but_never_below_a_plain_status_bar():
     css = _read("src/app/static/src/tw-input.css")
     assert ("--top-reserve: max(min(env(safe-area-inset-top, 0px), 20px), "
-            "calc(env(safe-area-inset-top, 0px) - 11px));") in css
+            "calc(env(safe-area-inset-top, 0px) - 15px));") in css
 
 
 def test_navy_strips_and_header_bars_use_the_reserve():
