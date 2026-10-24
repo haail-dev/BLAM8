@@ -26,8 +26,10 @@ ASSIGNMENT = _object({
     "field": {"type": "string"},
     "value": {"anyOf": [{"type": "string"}, {"type": "number"}, {"type": "boolean"},
                         {"type": "null"}, {"type": "array", "items": {"type": "string"}}]},
-    "source": {"type": "string", "enum": ["owner_said", "owner_site", "assumed"]},
+    "source": {"type": "string", "enum": ["owner_said", "owner_site", "inferred", "assumed"]},
     "reference": {"type": "string"},
+    # Signal ids from the setup context an inferred value rests on; [] otherwise.
+    "evidence": {"type": "array", "items": {"type": "string"}},
 })
 CHANGE = _object({
     "op": {"type": "string", "enum": ["append", "set", "remove"]},
@@ -235,13 +237,17 @@ def unpack(raw):
             else:
                 fields, sources = {}, {}
                 for assignment in item["fields"]:
-                    if not isinstance(assignment, dict) or set(assignment) != {"field", "value", "source", "reference"}:
+                    if not isinstance(assignment, dict) or set(assignment) not in (
+                            {"field", "value", "source", "reference"}, {"field", "value", "source", "reference", "evidence"}):
                         raise setup_cards.Invalid("Every value needs a named field and source.")
                     field = assignment["field"]
                     if not isinstance(field, str) or field in fields:
                         raise setup_cards.Invalid("A field appears more than once.")
                     fields[field] = assignment["value"]
                     sources[field] = {"kind": assignment["source"], "reference": assignment["reference"]}
+                    # Only an inferred value keeps its evidence; other kinds store as before.
+                    if assignment["source"] == "inferred":
+                        sources[field]["evidence"] = assignment.get("evidence") or []
                 patch.update(fields=fields, sources=sources)
                 if item["held"] is not None:
                     patch["held"] = item["held"]

@@ -34,6 +34,32 @@ def _text(value, limit=200):
     return value.strip()
 
 
+SOURCE_KINDS = {"owner_said", "owner_site", "inferred", "assumed"}
+
+
+def _source(source):
+    """Validate one field source.
+
+    Every source has a kind and a reference. An inferred source also carries
+    the signal ids it rests on (``evidence``, up to three) and may be marked
+    ``check`` when it is stricter than the usual setting for a customer-facing
+    choice, so the owner accepts it on its own.
+    """
+    if not isinstance(source, dict) or not {"kind", "reference"} <= set(source) <= {"kind", "reference", "evidence", "check"}:
+        raise Invalid("A source needs kind and reference.")
+    if not isinstance(source["kind"], str) or source["kind"] not in SOURCE_KINDS:
+        raise Invalid("Unknown value source.")
+    _text(source["reference"], 2000)
+    if source["kind"] != "inferred" and set(source) != {"kind", "reference"}:
+        raise Invalid("Only an inferred value carries evidence.")
+    evidence = source.get("evidence", [])
+    if not isinstance(evidence, list) or len(evidence) > 3 or any(
+            not isinstance(e, str) or not e or len(e) > 80 for e in evidence):
+        raise Invalid("Inferred evidence is up to three signal ids.")
+    if "check" in source and source["check"] is not True:
+        raise Invalid("Check is only ever true.")
+
+
 def _base(page, current, revision, turn):
     if page not in PAGES:
         raise Invalid("This page does not support named setup cards yet.")
@@ -103,11 +129,7 @@ def change(page, current, revision, turn, changes, considered=None):
         if line["name"] == "setting" and line["fields"].get("key") and fields.get("key", line["fields"]["key"]) != line["fields"]["key"]:
             raise Invalid("A setting line keeps its original key. Add a different setting as another line.")
         for source in sources.values():
-            if not isinstance(source, dict) or set(source) != {"kind", "reference"}:
-                raise Invalid("A source needs kind and reference.")
-            if not isinstance(source["kind"], str) or source["kind"] not in {"owner_said", "owner_site", "assumed"}:
-                raise Invalid("Unknown value source.")
-            _text(source["reference"], 2000)
+            _source(source)
         if "held" in patch:
             if type(patch["held"]) is not bool:
                 raise Invalid("Held must be true or false.")

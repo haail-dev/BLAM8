@@ -384,3 +384,16 @@ def test_help_mentions_a_rewrite_only_for_a_page_that_saved(route_client):
     reply = ask_on(c, "/app/diary/settings").json()
     assert reply["setup_cards"] == [] and len(reply["card_errors"]) == 2
     assert "proposed as new settings" not in reply["reply"] and "sorted into" not in reply["reply"]
+
+
+def test_unpack_keeps_evidence_only_for_inferred_values():
+    fields = [assignment("name", "Review"), assignment("minutes", 45),
+              {"field": "timing", "value": "time", "source": "inferred", "reference": "Usual setting", "evidence": []},
+              ]
+    fields[0] = dict(fields[0], evidence=[])
+    entry = model.unpack(delta(fields=fields))[0]
+    sources = entry["changes"][0]["sources"]
+    assert sources["name"] == {"kind": "owner_said", "reference": "Owner's latest answer"}
+    assert sources["timing"] == {"kind": "inferred", "reference": "Usual setting", "evidence": []}
+    schema_source = model.ASSIGNMENT["properties"]["source"]["enum"]
+    assert "inferred" in schema_source and "evidence" in model.ASSIGNMENT["required"]
