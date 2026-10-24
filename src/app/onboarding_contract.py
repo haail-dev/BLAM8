@@ -48,7 +48,7 @@ PAGE_SUBSTEPS = {'diary_settings': 'diary.time', 'booking_details': 'diary.condi
 CAPABILITIES = {
     'time_occupancy': 'Do you need help arranging times?',
     'information_collection': 'Do you need answers or documents before agreeing to work?',
-    'related_records': 'Do you track named subjects separately?',
+    'related_records': 'Do you need separate records for people, places or items linked to a customer?',
     'record_information': 'Do you need to record details or evidence?',
     'lifecycle': 'Do you use stages or follow-up?',
     'charging': 'Do you issue quotes or charge for work?',
@@ -88,7 +88,7 @@ QUESTIONS = {
     'activity.authority': _question('activity.authority', 'diary.activities', 'Who should arrange and confirm times?', kind='choice',
         choices=['owner_arranges', 'review_booking_settings'], scopes=('organisation', 'activity'),
         why='Owner arrangement is a factual preference. Booking authority still depends on the saved booking rules.'),
-    'records.relationships': _question('records.relationships', 'records.relationships', 'Are separate named subjects needed for a contact?', kind='boolean',
+    'records.relationships': _question('records.relationships', 'records.relationships', 'Do you need to keep separate details for each person, place or item linked to a customer?', kind='boolean',
         why='Only the existing contact-to-subject relationship is supported. Other roles remain separate unresolved needs.'),
     'requirements.policy': _question('requirements.policy', 'diary.conditions', 'What must be known or checked before proceeding?', scopes=('organisation', 'activity', 'record_group', 'record')),
     'terms.agreement_notice': _question('terms.agreement_notice', 'charges.terms', 'What notice applies to ending an agreement?',

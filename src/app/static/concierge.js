@@ -448,6 +448,13 @@
   }
 
   function renderAll() {
+    function displayContent(m) {
+      var content = m.content;
+      if (m.role === 'user' && typeof content === 'string' && content.startsWith('Your choice: ')) {
+        content = content.replace(/ \((?:review choice; not final Save|still pending; not discarded|editor opened; no change saved|correction preview; not applied or saved)\)\.$/, '.');
+      }
+      return content;
+    }
     var savedStatus = document.querySelector('[data-knowledge-saved-status]');
     var receiptText = savedStatus ? savedStatus.textContent.trim() : '';
     if (currentKnowledgeFormCard && currentKnowledgeFormCard.focus_hash &&
@@ -470,8 +477,8 @@
       }
     }
     log.forEach(function (m, index) {
-      if (ONB_STEP === 'knowledge' && index !== currentIndex) {
-        if (!knowledgeHistory) {
+      if (ONB_STEP === 'knowledge' && index !== currentIndex || ONB_STEP !== 'knowledge' && m.knowledge_card) {
+        if (ONB_STEP === 'knowledge' && !knowledgeHistory) {
           knowledgeHistory = document.createElement('details');
           knowledgeHistory.setAttribute('data-knowledge-history', '');
           knowledgeHistory.className = 'rounded-lg border border-slate-200 p-3 text-xs text-slate-500';
@@ -479,13 +486,18 @@
           heading.textContent = receiptText ? 'Earlier conversation · review completed' : 'Earlier conversation';
           knowledgeHistory.appendChild(heading); msgs.appendChild(knowledgeHistory);
         }
+        // Outside Knowledge, keep each question and its recorded choice in
+        // the setup history too. Never restore review controls on another page.
+        var historyTarget = ONB_STEP === 'knowledge' ? knowledgeHistory : msgs;
         // History is reference text, never a second set of actionable controls.
         var card = m.knowledge_card;
         // Refreshes are presentation, not another exchange. Older transcripts
         // may contain consecutive copies of the same prompt; render it once.
         var promptKey = card && JSON.stringify([card.batch_id, card.version, card.focus_hash, m.content]);
         if (!promptKey || promptKey !== lastHistoryPrompt) {
-          knowledgeHistory.appendChild(bubbleEl(m.role, m.content));
+          // Older form receipts stored state explanations in their text. Keep
+          // the transcript intact, but show only the owner's decision here.
+          historyTarget.appendChild(bubbleEl(m.role, displayContent(m), m.guide_stop || ''));
           lastHistoryDecision = null;
         }
         lastHistoryPrompt = promptKey;
@@ -496,10 +508,7 @@
           var label = card.selected === 'edit' ? 'Edit note' : choice && choice.label;
           var decisionKey = promptKey + ':' + card.selected + ':' + card.state;
           if (label && decisionKey !== lastHistoryDecision) {
-            var qualifier = card.state === 'editing' ? 'editor opened; no change saved'
-              : card.state === 'preview' ? 'correction preview; not applied or saved'
-              : 'review choice; not final Save';
-            knowledgeHistory.appendChild(bubbleEl('user', 'Your choice: ' + label + ' (' + qualifier + ').'));
+            historyTarget.appendChild(bubbleEl('user', 'Your choice: ' + label + '.', m.guide_stop || ''));
             lastHistoryDecision = decisionKey;
           }
         }
@@ -514,8 +523,9 @@
         history.appendChild(summary); history.appendChild(bubbleEl(m.role, m.content));
         msgs.appendChild(history); return;
       }
+      var firstNode = msgs.childElementCount;
       if (m.role === "assistant") appendTrailStrip(m.trail);
-      var el = bubbleEl(m.role, m.content, m.guide_stop || '');
+      var el = bubbleEl(m.role, displayContent(m), m.guide_stop || '');
       msgs.appendChild(el);
       if (m.role === "assistant") lastAssistant = el;
       if (m.role === "assistant" && m.knowledge_card) {
@@ -529,6 +539,12 @@
               && l.href !== window.location.pathname) appendNavLink(l);
         });
       }
+      // Source strips and navigation links belong to the same exchange.
+      // Collapse them with their message when the guide moves to another step.
+      Array.from(msgs.querySelectorAll(':scope > *')).slice(firstNode).forEach(function (node) {
+        node.dataset.bcRole = m.role;
+        node.dataset.guideStop = m.guide_stop || '';
+      });
     });
     if (!receiptText && currentKnowledgeFormCard && currentKnowledgeFormCard.focus_hash) {
       lastAssistant = bubbleEl('assistant', currentKnowledgeFormCard.reply);
@@ -2940,7 +2956,7 @@
     // refreshes must not invent decisions. The guide has checkpointed the form.
     if (ownerChoice && !data.recovered_after_error && data.batch_id === ownerChoice.batch_id) {
       log.push({role:'user',content:'Your choice: ' + ownerChoice.label + ' — ' +
-        (ownerChoice.action === 'later' ? 'Leave for later (still pending; not discarded).' : 'Reviewed to keep (review choice; not final Save).')});
+        (ownerChoice.action === 'later' ? 'Leave for later.' : 'Reviewed to keep.')});
       saveLog(log);
     }
     // Current guidance itself is presentation, not a transcript turn.

@@ -1,6 +1,6 @@
 {% extends "app/base.html" %}
-{% block title %}Dependants · BLAM8{% endblock %}
-{% block heading %}Dependants{% endblock %}
+{% block title %}Related records · BLAM8{% endblock %}
+{% block heading %}Related records{% endblock %}
 {% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
 {% block content %}
 {# Dependants (docs/modules/module-requirement-groups.md; Kris 2026-09-04: "each Contact
@@ -13,13 +13,16 @@
 <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-4">
 
   <div class="glass-card p-4 sm:p-5">
-    <p class="font-semibold text-navy">What a booking is about</p>
-    <p class="text-sm text-slate-500 mt-1.5">If a booking is about something that belongs to the customer — a person, item or other named subject — name the kind here and say what you need to know about each one. The agent collects the configured details, remembers each one on the customer's record by name, and books a visit as being about <em>them</em> rather than squeezing two into one line.</p>
+    <p class="font-semibold text-navy">Records linked to a customer</p>
+    <p class="text-sm text-slate-500 mt-1.5">A customer may have several people, places or items you need to keep track of separately. Name the type of record and choose which details to keep for each one. The assistant can then collect those details and link them to the right customer.</p>
+    <details class="mt-3 text-sm text-slate-500">
+    <summary class="cursor-pointer font-medium text-slate-600">When details are collected</summary>
     <ul class="mt-3 space-y-1 text-sm text-slate-500">
       <li><span class="font-medium text-slate-600">Ask once</span> — asked when missing, then reused from the saved record.</li>
       <li><span class="font-medium text-slate-600">Confirm each time</span> — prefilled and re-confirmed in one line ("is that still correct?").</li>
       <li><span class="font-medium text-slate-600">Expires</span> — a date that lapses (an expiring certificate); tick <em>must cover the booking</em> and a lapsed one blocks that one, not the others.</li>
     </ul>
+    </details>
   </div>
 
   <div class="flex justify-end">
@@ -30,7 +33,7 @@
   {% if saved %}
   <div class="glass-card px-4 py-3 text-sm">
     <p class="flex items-center gap-2 font-medium text-navy"><span class="h-1.5 w-1.5 flex-none rounded-full bg-emerald-500"></span>Saved</p>
-    <p class="mt-1 text-slate-500">Your dependants are live — the agent asks for them from the next email.</p>
+    <p class="mt-1 text-slate-500">Your related record settings are saved. The assistant will use them when collecting customer details.</p>
   </div>
   {% endif %}
 
@@ -108,7 +111,7 @@
     <div class="glass-card p-4 sm:p-5 space-y-3" id="progress">
       <div>
         <p class="font-semibold text-navy">Progress</p>
-        <p class="text-sm text-slate-500 mt-1">Do your customers — or their {{ groups|map(attribute='label_plural')|map('lower')|join(' / ') if groups else 'named subjects' }} — work through levels? Name them in order. You move them up from a booking or their record; the customer reads the level on the portal, and a service can need at least a level before it's booked.</p>
+        <p class="text-sm text-slate-500 mt-1">If customers or their related records move through stages, list those stages in order. You can update progress from their record or a booking. Customers can see their current stage in the portal.</p>
       </div>
       <div id="ladders" class="space-y-3">
         {% for l in ladders %}
@@ -135,14 +138,14 @@
         </div>
         {% endfor %}
       </div>
-      <button type="button" id="add-ladder" class="text-sm font-medium text-brand" {{ 'hidden' if ladders|length >= max_ladders }}>+ Add a ladder</button>
+      <button type="button" id="add-ladder" class="text-sm font-medium text-brand" {{ 'hidden' if ladders|length >= max_ladders }}>+ Add progress stages</button>
     </div>
 
     {# With no kind yet nothing in this form can change, so dirty_save.js hid
        the add button along with the row and a first kind could not be added
        by hand (2026-10-22). Until one exists the row stays: data-save-always. #}
     <div data-save-row {% if not groups %}data-save-always{% endif %} class="flex flex-wrap items-center gap-3">
-      {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add a kind of dependant</button>{% endif %}
+      {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add a record type</button>{% endif %}
       <button type="submit" data-save-row class="ml-auto rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
     </div>
     <p class="text-xs text-slate-400">Up to {{ max_groups }} kinds, {{ max_fields }} things to know about each. Booking-level details (the date, the address, who to call) stay in {% if setup_walk_active %}<span class="font-medium">Booking requirements</span>{% else %}<a href="/app/diary/intake" class="text-brand">Booking requirements</a>{% endif %}.</p>

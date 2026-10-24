@@ -97,7 +97,7 @@ const historyText=()=>msgs.querySelector('[data-knowledge-history]').children.ma
 assert.match(historyText(),/Your choice: Keep this note/);
 assert.match(historyText(),/Your choice: Keep both notes/);
 assert.match(historyText(),/Your choice: Leave unknown/);
-assert.match(historyText(),/Your choice: Edit note \(editor opened; no change saved\)/);
+assert.match(historyText(),/Your choice: Edit note\./);
 assert(!historyText().includes('Your choice: Leave this note out'));
 assert(c.log.some(m=>m.knowledge_card?.selected==='keep'));
 assert(c.log.some(m=>m.knowledge_card?.selected==='keep_both'));
@@ -140,7 +140,7 @@ assert(buttons(cards().at(-1)).every(b=>!b.disabled));
 c.window.blam8KnowledgeReviewChanged(current,{batch_id:'batch',label:'Hours <unchanged>',action:'keep'});
 assert.equal(c.log.length,oldLogLength+1);
 assert.equal(c.log.at(-1).role,'user');
-assert.match(c.log.at(-1).content,/Hours <unchanged>.*Reviewed to keep.*not final Save/);
+assert.equal(c.log.at(-1).content,'Your choice: Hours <unchanged> — Reviewed to keep.');
 c.window.blam8KnowledgeReviewChanged({...current,recovered_after_error:true},{batch_id:'batch',label:'Not confirmed',action:'keep'});
 assert.equal(c.log.length,oldLogLength+1);
 c.window.blam8KnowledgeReviewChanged(current,{batch_id:'other',label:'Wrong batch',action:'keep'});

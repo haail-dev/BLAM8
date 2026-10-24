@@ -261,13 +261,14 @@ def test_knowledge_does_not_re_read_a_site_already_saved(client, monkeypatch):
     assert 'data-auto-site="1"' not in r.text
     assert 'data-onb-site=""' in r.text
     assert 'data-onb-autoask-after' not in r.text              # interview starts straight away
-    # done = one line, the box collapsed behind Read again (Kris 2026-09-13)
+    # Saved website notes have a completion row, with no reread action.
     assert 'id="site-done"' in r.text and "2 website notes saved" in r.text
     assert 'id="site-box"' in r.text and 'data-state="saved"' in r.text
     assert "Website notes saved" in r.text
     box_tag = r.text.split('id="site-box"')[1].split(">")[0]
     assert " hidden" in box_tag
-    assert 'id="site-again"' in r.text
+    assert 'id="site-again"' not in r.text
+    assert '>Done</span>' in r.text
 
 
 def test_knowledge_box_is_open_before_any_site_note(client, monkeypatch):
