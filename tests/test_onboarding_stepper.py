@@ -44,6 +44,16 @@ def test_shared_stepper_has_one_visible_current_name_and_safe_disclosures(step):
     assert "--label-start" in html and "--label-end" in html
 
 
+def test_stepper_has_no_band_and_the_current_name_is_the_bar_blue():
+    html=render_stepper('knowledge')
+    sticky=html.split('body[data-onboarding-shell] [data-stepper-total] {',1)[1].split('}',1)[0]
+    assert 'position:sticky' in sticky and 'background' not in sticky and 'box-shadow' not in sticky
+    bar=html.split('.onboarding-progress {',1)[1].split('}',1)[0]
+    assert 'linear-gradient(to right,#2450e6 0' in bar
+    name=html.split('.onboarding-step-toggle[data-current-step] + .onboarding-step-label {',1)[1].split('}',1)[0]
+    assert name.strip()=='color:#2450e6;'
+
+
 def test_stepper_disclosure_controller_click_keyboard_and_reset_replay():
     result=subprocess.run([shutil.which('node'),'tests/replays/onboarding_stepper.mjs'],
         cwd=ROOT,capture_output=True,text=True,timeout=30)

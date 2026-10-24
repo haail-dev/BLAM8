@@ -43,6 +43,10 @@ def test_native_setup_keeps_seven_positions_and_one_shared_shell(path,current):
     assert html.count('/static/guided_setup.js?')==1
     assert html.count('/static/dirty_save.js?')==1 and 'id="setup-prefill"' in html
     assert 'data-in-app="true"' in html and 'data-onboarding-step=""' in html
+    launcher=html.split('<button id="bc-bubble"',1)[1].split('</button>',1)[0]
+    assert 'data-assistant-glass-logo' in launcher and '/static/img/blam8-assistant-glass.png?' in launcher
+    assert '/static/img/blam8-assistant-animated.png?' not in html
+    assert html.count('/static/assistant-glass-logo.js?')==1
 
 
 @pytest.mark.parametrize('path,done,status,dismissed',[
@@ -56,6 +60,7 @@ def test_normal_app_and_finished_or_dismissed_walk_keep_app_layout(path,done,sta
     assert not any('data-onboarding-shell' in a for _,a in tags)
     assert any('app-sky' in a.get('class','') for tag,a in tags if tag=='main')
     assert 'data-native-form' in html
+    assert 'data-assistant-glass-logo' not in html.split('<button id="bc-bubble"',1)[1].split('</button>',1)[0]
 
 
 def test_pause_and_completed_review_keep_the_setup_shell():
