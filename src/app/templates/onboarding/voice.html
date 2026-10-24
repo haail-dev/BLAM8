@@ -8,7 +8,7 @@
 {% set voice_valid = voice_valid|default(false) %}
 <style>[data-onb-continue]:disabled{opacity:.45;cursor:not-allowed}</style>
 
-  <p id="voice-completion-status" role="status" aria-live="polite">Choose an agent or team name, tone and sign-off. Extra voice notes are optional.</p>
+  <p id="voice-completion-status" role="status" aria-live="polite"></p>
 {% if learning_status == "running" %}
 <!-- Analysis in flight: poll until it lands, then reload into the review. -->
 <div class="rounded-xl border border-slate-200 bg-white p-6 text-center space-y-4">
