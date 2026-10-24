@@ -31,6 +31,7 @@ SOURCE_CAPABILITIES = {
     'docs/operations/knowledge-voice-review.md':'knowledge.review',
     'src/app/templates/app/crm_fields.html': 'crm',
     'src/app/templates/app/crm_settings.html': 'crm',
+    'src/app/templates/app/diary.html': 'scheduling',
     'src/app/guided_setup.py': 'product.help',
     'src/app/guided_setup_routes.py': 'product.help',
     'src/app/static/guided_setup.js': 'product.help',
