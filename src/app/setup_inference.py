@@ -60,6 +60,12 @@ CUSTOMER_AFFECTING = {
 }
 
 
+# Rows these rules know how to settle. Other rows (diary settings, invoices,
+# scalar CRM settings) keep the stricter rule: an assumed value is refused.
+SETTLED_ROWS = set(NATIVE_DEFAULTS) | set(CUSTOMER_AFFECTING)
+ASSUMED = 'A choice was assumed rather than supplied. Please answer it explicitly; no suggestion was stored.'
+
+
 def default(page, row, field, fields):
     """(True, value) when the native editor has a blank-row default, else (False, None)."""
     table = NATIVE_DEFAULTS.get((page, row), {})
@@ -97,7 +103,7 @@ def _row_label(fields, line):
     return merged.get('label') or merged.get('name') or merged.get('key') or ''
 
 
-def resolve(page, patches, card, signals):
+def resolve(page, patches, card, signals, *, strict=True):
     """Return (patches, questions) with every unsupported value settled.
 
     Per field: owner_said and owner_site stay. inferred stays when its evidence
@@ -107,6 +113,10 @@ def resolve(page, patches, card, signals):
     so the owner can make it stricter), or, for a set on a saved line, is left
     out so the saved value carries forward. A new row missing a field that has
     no usual setting (its name, say) is held back with a question.
+
+    Rows these rules do not cover keep the stricter rule: with ``strict`` an
+    assumed or inferred value there refuses the proposal (an owner turn);
+    without it the row is left out (a draft the owner never typed).
     """
     lines = {l['id']: l for l in (card or {}).get('lines', [])}
     kept, questions = [], []
@@ -118,6 +128,13 @@ def resolve(page, patches, card, signals):
         line = lines.get(patch.get('id')) if patch['op'] == 'set' else None
         row = line['name'] if line else patch.get('name')
         fields, sources = patch.get('fields', {}), patch.get('sources', {})
+        if (page, row) not in SETTLED_ROWS:
+            if any(s.get('kind') in ('assumed', 'inferred') for s in sources.values()):
+                if strict:
+                    raise ValueError(ASSUMED)
+                continue
+            kept.append(patch)
+            continue
         label = _row_label(fields, line)
         held_back = False
         for field in list(fields):

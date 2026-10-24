@@ -144,3 +144,14 @@ def test_reasons_speak_in_owner_words_and_group_usual_settings():
         {'label': 'How long it stays true', 'text': 'You said: stays the same', 'check': False}]
     card = setup_cards.change('dependants', None, 0, 'turn-1', [{'op': 'append', 'name': 'field', 'fields': fields, 'sources': sources}])
     assert card['lines'][0]['reasons'] == result
+
+
+def test_rows_without_usual_settings_keep_the_strict_rule():
+    import pytest
+    for page, row in (('invoice_settings', 'setting'), ('diary_settings', 'service'), ('crm_settings', 'setting')):
+        patch = append(row, key=said('x'), value=assumed('y'))
+        with pytest.raises(ValueError, match='assumed rather than supplied'):
+            inference.resolve(page, [patch], None, SIGNALS)
+        stated = append(row, key=said('x'), value=said('y'))
+        assert inference.resolve(page, [stated], None, SIGNALS) == ([stated], [])
+        assert inference.resolve(page, [patch], None, SIGNALS, strict=False) == ([], [])

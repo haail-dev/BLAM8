@@ -492,7 +492,7 @@ async def draft(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
         patches, questions = ([], [])
         if entry:
             patches = _deduplicate(card, entry['changes'])
-            patches, questions = setup_inference.resolve(page, patches, card, setup_inference.signal_trust(pack))
+            patches, questions = setup_inference.resolve(page, patches, card, setup_inference.signal_trust(pack), strict=False)
             # Rows for another question on this page wait there, held, as an owner's later-area answer does.
             patches = [p if p['op'] == 'remove' or _allowed(stop, card, p) else dict(p, held=True) for p in patches]
         if not patches:
