@@ -21,6 +21,12 @@ from tests.test_knowledge_guidance_browser import chromium_binary,devtools_port
 ROOT=Path(__file__).resolve().parents[1]
 
 
+def test_grouped_setup_nudge_enters_the_same_guide():
+    result=subprocess.run([shutil.which('node'),str(ROOT/'tests/replays/guided_setup_entry.mjs')],
+        cwd=ROOT,capture_output=True,text=True,timeout=15)
+    assert result.returncode==0,result.stdout+result.stderr
+
+
 @pytest.mark.parametrize('width,height,theme',[(390,844,'light'),(1280,900,'dark'),(320,640,'dark'),(768,900,'light')])
 def test_real_diary_projections_edits_accept_and_device_restore(guide_journey,monkeypatch,tmp_path,width,height,theme):
     run_browser(guide_journey,monkeypatch,tmp_path,width,height,theme,'diary')
@@ -31,8 +37,9 @@ def test_records_and_charges_real_native_decision_journeys(guide_journey,monkeyp
     run_browser(guide_journey,monkeypatch,tmp_path,width,height,theme,area)
 
 
-def test_knowledge_handover_to_real_diary_without_intake_redirect(guide_journey,monkeypatch,tmp_path):
-    run_browser(guide_journey,monkeypatch,tmp_path,390,844,'light','handoff')
+@pytest.mark.parametrize('entry',['handoff','handoff_assistant'])
+def test_knowledge_handover_to_real_diary_without_intake_redirect(guide_journey,monkeypatch,tmp_path,entry):
+    run_browser(guide_journey,monkeypatch,tmp_path,390,844,'light',entry)
 
 
 def test_weekday_collection_projects_exact_members_without_serialising_proposals(guide_journey,monkeypatch,tmp_path):
@@ -44,7 +51,7 @@ def test_changed_knowledge_requires_visible_resolution_before_native_accept(guid
 
 
 def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
-    if area=='handoff':
+    if area.startswith('handoff'):
         from app import onboarding, onboarding_state
         from copy import deepcopy
         seed_reviewed_voice(j)
@@ -130,7 +137,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             return response
         return page
     views={path:view}
-    if area=='handoff':views.update({'/app/diary':dashboard.diary_view,'/app/diary/settings':dashboard.diary_settings})
+    if area.startswith('handoff'):views.update({'/app/diary':dashboard.diary_view,'/app/diary/settings':dashboard.diary_settings})
     page_routes=[APIRoute(url,render(handler)) for url,handler in views.items()]
     for route in page_routes:app.router.routes.insert(0,route)
     requests=[]
@@ -147,7 +154,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
                 try:incoming=json.loads(body) if body else {};outgoing=result.json()
                 except ValueError:incoming={};outgoing={}
                 requests.append(dict(path=self.path,method=self.command,status=result.status_code,
-                    revision=incoming.get('revision'),result_revision=outgoing.get('revision'),
+                    revision=incoming.get('revision'),result_revision=outgoing.get('revision'),operation=incoming.get('operation'),
                     patch_keys=sorted((incoming.get('patch') or {}).keys()),
                     channel=self.headers.get('X-Blam8-Channel'),workspace_revision=self.headers.get('X-Blam8-Revision')))
             self.send_response(result.status_code)
@@ -176,7 +183,9 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
                 if os.name=='nt':
                     subprocess.run(['taskkill','/PID',str(browser.pid),'/T','/F'],stdout=log,stderr=log,timeout=5)
                 browser.kill();browser.wait(timeout=10)
-        if area=='handoff':
+        if area.startswith('handoff'):
+            assert len([r for r in requests if r['operation']=='start'])==1
+            assert len([r for r in requests if r['operation']=='resume'])==1
             from app import intake
             saved=j.row('scheduling_config',j.tenant)
             assert not intake.stay_mode(saved)

@@ -149,14 +149,14 @@
     } catch (e) {}
   }
   function modeLabel() {
-    if (window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) return "Setup";
+    if (document.querySelector('[data-guided-intro]') || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) return "Setup";
     if (ONB_MODE) return "Onboard";
     return HELP_MODE ? "Help" : "Ask";
   }
   function refreshTitle() {
     if (titleEl) titleEl.textContent = FIX_LOG_ID
       ? "BLAM8 assistant — Fix a draft"
-      : ((log.length || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) ? "BLAM8 assistant — " + modeLabel() : "BLAM8 assistant");
+      : ((log.length || document.querySelector('[data-guided-intro]') || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) ? "BLAM8 assistant — " + modeLabel() : "BLAM8 assistant");
   }
 
   // EU AI Act Art 50(1): the FIRST message in every mode says "AI assistant"
@@ -215,7 +215,9 @@
       : "I'll help you review each note and any decisions it needs. Unknown details can stay unknown. The drafts stay pending until you save your reviewed decisions. Every pending note needs a decision before you continue.",
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
   };
-  var GREETING = ONB_MODE
+  var GREETING = document.querySelector('[data-guided-intro]')
+    ? "I'm the BLAM8 AI assistant. Start guided setup and we'll work through Diary, Records and Charges together, one section at a time."
+    : ONB_MODE
     ? (ONB_GREETINGS[ONB_STEP] || "I'm the BLAM8 AI assistant — here to help you finish setting up, just ask.")
     : (AUTHED
         ? "Hi! I'm the BLAM8 AI assistant. Ask me about any module, your settings, or how something works — or tell me about a problem or an idea and I'll draft it for the team."
@@ -1117,7 +1119,10 @@
        : isNext ? "border-brand bg-brand text-white hover:bg-blue-700"
                 : "border-slate-300 bg-white text-slate-600 hover:border-brand hover:text-brand");
     b.textContent = step.done ? "✓ " + step.label : step.label + (step.status ? " · " + step.status : "") + " →";
+    var grouped = ['diary','records','charges'].indexOf(step.key)!==-1 && step.substeps;
+    if(grouped)b.textContent='Start guided setup';
     b.addEventListener("click", function () {
+      if(grouped){window.location.href='/app/setup/guide';return;}
       if (step.href && step.href.charAt(0) === "/") window.location.href = step.href;
     });
     return b;
@@ -1126,6 +1131,15 @@
     if (ONB_MODE || !cta) return;
     cta.classList.add("hidden");
     cta.innerHTML = "";
+    // The page and assistant share the same explicit start/resume action.
+    var entry=document.querySelector('[data-guided-intro] [data-guided-start]');
+    if(entry && window.Blam8GuidedSetup && !FIX_LOG_ID){
+      var start=document.createElement('button');start.type='button';start.dataset.guidedEntry='';
+      start.className='rounded-lg bg-brand px-4 py-2 text-white disabled:opacity-50';
+      start.textContent=entry.textContent;start.disabled=entry.disabled;
+      start.addEventListener('click',function(){window.Blam8GuidedSetup.start();});
+      cta.appendChild(start);cta.classList.remove('hidden');refreshTitle();return;
+    }
     if (!setupState || !setupState.show || FIX_LOG_ID) return;
     var head = document.createElement("div");
     head.className = "flex items-center justify-between";
@@ -1157,7 +1171,9 @@
     cta.classList.remove("hidden");
   }
   async function fetchSetupStatus() {
-    if(window.Blam8GuidedSetup){await window.Blam8GuidedSetup.ready;if(window.Blam8GuidedSetup.exists())return;}
+    if(window.Blam8GuidedSetup){await window.Blam8GuidedSetup.ready;
+      if(document.querySelector('[data-guided-intro]')){paintSetupCta();return;}
+      if(window.Blam8GuidedSetup.exists())return;}
     try {
       var until = parseInt(sessionStorage.getItem(KEY_SETUP_SNOOZE) || "0", 10);
       if (until && Date.now() < until) return;

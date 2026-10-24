@@ -35,7 +35,7 @@
 .guided-actions button:disabled{opacity:.5;cursor:wait}
 .guided-more{margin-top:.5rem}
 .guided-owning-link{display:inline-block;color:#2563eb;text-decoration:underline;margin-top:.5rem}
-.guided-target{outline:2px solid #3b82f6;outline-offset:4px;scroll-margin-block:1rem}
+.guided-target{scroll-margin-block:1rem}
 .guided-proposed-note{display:block;font-size:.75rem;color:#1d4ed8;margin:.35rem 0}
 .guided-proposed-note button{font:inherit;padding:.15rem .4rem}
 .guided-resume{position:fixed;right:1rem;top:3rem;z-index:80;border:1px solid #94a3b8;border-radius:.6rem;padding:.6rem .85rem;background:#1d4ed8;color:white;font-size:.875rem}
