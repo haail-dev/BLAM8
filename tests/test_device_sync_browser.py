@@ -129,7 +129,7 @@ CONFLICT_DRIVER = r"""
 
 @pytest.mark.parametrize(
     "browser_driver,expected_calls",
-    [(DRIVER, 11), (CONFLICT_DRIVER, 1)],
+    [(DRIVER, 12), (CONFLICT_DRIVER, 1)],
     ids=["handover", "conflicting-edits"],
 )
 def test_two_device_onboarding_and_assistant_roundtrip(
@@ -226,7 +226,11 @@ def test_two_device_onboarding_and_assistant_roundtrip(
         server.server_close()
         thread.join(timeout=5)
     assert reports[0]["status"] == "PASS", reports[0]["text"]
-    # A single invocation at each step, including the shared guide turn.
+    # One additional read-only refresh binds the typed request to edited text.
+    if browser_driver == DRIVER:
+        index=next(i for i,c in enumerate(calls) if isinstance(c,dict) and c.get('question')=='Keep this note after editing it.')
+        assert calls[index-1]['question']=='Show the current note'
+    # No duplicate approval or save request.
     assert len(calls) == expected_calls
 
 

@@ -146,3 +146,15 @@ The document inventory reports maintained references, explicit history/design,
 and review-required debt. Unreviewed older documents are not silently certified
 as current. The existing agnostic debt ledger and real-caller snapshot gate remain
 active; source moves and intended prompt changes require their own exact review.
+
+
+## One-pass Knowledge review (24 October 2026)
+
+The normal review form explicitly saves reviewed notes and answers while deferring
+untouched, unrepresented source fragments as unknown. Original evidence stays in
+the audit; this is not semantic-coverage certification. Explicit invalid source
+choices, shared qualifications, unreviewed notes and overlaps retain their guards.
+See [the journey contract](modules/knowledge-review-journey.md). Save errors stay
+beside the review without losing edits. Form-driven current-note refreshes update
+the guide, without fabricating chat messages. Typed requests after a local edit
+refresh context first; stale approval shortcuts are not replayed.

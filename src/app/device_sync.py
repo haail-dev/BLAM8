@@ -509,8 +509,11 @@ class SyncRoute(APIRoute):
                     ):
                         messages = list(current["payload"].get("messages", []))
                         question = body.get("question", "")
+                        refresh_only = (request.url.path.endswith("/guide")
+                            and question.strip().casefold() == "show the current note")
                         if (
                             not automatic
+                            and not refresh_only
                             and question
                             and (
                                 not messages
@@ -523,6 +526,11 @@ class SyncRoute(APIRoute):
                         for key in ("links", "trail"):
                             if answer.get(key):
                                 message[key] = answer[key]
+                        # Keep one current guide card for another device to restore,
+                        # rather than a transcript of form-driven refreshes.
+                        messages = [m for m in messages if not m.get("knowledge_refresh")]
+                        if refresh_only:
+                            message["knowledge_refresh"] = True
                         messages.append(message)
                         patch["messages"] = messages[-80:]
                         if arrival:

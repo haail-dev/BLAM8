@@ -963,6 +963,9 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
     row = _knowledge_review_row(context,review_id)
     form = await request.form()
     if row['state']=='saved':
+        if request.headers.get('accept') == 'application/json':
+            target=row['payload'].get('return_to','/onboarding/knowledge')
+            return JSONResponse({'saved':True,'return_to':target},headers={'Location':target})
         return RedirectResponse(row['payload'].get('return_to','/onboarding/knowledge'),status_code=303)
     if row['payload'].get('source_snapshot'):
         from app.knowledge_source_routes import require_source_writer
@@ -992,11 +995,13 @@ async def knowledge_review_save(request: Request, review_id: str, ctx: TenantCtx
                 review_coverage=knowledge_review.topic_view(context), preview_complete=True))
     except HTTPException as exc:
         if request.headers.get('accept') == 'application/json':
-            return JSONResponse({'detail':exc.detail},status_code=exc.status_code)
+            return JSONResponse({'detail':exc.detail},status_code=exc.status_code,headers=exc.headers)
         return templates.TemplateResponse(request,"knowledge_review.html",_step_ctx('knowledge',review=knowledge_review.review_view(context,row,form),
             review_coverage=knowledge_review.topic_view(context),error=exc.detail),status_code=exc.status_code)
     except Exception:
         raise HTTPException(503,"The decision could not be confirmed. Reload to check before retrying.") from None
+    if request.headers.get('accept') == 'application/json':
+        return JSONResponse({'saved': True, 'return_to': row['payload'].get('return_to','/onboarding/knowledge')}, headers={'Location':row['payload'].get('return_to','/onboarding/knowledge')})
     return RedirectResponse(row["payload"].get("return_to","/onboarding/knowledge"),status_code=303)
 
 

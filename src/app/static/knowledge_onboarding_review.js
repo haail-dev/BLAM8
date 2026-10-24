@@ -131,7 +131,9 @@
     if(!form.dataset.reviewEnhanced){noteSections(form).forEach(function(section){if(section.querySelector('[data-note-status]'))noteTool(section,null);});form.dataset.reviewEnhanced='1';}
     var remaining=form.querySelector('[data-review-remaining]');if(remaining)remaining.textContent=noteSections(form).filter(function(section){return !form.elements['action_'+section.dataset.draft].value;}).length;
     var label=form.querySelector('[data-review-remaining-label]');if(label && remaining)label.textContent=Number(remaining.textContent)===1?'note remaining':'notes remaining';
+    var pendingOverlaps=new Set();
     noteSections(form).forEach(function(section){
+      if(form.elements['action_'+section.dataset.draft].value!=='discard')section.querySelectorAll('[data-duplicate-candidate] input[type="checkbox"]').forEach(function(c){if(!c.checked)pendingOverlaps.add(c.name);});
       var overlap=section.querySelector('[data-overlap-status]');if(overlap){var checks=Array.from(section.querySelectorAll('[data-duplicate-candidate] input[type="checkbox"]'));overlap.textContent=checks.length && checks.every(function(c){return c.checked;})?'Overlap reviewed':'Overlap to check';}
       var id=section.dataset.draft,status=section.querySelector('[data-note-status]');
       if(!status)return;
@@ -147,6 +149,8 @@
       if(content)growEditor(content);
       section.querySelectorAll('[data-note-reviewed],[data-note-later]').forEach(function(button){button.setAttribute('aria-pressed',button.hasAttribute('data-note-reviewed')?String(value==='keep'):String(!value && !!(later && later.value)));});
     });
+    var progress=form.querySelector('[data-review-progress]');
+    if(progress)progress.textContent=pendingOverlaps.size ? pendingOverlaps.size+' overlap decision(s) to review before saving.' : remaining && Number(remaining.textContent)===0 ? 'Ready to save. Additional website details will stay unknown.' : 'Review each note, then Save once.';
   }
   document.addEventListener('toggle',function(event){
     var detail=event.target;
@@ -183,7 +187,7 @@
       button.disabled=true;
       try{
         var data=await guide.ask('Show the current note',form);
-        if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged(data.reply || 'Review choice recorded. Save when you have finished.');
+        if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged(data);
         var focus=data.focus || {};
         var next=focus.kind==='note'||focus.kind==='support'?focus.id:focus.note_id || focus.target;
         if(deferred && next===id){
@@ -191,7 +195,7 @@
           // draft does not pretend to approve or skip that pending decision.
           browseNext(form,section,true);
         }else if(next)focusNote(form,next,focus.kind==='overlap'?'more':focus.kind==='support'||focus.kind==='passage'?'source':null);
-        if(!deferred && focus.kind!=='note' && focus.kind!=='ready')notice(form,'Note reviewed to keep. '+(focus.kind==='overlap'?'Review its possible overlap under More options.':'Source decisions are still pending; review Source and check changes before saving.'));
+        if(!deferred && focus.kind!=='note' && focus.kind!=='ready')notice(form,'Note reviewed to keep. '+(focus.kind==='overlap'?'Review its possible overlap under More options.':'Check the highlighted decision before saving.'));
       }catch(error){notice(form,error.message || 'Your local choice remains. Show the current note with the Assistant to continue.');}
       finally{button.disabled=false;}
     }else browseNext(form,section,deferred);
@@ -212,6 +216,24 @@
     syncNotes(form);
   });
   window.Blam8KnowledgeReview={replace:replace,signature:signature,focusNote:focusNote,syncNotes:syncNotes,noteTool:noteTool,check:checkReview};
+  document.addEventListener('submit',async function(event){
+    var form=event.target,button=event.submitter;
+    if(!form.matches('[data-knowledge-review]') || !button || button.value!=='save' || event.defaultPrevented)return;
+    event.preventDefault();
+    if(busy || window.blam8KnowledgeImportBusy)return;
+    var body=new FormData(form);body.set('operation','save');
+    var controls=Array.from(form.querySelectorAll('input,textarea,select,button')),disabled=controls.map(function(el){return el.disabled;});
+    busy=true;window.blam8KnowledgeImportBusy=true;controls.forEach(function(el){el.disabled=true;});ready();
+    notice(form,'Saving your reviewed Knowledge…');
+    try{
+      var response=await (window.Blam8DeviceSync ? window.Blam8DeviceSync.request : fetch)(form.action,{method:'POST',headers:{Accept:'application/json'},body:body});
+      var data=await response.json();
+      if(!response.ok)throw new Error(typeof data.detail==='string'?data.detail:'Save could not be confirmed. Your review remains on this page.');
+      if(!data.saved)throw new Error('Save could not be confirmed. Reload to check before trying again.');
+      window.location.assign(data.return_to);
+    }catch(error){notice(form,error.message);var status=form.querySelector('[data-review-status]');if(status && status.scrollIntoView)status.scrollIntoView({block:'nearest'});}
+    finally{controls.forEach(function(el,i){el.disabled=disabled[i];});busy=false;window.blam8KnowledgeImportBusy=false;ready();}
+  },true);
   document.addEventListener('submit',async function(event){
     var form=event.target, button=event.submitter;
     if(!form.matches('[data-knowledge-review]') || !button || button.value!=='preview')return;

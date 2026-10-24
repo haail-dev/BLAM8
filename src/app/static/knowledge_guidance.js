@@ -24,6 +24,14 @@
     var f = reviewForm || form();
     if(!f) throw new Error('Choose the batch of notes you want to review with the Assistant.');
     if(busy || window.blam8KnowledgeImportBusy || sourceWorking())throw new Error('Please wait for the current review to finish.');
+    // A local edit changes focus identity. Refresh before interpreting a new
+    // typed request, never replay a failed request or a stale choice button.
+    var showing=['', 'show the current note', 'start reviewing the notes', 'show the next decision'].includes(question.trim().toLowerCase());
+    if(!showing && (!focus || focus.form!==f || focus.signature!==JSON.stringify(values(f)))) {
+      var decision=['keep this note','discard this note','keep both notes','retain this passage with the note','leave this unknown','leave these source details unknown','leave reviewed layout labels in the audit','keep all the original website wording for this note'];
+      if(decision.includes(question.trim().toLowerCase()))throw new Error('This note changed. Review the current note before choosing.');
+      await ask('Show the current note',f);
+    }
     var base=values(f), signature=JSON.stringify(base), key=f.dataset.knowledgeReview;
     busy=true; window.blam8KnowledgeImportBusy=true; ready();
     try {

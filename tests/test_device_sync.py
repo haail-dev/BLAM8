@@ -696,3 +696,18 @@ def test_a_draft_stored_without_its_page_is_matched_by_its_action(card_app):
     payload = c.get("/device-sync/flow").json()["payload"]
     assert list(payload["form"]) == ["/app/diary/settings/booking-mode:0"]
     assert payload["refresh"] == operation
+
+
+def test_current_note_refresh_updates_guide_without_synthetic_chat_messages(sync_app):
+    c=client(sync_app)
+    version=re.search(r'name="version"[^>]*value="([^"]+)"',c.get('/onboarding/knowledge').text)[1]
+    url='/onboarding/knowledge/review/review-one/guide'
+    for _ in range(3):
+        state=c.get('/device-sync/flow').json()
+        response=c.post(url,json={'form':{'version':version},'question':'Show the current note'},headers={
+            'X-CSRF-Token':'test-csrf','X-Blam8-Operation':str(uuid4()),'X-Blam8-Revision':str(state['revision'])})
+        assert response.status_code==200
+    payload=c.get('/device-sync/flow').json()['payload']
+    assert len(payload['messages'])==1
+    assert payload['messages'][0]['role']=='assistant' and payload['messages'][0]['knowledge_refresh'] is True
+    assert payload['guide']['data']['focus']['kind']=='note'
