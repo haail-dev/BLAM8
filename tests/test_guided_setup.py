@@ -709,3 +709,8 @@ def test_question_and_answers_are_pinned_under_the_thread_without_pause_setup():
     nav=css.split('.guided-navigation{')[1].split('}')[0]
     assert 'flex:none' in nav and 'overflow-y:auto' in nav and 'scrollbar-width:none' in nav
 
+
+def test_empty_guide_section_draws_nothing_above_the_chat():
+    css=(__import__('pathlib').Path(__file__).resolve().parents[1]/'src/app/static/guided_setup.css').read_text(encoding='utf-8')
+    assert '.guided-question:empty{display:none}' in css
+

@@ -6,6 +6,8 @@
 /* Hide scrollbar chrome without disabling wheel, touch or keyboard scrolling. */
 .guided-stream::-webkit-scrollbar{display:none}
 .guided-question{padding:1rem;font-size:.875rem;line-height:1.5;overflow-wrap:anywhere}
+/* Outside a running or paused guide the section is empty; its padding must not band the chat. */
+.guided-question:empty{display:none}
 .guided-progress{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--guided-muted);margin-bottom:.5rem}
 .guided-title{font-size:1rem;font-weight:650;margin-bottom:.5rem}
 .guided-section{font-size:.8rem;color:var(--guided-muted);margin-bottom:.35rem}
