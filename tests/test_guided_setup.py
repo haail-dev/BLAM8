@@ -772,3 +772,39 @@ def test_guided_stream_scrolls_without_scrollbar_chrome():
     stream=css.split('.guided-stream{')[1].split('}')[0]
     assert 'overflow-y:auto' in stream and 'scrollbar-width:none' in stream
     assert '.guided-stream::-webkit-scrollbar{display:none}' in css
+
+
+def draft(j,expected=200):
+    response=j.http.post('/app/setup/guide/draft',json=dict(revision=j.state()['revision'],stop=j.state()['guide']['current'],operation='draft'))
+    assert response.status_code==expected,response.text
+    return response.json()
+
+
+def test_records_page_gets_one_draft_from_business_facts_as_an_ordinary_card(guide_journey,monkeypatch):
+    j=guide_journey;j.move('dependants/field')
+    assert j.http.get('/app/setup/guide/state').json()['draft'] is True
+    proposal=sourced('dependants',0,[dict(name='group',fields={'label':('Property','owner_site'),'cardinality':('many','owner_site')}),
+        dict(name='field',fields={'kind':('Property','owner_site'),'label':('Address','owner_site'),'type':('text','assumed'),
+            'required':(False,'assumed'),'durability':('once','assumed'),'gate':(False,'assumed')})])
+    seen=model(monkeypatch,proposal,reply='I drafted a Property record from your website.')
+    result=draft(j)
+    assert result['reply']=='I drafted a Property record from your website.' and result['draft'] is False
+    card=j.row('tenant_config',j.tenant)['setup_cards']['dependants']
+    assert [l['status'] for l in card['lines']]==['proposed','proposed']
+    assert card['lines'][1]['reasons']['usual']==['Format','Must be filled in','How long it stays true','Stops a booking when it has run out']
+    assert j.state()['guide']['drafts']['dependants']
+    calls=len([s for s in seen if 'system' in s])
+    again=draft(j)
+    assert again['reply']=='' and len([s for s in seen if 'system' in s])==calls
+
+
+def test_failed_draft_is_marked_once_and_leaves_the_question_usable(guide_journey,monkeypatch):
+    j=guide_journey;j.move('booking_details/field')
+    async def broken(**kwargs):
+        raise RuntimeError('provider down')
+    monkeypatch.setattr(llm,'create',broken)
+    monkeypatch.setattr(concierge,'client',lambda:None)
+    result=draft(j)
+    assert result['fallback'] is True and result['draft'] is False
+    assert 'booking_details' not in (j.row('tenant_config',j.tenant).get('setup_cards') or {})
+    assert j.state()['guide']['current']=='booking_details/field'

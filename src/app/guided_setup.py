@@ -483,7 +483,13 @@ def describe(context):
             [dict(type='activity',id=k,label=v['label']) for k,v in context['state']['scopes'].items()]+
             [dict(type='record_group',id=str(g['id']),label=g['label']) for g in context['groups']],
         summary_href='/app/setup/'+(stop.get('substep') or 'charges.terms').split('.')[0],
-        discovery=discovery_view(context, guide, stop) if stop['kind'] in DISCOVERY else None)
+        discovery=discovery_view(context, guide, stop) if stop['kind'] in DISCOVERY else None,
+        draft=_draftable(context['state'], stop))
+
+
+def _draftable(state, stop):
+    from app import setup_draft  # imports setup_card_model; kept lazy like the other card helpers
+    return setup_draft.draftable(state, stop)
 
 
 def discovery_view(context, guide, stop):

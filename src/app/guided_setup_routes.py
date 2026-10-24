@@ -442,6 +442,70 @@ async def diary_suggest(body: Action, ctx: TenantCtx = Depends(require_onboarded
     return save(ctx, latest, state)
 
 
+@router.post('/draft', dependencies=[Depends(require_csrf_header)])
+async def draft(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
+    """The first suggestion for a records or booking-requirements page, drafted from the business's facts.
+
+    Runs once per page. A page with pending suggestions, or one already drafted,
+    returns the current guide unchanged. The draft becomes an ordinary setup
+    card, settled by setup_inference; questions it leaves open follow the reply.
+    """
+    from app import setup_context, setup_draft, usage
+    context = _with_knowledge(ctx, context_for(ctx, body.revision))
+    try:
+        current, stop = guide.current(context, body.stop)
+        if current['status'] != 'active' or body.operation != 'draft' or stop.get('kind') != 'decision':
+            raise ValueError('Drafts belong to a records or booking-requirements question.')
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+    cards = setup_card_store.load_all(ctx.tenant_id, client=ctx.client)
+    page = stop.get('page')
+    card = cards.get(page)
+    if not setup_draft.draftable(context['state'], stop) or any(
+            l['status'] in setup_cards.PENDING for l in (card or {}).get('lines', [])):
+        return dict(**guide.describe(context), reply='', fallback=False)
+    if page in ('crm_fields', 'crm_settings') and 'crm' not in context['modules']:
+        return dict(**guide.describe(context), reply='', fallback=False)
+    pack = setup_context.build(context)
+    try:
+        data, msg = await setup_draft.draft(ctx.tenant_id, page, cards, body_path(stop), context['cfg'], pack)
+        usage.record_anthropic(ctx.tenant_id, msg.model, msg.usage, operation='concierge_help', module='concierge')
+    except Exception:
+        log.exception('Guided setup draft failed for %s', page)
+        data = None
+    latest = context_for(ctx, body.revision)
+    state = deepcopy(latest['state'])
+    state['guide'].setdefault('drafts', {})[page] = pack['evidence_revision']
+    if not data:
+        return dict(**save(ctx, latest, state), reply='', fallback=True)
+    reply = (data.get('reply') or '').strip()
+    try:
+        entries, _ = setup_card_model.normalise(setup_card_model.unpack(data.get('setup_changes') or []), cards)
+        entry = next((e for e in entries if e['page'] == page), None)
+        patches, questions = ([], [])
+        if entry:
+            patches = _deduplicate(card, entry['changes'])
+            patches, questions = setup_inference.resolve(page, patches, card, setup_inference.signal_trust(pack))
+            # Rows for another question on this page wait there, held, as an owner's later-area answer does.
+            patches = [p if p['op'] == 'remove' or _allowed(stop, card, p) else dict(p, held=True) for p in patches]
+        if not patches:
+            return dict(**save(ctx, latest, state), reply=_with_questions(reply, questions), fallback=False)
+        changed = setup_cards.change(page, card, entry['revision'], str(uuid4()), patches)
+        link_card(ctx, latest, state, stop, card, changed)
+        output = save(ctx, latest, state, dict(page=page, revision=entry['revision'], card=changed,
+                      expected_settings=None, settings_patch=None))
+    except setup_cards.Stale as exc:
+        raise HTTPException(409, str(exc)) from None
+    except (ValueError, setup_cards.Invalid):
+        log.exception('Guided setup draft for %s could not be used', page)
+        return dict(**save(ctx, latest, state), reply='', fallback=True)
+    return dict(**output, reply=_with_questions(reply, questions), fallback=False)
+
+
+def body_path(stop):
+    return stop['href'].split('#')[0]
+
+
 async def discovery_turn(ctx, context, body, stop):
     """Owner words on a discovery stop become validated answers, never settings."""
     from app import concierge, diary_discovery, setup_context, usage

@@ -2376,6 +2376,14 @@
   window.blam8ConciergeAsk = function (text) {
     openWith(text);
   };
+  // A reply the guided setup produced by itself (a page's first drafted
+  // suggestion): it joins the thread as the assistant, with no owner turn.
+  window.blam8ConciergeAssistantSay = function (text) {
+    if (!text || !String(text).trim()) return;
+    log.push({ role: "assistant", content: text,
+      guide_stop: window.Blam8GuidedSetup ? window.Blam8GuidedSetup.currentStop() : '' }); saveLog(log);
+    msgs.appendChild(bubbleEl("assistant", text));
+  };
 
   // The landing FAQ's "Run it past BLAM8" link: [data-scenario-open] opens the chat
   // in scenario mode with a fresh thread (public pages only).

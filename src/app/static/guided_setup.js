@@ -212,6 +212,7 @@
         secondary.appendChild(button('Decide later',function(){action('later');}));
         secondary.appendChild(button('Not needed',function(){action('not_needed');}));
         if(stop.kind==='decision'&&!pending&&decision!=='applied')actions.appendChild(button('Keep current settings',function(){action('keep_current');}));
+        if(state.draft&&!pending&&drafting!==stop.id&&!busy)requestDraft(stop);
       }
     }
     if(state.index>0)actions.appendChild(button('Back',function(){action('back');}));
@@ -237,7 +238,18 @@
     });}
   }
   // ── Diary discovery: answers first, settings after ─────────────────────────
-  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null;
+  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null, drafting=null;
+  // The first suggestion for a records or booking-requirements page, drafted once by the server
+  // from the business's own facts. Its reply joins the conversation and the card loads beside it.
+  function requestDraft(stop){
+    drafting=stop.id;note('Drafting a suggestion from what you’ve told us so far…');
+    request('/draft',{revision:state.revision,stop:stop.id,operation:'draft'}).then(function(next){
+      if(next.revision<state.revision)return;
+      state=next;note('');
+      if(next.reply&&window.blam8ConciergeAssistantSay)window.blam8ConciergeAssistantSay(next.reply);
+      if(panel)panel.load();paint();
+    }).catch(function(){note('');});
+  }
   // What the owner typed or ticked survives a repaint (suggestions arrive while they type).
   var draft={stop:null,text:'',picked:{}};
   var DAYS=[['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
