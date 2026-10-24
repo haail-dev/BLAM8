@@ -5,6 +5,7 @@ disposable PostgreSQL.
 """
 
 import json
+import threading
 from uuid import uuid4
 
 from fastapi import APIRouter, FastAPI, Request, Response
@@ -101,6 +102,59 @@ def submit(client, path, revision, operation):
         },
         follow_redirects=False,
     )
+
+
+def test_voice_learn_through_the_sync_wrapper_starts_the_run(harness, monkeypatch):
+    """Live 2026-10-24: the sync route spawned from a threadpool worker, raised
+    'no running event loop', and the unrecorded claim then refused every edit."""
+    from app import onboarding, voice_learning
+
+    app, ctx = harness
+    started = threading.Event()
+
+    async def learning(tenant_id, mailbox_id=None):
+        assert tenant_id == ctx.tenant_id
+        started.set()
+
+    monkeypatch.setattr(onboarding.db, "get_connection_status", lambda *a, **k: True)
+    monkeypatch.setattr(onboarding.fairuse, "onboarding_allowed", lambda *a, **k: True)
+    monkeypatch.setattr(voice_learning, "run_learning", learning)
+    app.include_router(onboarding.router)
+    with TestClient(app, cookies={"bl_csrf": "test-csrf"}) as client:
+        response = submit(client, "/onboarding/voice/learn", 0, uuid4())
+        assert (response.status_code, response.headers["location"]) == (
+            303,
+            "/onboarding/voice",
+        )
+        assert started.wait(5)
+        assert response.headers["X-Blam8-Revision"] == "1"
+        assert checkpoint(client, 1).status_code == 200
+
+
+def test_settings_voice_relearn_starts_the_run(harness, monkeypatch):
+    from app import auth, dashboard, voice_learning
+
+    app, ctx = harness
+    started = threading.Event()
+
+    async def learning(tenant_id, mailbox_id=None):
+        started.set()
+
+    async def onboarded(request: Request, response: Response):
+        return ctx
+
+    monkeypatch.setattr(dashboard.db, "get_connection_status", lambda *a, **k: True)
+    monkeypatch.setattr(voice_learning, "run_learning", learning)
+    app.dependency_overrides[auth.require_onboarded] = onboarded
+    app.include_router(dashboard.router)
+    with TestClient(app, cookies={"bl_csrf": "test-csrf"}) as client:
+        response = client.post(
+            "/app/settings/voice-learn",
+            data={"csrf_token": "test-csrf"},
+            follow_redirects=False,
+        )
+        assert response.headers["location"] == "/app/settings?voice=learning"
+        assert started.wait(5)
 
 
 def test_a_failed_handler_records_its_error_and_releases_the_channel(harness):
