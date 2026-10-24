@@ -22,3 +22,11 @@ def test_continue_floats_over_a_fading_thread_foot():
     assert 'rgb(var(--c-bg-slate-50)/0)' in block and 'pointer-events:none' in block
     assert '#bc-messages { padding-bottom:calc(.75rem + var(--bc-cta-h, 0px)); }' in block
     assert 'panel.style.setProperty("--bc-cta-h", cta.offsetHeight + "px");' in JS
+
+
+def test_voice_page_status_speaks_only_while_saving_or_after_a_failure():
+    root = Path(__file__).resolve().parents[1]
+    html = (root / 'src/app/templates/onboarding/voice.html').read_text(encoding='utf-8')
+    js = (root / 'src/app/static/voice_completion.js').read_text(encoding='utf-8')
+    assert '<p id="voice-completion-status" role="status" aria-live="polite"></p>' in html
+    assert 'if(status)status.textContent=saving?state.reason:failure;' in js
