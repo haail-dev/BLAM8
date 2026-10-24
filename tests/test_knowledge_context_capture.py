@@ -16,6 +16,8 @@ def test_shared_business_vocabulary_does_not_block_admission():
 
 
 @pytest.mark.parametrize('left,right', [
+    ('We charge £50.', 'We charge £500.'),
+    ('We charge £50.', 'We charge $50.'),
     ('We open Monday to Friday at 9 am and close at 4 pm.', 'We open Monday to Friday at 9 am and close at 5 pm.'),
     ('We accept requests without prior approval.', 'We accept requests with prior approval.'),
 ])
@@ -159,3 +161,9 @@ def test_native_quoted_comparison_layout(tmp_path, width, theme):
 
 def test_malformed_link_does_not_abort_valid_discovery():
     assert web.discover_links('https://example.test/', '<a href="http://[broken">Bad</a><a href="/details">Details</a>') == ['https://example.test/details']
+
+
+def test_containment_never_calls_a_numeric_prefix_repeated_text():
+    from app.knowledge_comparison import comparison
+    pairs=comparison('Base amount £10', 'Base amount £100 and other conditions.')
+    assert not any(p['type']=='repeated' for p in pairs)
