@@ -226,3 +226,37 @@ authority are unchanged. These changes do not configure Diary, CRM or invoicing.
 Use the owner-correction, source-database and native correction-layout tests in
 addition to the existing caller/recovery checks. Live model answer quality and
 already-saved data remediation require separate validation and release approval.
+
+
+### Context-aware collection and explainable comparisons
+
+Website collection uses a bounded projection of saved business brief, owner goals,
+business-wide Knowledge and explicitly recorded unanswered review questions.
+Conversation answers enter through saved state; raw chat, unsaved suggestions,
+mailbox-private notes, secrets and customer records are excluded. Context only
+ranks same-site URLs and anchor labels and focuses draft questions. It is marked
+separately from website evidence in the model request; citations must still match
+captured pages, and saved owner corrections retain precedence at admission.
+
+The crawler has no sector-specific path priorities. It follows links to depth two,
+with at most eight fetch attempts, twelve seconds per attempt (including redirects),
+a forty-second total collection deadline, 12,000 characters
+per page and 60,000 total. Failures consume the attempt budget. Discovered pages
+beyond the budget and omitted text remain in the capture manifest. Discovery is
+stable without context. SSRF checks still apply to every redirect; linked pages
+redirecting off-site are not admitted. This is HTML capture, not JavaScript
+rendering or a guarantee of whole-site coverage. Context itself is bounded to
+12 saved items and 20 recorded questions with omission counts.
+
+Overlap review no longer blocks admission for a matching title or shared business
+vocabulary alone. Exact repeated statements/contained text and closely aligned
+statements with different numbers or conditions produce quoted comparisons.
+Both sides are labelled, source URLs are displayed once, and full citation records
+remain in the audit. A possible difference is a review hint, never an automatic
+contradiction verdict or semantic-coverage certificate. Owner review/merge/discard,
+content-bound acknowledgements, source-coverage checks and final atomic Save
+remain required. Unknown paraphrases are not silently declared equivalent.
+
+Validation: tests/test_knowledge_context_capture.py, existing capture/canonical,
+review/admission, guidance and native Knowledge layout tests. No migration or
+automatic rewriting of existing saved notes is part of this change.

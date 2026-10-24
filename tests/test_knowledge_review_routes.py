@@ -62,7 +62,7 @@ def test_preview_and_unresolved_overlap_save_nothing_and_preserve_edits(client,r
     review_store.brief='We provide a scheduled support service for customers.'
     row=review_store.stage('tenant',[{'label':'What we do','content':review_store.brief}])
     view=client.get('/onboarding/knowledge/review/'+row['id'])
-    assert view.status_code==200 and 'Possible overlap: Business brief' in view.text
+    assert view.status_code==200 and 'Repeated text · Business brief' in view.text
     version=review_store.load('tenant')['version'];id=row['payload']['entries'][0]['id']
     f={'version':version,'operation':'save','action_'+id:'keep','content_'+id:review_store.brief+' Extra fact.'}
     r=client.post('/onboarding/knowledge/review/'+row['id'],data=f)

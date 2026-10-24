@@ -51,10 +51,15 @@
     {% if n.combined != n.content %}<details open class="text-xs"><summary>Combined preview — check for contradictions</summary><p class="mt-1 whitespace-pre-wrap break-words">{{ n.combined }}</p></details>{% endif %}
     {% for m in n.matches %}
     <div class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs" data-duplicate-candidate>
-      <p class="font-semibold">Possible overlap: {{ m.label }} ({{ m.kind }})</p>
-      <p class="mt-1">{{ m.reason }}. This check does not establish contradiction or complete semantic coverage.</p>
-      {% if m.exact_passages %}{% for passage in m.exact_passages %}<blockquote class="mt-1 whitespace-pre-wrap break-words">{{ passage }}</blockquote>{% endfor %}{% else %}<p class="mt-1 whitespace-pre-wrap break-words">{{ m.excerpt }}</p>{% endif %}
-      {% for p in m.provenance or [] %}<p class="mt-1">Source: {{ p.source }}</p>{% endfor %}
+      <p class="font-semibold">{{ m.comparison_title }} · {{ m.label }}</p>
+      <p class="mt-1">{{ m.reason }}</p>
+      {% for pair in m.comparisons %}
+      <div class="mt-3 space-y-2" data-comparison-pair>
+        <div><p class="font-medium">This note · {{ n.label }}</p><blockquote class="mt-1 whitespace-pre-wrap break-words">“{{ pair.left }}”</blockquote></div>
+        <div><p class="font-medium">{{ m.label }} · {{ 'Saved brief' if m.kind == 'brief' else ('Saved note' if m.kind == 'saved' else 'Draft note') }}</p><blockquote class="mt-1 whitespace-pre-wrap break-words">“{{ pair.right }}”</blockquote></div>
+      </div>
+      {% endfor %}
+      {% for source in m.source_labels %}<p class="mt-2 break-words">Source: {{ source }}</p>{% endfor %}
       <label class="mt-2 block"><input type="checkbox" name="match_{{ m.key }}" value="keep_both"{% if review.form.get("match_"+m.key)=="keep_both" %} checked{% endif %}> I reviewed this match: keep both intentionally.</label>
     </div>
     {% endfor %}

@@ -5,7 +5,6 @@ unknown; only a reviewer can confirm coverage or mark a topic not applicable.
 """
 from copy import deepcopy
 from datetime import datetime, timezone
-from difflib import SequenceMatcher
 import hashlib
 import json
 import re
@@ -209,7 +208,7 @@ def shared_passages(a, b):
     return [right[k] for k in right if k in left]
 
 
-def candidates(entry, context, own_review=None, entries=None):
+def candidates(entry, context, own_review=None, entries=None, *, include_merge_targets=False):
     targets = [{"id": "brief", "label": "Business brief", "content": context.get("brief", ""),
                 "kind": "brief", "provenance": [{"source": "Saved business brief"}]}]
     targets += [{"id": "saved:" + fingerprint(n["source"], n.get("mailbox_id")), "label": n["source"],
@@ -226,22 +225,22 @@ def candidates(entry, context, own_review=None, entries=None):
     found = []
     for target in targets:
         a, b = entry["content"], target["content"]
-        stop = set("a an the and or of to for we our us you your is are be it its this that with in on at from by as have has will can do does".split())
-        words_a, words_b = set(re.findall(r"\w+", a.lower()))-stop, set(re.findall(r"\w+", b.lower()))-stop
-        common = words_a & words_b
-        overlap = len(common) / max(1, min(len(words_a), len(words_b)))
-        ratio = (SequenceMatcher(None, a.lower()[:1600], b.lower()[:1600]).ratio()
-                 if len(common)>=5 and overlap>=.25 else 0)
-        ga,gb = " ".join(re.findall(r"\w+",a.casefold()))," ".join(re.findall(r"\w+",b.casefold()))
-        contained = min(len(ga),len(gb))>=12 and (ga in gb or gb in ga)
-        same_label = entry["label"].casefold() == target["label"].removeprefix("Website — ").casefold()
+        from app.knowledge_comparison import comparison
+        comparisons = comparison(a, b)
+        same_saved_label = (target['kind'] == 'saved' and entry['label'].casefold() ==
+                            target['label'].removeprefix('Website — ').casefold())
+        if not comparisons and not (include_merge_targets and same_saved_label):
+            continue
         passages = shared_passages(a, b)
-        if b and (same_label or contained or a.strip().casefold() == b.strip().casefold() or
-                  passages or (len(common) >= 5 and (overlap >= .45 or ratio >= .65))):
-            pair = sorted([(entry['id'], a), (target['id'], b)])
-            found.append({**target, "key": fingerprint(pair),
-                          "overlap": sorted(common)[:24], "excerpt": b[:1200], 'exact_passages': passages,
-                          "reason": "Exact repeated passage; repetition may be intentional" if passages else "Matching label" if same_label else "Shared wording; check meaning and numbers"})
+        difference = any(p['type'] == 'difference' for p in comparisons)
+        pair = sorted([(entry['id'], a), (target['id'], b)])
+        found.append({**target, "key": fingerprint(pair),
+                      "overlap": sorted(set(re.findall(r"\w+", a.lower())) & set(re.findall(r"\w+", b.lower())))[:24],
+                      "excerpt": b[:1200], 'exact_passages': passages, 'comparisons': comparisons,
+                      'comparison_title': 'Check a possible fact difference' if difference else 'Repeated text',
+                      'source_labels': list(dict.fromkeys(p.get('source', '') for p in target.get('provenance', []) if p.get('source'))),
+                      "reason": "Similar statements contain different numbers or conditions. Check whether their scope differs or one needs correcting." if difference else
+                          "The quoted wording appears in both places. Keep both if each note needs it, or edit or merge the repeated text."})
     return found
 
 
@@ -395,7 +394,7 @@ def effective_entries(context, row, entries, form):
             target["topics"] = sorted(set(topics(target)+topics(n)))
             target["source_context"] = "\n".join(filter(None,[target.get("source_context"),n.get("source_context")]))
         elif action.startswith("merge_saved:"):
-            match = next((m for m in candidates(n,context,row["id"],entries)
+            match = next((m for m in candidates(n,context,row["id"],entries, include_merge_targets=True)
                           if m["kind"]=="saved" and m["id"]==action.removeprefix("merge_saved:")
                           and m.get("mailbox_id")==n.get("mailbox_id")),None)
             if not match: raise HTTPException(409,"That saved merge target is no longer a matching source. Check changes first.")
@@ -438,7 +437,7 @@ def review_view(context, row, form=None):
          "content_segments":by_id.get(n["id"],n).get("content_segments",[]),
          "matches": [m for m in candidates(by_id[n["id"]],context,row["id"],effective)
                      if m["id"]!=by_id[n["id"]].get("merge_target",{}).get("id")] if n["id"] in by_id else [],
-         "merge_options": [m for m in candidates(n,context,row["id"],entries)
+         "merge_options": [m for m in candidates(n,context,row["id"],entries, include_merge_targets=True)
                            if m["kind"]=="saved" and m.get("mailbox_id")==n.get("mailbox_id")]} for n in entries],
         "form": form, "coverage": topic_view(context), "source_view":source_view}
     seen = set()

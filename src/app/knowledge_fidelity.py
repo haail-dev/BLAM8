@@ -83,8 +83,7 @@ def layout_fragment(unit):
     protected = re.search(r"\d|[£$€@]|\b(no|not|never|only|unless|except|if|before|after|until|excluding|without|includes?|is|are|we|our|must|can|will|available|closed|open|free)\b", text, re.I)
     labels = {'home','menu','navigation','contact','contact us','about','about us','services',
               'what we do','service area','prices','fees','fees and prices','get started',
-              'learn more','read more','privacy','privacy policy','terms','back','next',
-              'reporting a repair','ongoing service','starting management','hours and contact'}
+              'learn more','read more','privacy','privacy policy','terms','back','next'}
     return (bool(places & {'nav','h1','h2','h3','h4'}) and all(part.strip().casefold() in labels for part in text.split('|'))
             and not protected and unit['kind']=='statement')
 

@@ -120,7 +120,7 @@ def test_rendered_candidates_are_unselected_and_source_markup_is_escaped():
     ctx,row=context([n],brief=n["content"])
     env=Environment(loader=FileSystemLoader(Path(__file__).parents[1]/"src/app/templates"),autoescape=True)
     html=env.get_template('_knowledge_review.html').render(review=kr.review_view(ctx,row),csrf_token=lambda r:'token',request={})
-    assert "Possible overlap: Business brief" in html and 'data-duplicate-candidate' in html
+    assert "Repeated text · Business brief" in html and 'data-duplicate-candidate' in html
     assert '&lt;script&gt;' in html and '<script>' not in html
     assert ' checked>' not in html and '<option value="keep" selected' not in html
     assert 'No variation' not in html
