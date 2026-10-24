@@ -75,3 +75,20 @@
 
 .guided-section{font-size:.75rem;color:var(--guided-muted);margin:-.2rem 0 .65rem}
 .guided-knowledge-conflict{border:1px solid #b45309;border-radius:.5rem;padding:.75rem;margin:.75rem 0}.guided-knowledge-conflict p{margin-bottom:.5rem}.guided-knowledge-conflict button{margin:.25rem .5rem .25rem 0;border:1px solid var(--guided-border);border-radius:.35rem;padding:.4rem .5rem}
+
+/* Diary discovery: choices, hours, the diary list and pre-filled answers. */
+.guided-choices{display:flex;flex-wrap:wrap;gap:.5rem;margin:.65rem 0}
+.guided-choices label{display:flex;align-items:center;gap:.35rem;font-size:.85rem;width:100%}
+.guided-choices .guided-direct-answer{margin:0;flex:1 1 8rem;width:auto}
+.guided-choices select{border:1px solid var(--guided-border);border-radius:.5rem;padding:.5rem;color:inherit;background:var(--guided-surface)}
+.guided-question .guided-choices button,.guided-prefill button,.guided-diary-list button,.guided-question>button{border:1px solid var(--guided-border);border-radius:.5rem;padding:.45rem .7rem;font-size:.8rem;margin:.25rem .5rem .25rem 0}
+.guided-prefill .guided-primary{background:#2455df;color:white;border-color:#2455df}
+.guided-prefill{border:1px solid #3b82f6;border-radius:.5rem;padding:.75rem;margin:.75rem 0}.guided-prefill p{margin-bottom:.5rem}
+.guided-suggestion{display:block;font-size:.85rem;margin:.4rem 0}.guided-suggestion .guided-why{display:inline;margin:0}
+.guided-diary-list{list-style:none;padding:0;margin:.5rem 0}.guided-diary-list>li{border:1px solid var(--guided-border);border-radius:.5rem;padding:.6rem .75rem;margin-bottom:.5rem;font-size:.85rem}
+.guided-diary-list .guided-actions{margin-top:.35rem}
+.guided-badge{font-size:.75rem;color:var(--guided-muted)}.guided-badge-ready{color:#047857}.guided-badge-noted,.guided-badge-unavailable{color:#b45309}
+.guided-hours{display:grid;gap:.35rem;margin:.35rem 0 .75rem}
+.guided-hours-row{display:grid;grid-template-columns:7.5rem 1fr auto 1fr;align-items:center;gap:.4rem;font-size:.8rem}
+.guided-hours-row input[type=time]{border:1px solid var(--guided-border);border-radius:.4rem;padding:.25rem .35rem;color:inherit;background:var(--guided-surface);min-width:0}
+.guided-question>label{display:flex;align-items:center;gap:.4rem;font-size:.85rem;margin:.35rem 0}
