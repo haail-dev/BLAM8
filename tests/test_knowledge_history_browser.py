@@ -18,6 +18,8 @@ def test_knowledge_history_is_collapsed_and_current_message_visible(tmp_path,wid
     const oldCard={id:'old',batch_id:'batch',version:'v1',focus_hash:'old',
       actions:[{action:'keep',label:'Keep note'}],selected:'keep',state:'prepared'};
     const log=[{role:'user',content:'Keep our original request.'},
+      {role:'user',content:'Your choice: Original note — Reviewed to keep (review choice; not final Save).'},
+      {role:'user',content:'Your choice: Other note — Leave for later (still pending; not discarded).'},
       {role:'assistant',content:'Stale correction: nothing changed yet.',knowledge_card:oldCard},
       {role:'assistant',content:'Stale correction: nothing changed yet.',knowledge_card:{...oldCard}},
       {role:'assistant',content:'Unconfirmed choice: please retry.',knowledge_card:{id:'failed',selected:'discard'}},
@@ -42,7 +44,10 @@ def test_knowledge_history_is_collapsed_and_current_message_visible(tmp_path,wid
     history.open=true;check(document.body.innerText.includes('Stale correction'),'history can be read');
     check(history.textContent.split('Stale correction: nothing changed yet.').length===2,'repeated prompt shown once');
     check(history.textContent.split('Your choice: Keep note').length===2,'confirmed owner choice shown once');
-    check(history.textContent.includes('review choice; not final Save'),'choice is not presented as saved');
+    check(history.textContent.includes('Your choice: Keep note.'),'plain decision label');
+    check(history.textContent.includes('Your choice: Original note — Reviewed to keep.'),'old form receipt displayed plainly');
+    check(history.textContent.includes('Your choice: Other note — Leave for later.'),'old deferred receipt displayed plainly');
+    check(!history.textContent.includes('review choice; not final Save')&&!history.textContent.includes('still pending; not discarded'),'state metadata hidden');
     check(!history.textContent.includes('Your choice: Leave'),'unconfirmed selection is not an owner decision');
     const status=document.createElement('p');status.dataset.knowledgeSavedStatus='';status.textContent='Knowledge saved';document.body.appendChild(status);
     renderAll();history=msgs.querySelector('details');

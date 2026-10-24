@@ -485,7 +485,13 @@
         // may contain consecutive copies of the same prompt; render it once.
         var promptKey = card && JSON.stringify([card.batch_id, card.version, card.focus_hash, m.content]);
         if (!promptKey || promptKey !== lastHistoryPrompt) {
-          knowledgeHistory.appendChild(bubbleEl(m.role, m.content));
+          // Older form receipts stored state explanations in their text. Keep
+          // the transcript intact, but show only the owner's decision here.
+          var historyContent = m.content;
+          if (m.role === 'user' && typeof historyContent === 'string' && historyContent.startsWith('Your choice: ')) {
+            historyContent = historyContent.replace(/ \((?:review choice; not final Save|still pending; not discarded|editor opened; no change saved|correction preview; not applied or saved)\)\.$/, '.');
+          }
+          knowledgeHistory.appendChild(bubbleEl(m.role, historyContent));
           lastHistoryDecision = null;
         }
         lastHistoryPrompt = promptKey;
@@ -496,10 +502,7 @@
           var label = card.selected === 'edit' ? 'Edit note' : choice && choice.label;
           var decisionKey = promptKey + ':' + card.selected + ':' + card.state;
           if (label && decisionKey !== lastHistoryDecision) {
-            var qualifier = card.state === 'editing' ? 'editor opened; no change saved'
-              : card.state === 'preview' ? 'correction preview; not applied or saved'
-              : 'review choice; not final Save';
-            knowledgeHistory.appendChild(bubbleEl('user', 'Your choice: ' + label + ' (' + qualifier + ').'));
+            knowledgeHistory.appendChild(bubbleEl('user', 'Your choice: ' + label + '.'));
             lastHistoryDecision = decisionKey;
           }
         }
@@ -2940,7 +2943,7 @@
     // refreshes must not invent decisions. The guide has checkpointed the form.
     if (ownerChoice && !data.recovered_after_error && data.batch_id === ownerChoice.batch_id) {
       log.push({role:'user',content:'Your choice: ' + ownerChoice.label + ' — ' +
-        (ownerChoice.action === 'later' ? 'Leave for later (still pending; not discarded).' : 'Reviewed to keep (review choice; not final Save).')});
+        (ownerChoice.action === 'later' ? 'Leave for later.' : 'Reviewed to keep.')});
       saveLog(log);
     }
     // Current guidance itself is presentation, not a transcript turn.

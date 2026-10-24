@@ -129,3 +129,8 @@ retain a factual heading or leave it unknown. Unassigned facts are grouped
 with a remaining count and a separate explicit unknown route. No semantic
 coverage is inferred solely from a citation. Questions and topic answers keep
 their existing Knowledge persistence and do not change operational settings.
+
+Earlier conversation displays plain owner decision labels without internal state
+qualifiers. Older form receipts receive the same presentation without rewriting
+their stored transcript. Current review status and the final saved receipt remain
+separate; hiding the qualifiers does not change approval or admission state.
