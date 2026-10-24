@@ -95,7 +95,9 @@ try{
    assert(await evaluate('[...document.querySelectorAll("[name=working_days]")].every(e=>e.disabled)'));
    await shot('02-exact-weekdays');
    await button('Accept displayed changes');
-   await until('document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelectorAll("[data-proposed]").length===0');
+   // The saved receipt and the native form refresh arrive independently.
+   // Wait for both; keep the exact UI and durable SQL assertions below.
+   await until('document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelectorAll("[data-proposed]").length===0 && [...document.querySelectorAll("[name=working_days]:checked")].map(e=>e.value).join(",")==="mon,wed"');
    assert.deepEqual(await evaluate('[...document.querySelectorAll("[name=working_days]:checked")].map(e=>e.value)'),['mon','wed']);
    await shot('04-weekdays-saved');
  }else if(area!=='diary'){
