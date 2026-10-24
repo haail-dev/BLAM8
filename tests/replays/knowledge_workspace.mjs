@@ -37,7 +37,7 @@ window.Blam8KnowledgeReview.replace(incoming('changed',form('c2')));
 assert.equal(active,original);assert.equal(active.edits,'Unsaved owner text');assert.match(active.status.textContent,/local edits are preserved/);
 const checked=form('c2','e1','v2');checked.edits='Unsaved owner text';
 const submit={target:active,submitter:{value:'preview'},preventDefault(){this.prevented=true;}};
-const pending=events.submit[0](submit);assert(submit.prevented);assert.equal(requests.length,1);assert(window.blam8KnowledgeImportBusy);
+const pending=Promise.all(events.submit.map(handler=>handler(submit)));assert(submit.prevented);assert.equal(requests.length,1);assert(window.blam8KnowledgeImportBusy);
 requests[0].resolve({ok:true,json:async()=>({...incoming('checked',checked),summary:'Check complete: no new findings. No facts saved.'})});await pending;
 assert.equal(active,checked);assert.equal(active.edits,'Unsaved owner text');assert.match(active.status.textContent,/No facts saved/);assert(!window.blam8KnowledgeImportBusy);
 const beforeRead=active;

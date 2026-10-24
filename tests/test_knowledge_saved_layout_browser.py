@@ -30,6 +30,9 @@ def test_saved_knowledge_layout(tmp_path, width, theme):
     const status=document.querySelector('[data-knowledge-saved-status]');
     check(status.textContent.includes('1 note saved. No drafts waiting'),'saved status');
     check(document.getElementById('site-lifecycle').hidden,'one completion summary');
+    const siteDone=document.getElementById('site-done');
+    check(siteDone.textContent.includes('Done')&&!siteDone.querySelector('button,a'),'website completion has no reread action');
+    check(!document.body.innerText.includes('Read again'),'saved page does not offer rereading');
     check(document.querySelector('[data-onboarding-heading]').textContent==='Your Knowledge','saved heading');
     const note=document.querySelector('[data-kb-note]'), summary=note.querySelector('summary');
     check(summary.textContent.includes('Opening hours')&&!summary.textContent.includes('technical123'),'title has no identifier');

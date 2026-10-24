@@ -95,9 +95,7 @@
    session (a reload after a failed read doesn't spend the cap again; the
    button still does). data-onb-site tells the panel's greeting the site is
    being read. #}
-{# Done = collapsed (Kris 2026-09-13: "still showing even though it's been
-   done"): once "Website — …" notes exist the box becomes one line, and
-   Read again reveals it for a re-run. #}
+{# Once website notes are saved, show a completion row without a reread action. #}
 {% set site_state = site_state or {'state': 'saved' if site_done else 'idle', 'pending_notes': 0, 'saved_notes': site_note_count or 0} %}
 <div id="site-lifecycle"{% if sources and not pending_reviews and site_state.state=='saved' %} hidden{% endif %} class="mb-3 rounded-lg bg-slate-50 p-3 text-sm" data-state="{{ site_state.state }}" data-pending-notes="{{ site_state.pending_notes }}" data-review-href="{{ site_state.review_href or '#knowledge-pending-reviews' }}">
   <p data-site-heading class="font-semibold">{% if site_state.state=='pending' %}Website drafts ready to review{% elif site_state.state=='saved' %}Website notes saved{% else %}Start from your website{% endif %}</p>
@@ -107,7 +105,7 @@
 {% if site_done and site_state.state=='saved' %}
 <div class="mb-4 flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm" id="site-done">
   <p class="text-slate-600">{% if site_url %}{{ site_url }}{% else %}Website source{% endif %}</p>
-  <button type="button" id="site-again" class="shrink-0 text-xs font-semibold text-brand hover:underline">Read again</button>
+  <span class="shrink-0 text-xs font-semibold text-emerald-700">Done</span>
 </div>
 {% endif %}
 <div class="mb-4 rounded-xl border border-brand/30 bg-brand-50/50 p-4" id="site-box" data-onb-site="{{ site_url if auto_site else '' }}"{% if auto_site %} data-auto-site="1"{% endif %}{% if site_done and site_state.state=='saved' %} hidden{% endif %} data-scope="{{ (request.state.tenant_id or '')[:12] }}">

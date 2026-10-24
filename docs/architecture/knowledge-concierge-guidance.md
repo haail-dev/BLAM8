@@ -134,3 +134,5 @@ Earlier conversation displays plain owner decision labels without internal state
 qualifiers. Older form receipts receive the same presentation without rewriting
 their stored transcript. Current review status and the final saved receipt remain
 separate; hiding the qualifiers does not change approval or admission state.
+The saved website row shows a noninteractive Done status instead of offering
+another website read during onboarding.

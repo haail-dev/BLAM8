@@ -295,8 +295,6 @@
   go.addEventListener('click',read);
   input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();read();}});
   input.addEventListener('input',function(){if(!busy && lifecycle.dataset.state!=='unconfirmed')present({state:'idle',message:'Address changed. Read deliberately when ready; existing pending drafts remain below.'});});
-  var again=document.getElementById('site-again');
-  if(again)again.addEventListener('click',function(){box.hidden=false;document.getElementById('site-done').hidden=true;input.focus();});
   if(box.dataset.autoSite==='1' && input.value.trim() && (!lifecycle || lifecycle.dataset.state==='idle')){
     var stamp='blam8_site_autoread:'+box.dataset.scope+':'+input.value.trim(),attempted=false;
     try{attempted=sessionStorage.getItem(stamp)==='1';sessionStorage.setItem(stamp,'1');}catch(e){}
