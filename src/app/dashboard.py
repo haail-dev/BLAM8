@@ -8684,10 +8684,11 @@ async def save_deck_settings(request: Request, ctx: TenantCtx = Depends(require_
 
 # ── Voice auto-learning (settings-side re-run + apply) ───────────────────────
 @router.post("/settings/voice-learn", dependencies=[Depends(require_csrf)])
-def settings_voice_learn(ctx: TenantCtx = Depends(require_onboarded)):
+async def settings_voice_learn(ctx: TenantCtx = Depends(require_onboarded)):
     """Re-run the sent-mail analysis on demand (e.g. after reconnecting a
-    mailbox, or a tenant who onboarded before this feature)."""
-    if db.get_connection_status(ctx.tenant_id, client=ctx.client):
+    mailbox, or a tenant who onboarded before this feature). Async so the run
+    is spawned on the event loop."""
+    if await run_in_threadpool(db.get_connection_status, ctx.tenant_id, client=ctx.client):
         voice_learning.spawn(ctx.tenant_id)
     return RedirectResponse("/app/settings?voice=learning", status_code=303)
 

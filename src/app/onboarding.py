@@ -693,19 +693,24 @@ async def voice_accept(request: Request, ctx: TenantCtx = Depends(require_tenant
 
 
 @router.post("/voice/learn", dependencies=[Depends(require_csrf)])
-def voice_learn(ctx: TenantCtx = Depends(require_tenant)):
+async def voice_learn(ctx: TenantCtx = Depends(require_tenant)):
     """The opt-in: start (or retry) sent-mail analysis — the ONLY way it starts
-    during onboarding."""
-    if db.get_connection_status(ctx.tenant_id, client=ctx.client):
+    during onboarding. Async so the run is spawned on the event loop; the
+    blocking checks go to the threadpool."""
+    def _allowed():
+        if not db.get_connection_status(ctx.tenant_id, client=ctx.client):
+            return False
         # Daily ceiling (2026-09-02 cost review): each run is up to 8 Sonnet
         # batch calls and this button could re-spawn one per click, unmetered.
         # A capped click quietly keeps the existing profile — the voice screen
         # still shows the last run's result, so nothing is lost.
         if fairuse.onboarding_allowed(ctx.tenant_id, "voice_learning", client=ctx.client):
-            voice_learning.spawn(ctx.tenant_id)
-        else:
-            logging.getLogger("blautom8.onboarding").warning(
-                "voice learning capped for today (tenant %s) — spawn skipped", ctx.tenant_id)
+            return True
+        logging.getLogger("blautom8.onboarding").warning(
+            "voice learning capped for today (tenant %s) — spawn skipped", ctx.tenant_id)
+        return False
+    if await run_in_threadpool(_allowed):
+        voice_learning.spawn(ctx.tenant_id)
     return RedirectResponse("/onboarding/voice", status_code=303)
 
 

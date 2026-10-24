@@ -48,12 +48,22 @@ Claims and revisions are serialized in PostgreSQL. Replaying an operation
 returns its recorded response. Different requests at an old revision or while
 another request is unresolved are rejected before the handler runs. Existing
 Knowledge admission and setup-card revision checks remain authoritative too.
+A handler that raises an unexpected error inside the process has a known
+outcome: it failed. The wrapper logs it and records the 500 response as the
+operation's receipt, exactly as it records any other error response, so a
+retry of that operation returns the error instead of running the handler again
+and later edits are accepted. Its revision header lets the page stay in step.
 If a process stops after claiming an action but before recording its outcome,
-the unresolved claim deliberately blocks retries. An operator must reconcile
-the stored business outcome before recording a terminal receipt with
+the unresolved claim deliberately blocks retries and every other write on that
+channel for that account. After 15 minutes (`ABANDONED_AFTER`, longer than any
+synced handler runs) the next write records an "interrupted" 409 receipt for
+the claim, logs it, and proceeds; the revision is unchanged because nothing was
+written. Replaying the interrupted operation returns that receipt and never
+repeats the action. Within the window an operator can still reconcile the
+stored business outcome and record a terminal receipt with
 `finish_device_sync`; do not delete the claim and blindly repeat the action.
 This favors avoiding duplicate side effects over automatic retry after an
-unconfirmed process failure.
+unconfirmed process failure, without leaving the owner locked out of setup.
 
 State and operation receipts are retained until tenant deletion, which cascades
 to both tables. They contain private conversation and draft content and belong
