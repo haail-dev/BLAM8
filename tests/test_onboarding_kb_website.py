@@ -55,13 +55,13 @@ HOME = """
 """
 
 
-def test_discover_links_same_site_priority_first_no_assets():
+def test_discover_links_same_site_discovery_order_without_context_no_assets():
     links = kb_website.discover_links("https://example.co.uk/", HOME)
-    # priority pages (pricing, contact) lead; www ↔ bare host is the same site;
+    # Without owner context, preserve discovery order; www/bare are the same site;
     # externals, images, mailto, fragments and the /pricing dupe are gone.
     assert links == ["https://example.co.uk/pricing",
-                     "https://www.example.co.uk/contact-us",
-                     "https://example.co.uk/blog/post-1"]
+                     "https://example.co.uk/blog/post-1",
+                     "https://www.example.co.uk/contact-us"]
 
 
 def test_normalize_url_adds_scheme():
@@ -177,6 +177,7 @@ def test_cited_statement_expansion_does_not_silently_cut_at_note_limit(monkeypat
 # ── propose endpoint ─────────────────────────────────────────────────────────
 
 def _tenant_env(monkeypatch):
+    monkeypatch.setattr(db, "get_tenant_config", lambda tid, client=None: {"goals":"Fewer missed requests"})
     monkeypatch.setattr(db, "get_tenant",
                         lambda tid, client=None: {"name": "Example Ltd", "industry": "trades"})
 
@@ -184,7 +185,8 @@ def _tenant_env(monkeypatch):
 def test_website_proposes_entries_as_json(client, store, monkeypatch):
     _tenant_env(monkeypatch)
 
-    async def fake_build(tenant_id, url, business_name=None, industry=None):
+    async def fake_build(tenant_id, url, business_name=None, industry=None, context=None):
+        assert context["saved_context"] == [{"label":"Owner goals","content":"Fewer missed requests"}]
         assert (tenant_id, business_name, industry) == ("t1", "Example Ltd", "trades")
         return {"site": "https://example.co.uk", "pages": ["https://example.co.uk"],
                 "entries": [{"label": "Prices", "content": "£45 + VAT."}]}

@@ -19,7 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.mark.parametrize('width', [390,1280])
 def test_correction_cards_apply_and_source_choices_in_native_browser(tmp_path,theme,width):
     note = entry(label='Hours and Contact',content='Our office closes at 5 pm. '+ 'Contact instructions remain available. '*7)
-    ctx,row=context([note])
+    other=entry('two','Published hours',content=note['content'].replace('5 pm','4 pm'))
+    other['provenance']=[{'source':'https://example.test/'+'long-path/'*30,'excerpt':'4 pm'},
+                         {'source':'https://example.test/'+'long-path/'*30,'excerpt':'office'}]
+    ctx,row=context([note,other])
     row['payload']['source_snapshot']='offline'
     from app.knowledge_capture import extract
     row['payload']['source_units']=knowledge_fidelity.inventory([{'url':'https://example.test/'+'path/'*30,
@@ -48,6 +51,14 @@ def test_correction_cards_apply_and_source_choices_in_native_browser(tmp_path,th
       button.focus();check(document.activeElement===button&&getComputedStyle(button).outlineStyle==='solid','visible keyboard focus');
       const token=getComputedStyle(document.documentElement).getPropertyValue('--c-bg-white').trim().split(/\s+/).join(', ');
       check(getComputedStyle(note).backgroundColor==='rgb('+token+')','theme card surface');
+      document.querySelector('[data-note-details]').open=true;
+      document.querySelector('[data-note-panel=more]').hidden=false;
+      const comparison=document.querySelector('[data-duplicate-candidate]');
+      check(comparison.getBoundingClientRect().height>0,'comparison visible');
+      check(comparison&&comparison.textContent.includes('Check a possible fact difference'),'difference label');
+      check(comparison.querySelectorAll('[data-comparison-pair] blockquote').length>=2,'both quoted passages');
+      check(comparison.textContent.includes('“Our office closes at 5 pm.”'),'literal quote punctuation');
+      check(Array.from(comparison.querySelectorAll('p')).filter(p=>p.textContent.startsWith('Source:')).length===1,'one source display');
       document.querySelector('[data-note-panel=edit]').hidden=false;
       document.querySelector('[data-note-panel=source]').hidden=false;
       document.querySelector('.kr-source-coverage').open=true;

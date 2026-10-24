@@ -866,9 +866,12 @@ async def knowledge_website(request: Request, url: str = Form(""), ctx: TenantCt
                                       "the key facts as notes below instead."},
                             status_code=429)
     t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
+    from app import knowledge_review, knowledge_collection
+    collection_context = knowledge_collection.context_for(
+        db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}, knowledge_review.load(ctx.tenant_id))
     try:
         result = await kb_website.build(ctx.tenant_id, url,
-                                        business_name=t.get("name"), industry=t.get("industry"))
+                                        business_name=t.get("name"), industry=t.get("industry"), context=collection_context)
     except ValueError as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     except Exception as e:
