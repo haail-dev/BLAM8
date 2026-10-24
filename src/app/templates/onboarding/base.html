@@ -52,7 +52,8 @@
       }
     }
     [data-stepper-total] { position:relative; --label-start:0px; --label-end:0px; }
-    body[data-onboarding-shell] [data-stepper-total] { position:sticky;top:calc(3rem + env(safe-area-inset-top, 0px));z-index:30;background:rgb(var(--c-bg-slate-100));box-shadow:0 -12px 0 rgb(var(--c-bg-slate-100)); }
+    /* Kris 2026-10-24: no band behind the stepper; the page background shows through. */
+    body[data-onboarding-shell] [data-stepper-total] { position:sticky;top:calc(3rem + env(safe-area-inset-top, 0px));z-index:30; }
     .onboarding-stepper-row { display:grid;grid-template-columns:repeat(var(--stepper-count),minmax(0,1fr));height:2.8rem; }
     [data-stepper-inspecting] .onboarding-stepper-row { height:4.2rem; }
     .onboarding-stepper-item { min-width:0; }
@@ -60,6 +61,8 @@
     .onboarding-step-toggle:focus-visible { outline:2px solid #4f46e5;outline-offset:2px; }
     .onboarding-step-label { position:absolute;top:1.85rem;left:var(--label-left,0px);max-width:100%;width:max-content;padding:0 .4rem;text-align:center;font-size:11px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none; }
     .onboarding-step-label[data-inspected-label] { top:3rem; }
+    /* The current step's name is the progress bar's own blue. */
+    .onboarding-step-toggle[data-current-step] + .onboarding-step-label { color:#2450e6; }
     .onboarding-progress { position:absolute;top:calc(1.85rem + 6px);height:3px;left:0;right:0;border-radius:999px;background:linear-gradient(to right,#2450e6 0 var(--label-start),transparent var(--label-start) var(--label-end),#e2e8f0 var(--label-end) 100%);pointer-events:none; }
     /* The body scrolls, so content otherwise ends in a hard line at the bottom of
        the viewport. A fixed, click-through fade in the page colour (the theme
@@ -252,6 +255,7 @@
 {% set concierge_authed = true %}
 {% set concierge_in_app = onboarding_progress|default(none) is not none %}
 {% set concierge_onboarding_step = step if not concierge_in_app else '' %}
+{% set concierge_glass_logo = true %}
 {% block onboarding_app_support %}{% endblock %}
 <script id="onboarding-journey" type="application/json">{{ journey|default(none)|tojson }}</script>
 <script src="/static/onboarding_journey.js?v={{ asset_rev }}"></script>

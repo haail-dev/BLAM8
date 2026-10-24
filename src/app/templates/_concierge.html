@@ -82,7 +82,8 @@
     </form>
   </section>
 
-  {% set landing_glass_logo = request.url.path in ('/', '/login') or request.url.path.startswith('/onboarding/') %}
+  {# Guided setup keeps the onboarding shell on /app/ pages, so the shell asks for the glass mark itself. #}
+  {% set landing_glass_logo = concierge_glass_logo|default(false) or request.url.path in ('/', '/login') or request.url.path.startswith('/onboarding/') %}
   <!-- Landing, sign-in and onboarding share the glass mark and reduced-motion still. -->
   <button id="bc-bubble" type="button" aria-label="Open BLAM8 assistant" aria-expanded="false"
           {% if landing_glass_logo %}data-assistant-glass-logo{% endif %}
