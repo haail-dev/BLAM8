@@ -47,6 +47,46 @@ remain proposals. Existing card edits and acceptance reconcile linked answers,
 superseded history, proposal revisions and receipts through the same atomic
 metadata/card writer. Unrelated native card behavior remains supported.
 
+Each proposed value carries a source: `owner_said`, `owner_site`, `inferred`
+or `assumed`. Guided turns give the model the setup context pack
+(`setup_context.py`) as BUSINESS CONTEXT. An `inferred` value names its reason
+and up to three signal ids from that pack as `evidence`. `setup_inference.resolve`
+settles every value before a card is written:
+
+- an owner's or website value stays;
+- an inferred value stays when its evidence is known and the owner stands
+  behind at least one cited signal (confirmed, submitted, saved configuration,
+  or their saved website and Knowledge text); a stricter-than-usual
+  customer-facing value is marked `check`;
+- any other value takes the native editor's blank-row default, the "usual
+  setting", filled explicitly where the row checks demand the choice; a
+  stricter customer-facing value without evidence is reset and the owner is
+  asked in plain words (`setup_wording.py`) whether they want it;
+- a new row missing a field with no usual value (its label, say) is held back
+  with a question, and the rest of the proposal goes ahead.
+
+These rules cover related records, customer fields, pipeline stages and
+booking requirements. Other rows (diary settings, invoices, scalar CRM
+settings) keep the stricter rule: an owner turn carrying an assumed or inferred
+value there is refused, and a draft leaves such a row out.
+
+An industry name or template is never evidence. The general Help prompt keeps
+its stricter source rules, because only the guided server checks evidence. A
+reply covering two pages keeps the current page. A turn of considered notes
+only ("leave it as it is") is stored and keeps the assistant's reply. When a
+proposal still cannot be used, the error detail leads with the assistant's
+reply. Card lines carry `reasons` built by the server ("You said", "From your
+website", "Suggested: …", "Check this"), with usual settings grouped on one
+line.
+
+On arrival at Related records, customer fields, CRM settings or Booking
+requirements with nothing suggested yet, the browser requests one draft
+(`POST /app/setup/guide/draft`, `setup_draft.py`). The model drafts from
+BUSINESS CONTEXT, the server settles it like any turn, and the result is an
+ordinary card; rows for another question on the page are held. Each page is
+drafted once, recorded in `guide.drafts` even when the call fails, so a reload
+never repeats it.
+
 `proposal_forms.js` projects supported scalar values into real owning controls.
 Their pre-projection values remain authoritative for dirty-save and device-sync
 serialization. Enter and native form submission are blocked while a proposal

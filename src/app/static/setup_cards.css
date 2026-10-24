@@ -12,6 +12,10 @@
 .bc-setup-tray button:disabled{opacity:.45;cursor:default}
 .bc-setup-tray button:focus-visible,.bc-setup-dot:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
 .bc-setup-problem,.bc-setup-error{color:#92400e}
+.bc-setup-line p.bc-setup-reason{font-size:11px;color:#475569}
+.bc-setup-line p.bc-setup-check{font-size:11px;color:#92400e;font-weight:600}
+[data-theme="dark"] .bc-setup-line p.bc-setup-reason{color:#cbd5e1}
+[data-theme="dark"] .bc-setup-line p.bc-setup-check{color:#fbbf24}
 .bc-setup-error{background:#fffbeb;padding:8px;font-size:12px;flex:none}
 .bc-setup-editor{display:grid;gap:8px}
 .bc-setup-editor>label{display:grid;gap:3px;text-transform:none}

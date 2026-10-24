@@ -214,6 +214,7 @@
         secondary.appendChild(button('Decide later',function(){action('later');}));
         secondary.appendChild(button('Not needed',function(){action('not_needed');}));
         if(stop.kind==='decision'&&!pending&&decision!=='applied')actions.appendChild(button('Keep current settings',function(){action('keep_current');}));
+        if(state.draft&&!pending&&drafting!==stop.id&&!busy)requestDraft(stop);
       }
     }
     if(state.index>0)actions.appendChild(button('Back',function(){action('back');}));
@@ -240,7 +241,18 @@
     });}
   }
   // ── Diary discovery: answers first, settings after ─────────────────────────
-  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null;
+  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null, suggestRetried=null, drafting=null;
+  // The first suggestion for a records or booking-requirements page, drafted once by the server
+  // from the business's own facts. Its reply joins the conversation and the card loads beside it.
+  function requestDraft(stop){
+    drafting=stop.id;note('Drafting a suggestion from what you’ve told us so far…');
+    request('/draft',{revision:state.revision,stop:stop.id,operation:'draft'}).then(function(next){
+      if(next.revision<state.revision)return;
+      state=next;note('');
+      if(next.reply&&window.blam8ConciergeAssistantSay)window.blam8ConciergeAssistantSay(next.reply);
+      if(panel)panel.load();paint();
+    }).catch(function(){note('');});
+  }
   // What the owner typed or ticked survives a repaint (suggestions arrive while they type).
   var draft={stop:null,text:'',picked:{}};
   var DAYS=[['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
@@ -397,7 +409,9 @@
     if(state.guide.diary&&state.guide.diary.suggestions_source!=='model'&&suggesting!==state.stop.id&&!busy){
       suggesting=state.stop.id;
       request('/diary/suggest',{revision:state.revision,stop:state.stop.id,operation:'suggest'})
-        .then(function(next){if(next.revision>=state.revision){state=next;paint();}}).catch(function(){});
+        .then(function(next){if(next.revision>=state.revision){state=next;paint();}})
+        // One retry on the next paint: a failure must not leave the question without suggestions for good.
+        .catch(function(){if(suggestRetried!==suggesting){suggestRetried=suggesting;suggesting=null;}});
     }
   }
   function discovery(stop,actions,secondary){
@@ -453,7 +467,7 @@
       }
     }
     if(!previews)return;
-    var projected=0, pending=0;
+    var projected=0, pending=0, why=null;
     (data.cards||[]).forEach(function(card){card.lines.forEach(function(line){
       if(!matches(card,line)||['proposed','held'].indexOf(line.status)===-1)return;
       pending++;
@@ -474,10 +488,11 @@
         panel.guidedDraft={control:control,raw:raw};
         panel.mutate(card,'/changes',{revision:card.revision,changes:[{op:'set',id:line.id,fields:{value:value},
           sources:{value:{kind:'owner_said',reference:'Owner edited the proposed control'}}}]});
-      }})){projected++;reveal(control);}
+      }})){projected++;reveal(control);
+        if(!why)why=((line.reasons&&line.reasons.lines)||[]).filter(function(r){return r.text.indexOf('Suggested: ')===0;})[0];}
     });});
     if(pending&&!projected)note('Review the existing card beside this editor. Compound or locally edited controls stay unchanged until you Accept.');
-    else if(projected)note('Proposed — not saved.');
+    else if(projected)note('Proposed — not saved.'+(why?' '+why.text.replace('Suggested: ','Suggested because: '):''));
     if(state.stop.kind==='explanation'&&t)reveal(t);
   }
   // The pinned bar shows the question and buttons; anything after them (More

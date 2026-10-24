@@ -16,6 +16,7 @@ Preserve the outcomes documented in `docs/verified-behaviours.md`. Business-spec
 facts and language belong in business settings and applied presets. Missing detail,
 a failed rule, an unverifiable fact, and an unsupported request are different outcomes.
 Do not invent a business configuration value when the owner has not chosen one.
+A suggestion shown with its reason and accepted by the owner is the owner's choice.
 
 Keep code comments and docstrings useful to the next reader. A docstring should explain
 the function's purpose, inputs, outputs and important boundaries. Record non-obvious

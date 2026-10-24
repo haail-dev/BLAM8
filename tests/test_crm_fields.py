@@ -62,13 +62,13 @@ def test_add_field_enforces_cap_and_duplicates(monkeypatch):
                                     "label": "Fleet size"})
 
 
-def test_seeds_for_tenant_skips_what_exists():
-    defined = [{"entity": "company", "key": "fleet_size"}]
+def test_seeds_for_tenant_skips_what_exists_and_ignores_the_industry_label():
+    defined = [{"entity": "company", "key": "location"}]
     seeds = crm_fields.seeds_for_tenant({"industry": "logistics"}, defined)
-    assert "fleet_size" not in [crm_fields.slug(s["label"]) for s in seeds["company"]]
+    assert "location" not in [crm_fields.slug(s["label"]) for s in seeds["company"]]
     assert seeds["contact"]                        # untouched entities still suggest
-    generic = crm_fields.seeds_for_tenant({"industry": "a made-up sector"}, [])
-    assert generic["company"]                      # free-text industry → generic set
+    for industry in ("logistics", "kennels", "a made-up sector", None):
+        assert crm_fields.seeds_for_tenant({"industry": industry}, []) == crm_fields.seeds_for_tenant({}, [])
     every = set(industry_lingo.CRM_SEEDS) | {None}
     for ind in every:                              # every seed ships valid
         for entity, items in industry_lingo.crm_seeds_for(ind).items():
@@ -361,13 +361,14 @@ FIELD_DEFS = [
 ]
 
 
-def test_fields_page_shows_defs_and_industry_seeds(client, monkeypatch):
+def test_fields_page_shows_defs_and_generic_seeds_only(client, monkeypatch):
     Env(monkeypatch, defs=FIELD_DEFS)
     r = client.get("/app/crm/fields")
     assert r.status_code == 200
     assert "Role" in r.text and "Fleet size" in r.text
-    assert "Depot count" in r.text          # logistics seed still on offer
-    assert "+ Fleet size" not in r.text     # already defined → chip gone
+    assert "+ Location" in r.text            # the generic seed is on offer
+    assert "Depot count" not in r.text       # an industry label never chooses chips
+    assert "+ Role" not in r.text            # already defined → chip gone
     assert "Preview with my last 5 emails" in r.text
 
 

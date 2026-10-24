@@ -174,12 +174,16 @@
     if (effective) {
       var changes = node("details"); changes.appendChild(node("summary", "Changes")); diff(changes, effective); row.appendChild(changes);
     }
-    var evidence = node("details"); evidence.appendChild(node("summary", "Sources"));
-    Object.keys(line.sources).forEach(function (field) {
-      var source = line.sources[field];
-      evidence.appendChild(node("p", field + ": " + source.kind.replace(/_/g, " ") + " — " + source.reference));
+    // Why each choice is suggested, in the owner's words; the server builds these lines.
+    var reasons = line.reasons || { lines: [], usual: [] };
+    reasons.lines.forEach(function (r) {
+      row.appendChild(node("p", (r.check ? "Check this. " : "") + r.label + ". " + r.text, r.check ? "bc-setup-check" : "bc-setup-reason"));
     });
-    row.appendChild(evidence);
+    if (reasons.usual.length) {
+      var usual = node("details"); usual.appendChild(node("summary", "Other choices use the usual settings"));
+      usual.appendChild(node("p", reasons.usual.join(", ")));
+      row.appendChild(usual);
+    }
     var grouped=hasGroupAccept&&groupPreview&&effective;
     if (preview && preview.error && !grouped) row.appendChild(node("p", preview.error, "bc-setup-problem"));
     else if(preview&&preview.error&&grouped)row.appendChild(node('p','Included in the displayed changes. Accept this group together.'));
