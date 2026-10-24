@@ -26,14 +26,15 @@ class FakeRead:
             dict(id='f2', entity='contact', key='notes', label='Access notes', field_type='text')])
 
     def stages(self):
-        return self._go('stages', [dict(name='Enquiry'), dict(name='Managed')])
+        return self._go('stages', [dict(name='Enquiry', stage_type='active'), dict(name='Managed', stage_type='won')])
 
     def source_texts(self):
         return self._go('source_texts', [dict(source='Website', text='We manage rented homes.'),
                                          dict(source='Owner clarifications · abc', text='Residents email repairs.')])
 
     def count(self, table):
-        return self._go('count', {'crm_contacts': 3, 'crm_tasks': 0, 'bookings': 0}[table])
+        return self._go('count', {'crm_contacts': 3, 'crm_companies': 1, 'requirement_instances': 4,
+                                  'crm_tasks': 0, 'bookings': 0}[table])
 
 
 def context(**cfg):
@@ -49,7 +50,7 @@ def context(**cfg):
                 config=dict(business_brief='Two-person property agency.', goals='Fewer missed repairs.',
                             setup_held=[dict(page='diary_settings', values={'open_time': '09:00'})]),
                 cfg=cfg, knowledge=None, knowledge_unavailable=False,
-                groups=[dict(id='g1', label='Property', fields=[
+                groups=[dict(id='g1', label='Property', plural='Properties', cardinality='many', fields=[
                     dict(key='gas_expiry', label='Gas safety expiry', durability='expires'),
                     dict(key='keys', label='Key code', durability='once')])])
 
@@ -162,3 +163,17 @@ def test_model_view_drops_lowest_trust_first_to_fit():
     assert 'confirmed' in kept and kept == sorted(kept, key=setup_context.TRUST.index)
     with pytest.raises(ValueError):
         setup_context.model_view(setup_context.build(context(), read=FakeRead()), 'charges')
+
+
+def test_records_step_sources_are_in_the_shared_picture():
+    ctx = context()
+    ctx['state']['capabilities'] = {'related_records': 'needed', 'lifecycle': 'undecided'}
+    pack = setup_context.build(ctx, read=FakeRead())
+    group = setup_context.signal(pack, 'record:group:g1')['value']
+    assert (group['plural'], group['cardinality']) == ('Properties', 'many')
+    assert [f['durability'] for f in group['fields']] == ['expires', 'once']
+    assert setup_context.signal(pack, 'record:stages')['value']['types'] == ['active', 'won']
+    assert setup_context.signal(pack, 'count:crm_companies')['value']['count'] == 1
+    assert setup_context.signal(pack, 'count:requirement_instances')['value']['count'] == 4
+    assert setup_context.signal(pack, 'capability:related_records')['trust'] == 'confirmed'
+    assert setup_context.signal(pack, 'capability:lifecycle') is None  # undecided is not a decision

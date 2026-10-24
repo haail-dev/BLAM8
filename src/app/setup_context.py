@@ -164,6 +164,12 @@ def build(context, *, read=None):
                  + ', '.join(_text(p.get('name'), 60) for p in people[:20]),
                  dict(count=len(people)), dict(type='team_people', reference='active'))
 
+    # Section decisions the owner already made (needed, off or deferred).
+    for capability, choice in sorted(state.get('capabilities', {}).items()):
+        if choice in ('needed', 'off', 'deferred'):
+            pack.add('capability', capability, 'confirmed', f'{capability}: {choice}',
+                     dict(capability=capability, choice=choice), dict(type='onboarding_capability', reference=capability))
+
     # 9. Modules decide availability, never meaning.
     for module in sorted(context.get('modules') or ()):
         pack.add('module', module, 'config', module, dict(module=module), dict(type='subscription'))
@@ -173,7 +179,10 @@ def build(context, *, read=None):
         group_label = _text(group.get('label') or group.get('name'), 60)
         if group_label:
             pack.add('record', f"group:{group.get('id')}", 'config', f"Related record: {group_label}",
-                     dict(record='requirement_group', id=str(group.get('id')), label=group_label),
+                     dict(record='requirement_group', id=str(group.get('id')), label=group_label,
+                          plural=_text(group.get('plural'), 60) or None, cardinality=group.get('cardinality'),
+                          fields=[dict(key=f.get('key'), label=_text(f.get('label'), 60), type=f.get('type'),
+                                       durability=f.get('durability')) for f in (group.get('fields') or [])[:LIST_CAP]]),
                      dict(type='requirement_groups', reference=str(group.get('id'))))
         for field in group.get('fields') or []:
             if field.get('durability') == 'expires':
@@ -196,11 +205,12 @@ def build(context, *, read=None):
     stages = pack.guarded('stages_unavailable', read.stages) or []
     if stages:
         pack.add('record', 'stages', 'config', 'Stages: ' + ', '.join(_text(s.get('name'), 40) for s in stages[:20]),
-                 dict(record='crm_stages', names=[_text(s.get('name'), 40) for s in stages[:20]]),
+                 dict(record='crm_stages', names=[_text(s.get('name'), 40) for s in stages[:20]],
+                      types=[s.get('stage_type') for s in stages[:20]]),
                  dict(type='crm_stages'))
 
     # 11. Counts of work already recorded; never message content.
-    for table in ('crm_contacts', 'crm_tasks', 'bookings'):
+    for table in ('crm_contacts', 'crm_companies', 'requirement_instances', 'crm_tasks', 'bookings'):
         count = pack.guarded(f'{table}_count_unavailable', lambda t=table: read.count(t))
         if count:
             pack.add('count', table, 'derived', f'{table}: {count}', dict(table=table, count=count),
