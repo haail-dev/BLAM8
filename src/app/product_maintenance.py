@@ -77,6 +77,13 @@ SOURCE_CAPABILITIES = {
     'src/app/auth_routes.py': 'installable',
     'src/app/native_auth.py': 'installable',
     'docs/architecture/native-sign-in.md': 'installable',
+    # Layouts outside the catalogue that carry the browser-tab icon (tests/test_tab_icon.py).
+    'src/app/templates/admin/base.html': 'installable',
+    'src/app/templates/admin/login.html': 'installable',
+    'src/app/templates/app/driver.html': 'installable',
+    'src/app/templates/partner/home.html': 'installable',
+    'src/app/templates/partner/join.html': 'installable',
+    'src/app/templates/partner/terms.html': 'installable',
 }
 
 

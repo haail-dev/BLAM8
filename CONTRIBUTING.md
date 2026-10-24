@@ -57,6 +57,13 @@ do not weaken the guard to work around billing. Actions usage is charged to the
 repository owner (`haail-dev`), and the organisation billing page is the place to
 check its allowance.
 
+If a PR is merged without CI because minutes ran out, keep track of it for later
+checks. Add the `needs-ci` label to the PR (create the label if it is missing) and
+link its local evidence comment. When minutes return, run the offline workflow on
+current `main`, which covers everything merged in the meantime, plus any labelled
+PR that is still open. Remove each label only once a green run includes that
+change; if the run fails, fix it in a new PR before more work lands on top.
+
 The initial baseline history replacement was a one-off migration. Normal changes
 add commits through PRs; do not rewrite shared `main` to tidy up ordinary work.
 
