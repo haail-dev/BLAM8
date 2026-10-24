@@ -819,6 +819,8 @@
       resizeHandle.setAttribute("aria-valuenow", String(next));
       resizeHandle.setAttribute("aria-valuetext", next + " pixels tall");
     }
+    // The guide sizes its own sheet; an explicit drag or key resize hands it the height.
+    if (height != null && window.Blam8GuidedSetup && window.Blam8GuidedSetup.active()) window.Blam8GuidedSetup.sheet(next);
     syncPageSpace();
     return next;
   }

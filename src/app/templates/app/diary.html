@@ -1,6 +1,9 @@
 {% extends "app/base.html" %}
 {% block title %}Diary · BLAM8{% endblock %}
 {% block heading %}{{ 'Office diary' if fleet_on else 'Diary' }}{% endblock %}
+{# In the onboarding shell the step name already says Diary; keep the
+   heading for screen readers and give the calendar the space. #}
+{% block card_header %}<h1 data-onboarding-heading class="sr-only">{{ self.heading() }}</h1>{% endblock %}
 {% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
 {% block content %}
 
