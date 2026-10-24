@@ -696,3 +696,16 @@ def test_guided_stream_scrolls_without_scrollbar_chrome():
     stream=css.split('.guided-stream{')[1].split('}')[0]
     assert 'overflow-y:auto' in stream and 'scrollbar-width:none' in stream
     assert '.guided-stream::-webkit-scrollbar{display:none}' in css
+
+
+def test_question_and_answers_are_pinned_under_the_thread_without_pause_setup():
+    js=(__import__('pathlib').Path(__file__).resolve().parents[1]/'src/app/static/guided_setup.js').read_text(encoding='utf-8')
+    css=(__import__('pathlib').Path(__file__).resolve().parents[1]/'src/app/static/guided_setup.css').read_text(encoding='utf-8')
+    assert "parent.insertBefore(navigation,parent.querySelector('#bc-form'))" in js
+    assert "stream.appendChild(navigation)" not in js
+    assert "if(stop.kind==='relevance'||stop.kind==='need')pinned.unshift(el('p',stop.question,'guided-ask'))" in js
+    assert "if(secondary.childElementCount)pinned.push(more)" in js
+    assert 'Pause setup' not in js and "e.key==='Escape'" not in js
+    nav=css.split('.guided-navigation{')[1].split('}')[0]
+    assert 'flex:none' in nav and 'overflow-y:auto' in nav and 'scrollbar-width:none' in nav
+
