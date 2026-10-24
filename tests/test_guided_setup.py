@@ -808,3 +808,14 @@ def test_failed_draft_is_marked_once_and_leaves_the_question_usable(guide_journe
     assert result['fallback'] is True and result['draft'] is False
     assert 'booking_details' not in (j.row('tenant_config',j.tenant).get('setup_cards') or {})
     assert j.state()['guide']['current']=='booking_details/field'
+
+
+def test_any_move_onto_the_diaries_question_reads_its_context_first(guide_journey):
+    # On the 24 Oct rig run the owner reached "Your diaries" by Decide later on the
+    # last Records question; the diary context was never read and no suggestions came.
+    j=guide_journey;j.move('relevance.records.progress')
+    state=j.state();state['capabilities'].pop('lifecycle',None);state['guide'].pop('diary',None)
+    onboarding_state.save(j.ctx,j.state(),state)
+    j.guide_action('relevance','deferred')
+    assert j.state()['guide']['current']==guided_setup.DIARIES_STOP
+    assert 'context_revision' in j.state()['guide']['diary']

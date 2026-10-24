@@ -236,6 +236,12 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 raise ValueError('Unknown guide operation.')
     except (ValueError, KeyError) as exc:
         raise HTTPException(400, str(exc) if isinstance(exc, ValueError) else 'Invalid guide data.') from None
+    if (state.get('guide') or {}).get('current') == guide.DIARIES_STOP and 'diary' not in state['guide']:
+        # Any move can land on the diaries question (Decide later or Not needed on
+        # the last Records section, for example); its cached context and the
+        # browser's suggestion request both depend on this first read.
+        from app import diary_discovery
+        diary_discovery.refresh(_with_knowledge(ctx, context), state)
     card_write = card_write or prepare_known_choice(ctx, context, state)
     return save(ctx, context, state, card_write)
 
@@ -430,6 +436,7 @@ async def diary_suggest(body: Action, ctx: TenantCtx = Depends(require_onboarded
         suggestions, msg = await diary_discovery.suggest(ctx.tenant_id, pack, context['state'])
         usage.record_anthropic(ctx.tenant_id, msg.model, msg.usage, operation='concierge_help', module='concierge')
     except Exception:
+        log.exception('Diary suggestions failed; the fallback list stays')
         return guide.describe(context)
     latest = context_for(ctx, body.revision)
     state = deepcopy(latest['state'])

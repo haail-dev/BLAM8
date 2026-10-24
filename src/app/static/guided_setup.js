@@ -238,7 +238,7 @@
     });}
   }
   // ── Diary discovery: answers first, settings after ─────────────────────────
-  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null, drafting=null;
+  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null, suggestRetried=null, drafting=null;
   // The first suggestion for a records or booking-requirements page, drafted once by the server
   // from the business's own facts. Its reply joins the conversation and the card loads beside it.
   function requestDraft(stop){
@@ -406,7 +406,9 @@
     if(state.guide.diary&&state.guide.diary.suggestions_source!=='model'&&suggesting!==state.stop.id&&!busy){
       suggesting=state.stop.id;
       request('/diary/suggest',{revision:state.revision,stop:state.stop.id,operation:'suggest'})
-        .then(function(next){if(next.revision>=state.revision){state=next;paint();}}).catch(function(){});
+        .then(function(next){if(next.revision>=state.revision){state=next;paint();}})
+        // One retry on the next paint: a failure must not leave the question without suggestions for good.
+        .catch(function(){if(suggestRetried!==suggesting){suggestRetried=suggesting;suggesting=null;}});
     }
   }
   function discovery(stop,actions,secondary){
