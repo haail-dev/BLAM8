@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>{% block title %}BLAM8{% endblock %}</title>
   <meta name="robots" content="noindex" />
-  <link rel="icon" type="image/png" href="/static/img/blam8-logo.png?v={{ asset_rev }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/blam8-tab-icon-32.png?v={{ asset_rev }}">
+  <link rel="icon" type="image/png" sizes="64x64" href="/static/img/blam8-tab-icon-64.png?v={{ asset_rev }}">
   {# PWA: installability (manifest + icons) and the Web Push public key the
      subscribe call needs (src/app/static/push.js). Key absent = push off, no banner. #}
   <link rel="manifest" href="{{ "/static/concierge-manifest.json" if request.url.path == "/concierge/live" else "/manifest.json" }}">
