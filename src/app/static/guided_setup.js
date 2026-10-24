@@ -134,7 +134,7 @@
     host.appendChild(el('p',stop.title,'guided-title'));
     if(sectionContext[stop.substep])host.appendChild(el('p',sectionContext[stop.substep],'guided-context'));
     var viewPage=button(document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page',function(){
-      document.body.classList.toggle('guided-page-expanded');
+      document.body.classList.toggle('guided-page-expanded');sheet(null);
       viewPage.textContent=document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page';
       fit();if(highlight)highlight.scrollIntoView({block:'start',behavior:'instant'});
     });viewPage.className='guided-page-toggle';host.appendChild(viewPage);
@@ -320,7 +320,20 @@
     if(!state){location.reload();return;}
     return action(state.guide&&state.guide.intro_ack?'resume':'start');
   }
-  var api=window.Blam8GuidedSetup={ready:null,start:startGuide,active:active,exists:function(){return !!(state&&state.guide);},
+  // A dragged assistant height is kept as a share of the viewport for the
+  // session, so the next guide page opens at the size the owner chose.
+  var SHEET_KEY='blam8-guided-sheet';
+  function sheet(height){
+    var ratio=null;
+    try{if(height===undefined)ratio=parseFloat(sessionStorage.getItem(SHEET_KEY))||null;
+      else if(height===null)sessionStorage.removeItem(SHEET_KEY);
+      else{var vp=window.visualViewport;ratio=height/(vp?vp.height:innerHeight);sessionStorage.setItem(SHEET_KEY,String(ratio));}}catch(_){}
+    if(ratio)document.documentElement.style.setProperty('--guided-sheet-height','calc(var(--guided-viewport,100dvh) * '+ratio+')');
+    else document.documentElement.style.removeProperty('--guided-sheet-height');
+    fit();
+  }
+  sheet();
+  var api=window.Blam8GuidedSetup={ready:null,start:startGuide,sheet:sheet,active:active,exists:function(){return !!(state&&state.guide);},
     currentStop:function(){return active()&&state.stop?state.stop.id:'';},messagesChanged:messagesChanged,pause:function(){return action('pause');},
     attach:function(cards,open){panel=cards;opener=open;Promise.all([api.ready,
       window.Blam8DeviceSync?window.Blam8DeviceSync.ready:Promise.resolve()]).then(function(){paint();cards.paint();resumeLocation();});},

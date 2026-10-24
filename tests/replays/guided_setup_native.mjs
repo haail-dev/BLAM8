@@ -74,8 +74,20 @@ try{
      await click('[data-guided-entry]');
    }else await click('[data-guided-start]');
    await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
+   // The step name says Diary; the card heading stays for screen readers only.
+   assert.deepEqual(await evaluate(`(()=>{const h=document.querySelector('[data-onboarding-heading]');return {text:h.textContent,height:h.getBoundingClientRect().height<=1};})()`),{text:'Diary',height:true});
+   // The owner can drag the assistant taller; the guide keeps that size on its next page.
+   const sheet=()=>evaluate(`Math.round(document.querySelector('#bc-panel').getBoundingClientRect().height)`);
+   assert(await evaluate(`getComputedStyle(document.querySelector('#bc-resize-handle')).display!=='none'`));
+   const before=await sheet(),grip=await evaluate(`(()=>{const r=document.querySelector('#bc-title').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',buttons:1,clickCount:1,...grip});
+   for(const step of [50,100,150])await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',button:'left',buttons:1,x:grip.x,y:grip.y-step});
+   await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',buttons:0,clickCount:1,x:grip.x,y:grip.y-150});
+   const dragged=await sheet();assert(dragged>=before+140,JSON.stringify({before,dragged}));
+   assert(await evaluate(`(()=>{const m=document.querySelector('main').getBoundingClientRect(),p=document.querySelector('#bc-panel').getBoundingClientRect();return m.bottom<=p.top+1;})()`));
    await button('Next');
    await until('location.pathname==="/app/diary/settings" && document.querySelector(".guided-title")');
+   assert(Math.abs(await sheet()-dragged)<=2,JSON.stringify({dragged,next:await sheet()}));
    await button('Needed');
    await until('document.querySelector(".guided-question")?.textContent.includes("Already covered — We inspect equipment.")');
    await shot('01-reused-answer');
