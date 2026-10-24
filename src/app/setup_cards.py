@@ -185,6 +185,8 @@ def refresh(card, saved=None):
         line["problems"] = row["problems"]
         line["display"] = (setup_rows.describe(card["page"], line["name"], row["fields"], row["provided"])
                            if row.get("fields") else "Needs your answer: " + "; ".join(row["problems"]))
+        from app import setup_inference  # imports setup_context; kept lazy to avoid a cycle
+        line["reasons"] = setup_inference.reasons(card["page"], line["name"], line["fields"], line.get("sources"))
     card["status"] = ("proposed" if any(v["status"] == "proposed" for v in pending)
                       else "held" if pending else "applied" if any(v["status"] == "applied" for v in card["lines"])
                       else "considered" if card.get("considered") else "left")

@@ -450,7 +450,7 @@
       }
     }
     if(!previews)return;
-    var projected=0, pending=0;
+    var projected=0, pending=0, why=null;
     (data.cards||[]).forEach(function(card){card.lines.forEach(function(line){
       if(!matches(card,line)||['proposed','held'].indexOf(line.status)===-1)return;
       pending++;
@@ -471,10 +471,11 @@
         panel.guidedDraft={control:control,raw:raw};
         panel.mutate(card,'/changes',{revision:card.revision,changes:[{op:'set',id:line.id,fields:{value:value},
           sources:{value:{kind:'owner_said',reference:'Owner edited the proposed control'}}}]});
-      }})){projected++;reveal(control);}
+      }})){projected++;reveal(control);
+        if(!why)why=((line.reasons&&line.reasons.lines)||[]).filter(function(r){return r.text.indexOf('Suggested: ')===0;})[0];}
     });});
     if(pending&&!projected)note('Review the existing card beside this editor. Compound or locally edited controls stay unchanged until you Accept.');
-    else if(projected)note('Proposed — not saved.');
+    else if(projected)note('Proposed — not saved.'+(why?' '+why.text.replace('Suggested: ','Suggested because: '):''));
     if(state.stop.kind==='explanation'&&t)reveal(t);
   }
   function fit(){

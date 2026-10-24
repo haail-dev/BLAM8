@@ -126,3 +126,21 @@ def test_filled_rows_pass_their_row_parsers():
                  'sources': {k: {'kind': 'owner_said', 'reference': 'x'} for k in fields}}
         kept, _ = inference.resolve(page, [patch], None, SIGNALS)
         assert setup_rows.parse(page, row, kept[0]['fields'])['problems'] == [], (page, row)
+
+
+def test_reasons_speak_in_owner_words_and_group_usual_settings():
+    from app import setup_cards
+    fields = {'kind': 'Property', 'label': 'Address', 'type': 'text', 'required': True,
+              'durability': 'once', 'gate': False}
+    sources = {'kind': said('Property')[1], 'label': said('Address')[1],
+               'type': {'kind': 'inferred', 'reference': inference.USUAL, 'evidence': []},
+               'required': {'kind': 'inferred', 'reference': 'Your site asks for it', 'evidence': ['source_text:abc'], 'check': True},
+               'durability': said('once', 'stays the same')[1],
+               'gate': {'kind': 'inferred', 'reference': inference.USUAL, 'evidence': []}}
+    result = inference.reasons('dependants', 'field', fields, sources)
+    assert result['usual'] == ['Format', 'Stops a booking when it has run out']
+    assert result['lines'] == [
+        {'label': 'Must be filled in', 'text': 'Suggested: Your site asks for it', 'check': True},
+        {'label': 'How long it stays true', 'text': 'You said: stays the same', 'check': False}]
+    card = setup_cards.change('dependants', None, 0, 'turn-1', [{'op': 'append', 'name': 'field', 'fields': fields, 'sources': sources}])
+    assert card['lines'][0]['reasons'] == result

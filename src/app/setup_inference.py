@@ -158,3 +158,30 @@ def resolve(page, patches, card, signals):
                     sources[field] = _usual()
         kept.append(patch)
     return kept, list(dict.fromkeys(questions))
+
+
+# Fields that name the row itself; the card's display line already shows them.
+IDENTITY = {'label', 'name', 'key', 'kind'}
+SAID = {'owner_said': 'You said', 'owner_site': 'From your website',
+        'inferred': 'Suggested', 'assumed': 'Assumed'}
+
+
+def reasons(page, row, fields, sources):
+    """Owner-facing reason lines for one card line.
+
+    Returns ``{'lines': [{'label', 'text', 'check'}], 'usual': [labels]}``. A
+    field on its usual setting with no evidence is listed once under
+    ``usual`` rather than given its own line.
+    """
+    lines, usual = [], []
+    for field in fields:
+        source = (sources or {}).get(field)
+        if not source or (field in IDENTITY and source.get('kind') == 'owner_said'):
+            continue
+        name = setup_wording.label(page, row, field)
+        if source.get('kind') == 'inferred' and not source.get('evidence'):
+            usual.append(name)
+            continue
+        lines.append({'label': name, 'text': SAID.get(source.get('kind'), 'Source') + ': ' + source.get('reference', ''),
+                      'check': bool(source.get('check'))})
+    return {'lines': lines, 'usual': usual}
