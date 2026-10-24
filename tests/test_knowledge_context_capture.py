@@ -131,7 +131,6 @@ def test_same_title_still_offers_merge_without_an_overlap_warning():
 @pytest.mark.parametrize('width,theme', [(390,'dark'),(1280,'light')])
 def test_native_quoted_comparison_layout(tmp_path, width, theme):
     import subprocess
-    from bs4 import BeautifulSoup
     from tests.test_knowledge_guidance_browser import chromium_binary
     root = Path(__file__).resolve().parents[1]
     url = 'https://example.test/'+'long-source-path/'*15
@@ -141,7 +140,11 @@ def test_native_quoted_comparison_layout(tmp_path, width, theme):
     ctx,row=context([one,two])
     env=Environment(loader=FileSystemLoader(root/'src/app/templates'),autoescape=True)
     html=env.get_template('_knowledge_review.html').render(review=review.review_view(ctx,row),csrf_token=lambda _: 'csrf',request={})
-    card=str(BeautifulSoup(html,'html.parser').select_one('[data-duplicate-candidate]'))
+    # Extract the controlled template fixture through its final checkbox label;
+    # no optional HTML-parser dependency is needed in a clean CI installation.
+    start=html.rfind('<div', 0, html.index('data-duplicate-candidate>'))
+    end=html.index('</label>', start)+len('</label>')
+    card=html[start:end]+'</div>'
     css=(root/'src/app/static/tw.css').read_text(encoding='utf-8')
     page=tmp_path/'comparison.html'
     page.write_text('<!doctype html><html data-theme="'+theme+'"><meta charset="utf-8"><style>'+css+

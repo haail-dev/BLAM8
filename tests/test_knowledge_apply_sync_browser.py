@@ -50,7 +50,11 @@ def apply_app(sync_case, monkeypatch):
     async def auth(request: Request, response: Response):
         return ctx
 
-    notes = [entry(str(i), "Note " + str(i), "Distinct wording " + str(i) + ".") for i in range(1, 5)]
+    # Distinct subjects: numeric placeholders now legitimately trigger possible
+    # fact-difference review. This fixture tests one deliberate brief overlap.
+    texts = ['We acknowledge new enquiries.', 'Prices follow the signed agreement.',
+             'Send documents using email.', 'Office access requires an appointment.']
+    notes = [entry(str(i), "Note " + str(i), text) for i, text in enumerate(texts, 1)]
     notes.append(entry("5", "Ongoing service", FINAL))
     review_ctx, review_row = context(notes, brief=notes[0]["content"])
     review_ctx["version"] = "v1"
