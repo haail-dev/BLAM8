@@ -1,3 +1,7 @@
+{# Setup keeps the wizard's exact chrome; native forms still own their content. #}
+{% set onboarding_progress = onboarding_app_progress(request.url.path, setup_strip_raw|default(none), guided_setup_meta|default(none)) if onboarding_app_progress is defined else none %}
+{% if onboarding_progress %}{% extends "onboarding/base.html" %}{% endif %}
+{% if not onboarding_progress %}
 <!doctype html>
 <html lang="en" class="h-full">
 <head>
@@ -1219,3 +1223,13 @@
 {% include "_concierge.html" %}
 </body>
 </html>
+{% endif %}
+{% block onboarding_app_support %}
+{% if onboarding_progress %}
+  {% if guided_setup_meta %}<div data-guided-active="{{ guided_setup_meta.status }}" hidden></div>{% endif %}
+  {% if setup_prefill %}<script type="application/json" id="setup-prefill">{{ setup_prefill | tojson }}</script>{% endif %}
+  <script src="/static/spare_rows.js?v={{ asset_rev }}" defer></script>
+  <script src="/static/flash.js?v={{ asset_rev }}" defer></script>
+  <script src="/static/dirty_save.js?v={{ asset_rev }}" defer></script>
+{% endif %}
+{% endblock %}

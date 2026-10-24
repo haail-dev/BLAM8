@@ -191,6 +191,30 @@ def _progress_name(label: str | None) -> str:
     return re.sub(r"\s+settings$", "", label, flags=re.IGNORECASE) or label
 
 
+def onboarding_progress(path: str, raw: dict | None = None, guide: dict | None = None):
+    """Keep setup in the wizard shell; saved group reviews own completion."""
+    from app import onboarding_contract as contract
+    raw, guide = raw or {}, guide or {}
+    groups = raw.get('steps') or []
+    review_page = path in ('/app/setup', '/app/setup/guide',
+                          *('/app/setup/' + key for key in contract.GROUPS))
+    native_group = contract.ROUTES.get(path, (None,))[0]
+    native_group = native_group or {'/app/diary': 'diary', '/app/money': 'charges'}.get(path)
+    walking = (not raw.get('dismissed_at') and first_open(groups)) or guide.get('status') in ('active', 'paused')
+    if not review_page and not (native_group and walking):
+        return None
+    current = native_group or (path.rsplit('/', 1)[-1] if path.rsplit('/', 1)[-1] in contract.GROUPS else None)
+    if not current:
+        current = next((g['key'] for g in groups if not g.get('done')), 'diary')
+    done = {g['key']: bool(g.get('done')) for g in groups}
+    items = [dict(key=key, label=label, completed=True, current=False)
+             for key, label in (('interview', 'About you'), ('mailbox', 'Customer inbox'),
+                                ('voice', 'Voice'), ('knowledge', 'Knowledge'))]
+    items.extend(dict(key=key, label=label, completed=done.get(key, False), current=key == current)
+                 for key, label in contract.GROUPS.items())
+    return items
+
+
 def strip(step_list: list[dict], current_path: str | None = None,
           onboarded_at=None, dismissed_at=None, now: datetime | None = None) -> dict | None:
     """The shell strip: where the owner is in the nine, what is next, and

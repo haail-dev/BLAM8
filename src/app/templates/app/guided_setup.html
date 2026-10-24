@@ -1,9 +1,8 @@
 {% extends "app/base.html" %}
 {% block title %}Guided setup · BLAM8{% endblock %}
-{% block heading %}Set up the app together{% endblock %}
+{% block heading %}Next, let’s set up your app together{% endblock %}
 {% block content %}
-<section class="max-w-2xl mx-auto p-6 space-y-4" data-guided-intro>
-  <h1 class="text-xl font-semibold">Next, let’s set up your app together</h1>
+<section class="space-y-4" data-guided-intro>
   <p>We’ll start with Diary, then review your records and charging choices. I’ll explain each area, ask about what you need, and show suggestions on its real page.</p>
   <p>Accept saves the displayed changes. Next moves the guide. You can leave a suggestion, decide later, or pause and resume.</p>
   <button type="button" disabled class="rounded-lg bg-brand px-4 py-2 text-white disabled:opacity-50" data-guided-start>{{ 'Resume guided setup' if guide_description.guide and guide_description.guide.intro_ack else 'Start guided setup' }}</button>

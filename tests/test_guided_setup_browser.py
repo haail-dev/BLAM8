@@ -100,7 +100,9 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
     j.execute((ROOT/'db/migrations/20261004_setup_forms.sql').read_text())
     j.execute((ROOT/'db/migrations/20261020_device_sync.sql').read_text())
     user=str(uuid4());ctx=TenantCtx(j.tenant,None,user)
-    async def auth(request:Request,response:Response):return ctx
+    async def auth(request:Request,response:Response):
+        request.state.tenant_id=j.tenant;request.state.user_email='owner@example.test'
+        return ctx
     app.dependency_overrides[require_onboarded]=auth
     app.dependency_overrides[require_tenant]=auth
     monkeypatch.setattr(sync,'require_tenant',auth)
@@ -111,6 +113,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             return super().rpc(name,args)
     monkeypatch.setattr(db,'db',lambda:Combined(((j.rpc.driver,j.rpc.dsn),j.tenant,user)))
     monkeypatch.setattr(db,'calendar_connected',lambda *a,**k:False)
+    monkeypatch.setattr(db,'list_mailboxes',lambda *a,**k:[dict(tenant_id=j.tenant,address='owner@example.test')])
     monkeypatch.setattr(db,'setup_has_booking_history',lambda *a,**k:False)
     model(monkeypatch,proposed)
     original_ctx=dashboard._ctx

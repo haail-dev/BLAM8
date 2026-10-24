@@ -5,6 +5,16 @@ Continue opens a brief introduction. Starting explicitly acknowledges it and
 opens Diary orientation, followed by the existing settings owners in grouped
 substep order. Existing completed tenants acquire no new mandatory flow.
 
+The introduction, all three grouped reviews and their native setup pages reuse
+Knowledge's onboarding shell: the B mark, BLAM8/Automate identity header, seven
+progress positions, card, background and assistant gutter. Progress names disclose
+labels without navigating or saving. Saved group reviews determine ticks; the
+current guide section determines the active group, including when two groups
+use the same settings page. Pausing retains this layout on setup pages; ordinary
+app pages and completed or dismissed setup retain their normal application shell.
+The header and seven progress positions stay visible while the guide reveals
+fields. The mobile guide keeps the native form scrollable above its assistant sheet.
+
 `guided_setup.registry()` accounts for the complete native setup catalogue.
 It defines bounded routes, anchors, small decisions and dependent batches. The
 guide never accepts model selectors or arbitrary navigation destinations.

@@ -63,6 +63,16 @@
 }
 @media(prefers-reduced-motion:reduce){.guided-target{scroll-behavior:auto}}
 
+/* Native editors sit inside the same card and gutter as Knowledge. */
+[data-onboarding-content] > :is(div,section).mx-auto {padding:0;max-width:none}
+@media(max-width:767px){
+ .guided-running[data-onboarding-shell]{position:fixed;inset:0}
+ .guided-running[data-onboarding-shell] > .min-h-full{height:100dvh;min-height:0}
+ .guided-running[data-onboarding-shell] [data-onboarding-main]{flex:none;overflow-y:auto;scroll-padding:5rem 0 1rem;overscroll-behavior:contain}
+ .guided-running[data-onboarding-shell] [data-stepper-total]{top:0}
+ .guided-running[data-onboarding-shell] #bc-panel{bottom:var(--guided-keyboard-inset,0px)!important}
+}
+
 .guided-navigation{padding:0 1rem 1rem}.guided-navigation .guided-actions{margin-top:0}
 
 .guided-section{font-size:.75rem;color:var(--guided-muted);margin:-.2rem 0 .65rem}

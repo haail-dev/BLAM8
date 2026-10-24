@@ -328,7 +328,8 @@ def describe(context):
                     for g in groups for sub in g['substeps'] if sub['id']==stop.get('substep')), None)
     decision_id = stop.get('decision_id', stop['id'])
     unresolved=unresolved_required(context,stop['substep']) if stop['kind']=='review' else []
-    return dict(section=section, unresolved=[dict(id=s['id'],title=s['title']) for s in sequence if s['id'] in unresolved],
+    return dict(section=section, progress=[dict(key=g['key'], done=g['done']) for g in groups],
+        unresolved=[dict(id=s['id'],title=s['title']) for s in sequence if s['id'] in unresolved],
         remaining_sections=sum(context['state']['reviews'].get(sub['id'],{}).get('state') not in ('reviewed','off','deferred')
                                for group in groups for sub in group['substeps']),
         revision=context['state']['revision'], guide=guide, stop=stop,

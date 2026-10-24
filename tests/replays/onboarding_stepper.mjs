@@ -9,7 +9,7 @@ const buttons=Array.from({length:9},(_,i)=>({attributes:{'aria-expanded':i===3?'
   addEventListener(name,handler){this.listeners[name]=handler;},focus(){this.focused=true;}}));
 const labels=Object.fromEntries(buttons.map((button,i)=>['label-'+i,{hidden:i!==3,offsetWidth:70,style:{setProperty(){}}}]));
 const stepper={style:{setProperty(){}},getBoundingClientRect(){return {left:0,width:360};},inspecting:false,querySelectorAll(){return buttons;},toggleAttribute(name,value){assert.equal(name,'data-stepper-inspecting');this.inspecting=value;}};
-vm.runInNewContext(source,{window:{addEventListener(){}},document:{querySelectorAll(){return [stepper];},getElementById(id){return labels[id];}}});
+vm.runInNewContext(source,{window:{addEventListener(){}},document:{addEventListener(){},querySelectorAll(){return [stepper];},getElementById(id){return labels[id];}}});
 const shown=()=>buttons.map((b,i)=>!labels['label-'+i].hidden?i:null).filter(i=>i!==null);
 assert.deepEqual(shown(),[3]);
 buttons[4].listeners.click();assert.deepEqual(shown(),[3,4]);assert.equal(buttons[4].attributes['aria-expanded'],'true');assert(stepper.inspecting);
