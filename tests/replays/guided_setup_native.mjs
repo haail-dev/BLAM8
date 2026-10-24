@@ -66,14 +66,14 @@ try{
    await until('location.pathname==="/app/diary/dependants" && window.Blam8GuidedSetup?.currentStop()==="relevance.records.relationships"');
    await shot('00-records-handoff');
    for(const [stop,next] of [['relevance.records.relationships','/app/crm/fields'],['relevance.records.information','/app/crm/settings'],
-                             ['relevance.records.progress','/app/diary']]){
+                             ['relevance.records.progress','/app/diary/settings']]){
      await until('window.Blam8GuidedSetup?.currentStop()==='+JSON.stringify(stop)+' && window.Blam8DeviceSync?.isReady()');
      await button('Decide later');
      await until('location.pathname==='+JSON.stringify(next)+' && document.querySelector(".guided-title")');
    }
-   await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
+   // Diary then starts by asking which diaries the business keeps, on the real settings page.
+   await until('location.pathname==="/app/diary/settings" && document.querySelector(".guided-title")?.textContent==="Your diaries"');
    await shot('00-diary-handoff');
-   assert(await evaluate(`getComputedStyle(document.querySelector('[data-tour-diary]')).outlineStyle==='none'`));
    await click('.guided-more > summary');await button('Pause setup');
    await until('!document.body.classList.contains("guided-running")');
    await cdp('Page.navigate',{url:`http://127.0.0.1:${appPort}/app/setup/guide`});
@@ -82,9 +82,10 @@ try{
      if(await evaluate('document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-bubble');
      await click('[data-guided-entry]');
    }else await click('[data-guided-start]');
-   await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
-   // The step name says Diary; the card heading stays for screen readers only.
-   assert.deepEqual(await evaluate(`(()=>{const h=document.querySelector('[data-onboarding-heading]');return {text:h.textContent,height:h.getBoundingClientRect().height<=1};})()`),{text:'Diary',height:true});
+   await until('location.pathname==="/app/diary/settings" && document.querySelector(".guided-title")?.textContent==="Your diaries"');
+   // Discovery runs on the real Diary settings page, under its own heading.
+   assert.equal(await evaluate(`document.querySelector('[data-onboarding-heading]').textContent`),'Diary settings');
+   assert(!await evaluate(`document.querySelector('.guided-context')`));
    // The owner can drag the assistant taller; the guide keeps that size on its next page.
    const sheet=()=>evaluate(`Math.round(document.querySelector('#bc-panel').getBoundingClientRect().height)`);
    assert(await evaluate(`getComputedStyle(document.querySelector('#bc-resize-handle')).display!=='none'`));
@@ -94,10 +95,31 @@ try{
    await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',buttons:0,clickCount:1,x:grip.x,y:grip.y-150});
    const dragged=await sheet();assert(dragged>=before+140,JSON.stringify({before,dragged}));
    assert(await evaluate(`(()=>{const m=document.querySelector('main').getBoundingClientRect(),p=document.querySelector('#bc-panel').getBoundingClientRect();return m.bottom<=p.top+1;})()`));
-   await button('Next');
-   await until('location.pathname==="/app/diary/settings" && document.querySelector(".guided-title")');
+   await cdp('Page.reload');
+   await until('window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-title")?.textContent==="Your diaries"');
    assert(Math.abs(await sheet()-dragged)<=2,JSON.stringify({dragged,next:await sheet()}));
-   await button('Needed');
+   // Answers first: name a diary, describe it with the controls, give hours, confirm.
+   await type('.guided-question textarea','Inspections');await button('Continue');
+   await until('document.querySelector(".guided-title")?.textContent==="Inspections"');
+   const answerText=async(text)=>{await type('.guided-choices input:not([type=checkbox])',text);await button('Use answer');};
+   const stopNow=()=>evaluate('Blam8GuidedSetup.currentStop()');
+   const after=async(work)=>{const before=await stopNow();await work();await until('Blam8GuidedSetup.currentStop()!=='+JSON.stringify(before));};
+   await after(()=>answerText('Boiler check at 4 Elm Road'));
+   await shot('01-diary-question');
+   await after(()=>button('Customers ask for it'));
+   await after(async()=>{await click('.guided-choices input[value=people]');await button('Use answer');});
+   await after(()=>answerText('2'));
+   await after(()=>button('A set time'));
+   await after(()=>answerText('60'));
+   await after(()=>button('No'));
+   await after(()=>button('The customer confirms'));
+   await until('document.querySelector(".guided-title")?.textContent==="Your hours"');
+   for(const day of [0,1,2,3,4])await click(`.guided-hours-row:nth-child(${day+1}) input[type=checkbox]`);
+   await after(()=>button('Use these hours'));
+   await until('document.querySelector(".guided-diary-list")?.innerText.includes("Ready to set up")');
+   assert(await evaluate('document.querySelector(".guided-question").innerText.includes("Hours: Monday to Friday, 09:00 to 17:00.")'));
+   await shot('01-diary-profile');
+   await button('That’s right');
    await until('document.querySelector(".guided-question")?.textContent.includes("Already covered — We inspect equipment.")');
    await shot('01-reused-answer');
    for(let n=0;n<12&&await evaluate('Blam8GuidedSetup.currentStop()!=="diary_settings/stay_mode"');n++){
@@ -147,7 +169,7 @@ try{
    await until('location.pathname==="/app/diary/settings" && window.Blam8DeviceSync?.isReady() && window.Blam8GuidedSetup?.currentStop()==="explain.diary_settings/stay_mode"');
    assert(await evaluate('!document.querySelector(".guided-question").textContent.includes("Your answer — false")'));
    await shot('05-exact-resume');
-   console.log('Actual Knowledge Continue, one-time handover, incomplete-intake Diary orientation, answer reuse, proposed mode, explanation and Accept passed');
+   console.log('Actual Knowledge Continue, one-time handover, diary discovery and profile, answer reuse, proposed mode, explanation and Accept passed');
  }else if(area==='knowledge_conflict'){
    await until('document.querySelector(".guided-knowledge-conflict")?.innerText.includes("Within 14 days")');
    assert(await evaluate('document.querySelector(".guided-knowledge-conflict").innerText.includes("Before work begins") && !document.querySelector("[name=payment_terms][data-proposed]")'));

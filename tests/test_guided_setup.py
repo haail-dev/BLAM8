@@ -46,7 +46,12 @@ def guide_journey(journey, monkeypatch):
         assert stop in {s['id'] for s in guided_setup.steps({**context,'state':state})}
         state['guide']['current']=stop
         onboarding_state.save(j.ctx,context['state'],state)
-    j.guide_action=action;j.move=move
+    def diary(op,expected=200,**extra):
+        g=j.state().get('guide') or {}
+        response=j.http.post('/app/setup/guide/diary',json=dict(revision=j.state()['revision'],stop=g['current'],operation=op,**extra))
+        assert response.status_code==expected,response.text
+        return response
+    j.guide_action=action;j.move=move;j.diary=diary
     action('start')
     return j
 
@@ -335,7 +340,7 @@ def test_unavailable_knowledge_never_certifies_an_imported_answer(guide_journey,
     assert not (j.row('tenant_config',j.tenant).get('setup_cards') or {}).get('invoice_settings')
 
 
-def test_start_opens_records_before_diary_and_get_never_mutates(guide_journey):
+def test_start_opens_records_then_asks_which_diaries_and_get_never_mutates(guide_journey):
     j=guide_journey
     before=j.state()
     for _ in range(2):
@@ -343,14 +348,15 @@ def test_start_opens_records_before_diary_and_get_never_mutates(guide_journey):
         assert d['stop']['substep']=='records.relationships' and d['section']['group']=='Records and workflows'
         assert d['stop']['href'].split('#')[0]=='/app/diary/dependants'
     assert j.state()==before
-    sequence=[s['id'] for s in guided_setup.steps(onboarding_state.load(j.ctx))]
-    assert sequence.index('review.records.progress')<sequence.index('orientation.diary')
-    j.move('orientation.diary')
+    # Records first; Diary then asks which diaries before any setting, and the real diary comes last.
+    ids=[s['id'] for s in guided_setup.steps({**onboarding_state.load(j.ctx),'state':j.state()})]
+    assert ids.index('review.records.progress')<ids.index('diary.discover.diaries')<ids.index('diary.profile')<ids.index('orientation.diary')
+    assert 'relevance.diary.activities' not in ids
+    j.move('diary.discover.diaries')
     d=j.http.get('/app/setup/guide/state').json()
-    assert d['stop']['href']=='/app/diary'
-    j.guide_action('next')
-    d=j.http.get('/app/setup/guide/state').json()
-    assert d['stop']['href'].split('#')[0]=='/app/diary/settings'
+    assert d['stop']['id']=='diary.discover.diaries' and d['stop']['href']=='/app/diary/settings'
+    assert d['discovery']['diaries']==[] and d['discovery']['limit']==8
+    j.guide_action('next',expected=400)
     assert j.row('scheduling_config',j.tenant) is None
 
 
@@ -415,7 +421,10 @@ def test_off_journey_finishes_without_settings_or_readiness(guide_journey):
     for _ in range(40):
         d=j.http.get('/app/setup/guide/state').json();kind=d['stop']['kind']
         if kind=='finished':break
-        j.guide_action('relevance','off') if kind=='relevance' else j.guide_action('next')
+        if kind=='diaries':j.diary('choose',state='not_applicable')
+        elif kind=='hours':j.diary('answer',state='not_applicable')
+        elif kind=='profile':j.diary('confirm')
+        else:j.guide_action('relevance','off') if kind=='relevance' else j.guide_action('next')
     assert kind=='finished'
     j.guide_action('finish')
     assert j.state()['guide']['status']=='finished'

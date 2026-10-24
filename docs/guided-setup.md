@@ -2,9 +2,10 @@
 
 The four initial onboarding steps retain their existing validation. Knowledge
 Continue opens a brief introduction. Starting explicitly acknowledges it and
-opens Records and workflows, followed by Diary orientation and the remaining
-settings owners in grouped substep order. Existing completed tenants acquire no
-new mandatory flow.
+opens Records and workflows, then Diary, which first asks which diaries the
+business keeps (Diary discovery, below), followed by the remaining settings
+owners in grouped substep order. Existing completed tenants acquire no new
+mandatory flow.
 
 The introduction has one route: its Start/Resume button and the assistant's
 matching button call the same guide action. The old grouped-review shortcut is
@@ -82,9 +83,10 @@ acceptance. The owner can explicitly choose the earlier or updated answer;
 this revises the same pending card and still requires Accept to save settings.
 Owner-edited or accepted settings retain their independent authority. Reads
 derive freshness without writing metadata; explicit mutations persist it.
-Section reviews link directly to unanswered required decisions. A fresh tenant
-can see the read-only Diary orientation before configuring its later intake
-step; this does not bypass validation for creating a booking.
+Section reviews link directly to unanswered required decisions. The read-only
+Diary page closes the Diary group, after its settings, and a fresh tenant can
+see it before configuring intake; this does not bypass validation for creating
+a booking.
 
 Guide orientations do not stamp whole legacy tours complete: unseen Diary,
 Money, Today and Inbox
@@ -92,7 +94,58 @@ topics, including explicit drafting activation, retain their existing behavior.
 No guide action creates bookings, invoices or payments, sends messages, enables
 drafting or changes saved operation through relevance choices.
 
+## Diary discovery
+
+Diary is answers first, settings after. It opens on the real Diary settings page
+with four kinds of stop before any setting is proposed:
+
+1. **Your diaries.** The owner picks suggested diaries or names their own (up to
+   eight), or says they are not sure or keep none. Each suggestion shows the
+   fact it rests on; suggestions that cite no trusted fact are dropped, and a
+   fallback list from saved services and record dates is used when the model is
+   unavailable.
+2. **Each diary.** A few short questions, skipped when an earlier answer makes
+   them irrelevant: an example, who starts it, the record date it follows, what
+   it takes up and how many at once, how its time is set and how long, whether
+   it repeats, and whether anyone outside the team must agree.
+3. **Hours.** Working and contact hours are always asked, whatever else was
+   answered, in 15-minute steps. Overnight hours are refused with their reason.
+4. **Profile.** One plain line per diary with a code-owned support state: ready
+   to set up, shown from records, noted for later (with the reason), not
+   available on this account, or not decided yet. Confirming it replaces the
+   former "Do you need help arranging times?" gate.
+
+Before asking, the guide reads one shared business picture
+(`src/app/setup_context.py`): confirmed answers, saved and current Knowledge
+answers, the interview description, saved configuration, record fields and
+their dates, and counts. Every fact has a stable id, a trust tier and its
+source. The industry label, pending Knowledge and message content are not read,
+and booking settings the owner has not confirmed are gaps, not values. Hours
+can be offered as "Is that right?" only from confirmed settings or the owner's
+saved words.
+
+On discovery stops the model returns answers only; no settings proposal is
+possible. One message may answer several questions for several diaries. The
+server validates every diary, question, value and cited fact, saves the valid
+answers in one revision and writes the reply from what was saved. Hours from a
+message stay a proposal to confirm, a different answer to an answered question
+is offered as a change, and a diary name the owner did not use is offered for
+them to add. Diary answers use their own `diary` scope.
+
+After the profile, customer-booking settings appear only for a bookable diary.
+A diary the business arranges gets hours, capacity, resources and slots. Diaries
+that need something not built yet, such as agreement from someone outside the
+team, combined resources, rule-based repeats or a records view of dates, get no
+settings and stay listed with their reason. The diary audit's engine extensions
+remain separate reviewed work.
+
 ## Local verification and release
+
+`tests/test_setup_context.py`, `tests/test_diary_contract.py`,
+`tests/test_diary_profile.py` and `tests/test_diary_discovery.py` cover the
+shared read, typed answers and scope, skip rules and support states, and the
+discovery HTTP journey with disposable SQL, including the 24 October owner
+sentence, multi-answer saves and the settings hand-off.
 
 `tests/test_guided_setup.py` covers the real Help caller with synthetic model
 transport, native card validation, HTTP handlers and disposable SQL. The notice
@@ -102,7 +155,7 @@ off journey finishes with no scheduling or invoice row.
 
 `tests/test_guided_setup_browser.py` drives trusted native Chromium input over
 loopback HTTP and disposable SQL. It covers the actual Knowledge handover,
-incomplete-intake Diary orientation, same-card explanations, scalar and weekday
+diary discovery through to a confirmed profile, same-card explanations, scalar and weekday
 previews, direct edits, native submit protection, Accept, pause/resume and device
 restore. Screenshots cover phone, narrow phone, tablet and desktop layouts;
 reduced viewport checks are separate from real on-device keyboard testing.

@@ -73,7 +73,8 @@
   function csrf(){var m=document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/);return m?decodeURIComponent(m[1]):'';}
   async function request(path,body){var r=await fetch('/app/setup/guide'+path,{cache:'no-store',method:body?'POST':'GET',
     headers:{'Content-Type':'application/json','X-CSRF-Token':csrf()},body:body?JSON.stringify(body):undefined});
-    var result=await r.json();if(!r.ok)throw Error(typeof result.detail==='string'?result.detail:'The guide could not be confirmed. Reload its current state.');return result;}
+    var result=await r.json();if(!r.ok){var failed=Error(typeof result.detail==='string'?result.detail:'The guide could not be confirmed. Reload its current state.');
+      failed.status=r.status;throw failed;}return result;}
   function active(){return !!(state&&state.guide&&state.guide.status==='active'&&state.guide.intro_ack);}
   function clear(){if(previews)previews.clear();if(highlight)highlight.classList.remove('guided-target');highlight=null;}
   function confirmDiscard(reason){return !previews || !previews.anyDirty() || window.confirm('You have unsaved changes on this page. '+reason+' will discard those edits. Keep this page open to save or review them first, or continue and discard them.');}
@@ -132,7 +133,7 @@
     host.appendChild(el('p',state.section?state.section.group+(sectionNumber?' · Section '+sectionNumber+' of 3':''):'Guided setup','guided-progress'));
     if(state.section&&state.section.label!==stop.title)host.appendChild(el('p',state.section.label,'guided-section'));
     host.appendChild(el('p',stop.title,'guided-title'));
-    if(sectionContext[stop.substep])host.appendChild(el('p',sectionContext[stop.substep],'guided-context'));
+    if(sectionContext[stop.substep]&&DISCOVERY.indexOf(stop.kind)===-1)host.appendChild(el('p',sectionContext[stop.substep],'guided-context'));
     var viewPage=button(document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page',function(){
       document.body.classList.toggle('guided-page-expanded');sheet(null);
       viewPage.textContent=document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page';
@@ -203,6 +204,8 @@
       actions.appendChild(button('Defer this section',function(){action('later');}));
     }else if(stop.kind==='finished'){
       actions.appendChild(button('Finish review',function(){action('finish');},true));
+    }else if(DISCOVERY.indexOf(stop.kind)!==-1){
+      discovery(stop,actions,secondary);
     }else{
       actions.appendChild(button('Next',function(){action('next');},!pending));
       if(stop.kind==='decision'||stop.kind==='fact'){
@@ -232,6 +235,175 @@
     if(revealed!==stop.id){revealed=stop.id;if(highlight)requestAnimationFrame(function(){
       if(highlight&&(!document.activeElement||!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)))highlight.scrollIntoView({block:'start',behavior:'instant'});
     });}
+  }
+  // ── Diary discovery: answers first, settings after ─────────────────────────
+  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null;
+  // What the owner typed or ticked survives a repaint (suggestions arrive while they type).
+  var draft={stop:null,text:'',picked:{}};
+  var DAYS=[['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
+  var WORDS={'diary.starter':{customers:'Customers ask for it',we_arrange:'We arrange it',both:'Customers ask, or we arrange it',
+      from_records:'It follows a date we already keep',internal:'Just us, no customer'},
+    'diary.occupies':{people:'Someone’s time',places:'A place',equipment:'Equipment',nothing:'Nothing — it’s a date or a to-do'},
+    'diary.time_shape':{set_time:'A set time',window:'An arrival window',days:'Over one or more days',due_by:'Done by a date'},
+    'diary.repeats':{no:'No',weekly:'Weekly',fortnightly:'Fortnightly',monthly:'Monthly',six_weekly:'Every six weeks',
+      quarterly:'Quarterly',depends:'It depends on something'},
+    'diary.agreement':{no:'No',customer:'The customer confirms',someone_else:'Someone else'}};
+  var SUPPORT={ready:'Ready to set up',from_records:'Shown from your records',noted:'Noted for later',
+    unavailable:'Not available on this account',undecided:'Not decided yet'};
+  async function diaryAction(operation,extra){
+    if(busy)return;busy=true;controlsBusy(true);
+    var send=function(){return request('/diary',Object.assign({revision:state.revision,stop:state.stop.id,operation:operation},extra||{}));};
+    try{
+      // Suggestions save in the background; a stale revision reloads once and resends the same choice.
+      try{state=await send();}catch(e){if(e.status!==409)throw e;state=await request('/state');state=await send();}
+      clear();paint();navigate();
+    }catch(e){note(e.message+' Your answers so far are kept.');}
+    finally{busy=false;controlsBusy(false);}
+  }
+  function answerWith(value,status){return diaryAction('answer',{state:status||'answered',value:value});}
+  function hoursText(value){
+    if(!value||!value.working)return '';
+    return DAYS.filter(function(d){return value.working[d[0]];}).map(function(d){return d[1]+' '+value.working[d[0]].join('–');}).join(', ');
+  }
+  function shown(question,value){
+    if(value==null)return '';
+    if(question==='diary.hours')return hoursText(value);
+    if(question==='diary.date_source'){var source=(state.discovery.date_sources||[]).find(function(d){return d.id===value;});return source?source.label:String(value);}
+    if(Array.isArray(value))return value.map(function(v){return (WORDS[question]||{})[v]||v;}).join(', ');
+    if(typeof value==='object'&&value.amount)return value.amount+' '+value.unit;
+    return (WORDS[question]||{})[value]||String(value);
+  }
+  function unsure(secondary,extra){
+    secondary.appendChild(button('Not sure',function(){answerWith(null,'unknown');}));
+    secondary.appendChild(button('Decide later',function(){answerWith(null,'deferred');}));
+    secondary.appendChild(button(extra||'Doesn’t apply',function(){answerWith(null,'not_applicable');}));
+  }
+  function prefillBox(stop){
+    var prefill=state.discovery.prefill;if(!prefill)return;
+    var box=el('section',null,'guided-prefill');box.setAttribute('role','status');
+    var source={conversation:'what you said',suggestion:'the suggestion you chose',context:'your setup'}[prefill.source]||'your setup';
+    if(prefill.value!=null){
+      box.appendChild(el('p',(prefill.change?'You gave a different answer earlier. Change it to: ':'From '+source+': ')+shown(stop.question_id,prefill.value)+'. Is that right?'));
+      box.appendChild(button(prefill.change?'Use the new answer':'Yes, that’s right',function(){diaryAction('accept_prefill');},true));
+      box.appendChild(button(prefill.change?'Keep the earlier answer':'Change it',function(){diaryAction('dismiss_prefill');}));
+    }else if(prefill.words){box.appendChild(el('p','From your notes: “'+prefill.words+'”. Set the times below to confirm them.'));}
+    host.appendChild(box);
+  }
+  function currentAnswer(stop){
+    var a=state.discovery.answer;if(!a)return;
+    host.appendChild(el('p','Your answer — '+(a.state==='answered'?shown(stop.question_id,a.value):
+      {unknown:'Not sure',deferred:'Decide later',not_applicable:'Doesn’t apply'}[a.state]),'guided-why'));
+  }
+  function choices(stop,actions){
+    var words=WORDS[stop.question_id]||{}, list=el('div',null,'guided-choices');
+    if(stop.answer_kind==='choice'){
+      stop.choices.forEach(function(value){list.appendChild(button(words[value]||value,function(){answerWith(value);}));});
+    }else if(stop.answer_kind==='multi'){
+      var boxes=stop.choices.map(function(value){var label=el('label'),box=el('input');box.type='checkbox';box.value=value;
+        label.appendChild(box);label.appendChild(document.createTextNode(' '+(words[value]||value)));list.appendChild(label);return box;});
+      actions.appendChild(button('Use answer',function(){var picked=boxes.filter(function(b){return b.checked;}).map(function(b){return b.value;});
+        if(!picked.length){note('Choose at least one.');return;}answerWith(picked);},true));
+    }else if(stop.answer_kind==='reference'){
+      (state.discovery.date_sources||[]).forEach(function(d){list.appendChild(button(d.label,function(){answerWith(d.id);}));});
+    }else{
+      var field=el('input'),unit=null;field.className='guided-direct-answer';field.setAttribute('aria-label',stop.question);
+      if(stop.answer_kind==='count'||stop.answer_kind==='length'){field.type='number';field.min='1';field.max='999';field.step='1';}
+      else{field.type='text';field.maxLength=200;}
+      list.appendChild(field);
+      if(stop.answer_kind==='length'){unit=el('select');unit.setAttribute('aria-label','Unit');
+        ['minutes','hours','days'].forEach(function(u){var o=el('option',u);o.value=u;unit.appendChild(o);});list.appendChild(unit);}
+      actions.appendChild(button('Use answer',function(){
+        var raw=field.value.trim();if(!raw){note('Type an answer, or choose Not sure.');return;}
+        if(stop.answer_kind==='count')return answerWith(parseInt(raw,10));
+        if(stop.answer_kind==='length')return answerWith({amount:parseInt(raw,10),unit:unit.value});
+        answerWith(raw);},true));
+    }
+    host.appendChild(list);
+  }
+  function weekRows(prefix,value){
+    var rows=el('div',null,'guided-hours'),inputs={};
+    DAYS.forEach(function(d){
+      var row=el('div',null,'guided-hours-row'),label=el('label'),on=el('input'),open=el('input'),close=el('input');
+      on.type='checkbox';open.type=close.type='time';open.step=close.step='900';
+      var span=value&&value[d[0]];on.checked=!!span;open.value=span?span[0]:'09:00';close.value=span?span[1]:'17:00';
+      open.setAttribute('aria-label',prefix+' '+d[1]+' opening');close.setAttribute('aria-label',prefix+' '+d[1]+' closing');
+      label.appendChild(on);label.appendChild(document.createTextNode(' '+d[1]));
+      row.appendChild(label);row.appendChild(open);row.appendChild(el('span','to'));row.appendChild(close);rows.appendChild(row);
+      inputs[d[0]]=[on,open,close];
+    });
+    return {node:rows,read:function(){var week={};Object.keys(inputs).forEach(function(k){var i=inputs[k];if(i[0].checked)week[k]=[i[1].value,i[2].value];});return week;}};
+  }
+  function hours(stop,actions,secondary){
+    var a=state.discovery.answer, prefill=state.discovery.prefill;
+    var start=(a&&a.state==='answered'&&a.value)||(prefill&&prefill.value)||null;
+    var working=weekRows('Working',start&&start.working);host.appendChild(el('p','When you’re working','guided-section'));host.appendChild(working.node);
+    var bank=el('label'),bankBox=el('input');bankBox.type='checkbox';bankBox.checked=!!(start&&start.bank_holidays_closed);
+    bank.appendChild(bankBox);bank.appendChild(document.createTextNode(' We’re closed on bank holidays'));host.appendChild(bank);
+    var same=el('label'),sameBox=el('input');sameBox.type='checkbox';sameBox.checked=!start||start.contact_same!==false;
+    same.appendChild(sameBox);same.appendChild(document.createTextNode(' People can reach us at the same times'));host.appendChild(same);
+    var contact=weekRows('Contact',start&&start.contact);contact.node.hidden=sameBox.checked;host.appendChild(contact.node);
+    sameBox.addEventListener('change',function(){contact.node.hidden=sameBox.checked;});
+    actions.appendChild(button('Use these hours',function(){
+      var value={working:working.read(),bank_holidays_closed:bankBox.checked,contact_same:sameBox.checked};
+      if(!sameBox.checked)value.contact=contact.read();
+      if(!Object.keys(value.working).length){note('Tick at least one working day, or choose We don’t keep set hours.');return;}
+      answerWith(value);},true));
+    unsure(secondary,'We don’t keep set hours');
+  }
+  function profile(actions,secondary){
+    var p=state.discovery.profile,list=el('ul',null,'guided-diary-list');
+    p.diaries.forEach(function(d){
+      var item=el('li');item.appendChild(el('strong',d.label));item.appendChild(el('span',' — '+SUPPORT[d.support],'guided-badge guided-badge-'+d.support));
+      item.appendChild(el('p',d.line.charAt(0).toUpperCase()+d.line.slice(1)+'.'));
+      d.reasons.forEach(function(r){item.appendChild(el('p',r,'guided-why'));});
+      var row=el('div',null,'guided-actions');
+      row.appendChild(button('Edit',function(){diaryAction('edit',{diary:d.id});}));
+      row.appendChild(button('Remove',function(){if(window.confirm('Remove '+d.label+'? Its answers are kept in the history.'))diaryAction('remove',{diary:d.id});}));
+      item.appendChild(row);list.appendChild(item);
+    });
+    if(!p.diaries.length)list.appendChild(el('li','No diaries. That’s fine — Diary settings will be skipped.'));
+    host.appendChild(list);host.appendChild(el('p',p.hours,'guided-why'));
+    actions.appendChild(button('That’s right',function(){diaryAction('confirm');},true));
+    actions.appendChild(button('Add a diary',function(){diaryAction('add_more');}));
+    secondary.appendChild(button('Decide later',function(){diaryAction('later');}));
+  }
+  function diaries(actions,secondary){
+    var d=state.discovery,existing=el('ul',null,'guided-diary-list');
+    d.diaries.forEach(function(item){var li=el('li',item.label);
+      li.appendChild(button('Remove',function(){diaryAction('remove',{diary:item.id});}));existing.appendChild(li);});
+    if(d.diaries.length){host.appendChild(el('p','Your diaries','guided-section'));host.appendChild(existing);}
+    if(draft.stop!==state.stop.id)draft={stop:state.stop.id,text:'',picked:{}};
+    var boxes=(d.suggestions||[]).map(function(s){
+      var label=el('label',null,'guided-suggestion'),box=el('input');box.type='checkbox';box.value=s.id;
+      box.checked=!!draft.picked[s.label];box.addEventListener('change',function(){draft.picked[s.label]=box.checked;});
+      label.appendChild(box);label.appendChild(el('strong',' '+s.label));label.appendChild(el('span',' — '+s.reason,'guided-why'));
+      host.appendChild(label);return box;});
+    (d.proposed_labels||[]).forEach(function(p){host.appendChild(button('Add “'+p.label+'”',function(){diaryAction('accept_label',{label:p.label});}));});
+    var other=el('textarea');other.rows=2;other.maxLength=400;other.className='guided-direct-answer';
+    other.placeholder='Something else — one per line';other.setAttribute('aria-label','Other diaries, one per line');host.appendChild(other);
+    other.value=draft.text;other.addEventListener('input',function(){draft.text=other.value;});
+    actions.appendChild(button('Continue',function(){
+      var labels=other.value.split(/\n|,/).map(function(s){return s.trim();}).filter(Boolean);
+      var picked=boxes.filter(function(b){return b.checked;}).map(function(b){return b.value;});
+      if(!labels.length&&!picked.length&&!d.diaries.length){note('Choose or name at least one diary, or choose Not sure.');return;}
+      diaryAction('choose',{suggestions:picked,labels:labels});},true));
+    if(!d.diaries.length){
+      secondary.appendChild(button('Not sure',function(){diaryAction('choose',{state:'unknown'});}));
+      secondary.appendChild(button('None of these apply',function(){diaryAction('choose',{state:'not_applicable'});}));
+    }
+    if(state.guide.diary&&state.guide.diary.suggestions_source!=='model'&&suggesting!==state.stop.id&&!busy){
+      suggesting=state.stop.id;
+      request('/diary/suggest',{revision:state.revision,stop:state.stop.id,operation:'suggest'})
+        .then(function(next){if(next.revision>=state.revision){state=next;paint();}}).catch(function(){});
+    }
+  }
+  function discovery(stop,actions,secondary){
+    if(!state.discovery)return;
+    if(stop.kind==='diaries')return diaries(actions,secondary);
+    if(stop.kind==='profile')return profile(actions,secondary);
+    prefillBox(stop);currentAnswer(stop);
+    if(stop.kind==='hours')return hours(stop,actions,secondary);
+    choices(stop,actions);unsure(secondary);
   }
   function matches(card,line){
     if(!active() || !state.stop || ['decision','explanation'].indexOf(state.stop.kind)===-1)return false;
