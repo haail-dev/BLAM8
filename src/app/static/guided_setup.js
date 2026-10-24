@@ -66,7 +66,8 @@
   }
   function el(tag,text,cls){var n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
   function button(text,work,primary){var b=el('button',text,primary?'guided-primary':'');b.type='button';b.disabled=busy;b.addEventListener('click',work);return b;}
-  function controlsBusy(on){if(host)(stream||host).querySelectorAll('.guided-question button,.guided-navigation button').forEach(function(b){b.disabled=on;});}
+  function controlsBusy(on){if(host)(stream||host).querySelectorAll('.guided-question button,.guided-navigation button').forEach(function(b){b.disabled=on;});
+    document.querySelectorAll('[data-guided-start],[data-guided-entry]').forEach(function(b){b.disabled=on;});}
   function note(text){if(status)status.textContent=text;
     var intro=document.querySelector('[data-guided-intro-status]');if(intro&&!active())intro.textContent=text;}
   function csrf(){var m=document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/);return m?decodeURIComponent(m[1]):'';}
@@ -315,7 +316,11 @@
     var main=document.querySelector('main');if(main){main.style.maxHeight=innerWidth<=767&&p?
       Math.max(0,p.getBoundingClientRect().top-main.getBoundingClientRect().top-12)+'px':'';}
   }
-  var api=window.Blam8GuidedSetup={ready:null,active:active,exists:function(){return !!(state&&state.guide);},
+  function startGuide(){
+    if(!state){location.reload();return;}
+    return action(state.guide&&state.guide.intro_ack?'resume':'start');
+  }
+  var api=window.Blam8GuidedSetup={ready:null,start:startGuide,active:active,exists:function(){return !!(state&&state.guide);},
     currentStop:function(){return active()&&state.stop?state.stop.id:'';},messagesChanged:messagesChanged,pause:function(){return action('pause');},
     attach:function(cards,open){panel=cards;opener=open;Promise.all([api.ready,
       window.Blam8DeviceSync?window.Blam8DeviceSync.ready:Promise.resolve()]).then(function(){paint();cards.paint();resumeLocation();});},
@@ -330,10 +335,7 @@
       }finally{busy=false;controlsBusy(false);}
     }};
   api.ready=(async function(){try{await refresh();}catch(_){state=null;note('The guide could not be loaded. Reload to try again; your saved setup is kept.');}
-    document.querySelectorAll('[data-guided-start]').forEach(function(b){b.disabled=false;b.addEventListener('click',function(){
-      if(!state){location.reload();return;}
-      if(state&&state.guide&&state.guide.intro_ack)action('resume');else action('start');
-    });});return state;})();
+    document.querySelectorAll('[data-guided-start]').forEach(function(b){b.disabled=false;b.addEventListener('click',startGuide);});return state;})();
   window.addEventListener('guided:submit-blocked',function(){note('These are proposed values. Use Accept in the card to save them, or Leave to restore the page.');});
   window.addEventListener('guided:projection-conflict',function(){note('Your restored edits differ from this preview. They are kept; reload the card and review before applying it.');});
   window.addEventListener('resize',fit);if(window.visualViewport)window.visualViewport.addEventListener('resize',fit);

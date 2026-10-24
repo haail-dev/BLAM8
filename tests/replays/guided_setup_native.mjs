@@ -47,7 +47,7 @@ async function shot(name){
 try{
  await cdp('Page.enable');await cdp('Emulation.setDeviceMetricsOverride',{width:+widthText,height:+heightText,deviceScaleFactor:1,mobile:false});
  await cdp('Page.bringToFront');await cdp('Emulation.setFocusEmulationEnabled',{enabled:true});
- if(area==='handoff'){
+ if(area.startsWith('handoff')){
    await until('document.querySelector("[data-onb-continue]") && window.Blam8DeviceSync?.isReady() && window.Blam8OnboardingJourney?.read(0).ready');
    const chrome=await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`);
    if(await evaluate('!document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-close');
@@ -55,9 +55,25 @@ try{
    await until('location.pathname==="/app/setup/guide" && document.querySelector("[data-guided-start]:not(:disabled)") && window.Blam8GuidedSetup && window.Blam8DeviceSync?.isReady()');
    assert.deepEqual(await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`),chrome);
    const intro=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(output+'/00-introduction.png',Buffer.from(intro.data,'base64'));
-   await click('[data-guided-start]');
+   assert(await evaluate(`!document.querySelector('[data-guided-intro] a[href="/app/setup"]')`));
+   await until('document.querySelector("[data-guided-entry]:not(:disabled)") && document.querySelector("#bc-title").textContent.includes("Setup")');
+   assert(await evaluate(`document.querySelector('[data-guided-entry]').textContent===document.querySelector('[data-guided-start]').textContent && !document.querySelector('#bc-cta').textContent.includes('Diary →')`));
+   if(area==='handoff_assistant'){
+     if(await evaluate('document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-bubble');
+     await click('[data-guided-entry]');
+   }else await click('[data-guided-start]');
    await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
    await shot('00-diary-handoff');
+   assert(await evaluate(`getComputedStyle(document.querySelector('[data-tour-diary]')).outlineStyle==='none'`));
+   await click('.guided-more > summary');await button('Pause setup');
+   await until('!document.body.classList.contains("guided-running")');
+   await cdp('Page.navigate',{url:`http://127.0.0.1:${appPort}/app/setup/guide`});
+   await until(`document.querySelector('[data-guided-start]:not(:disabled)')?.textContent==='Resume guided setup' && document.querySelector('[data-guided-entry]:not(:disabled)')?.textContent==='Resume guided setup'`);
+   if(area==='handoff_assistant'){
+     if(await evaluate('document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-bubble');
+     await click('[data-guided-entry]');
+   }else await click('[data-guided-start]');
+   await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
    await button('Next');
    await until('location.pathname==="/app/diary/settings" && document.querySelector(".guided-title")');
    await button('Needed');
@@ -96,7 +112,7 @@ try{
  await evaluate(`localStorage.setItem('blam8-theme',${JSON.stringify(theme)});document.documentElement.dataset.theme=${JSON.stringify(theme)};true`);
  await evaluate("window.trustedEvents=[];document.addEventListener('click',e=>trustedEvents.push(e.isTrusted));true");
  await shot('01-question');
- if(area==='handoff'){
+ if(area.startsWith('handoff')){
    await type('#bc-input','Use appointment times, not arrival-to-departure bookings.');await key('Enter','Enter',13);
    await until('document.querySelector("[name=booking_mode][data-proposed]")?.value==="appointment" && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept displayed changes")');
    await until('document.querySelector(".guided-conversation")?.tagName==="SECTION" && [...document.querySelectorAll("[data-bc-role=assistant]")].some(e=>e.getClientRects().length&&e.textContent.includes("suggestion"))');

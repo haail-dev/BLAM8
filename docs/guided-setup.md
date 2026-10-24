@@ -5,6 +5,13 @@ Continue opens a brief introduction. Starting explicitly acknowledges it and
 opens Diary orientation, followed by the existing settings owners in grouped
 substep order. Existing completed tenants acquire no new mandatory flow.
 
+The introduction has one route: its Start/Resume button and the assistant's
+matching button call the same guide action. The old grouped-review shortcut is
+not offered there; remaining setup nudges elsewhere lead to the guide entry.
+The grouped review remains an internal summary route. Moving through the guide
+opens the relevant page and fields without a tour outline. Keyboard focus and
+unsaved proposal indicators retain their own styling.
+
 The introduction, all three grouped reviews and their native setup pages reuse
 Knowledge's onboarding shell: the B mark, BLAM8/Automate identity header, seven
 progress positions, card, background and assistant gutter. Progress names disclose
