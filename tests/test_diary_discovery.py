@@ -238,3 +238,14 @@ def test_suggestions_keep_only_cited_trusted_facts(guide_journey, monkeypatch):
     j.diary('choose', suggestions=['s1'])
     created = next(iter(j.state()['diaries'].values()))
     assert created['label_provenance'] == 'owner_selected_suggestion' and created['suggestion']['signal_ids'] == ['module:scheduling']
+
+
+def test_unreadable_hours_keep_the_owners_words_as_a_proposal(guide_journey, monkeypatch):
+    j = guide_journey
+    j.diary('choose', labels=['Visits'])
+    scripted(monkeypatch, dict(reply='', new_diaries=[], answers=[
+        answer('diary.hours', None, {'working': {'fri': ['22:00', '02:00']}})]))
+    out = say(j, 'Usually\x0bevenings, Friday 10pm till 2am')
+    prefill = j.state()['guide']['diary']['prefills']['organisation']['diary.hours']
+    assert prefill['value'] is None and prefill['words'] == 'Usually evenings, Friday 10pm till 2am'
+    assert 'check them with you on the hours question' in out['reply']

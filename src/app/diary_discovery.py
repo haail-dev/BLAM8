@@ -229,7 +229,7 @@ def apply(state, stop, data, owner_text, actor, date_sources):
                 value = contract.answer_value(spec, value)
         except (ValueError, TypeError):
             if question == 'diary.hours':
-                _prefill(state, 'organisation', 'diary.hours', None, words=contract.bounded(owner_text[:600], 600, empty=True))
+                _prefill(state, 'organisation', 'diary.hours', None, words=' '.join(owner_text.split())[:600])
                 notes.append('You mentioned your hours. I’ll check them with you on the hours question.')
             else:
                 problems.append(f'I couldn’t use your answer to “{spec["text"]}”.')
