@@ -73,7 +73,7 @@
     // gap the pull opens under the phone's strip (which paints above it, so
     // nothing ever shows through the strip). Its ink is a variable for a shell
     // whose canvas needs something other than the landing's slate.
-    '#pull-refresh-label { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px); height: 0;' +
+    '#pull-refresh-label { position: fixed; left: 0; right: 0; top: var(--top-reserve, env(safe-area-inset-top, 0px)); height: 0;' +
     ' display: flex; align-items: center; justify-content: center; z-index: 59; pointer-events: none;' +
     ' font: 600 11px/1 Inter, system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase;' +
     ' color: var(--pull-refresh-ink, #8493A5); opacity: 0; transition: opacity .15s; }';

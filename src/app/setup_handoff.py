@@ -161,7 +161,8 @@ def load_steps(tenant_id: str, client=None) -> list[dict]:
         # The five reads after the module set do not depend on one another: one round trip of
         # waiting, not five (each is ~45-110 ms from Render to Supabase).
         wanted_stages = "crm" in modules
-        wanted_groups = bool(DIARY_MODULES & set(modules))
+        from app.onboarding_contract import subjects_available
+        wanted_groups = subjects_available(modules)
         calls = [lambda: db.get_scheduling_config(tenant_id, client=client),
                  lambda: db.get_invoice_settings(tenant_id, client=client),
                  lambda: db.get_tenant_config(tenant_id, client=client) or {}]
@@ -205,7 +206,7 @@ def onboarding_progress(path: str, raw: dict | None = None, guide: dict | None =
         return None
     current = native_group or (path.rsplit('/', 1)[-1] if path.rsplit('/', 1)[-1] in contract.GROUPS else None)
     if not current:
-        current = next((g['key'] for g in groups if not g.get('done')), 'diary')
+        current = next((g['key'] for g in groups if not g.get('done')), next(iter(contract.GROUPS)))
     done = {g['key']: bool(g.get('done')) for g in groups}
     items = [dict(key=key, label=label, completed=True, current=False)
              for key, label in (('interview', 'About you'), ('mailbox', 'Customer inbox'),

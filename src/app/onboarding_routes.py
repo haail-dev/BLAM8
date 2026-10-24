@@ -39,7 +39,7 @@ def questions_for(context, substep, scope_type, scope_id):
     specs = list(contract.QUESTIONS.values()) + list(state.get('routed_questions', {}).values())
     result = []
     for spec in specs:
-        if spec['substep'] != substep['id'] or scope_type not in spec['scopes']:
+        if spec['substep'] != substep['id'] or scope_type not in spec['scopes'] or spec.get('discovery'):
             continue
         if spec['adapter']:
             page = spec['adapter'][0]

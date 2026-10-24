@@ -53,7 +53,7 @@ def load(ctx, *, knowledge=False):
         raise HTTPException(503, str(exc)) from None
     modules = set(db.visible_modules(ctx.tenant_id, client=ctx.client))
     cfg = db.get_scheduling_config(ctx.tenant_id, client=ctx.client) or {}
-    groups = db.list_requirement_groups(ctx.tenant_id, client=ctx.client, strict=True) if {'scheduling', 'tms', 'fsm'} & modules else []
+    groups = db.list_requirement_groups(ctx.tenant_id, client=ctx.client, strict=True) if contract.subjects_available(modules) else []
     result = dict(state=state, config=config, cfg=cfg, modules=modules, groups=groups,
                   tenant_id=ctx.tenant_id, client=ctx.client,
                   invoice=db.get_invoice_settings(ctx.tenant_id, client=ctx.client) or {},

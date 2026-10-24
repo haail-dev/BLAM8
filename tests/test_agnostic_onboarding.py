@@ -162,7 +162,8 @@ def test_neutral_minimal_groups_and_off_without_readiness(journey):
     assert j.http.get('/app/setup', follow_redirects=False).headers['location'].endswith('/charges#charges.methods')
     # Re-enabling the review is reversible without fabricating operational values.
     j.action('capability', {'capability': 'time_occupancy', 'decision': 'needed'})
-    assert not contract.group_steps({'scheduling', 'crm'}, state=j.state())[0]['done']
+    diary = next(g for g in contract.group_steps({'scheduling', 'crm'}, state=j.state()) if g['key'] == 'diary')
+    assert not diary['done']
 
 
 @pytest.mark.parametrize('label', ['Services and requests', 'Members and groups', 'Contacts and equipment',
@@ -311,6 +312,18 @@ def test_unknown_ids_bad_types_and_source_text_cannot_execute(journey):
     from app import setup_card_model
     with pytest.raises(setup_cards.Invalid):
         setup_card_model.unpack([{'page': 'unknown', 'revision': 0, 'changes': []}])
+
+
+def test_records_come_first_and_related_subjects_need_crm_or_a_diary():
+    assert [g['key'] for g in contract.group_steps({'scheduling', 'crm'})] == ['records', 'diary', 'charges']
+    crm_only = {g['key']: g for g in contract.group_steps({'crm'})}
+    assert list(crm_only) == ['records', 'charges']
+    records = {s['id']: s for s in crm_only['records']['substeps']}
+    assert list(records) == ['records.relationships', 'records.information', 'records.progress']
+    assert ('/app/diary/dependants', 'Related subject fields and evidence') in records['records.information']['links']
+    diary_only = {g['key']: g for g in contract.group_steps({'scheduling'})}
+    assert [s['id'] for s in diary_only['records']['substeps']] == ['records.relationships', 'records.information']
+    assert [g['key'] for g in contract.group_steps(set())] == ['charges']
 
 
 def test_legacy_evidence_is_conservative_and_routes_stay_owned():

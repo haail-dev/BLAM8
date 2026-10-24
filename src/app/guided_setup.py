@@ -192,6 +192,127 @@ def registry():
     return result
 
 
+# Diary discovery stops (reports/diary-discovery-spec-2026-10-24.md, Parts 1–4):
+# answers first, settings after. They stay on the real Diary settings page.
+DISCOVERY = ('diaries', 'diary_fact', 'hours', 'profile')
+DIARY_HREF = '/app/diary/settings'
+DIARIES_STOP, HOURS_STOP, PROFILE_STOP = 'diary.discover.diaries', 'diary.ask.hours', 'diary.profile'
+DIARY_TEXT = {
+    'diary.example': 'Give me one example of something that goes in {label}.',
+    'diary.starter': 'Who puts things in {label}?',
+    'diary.date_source': 'Which date should {label} follow?',
+    'diary.occupies': 'Does {label} take up someone’s time or somewhere’s space?',
+    'diary.capacity': 'How many {label} can happen at the same time?',
+    'diary.time_shape': 'How is the time set for {label}?',
+    'diary.length': 'Roughly how long does one take?',
+    'diary.repeats': 'Does {label} repeat?',
+    'diary.repeats_detail': 'What does the repeat depend on?',
+    'diary.agreement': 'Does anyone outside your team need to agree to the time?',
+    'diary.agreement_who': 'Who needs to agree?',
+}
+
+
+def discovery_stops(context):
+    from app import diary_profile
+    state = context['state']
+    stops = [dict(id=DIARIES_STOP, kind='diaries', substep='diary.activities', title='Your diaries',
+        question='What do you keep a diary or calendar for? Pick any that fit, or tell me in your own words.',
+        why='Each one becomes its own diary layer. I’ll ask a few short questions about each before suggesting any settings.',
+        href=DIARY_HREF, anchor=None, question_id='diary.list', scopes=['organisation'], required=True)]
+    for diary in contract.active_diaries(state):
+        for question in diary_profile.applicable(state, diary['id']):
+            spec = contract.question(question)
+            stops.append(dict(id='diary.ask.'+diary['id']+'.'+question.split('.', 1)[1], kind='diary_fact',
+                substep=spec['substep'], title=diary['label'], question=DIARY_TEXT[question].format(label=diary['label']),
+                question_id=question, diary=diary['id'], scopes=['diary'], answer_kind=spec['kind'],
+                choices=diary_profile.choices(state, diary['id'], question), why=spec['why'],
+                href=DIARY_HREF, anchor=None, required=True))
+    hours = contract.question('diary.hours')
+    stops.append(dict(id=HOURS_STOP, kind='hours', substep='diary.time', title='Your hours',
+        question=hours['text'], why=hours['why'], question_id='diary.hours', scopes=['organisation'],
+        answer_kind='hours', href=DIARY_HREF, anchor=None, required=True))
+    stops.append(dict(id=PROFILE_STOP, kind='profile', substep='diary.activities', title='Your diaries',
+        question='Here is how I understand your diaries. Is that right?',
+        why='Nothing is set up until you confirm. Settings questions follow only for diaries that can be set up.',
+        question_id='diary.profile', scopes=['organisation'], href=DIARY_HREF, anchor=None, required=True))
+    return stops
+
+
+def _answer(state, question, scope_type='organisation', scope_id='organisation'):
+    return state['answers'].get(contract.answer_key(question, scope_type, scope_id))
+
+
+def discovery_cursor(state):
+    """Where discovery continues: the first open question, then hours, then the profile."""
+    from app import diary_profile
+    listed = _answer(state, 'diary.list')
+    if not listed or listed['state'] == 'unanswered':
+        return DIARIES_STOP
+    for diary in contract.active_diaries(state):
+        question = diary_profile.next_question(state, diary['id'])
+        if question:
+            return 'diary.ask.'+diary['id']+'.'+question.split('.', 1)[1]
+    hours = _answer(state, 'diary.hours')
+    if not hours or hours['state'] == 'unanswered':
+        return HOURS_STOP
+    return PROFILE_STOP
+
+
+def discovery_counts(state, answer):
+    """Whether a discovery answer still counts: a removed diary's answers, or an
+    answer to a question its diary no longer asks, cannot block a review."""
+    if answer.get('scope_type') != 'diary':
+        return True
+    from app import diary_profile
+    diary = state.get('diaries', {}).get(answer['scope_id'])
+    return bool(diary) and diary['status'] != 'removed' and \
+        answer['question'] in diary_profile.applicable(state, answer['scope_id'])
+
+
+def profile_flags(context):
+    """What a confirmed diary profile asks the settings walk to show (spec §5.6)."""
+    from app import diary_profile
+    state = context['state']
+    confirmed = _answer(state, 'diary.profile')
+    if not confirmed or confirmed['state'] != 'answered':
+        return None
+    ready = []
+    for diary in contract.active_diaries(state):
+        result = diary_profile.support(state, diary['id'], context['modules'])
+        if result['state'] == 'ready' and result['kind'] == 'diary':
+            ready.append(diary_profile.values(state, diary['id']))
+    return dict(bookable=any(v['diary.starter'] in ('customers', 'both') for v in ready),
+                timed=bool(ready),
+                days=any(v['diary.time_shape'] == 'days' for v in ready),
+                capacity=any(v['diary.capacity'] for v in ready))
+
+
+# Settings stops a diary arranged by the business still needs. Booking rules,
+# courses, credits and similar customer-booking controls need a bookable diary.
+TIMED_STOPS = {'diary_settings/working_days', 'diary_settings/capacity_state', 'diary_settings/resource',
+               'diary_settings/slot_minutes', 'diary_settings/blackout_dates', 'diary_settings/service'}
+
+
+def settings_allowed(stop, flags):
+    if flags is None or stop['page'] != 'diary_settings' or stop['substep'] not in ('diary.activities', 'diary.time'):
+        return True
+    if flags['bookable']:
+        return True
+    if stop['id'] == 'diary_settings/stay_mode':
+        return flags['timed'] and flags['days']
+    return flags['timed'] and stop['id'] in TIMED_STOPS
+
+
+def orientation(context, substep):
+    """The real diary, shown once Diary is set up rather than empty at the start."""
+    office = 'scheduling' in context['modules']
+    return dict(id='orientation.diary', kind='orientation', substep=substep,
+        title='Your diary' if office else 'Your available diary settings',
+        question='Here is your diary. As real work arrives it appears here, in the diaries you described. Looking around changes nothing.' if office else
+            'The appointment diary is not available on this account. Your diary answers are kept, and unavailable choices remain unresolved.',
+        href='/app/diary' if office else DIARY_HREF, anchor='orientation.diary' if office else None)
+
+
 def coverage():
     return [dict(identity=identity, stop=stop['id'], substep=stop['substep'],
         adapter=stop['adapter'], anchor=stop['anchor'], href=stop['href'])
@@ -229,20 +350,19 @@ def steps(context):
     guide = read(state) or neutral()
     seen_capabilities=set()
     seen_needs=set()
+    flags = profile_flags(context)
+    last_diary = ([s['id'] for s in subs if s['id'].startswith('diary.')] or [None])[-1]
     for sub in subs:
         sid = sub['id']
         if sid == 'diary.activities':
-            office='scheduling' in context['modules']
-            result.append(dict(id='orientation.diary', kind='orientation', substep=sid,
-                title='Your diary' if office else 'Your available diary settings',
-                question='This is where you review bookings and available time. Its settings decide what can be offered. Looking around changes nothing.' if office else
-                    'The appointment diary is not available on this account. We’ll review the controls available on this settings page; unavailable choices remain unresolved.',
-                href='/app/diary' if office else '/app/diary/settings', anchor='orientation.diary' if office else None))
+            # Discovery replaces the empty-diary orientation and the yes/no time
+            # gate: the confirmed profile decides time_occupancy instead.
+            result.extend(discovery_stops(context))
         if sid == 'charges.responsibility':
             result.append(dict(id='orientation.money', kind='orientation', substep=sid, title='Your money',
                 question='Quotes, invoices and payments appear here. We’ll review the relevant charging choices next. This guide creates no invoices or payments.',
                 href='/app/money', anchor='orientation.money'))
-        if sub['capability'] not in seen_capabilities:
+        if sub['capability'] not in seen_capabilities and sub['capability'] != 'time_occupancy':
             result.append(dict(id='relevance.'+sid, kind='relevance', substep=sid,
                 title=sub['label'], question=contract.CAPABILITIES[sub['capability']],
                 href=sub['links'][0][0] if sub['links'] else '/app/setup/'+sid.split('.')[0],
@@ -256,12 +376,14 @@ def steps(context):
         facts = [dict(id='question.'+q['id'], question_id=q['id'], kind='fact', title=sub['label'],
             question=q['text'], substep=sid, href=sub['links'][0][0].split('#')[0] if sub['links'] else '/app/setup/'+sid.split('.')[0],
             anchor=None, scopes=q['scopes'],required=True,answer_kind=q['kind'],choices=q.get('choices'))
-            for q in question_specs if q['substep']==sid and not q['adapter']
+            for q in question_specs if q['substep']==sid and not q['adapter'] and not q.get('discovery')
             and contract.need_selected(state,q.get('need'))]
         # CRM controls and diary editors remain behind their actual module gates.
         candidates = [s for s in candidates if not (s['page'].startswith('crm_') and 'crm' not in context['modules'])
-                      and not (s['page'] in ('diary_settings', 'booking_details', 'dependants') and
-                               not {'scheduling', 'tms', 'fsm'} & context['modules'])]
+                      and not (s['page'] in ('diary_settings', 'booking_details') and
+                               not {'scheduling', 'tms', 'fsm'} & context['modules'])
+                      and not (s['page'] == 'dependants' and not contract.subjects_available(context['modules']))
+                      and settings_allowed(s, flags)]
         filtered=[]
         for stop in candidates:
             need=stop.get('need')
@@ -302,14 +424,28 @@ def steps(context):
                         question=EXPLANATIONS.get(key, 'Review '+entry['label'].lower()+' here. The card shows the exact proposed value and its difference from the current setting. Ask the assistant if its effect is unclear before accepting.'),
                         anchor='setting.'+key if entry.get('key') else 'editor.'+entry['page'],
                         catalogue=stop['catalogue'], focus_catalogue=identity))
-        result.extend(facts+filtered)
+        # A need-gated fact is asked right after its need stop, never before it.
+        gated = [f for f in facts if contract.QUESTIONS.get(f['question_id'], {}).get('need')]
+        ordered = [f for f in facts if f not in gated]
+        for stop in filtered:
+            ordered.append(stop)
+            if stop['kind'] == 'need':
+                ordered += [f for f in gated if contract.QUESTIONS[f['question_id']]['need'] == stop['need']]
+        ordered += [f for f in gated if f not in ordered]
+        result.extend(ordered)
         result.append(dict(id='review.'+sid, kind='review', substep=sid, title='Review '+sub['label'],
             question='Review the saved results and anything left for later. Continuing records your review; it does not make booking or payments ready.',
             href=candidates[-1]['href'] if candidates else result[-1]['href'], anchor=None,
             capability=sub['capability']))
+        if sid == last_diary:
+            result.append(orientation(context, sid))
+    if last_diary and not any(s['id'] == 'orientation.diary' for s in result):
+        # The last Diary section was skipped (its capability is off or deferred).
+        index = max(i for i, s in enumerate(result) if str(s.get('substep') or '').startswith('diary.')) + 1
+        result.insert(index, orientation(context, last_diary))
     result.append(dict(id='finished', kind='finished', substep=None, title='Your setup review',
         question='Your choices and deferred items are kept. You can revisit the grouped review at any time. Drafting stays under its separate explicit control.',
-        href='/app/setup/diary' if any(s['id'].startswith('diary.') for s in subs) else '/app/setup/charges', anchor=None))
+        href='/app/setup/' + (subs[0]['id'].split('.')[0] if subs else 'charges'), anchor=None))
     return result
 
 
@@ -319,6 +455,9 @@ def describe(context):
         return dict(revision=context['state']['revision'], guide=None, start_href='/app/setup/guide')
     sequence = steps(context)
     stop = next((s for s in sequence if s['id'] == guide['current']), None)
+    if stop is None and guide['current'].startswith('diary.'):
+        # A changed answer can drop a discovery question; continue where discovery is.
+        stop = next((s for s in sequence if s['id'] == discovery_cursor(context['state'])), None)
     if stop is None:
         # A removed module/decision cannot be silently certified as complete.
         stop = sequence[0]
@@ -343,7 +482,38 @@ def describe(context):
         scopes=[dict(type='organisation',id='organisation',label='Whole business')]+
             [dict(type='activity',id=k,label=v['label']) for k,v in context['state']['scopes'].items()]+
             [dict(type='record_group',id=str(g['id']),label=g['label']) for g in context['groups']],
-        summary_href='/app/setup/'+(stop.get('substep') or 'charges.terms').split('.')[0])
+        summary_href='/app/setup/'+(stop.get('substep') or 'charges.terms').split('.')[0],
+        discovery=discovery_view(context, guide, stop) if stop['kind'] in DISCOVERY else None)
+
+
+def discovery_view(context, guide, stop):
+    """Everything the panel needs to render one discovery stop."""
+    from app import diary_profile
+    state = context['state']
+    saved = guide.get('diary') or {}
+    date_sources = saved.get('date_sources', [])
+    scope = ('diary', stop['diary']) if stop['kind'] == 'diary_fact' else ('organisation', 'organisation')
+    found = _answer(state, stop['question_id'], *scope)
+    prefill = (saved.get('prefills') or {}).get(scope[1], {}).get(stop['question_id'])
+    if not prefill and stop['kind'] == 'hours':
+        prefill = (saved.get('context_prefills') or {}).get('diary.hours')
+    if not prefill and stop['kind'] == 'diary_fact' and stop['question_id'] == 'diary.date_source':
+        seed = state['diaries'][stop['diary']]['seed'].get('date_source')
+        if seed:
+            prefill = dict(value=seed, words=None, source='suggestion')
+    if prefill and found and found['state'] == 'answered' and found['value'] == prefill.get('value'):
+        prefill = None
+    return dict(
+        diaries=[dict(id=d['id'], label=d['label'], label_provenance=d['label_provenance'])
+                 for d in contract.active_diaries(state)],
+        limit=contract.DIARY_LIMIT, suggestions=saved.get('suggestions', []),
+        proposed_labels=saved.get('proposed_labels', []),
+        answer=dict(state=found['state'], value=found['value']) if found else None,
+        prefill=prefill,
+        date_sources=[dict(id=d['id'], label=d['label']) for d in date_sources] + [
+            dict(id='not_recorded', label='A date we don’t record yet')],
+        profile=diary_profile.profile(state, context['modules'], date_sources) if stop['kind'] in ('profile', 'diaries') else None,
+        gaps=saved.get('gaps', []))
 
 
 def current(context, identity):
@@ -387,6 +557,10 @@ def unresolved_required(context, substep):
         if stop['kind']=='fact':
             answer=state['answers'].get(__import__('app.onboarding_state',fromlist=['key_for']).key_for(
                 stop['question_id'],progress['scope_type'],progress['scope_id']))
+            if answer and answer['state'] in ('answered','not_applicable'):
+                continue
+        if stop['kind'] in DISCOVERY:
+            answer=_answer(state,stop['question_id'],*(('diary',stop['diary']) if stop['kind']=='diary_fact' else ()))
             if answer and answer['state'] in ('answered','not_applicable'):
                 continue
         missing.append(stop['id'])

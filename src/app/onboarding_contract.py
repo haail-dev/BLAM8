@@ -5,18 +5,14 @@ import json
 
 from app import setup_card_scalars, setup_card_invoices, setup_card_crm
 
+# Records comes first: Diary's activities, requirements and date views refer
+# to the customers, subjects and fields that Records sets up.
 GROUPS = {
-    'diary': 'Diary',
     'records': 'Records and workflows',
+    'diary': 'Diary',
     'charges': 'Charges and payments',
 }
 SUBSTEPS = {
-    'diary.activities': ('diary', 'A', 'Activities and permissions', 'time_occupancy',
-                         [('/app/diary/settings#booking-mode', 'Booking mode and activities')]),
-    'diary.time': ('diary', 'B', 'Time and resources', 'time_occupancy',
-                   [('/app/diary/settings', 'Availability, timing and resources')]),
-    'diary.conditions': ('diary', 'C', 'Conditions for proceeding', 'information_collection',
-                         [('/app/diary/intake', 'Answers and documents required to proceed')]),
     'records.relationships': ('records', 'A', 'Records and relationships', 'related_records',
                               [('/app/diary/dependants', 'Related subjects and their information')]),
     'records.information': ('records', 'B', 'Information and evidence', 'record_information',
@@ -24,6 +20,12 @@ SUBSTEPS = {
                              ('/app/diary/dependants', 'Related subject fields and evidence')]),
     'records.progress': ('records', 'C', 'Progress and follow-up', 'lifecycle',
                          [('/app/crm/settings', 'Stages and follow-up')]),
+    'diary.activities': ('diary', 'A', 'Activities and permissions', 'time_occupancy',
+                         [('/app/diary/settings#booking-mode', 'Booking mode and activities')]),
+    'diary.time': ('diary', 'B', 'Time and resources', 'time_occupancy',
+                   [('/app/diary/settings', 'Availability, timing and resources')]),
+    'diary.conditions': ('diary', 'C', 'Conditions for proceeding', 'information_collection',
+                         [('/app/diary/intake', 'Answers and documents required to proceed')]),
     'charges.responsibility': ('charges', 'A', 'Responsibility and document details', 'charging',
                                [('/app/invoices/settings', 'Document identity and responsibility')]),
     'charges.terms': ('charges', 'B', 'Charging rules and terms', 'charging',
@@ -128,6 +130,123 @@ for _page, _keys in SCALARS.items():
             QUESTIONS[_id]['need'] = 'credit_cancellation' if _key == 'late_cancel_hours' else 'booking_rules'
 
 
+# Diary discovery (reports/diary-discovery-spec-2026-10-24.md, Parts 1–4).
+# These questions are asked only by the guide's own discovery stops, so they are
+# marked `discovery` and stay out of generic fact stops and the grouped review.
+# Each diary is its own `diary` scope, separate from service-bound activities.
+DIARY_STARTERS = ['customers', 'we_arrange', 'both', 'from_records', 'internal']
+DIARY_OCCUPIES = ['people', 'places', 'equipment', 'nothing']
+DIARY_TIME_SHAPES = ['set_time', 'window', 'days', 'due_by']
+DIARY_REPEATS = ['no', 'weekly', 'fortnightly', 'monthly', 'six_weekly', 'quarterly', 'depends']
+DIARY_AGREEMENT = ['no', 'customer', 'someone_else']
+DIARY_LENGTH_UNITS = ['minutes', 'hours', 'days']
+DIARY_LIMIT, DIARY_LABEL = 8, 40
+DAY_KEYS = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+_DIARY_WHY = 'This answer describes how this diary works. Nothing is set up until you confirm your diaries.'
+for _identity, _sub, _text, _kind, _choices, _scopes in [
+        ('diary.list', 'diary.activities', 'What do you keep a diary or calendar for?', 'ids', None, ('organisation',)),
+        ('diary.example', 'diary.activities', 'Give me one example of something that goes in it.', 'short_text', None, ('diary',)),
+        ('diary.starter', 'diary.activities', 'Who puts things in it?', 'choice', DIARY_STARTERS, ('diary',)),
+        ('diary.date_source', 'diary.activities', 'Which date should it follow?', 'reference', None, ('diary',)),
+        ('diary.occupies', 'diary.time', 'Does it take up someone’s time or somewhere’s space?', 'multi', DIARY_OCCUPIES, ('diary',)),
+        ('diary.capacity', 'diary.time', 'How many of these can happen at the same time?', 'count', None, ('diary',)),
+        ('diary.time_shape', 'diary.time', 'How is the time set?', 'choice', DIARY_TIME_SHAPES, ('diary',)),
+        ('diary.length', 'diary.time', 'Roughly how long does one take?', 'length', None, ('diary',)),
+        ('diary.repeats', 'diary.time', 'Does it repeat?', 'choice', DIARY_REPEATS, ('diary',)),
+        ('diary.repeats_detail', 'diary.time', 'What does it depend on?', 'short_text', None, ('diary',)),
+        ('diary.agreement', 'diary.activities', 'Does anyone outside your team need to agree to the time?', 'choice', DIARY_AGREEMENT, ('diary',)),
+        ('diary.agreement_who', 'diary.activities', 'Who needs to agree?', 'short_text', None, ('diary',)),
+        ('diary.hours', 'diary.time', 'When are you working, and when can people reach you?', 'hours', None, ('organisation',)),
+        ('diary.profile', 'diary.activities', 'Is this how your diaries work?', 'ids', None, ('organisation',))]:
+    QUESTIONS[_identity] = _question(_identity, _sub, _text, kind=_kind, choices=_choices, scopes=_scopes,
+        why='Hours are kept as your answer; they do not grant booking.' if _identity == 'diary.hours' else _DIARY_WHY)
+    QUESTIONS[_identity]['discovery'] = True
+
+
+def _clock(value):
+    if not isinstance(value, str) or len(value) != 5 or value[2] != ':':
+        raise ValueError('Use times like 09:00.')
+    hours, minutes = value.split(':')
+    if not (hours.isdigit() and minutes.isdigit() and int(hours) < 24 and int(minutes) < 60):
+        raise ValueError('Use times like 09:00.')
+    if int(minutes) % 15:
+        raise ValueError('Use times in 15-minute steps.')
+    return int(hours) * 60 + int(minutes)
+
+
+def _week(value, label):
+    if not isinstance(value, dict) or not value or any(day not in DAY_KEYS for day in value):
+        raise ValueError(f'Choose at least one day for {label}.')
+    week = {}
+    for day in DAY_KEYS:
+        if day not in value:
+            continue
+        span = value[day]
+        if not isinstance(span, list) or len(span) != 2:
+            raise ValueError(f'Give an opening and closing time for {label}.')
+        opening, closing = _clock(span[0]), _clock(span[1])
+        if closing <= opening:
+            raise ValueError('Overnight hours aren’t supported yet. Closing must be after opening on the same day.')
+        week[day] = [span[0], span[1]]
+    return week
+
+
+def hours_value(value):
+    """Working hours plus contact hours; overnight spans are refused, not split."""
+    if not isinstance(value, dict) or set(value) - {'working', 'bank_holidays_closed', 'contact_same', 'contact', 'notes'}:
+        raise ValueError('Give your hours as days and times.')
+    same = value.get('contact_same', True)
+    closed = value.get('bank_holidays_closed')
+    if type(same) is not bool or closed not in (None, True, False):
+        raise ValueError('Give your hours as days and times.')
+    return dict(working=_week(value.get('working'), 'working hours'), bank_holidays_closed=closed,
+                contact_same=same, contact=None if same else _week(value.get('contact'), 'contact hours'),
+                notes=bounded(value.get('notes') or '', 500, empty=True))
+
+
+def _discovery_value(spec, value):
+    kind = spec['kind']
+    if kind == 'short_text':
+        return bounded(value, 200)
+    if kind == 'reference':
+        return bounded(value, 200)
+    if kind == 'ids':
+        if not isinstance(value, list) or len(value) > DIARY_LIMIT or len(set(value)) != len(value) or not all(
+                isinstance(v, str) and 0 < len(v) <= 64 for v in value):
+            raise ValueError('Choose your diaries.')
+        return list(value)
+    if kind == 'multi':
+        if not isinstance(value, list) or not value or len(set(value)) != len(value) or any(v not in spec['choices'] for v in value):
+            raise ValueError('Choose one or more offered options.')
+        if 'nothing' in value and len(value) > 1:
+            raise ValueError('“Nothing” can’t be combined with other choices.')
+        return [c for c in spec['choices'] if c in value]
+    if kind == 'count':
+        if type(value) is not int or not 1 <= value <= 999:
+            raise ValueError('Give a whole number from 1 to 999.')
+        return value
+    if kind == 'length':
+        if not isinstance(value, dict) or set(value) != {'amount', 'unit'} or value['unit'] not in DIARY_LENGTH_UNITS \
+                or type(value['amount']) is not int or not 1 <= value['amount'] <= 999:
+            raise ValueError('Give a whole number of minutes, hours or days.')
+        return dict(amount=value['amount'], unit=value['unit'])
+    if kind == 'hours':
+        return hours_value(value)
+    raise ValueError('Unknown answer type.')
+
+
+def diary_label(value):
+    label = ' '.join(str(value or '').split())
+    if not label or len(label) > DIARY_LABEL or any(ord(c) < 32 for c in label):
+        raise ValueError(f'Name each diary in 1 to {DIARY_LABEL} characters.')
+    return label
+
+
+def active_diaries(state):
+    return [d for d in sorted(state.get('diaries', {}).values(), key=lambda d: (d['order'], d['id']))
+            if d['status'] != 'removed']
+
+
 def bounded(value, limit=1000, *, empty=False):
     if not isinstance(value, str) or len(value) > limit or (not empty and not value.strip()) or any(ord(c) < 32 and c not in '\n\t' for c in value):
         raise ValueError('Use bounded plain text.')
@@ -147,6 +266,8 @@ def answer_value(spec, value):
                  'crm_settings': setup_card_crm.SPECS}[page]
         return setup_card_scalars.parse({'key': key, 'value': value}, specs)['value']
     kind = spec['kind']
+    if spec.get('discovery') and kind not in ('choice', 'text'):
+        return _discovery_value(spec, value)
     if kind == 'boolean':
         if type(value) is not bool:
             raise ValueError('Choose Yes or No.')
@@ -175,7 +296,8 @@ def answer_key(identity, scope_type, scope_id):
 
 def neutral_state():
     return {'version': 1, 'revision': 0, 'reviews': {}, 'capabilities': {}, 'answers': {},
-            'labels': {}, 'scopes': {}, 'proposals': {}, 'imports': {}, 'needs': {}, 'position': None}
+            'labels': {}, 'scopes': {}, 'proposals': {}, 'imports': {}, 'needs': {}, 'position': None,
+            'diaries': {}}
 
 
 def read_state(raw):
@@ -184,7 +306,7 @@ def read_state(raw):
     if not isinstance(raw, dict) or raw.get('version') != 1 or type(raw.get('revision')) is not int:
         raise ValueError('The onboarding state needs a supported version.')
     state = neutral_state() | deepcopy(raw)
-    if any(not isinstance(state[k], dict) for k in ('reviews', 'capabilities', 'answers', 'labels', 'scopes', 'proposals', 'imports', 'needs')):
+    if any(not isinstance(state[k], dict) for k in ('reviews', 'capabilities', 'answers', 'labels', 'scopes', 'proposals', 'imports', 'needs', 'diaries')):
         raise ValueError('The onboarding state could not be verified.')
     return state
 
@@ -198,6 +320,9 @@ def validate_scope(spec, scope_type, scope_id, state, groups):
     elif scope_type == 'activity':
         if scope_id not in state['scopes']:
             raise ValueError('Choose a saved activity identity.')
+    elif scope_type == 'diary':
+        if scope_id not in {d['id'] for d in active_diaries(state)}:
+            raise ValueError('Choose one of your diaries.')
     elif scope_type in ('record_group', 'record'):
         if scope_id not in {str(g['id']) for g in groups}:
             raise ValueError('Choose a saved related-record identity.')
@@ -221,6 +346,10 @@ def legacy_evidence(cfg, groups):
     return result
 
 
+def subjects_available(modules):
+    return 'crm' in modules or bool({'scheduling', 'tms', 'fsm'} & set(modules))
+
+
 def group_steps(modules, cfg=None, state=None, groups=None):
     state = read_state(state)
     out = []
@@ -232,13 +361,14 @@ def group_steps(modules, cfg=None, state=None, groups=None):
         for sid, (gid, badge, neutral, capability, links) in SUBSTEPS.items():
             if gid != identity:
                 continue
-            # CRM-only controls require CRM; subject controls require a diary module.
+            # CRM-only controls require CRM. Related subjects are kept on CRM
+            # contacts as well as bookings, so either module offers them.
             if sid == 'records.progress' and 'crm' not in modules:
                 continue
-            if sid == 'records.relationships' and not {'scheduling', 'tms', 'fsm'} & set(modules):
+            if sid == 'records.relationships' and not subjects_available(modules):
                 continue
             links = [(href, text) for href, text in links if not (
-                (href == '/app/diary/dependants' and not {'scheduling', 'tms', 'fsm'} & set(modules)) or
+                (href == '/app/diary/dependants' and not subjects_available(modules)) or
                 (href.startswith('/app/crm/') and 'crm' not in modules))]
             decision = state['capabilities'].get(capability, 'undecided')
             review = state['reviews'].get(sid, {}).get('state', 'unreviewed')

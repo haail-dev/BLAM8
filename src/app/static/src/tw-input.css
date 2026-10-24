@@ -1,7 +1,16 @@
 /* Input for the deploy-time Tailwind build (scripts/build/build_css.sh →
  * src/app/static/tw.css). Theme variables and the Counting House flat layer are
- * emitted by the plugin in config/tailwind/tailwind.config.js, so directives are the whole
- * file. */
+ * emitted by the plugin in config/tailwind/tailwind.config.js; the only rule here is
+ * the shared phone top reserve below. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The navy strip and header bars reserve the phone's top inset down to the
+ * bottom of the camera cut-out, not the whole status-bar row: iOS reports the
+ * inset about 11pt below the Dynamic Island (59pt on a 48pt island). Phones
+ * with a plain 20pt status bar keep all of it so the clock never overlaps the
+ * bar; in a normal browser the inset and the reserve are 0. */
+:root {
+  --top-reserve: max(min(env(safe-area-inset-top, 0px), 20px), calc(env(safe-area-inset-top, 0px) - 11px));
+}

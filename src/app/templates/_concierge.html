@@ -182,8 +182,8 @@
     /* …and the panel starts under that bar, not over its wordmark (it sat 24px
        from the top, hidden only because the squeezed bar had moved aside). */
     body:not(:has(main.app-sky)):has(> header.sticky) #bc-panel {
-      top: calc(4rem + env(safe-area-inset-top, 0px)) !important;
-      height: calc(100vh - 8.5rem - env(safe-area-inset-top, 0px)) !important;
+      top: calc(4rem + var(--top-reserve)) !important;
+      height: calc(100vh - 8.5rem - var(--top-reserve)) !important;
     }
   }
   /* Full height at every desktop width (Kris 2026-09-05, "keep its new

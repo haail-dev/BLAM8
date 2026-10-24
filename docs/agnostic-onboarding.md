@@ -3,8 +3,12 @@
 Local implementation, 23 October 2026. No deployment, migration execution or
 production activation is claimed. The first four routes keep their existing
 forms and validation. `/app/setup` resumes the stored section; the later review
-has Diary, Records and workflows, and Charges and payments, each with compact
-independently saved A/B/C sections. Old settings URLs still edit their own
+has Records and workflows, Diary, and Charges and payments, each with compact
+independently saved A/B/C sections. Records comes first because Diary's
+activities, conditions and date views refer to the customers, related subjects
+and fields it sets up; Charges already depends on the related-record decision.
+Related subjects are offered with CRM or a diary module, since CRM contacts
+hold them as well as bookings. Old settings URLs still edit their own
 domains and link back to the group. Team assignment remains in People.
 
 `onboarding_contract.py` owns stable capability, group, substep and question IDs.
@@ -60,6 +64,15 @@ or renamed services fail safely instead of rebinding by a generated label.
 Duration and price proposals change only that bound service. Organisation-wide
 availability/authority cannot express different per-activity rules here.
 
+Diary discovery answers use a separate `diary` scope whose ID is one of the
+owner's named diaries in the state's `diaries` map, never a service-bound
+activity. A removed diary keeps its answers in history, but they no longer
+count towards review, and neither do answers to questions a diary stopped
+asking after an earlier answer changed. Discovery questions are marked
+`discovery` and are asked only by the guide's discovery stops, never as generic
+facts or grouped-review rows. A pre-filled answer the owner confirms carries the
+`owner_confirmed_prefill` provenance with the facts it came from.
+
 Saved Knowledge question decisions can be explicitly routed/reused without
 rewriting Knowledge. Pending extraction and generated default questions are not
 imported. Owner answers are reused only with current coverage evidence; expired
@@ -112,6 +125,9 @@ All grouped read/write routes inherit the existing application subscription
 gate, including expired-trial denial before loading or saving review data.
 
 ## Compatibility and migration
+
+The `diaries` map is additive: existing states load with it empty, and the
+existing state writer accepts it without a migration.
 
 Prepare `db/migrations/20261023_agnostic_onboarding.sql` after existing setup-card
 migrations. It adds one JSON metadata column and an immutable revision history
