@@ -20,7 +20,7 @@ What this pins:
 Run: python -m pytest tests/test_scheduling_offers.py -q
 """
 from tests.booking_fixtures import carried_config
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -220,7 +220,7 @@ def test_fresh_hold_releases_dangling_offer_set(no_db):
 # ── expired offers vanish from db reads ──────────────────────────────────────
 def test_drop_expired_offers_filters_only_dead_offers():
     past = (datetime.now(DIARY_TZ) - timedelta(hours=1)).isoformat()
-    future = (datetime.now(DIARY_TZ) + timedelta(hours=1)).isoformat()
+    future = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
     rows = [{"status": "offered", "expires_at": past},
             {"status": "offered", "expires_at": future},
             {"status": "offered", "expires_at": None},
@@ -379,7 +379,7 @@ def test_diary_page_renders_offered_state_and_deep_link(monkeypatch):
     from app.security import require_csrf
 
     day = (_date.today() + timedelta(days=2)).isoformat()
-    exp = (datetime.now(DIARY_TZ) + timedelta(hours=6)).isoformat()
+    exp = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
     cfg = carried_config({"windows": "day", "working_days": "mon,tue,wed,thu,fri,sat,sun",
            "intake_configured_at": "2026-01-01T00:00:00Z"})
     rows = [{"id": "off1", "status": "offered", "booking_date": day, "window": "day",
@@ -456,7 +456,7 @@ def test_month_grid_day_states_wear_their_borders(monkeypatch):
         base += timedelta(days=1)
     d_off, d_duo, d_full = (base.isoformat(), (base + timedelta(days=1)).isoformat(),
                             (base + timedelta(days=2)).isoformat())
-    exp = (datetime.now(DIARY_TZ) + timedelta(hours=6)).isoformat()
+    exp = (datetime.now(timezone.utc) + timedelta(hours=6)).isoformat()
     cfg = carried_config({"windows": "slots", "open_time": "09:00", "close_time": "17:00",
            "slot_minutes": 60, "working_days": "mon,tue,wed,thu,fri", "capacity_per_window": 1,
            "intake_configured_at": "2026-01-01T00:00:00Z"})   # capacity 1: eight hourly bookings ARE a full day
