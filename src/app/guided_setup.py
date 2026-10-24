@@ -256,7 +256,7 @@ def steps(context):
         facts = [dict(id='question.'+q['id'], question_id=q['id'], kind='fact', title=sub['label'],
             question=q['text'], substep=sid, href=sub['links'][0][0].split('#')[0] if sub['links'] else '/app/setup/'+sid.split('.')[0],
             anchor=None, scopes=q['scopes'],required=True,answer_kind=q['kind'],choices=q.get('choices'))
-            for q in question_specs if q['substep']==sid and not q['adapter']
+            for q in question_specs if q['substep']==sid and not q['adapter'] and not q.get('discovery')
             and contract.need_selected(state,q.get('need'))]
         # CRM controls and diary editors remain behind their actual module gates.
         candidates = [s for s in candidates if not (s['page'].startswith('crm_') and 'crm' not in context['modules'])
