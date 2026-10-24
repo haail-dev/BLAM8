@@ -260,8 +260,9 @@ def steps(context):
             and contract.need_selected(state,q.get('need'))]
         # CRM controls and diary editors remain behind their actual module gates.
         candidates = [s for s in candidates if not (s['page'].startswith('crm_') and 'crm' not in context['modules'])
-                      and not (s['page'] in ('diary_settings', 'booking_details', 'dependants') and
-                               not {'scheduling', 'tms', 'fsm'} & context['modules'])]
+                      and not (s['page'] in ('diary_settings', 'booking_details') and
+                               not {'scheduling', 'tms', 'fsm'} & context['modules'])
+                      and not (s['page'] == 'dependants' and not contract.subjects_available(context['modules']))]
         filtered=[]
         for stop in candidates:
             need=stop.get('need')
@@ -309,7 +310,7 @@ def steps(context):
             capability=sub['capability']))
     result.append(dict(id='finished', kind='finished', substep=None, title='Your setup review',
         question='Your choices and deferred items are kept. You can revisit the grouped review at any time. Drafting stays under its separate explicit control.',
-        href='/app/setup/diary' if any(s['id'].startswith('diary.') for s in subs) else '/app/setup/charges', anchor=None))
+        href='/app/setup/' + (subs[0]['id'].split('.')[0] if subs else 'charges'), anchor=None))
     return result
 
 

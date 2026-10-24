@@ -335,13 +335,19 @@ def test_unavailable_knowledge_never_certifies_an_imported_answer(guide_journey,
     assert not (j.row('tenant_config',j.tenant).get('setup_cards') or {}).get('invoice_settings')
 
 
-def test_start_opens_diary_then_actual_settings_and_get_never_mutates(guide_journey):
+def test_start_opens_records_before_diary_and_get_never_mutates(guide_journey):
     j=guide_journey
     before=j.state()
     for _ in range(2):
         d=j.http.get('/app/setup/guide/state').json()
-        assert d['stop']['id']=='orientation.diary' and d['stop']['href']=='/app/diary'
+        assert d['stop']['substep']=='records.relationships' and d['section']['group']=='Records and workflows'
+        assert d['stop']['href'].split('#')[0]=='/app/diary/dependants'
     assert j.state()==before
+    sequence=[s['id'] for s in guided_setup.steps(onboarding_state.load(j.ctx))]
+    assert sequence.index('review.records.progress')<sequence.index('orientation.diary')
+    j.move('orientation.diary')
+    d=j.http.get('/app/setup/guide/state').json()
+    assert d['stop']['href']=='/app/diary'
     j.guide_action('next')
     d=j.http.get('/app/setup/guide/state').json()
     assert d['stop']['href'].split('#')[0]=='/app/diary/settings'
@@ -672,6 +678,6 @@ def test_knowledge_continue_creates_intro_once_and_resumes_after_ack(journey,mon
     before=j.state();r=j.http.get('/app/setup/guide');assert r.status_code==200
     assert j.state()==before
     r=j.http.post('/app/setup/guide/action',json=dict(revision=before['revision'],stop='intro',operation='start'))
-    assert r.status_code==200 and j.state()['guide']['current']=='orientation.diary'
-    after=j.state();assert onboarding._prepare_guided_setup(ctx)=='/app/diary'
+    assert r.status_code==200 and j.state()['guide']['current']=='relevance.records.relationships'
+    after=j.state();assert onboarding._prepare_guided_setup(ctx)=='/app/diary/dependants'
     assert j.state()==after

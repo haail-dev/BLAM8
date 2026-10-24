@@ -3,8 +3,12 @@
 Local implementation, 23 October 2026. No deployment, migration execution or
 production activation is claimed. The first four routes keep their existing
 forms and validation. `/app/setup` resumes the stored section; the later review
-has Diary, Records and workflows, and Charges and payments, each with compact
-independently saved A/B/C sections. Old settings URLs still edit their own
+has Records and workflows, Diary, and Charges and payments, each with compact
+independently saved A/B/C sections. Records comes first because Diary's
+activities, conditions and date views refer to the customers, related subjects
+and fields it sets up; Charges already depends on the related-record decision.
+Related subjects are offered with CRM or a diary module, since CRM contacts
+hold them as well as bookings. Old settings URLs still edit their own
 domains and link back to the group. Team assignment remains in People.
 
 `onboarding_contract.py` owns stable capability, group, substep and question IDs.
