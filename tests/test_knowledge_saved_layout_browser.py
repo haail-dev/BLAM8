@@ -29,6 +29,15 @@ def test_saved_knowledge_layout(tmp_path, width, theme):
     check(document.documentElement.scrollWidth<=WIDTH,'horizontal overflow');
     const status=document.querySelector('[data-knowledge-saved-status]');
     check(status.textContent.includes('1 note saved. No drafts waiting'),'saved status');
+    const navigation=document.querySelector('[data-knowledge-navigation]');
+    const next=navigation.querySelector('[data-onb-continue]');
+    check(next.textContent==='Next: Guided setup'&&!next.disabled,'guided setup action retained');
+    check(next.form===document.getElementById('kb-note'),'Continue still submits the manual note form');
+    check(!document.querySelector('a[href="/onboarding/voice"]'),'no Back link');
+    check(getComputedStyle(navigation).borderTopWidth==='0px','no navigation divider');
+    check(navigation.getBoundingClientRect().bottom<=status.getBoundingClientRect().top,'navigation above Knowledge content');
+    check(next.getBoundingClientRect().top<=document.querySelector('[data-onboarding-heading]').getBoundingClientRect().top+1,'Next at the top of the card');
+    check(Math.abs(next.getBoundingClientRect().right-navigation.getBoundingClientRect().right)<1,'Next aligned to the right');
     check(document.getElementById('site-lifecycle').hidden,'one completion summary');
     const siteDone=document.getElementById('site-done');
     check(siteDone.textContent.includes('Done')&&!siteDone.querySelector('button,a'),'website completion has no reread action');

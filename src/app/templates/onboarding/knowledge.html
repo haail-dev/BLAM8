@@ -2,8 +2,20 @@
 {% block title %}Knowledge · Set up BLAM8{% endblock %}
 {% block heading %}{{ "Review Knowledge" if pending_reviews else ("Your Knowledge" if sources else "Give it your facts") }}{% endblock %}
 {% block subheading %}{% if not pending_reviews %}{% if sources %}Your agent can use these saved facts. You can read them below or add more any time.{% else %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endif %}{% endif %}{% endblock %}
+{% block card_header %}
+<div data-knowledge-header>
+  <h1 data-onboarding-heading class="text-xl font-bold text-navy">{{ self.heading() }}</h1>
+<div data-knowledge-navigation>
+  {# Keep the form association: Continue also submits a typed manual note. #}
+  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue{% if not sources or pending_reviews %} disabled{% endif %}
+          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait">{{ next_label or 'Next: Guided setup' }}</button>
+</div>
+</div>
+{% endblock %}
 {% block content %}
 <span hidden data-knowledge-saved-reviews='{{ (saved_review_ids or []) | tojson }}'></span>
+
+<p data-knowledge-navigation-status role="status" class="mb-4 text-sm">{% if not sources or pending_reviews %}Review and save your Knowledge before continuing.{% endif %}</p>
 {% if sources and not pending_reviews %}<div data-knowledge-saved-status role="status" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Knowledge saved</strong> <p>{{ sources|length }} note{{ '' if sources|length == 1 else 's' }} saved. No drafts waiting for review. You can continue when you’re ready.</p></div>{% endif %}
 <style>
   .knowledge-review, #site-box { container-type:inline-size; }
@@ -15,10 +27,12 @@
   #site-done { flex-wrap:wrap;overflow-wrap:anywhere; }
   #site-lifecycle p + p { margin-top:.25rem; }
   #knowledge-manual-controls input[type=file] { min-width:0;max-width:100%; }
-  [data-knowledge-navigation] { display:flex;align-items:center;justify-content:space-between;gap:1rem;border-top:1px solid #e2e8f0;margin-top:1.25rem;padding-top:1.25rem; }
+  [data-knowledge-header] { display:flex;align-items:flex-start;justify-content:space-between;gap:1rem; }
+  [data-knowledge-navigation] { display:flex;justify-content:flex-end;flex-shrink:0; }
   [data-knowledge-navigation] button { min-width:0;white-space:normal; }
   [data-knowledge-later] { border:1px solid rgb(var(--c-bd-slate-200));border-radius:.75rem;padding:.875rem;background:rgb(var(--c-bg-white)); }
-  @media(max-width:480px) { [data-knowledge-navigation] { align-items:stretch;flex-direction:column-reverse; } [data-knowledge-navigation] a { align-self:flex-start; } [data-leave-knowledge] { width:100%; } }
+  [data-knowledge-navigation-status]:empty { display:none; }
+  @media(max-width:480px) { [data-knowledge-header] { flex-direction:column-reverse;align-items:stretch; } [data-leave-knowledge] { width:100%; } }
 </style>
 <script src="/static/knowledge_source_review.js?v={{ asset_rev }}" defer></script><span hidden data-knowledge-source-mode></span>
 {% if knowledge_source_review_enabled %}<script src="/static/knowledge_guidance.js?v={{ asset_rev }}" defer></script>{% endif %}
@@ -121,15 +135,4 @@
 <script src="/static/knowledge_onboarding_review.js?v={{ asset_rev }}" defer></script>
 {% endif %}
 
-<div data-knowledge-navigation>
-  <a href="/onboarding/voice" class="text-sm text-slate-400 hover:text-slate-600 transition">← Back</a>
-  {# The wizard's last step: the button submits the note form (formnovalidate →
-     an empty box just moves on): as a bare link it silently discarded a
-     typed-but-not-Added note. It says "Next: Diary settings" — the first of
-     the five tuning steps inside the app — not "Finish setup" (Kris 2026-09-13:
-     "we've shown/done four steps… the user can just ignore the next 5"). #}
-  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue{% if not sources or pending_reviews %} disabled{% endif %}
-          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait">{{ next_label or 'Finish setup' }}</button>
-</div>
-<p data-knowledge-navigation-status role="status" class="mt-3 text-sm">{% if not sources or pending_reviews %}Review and save your Knowledge before continuing.{% endif %}</p>
 {% endblock %}
