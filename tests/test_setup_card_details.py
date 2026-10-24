@@ -63,6 +63,17 @@ def test_invalid_booking_links_never_produce_partial_plan(fields, config, defini
     assert proposal["status"] == "proposed"
 
 
+@pytest.mark.parametrize("plural,saved", [(None, "Properties"), ("", "Properties"), ("Children", "Children")])
+def test_new_kind_derives_an_unstated_plural_like_the_native_editor(plural, saved):
+    group = {"label": "Property" if plural != "Children" else "Child", "cardinality": "many"}
+    if plural is not None:
+        group["plural"] = plural
+    card = start(append("field", kind=group["label"], label="Address", type="text", required=False,
+                        durability="once", gate=False), append("group", **group), page="dependants")
+    _, patch = apply(card, {"config": {}, "groups": []})
+    assert patch["groups"][0]["label_plural"] == saved
+
+
 def test_new_kind_and_field_are_order_independent_with_stable_preview_id():
     card = start(subject(), append("group", label="Asset", plural="Assets", cardinality="many"), page="dependants")
     snapshot = {"config": {}, "groups": []}

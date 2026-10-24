@@ -8,6 +8,8 @@ from copy import deepcopy
 from decimal import Decimal, InvalidOperation
 import re
 
+from app import requirement_groups
+
 SUPPORTED = {("diary_settings", "service"), ("diary_settings", "resource"),
              ("knowledge", "note"),
              ("dependants", "ladder"),
@@ -282,7 +284,8 @@ def parse(page, name, value):
         else:
             f["label"] = _text(f.get("label"), "a label", 60)
             if name == "group":
-                f["plural"] = _text(f.get("plural"), "a plural label", 60)
+                # Owners rarely state a plural; derive it as the native editor does.
+                f["plural"] = _text(f.get("plural", ""), "a plural label", 60, empty=True) or requirement_groups._plural(f["label"])
                 f["cardinality"] = _enum(f.get("cardinality"), ("one", "several", "many"), "one or several")
                 if f["cardinality"] == "several":
                     f["cardinality"] = "many"
