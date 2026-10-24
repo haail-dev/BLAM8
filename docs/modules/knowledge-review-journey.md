@@ -17,6 +17,12 @@ Focused offline admission/guide/route regressions, JavaScript event replays, nat
 
 Earlier conversation is retained behind one collapsed disclosure on Knowledge;
 only the current guide offers actions. Completed state replaces unsaved guidance.
+History shows an explicit owner choice beside the question it answered, using
+the recorded item-scoped selection rather than inferring approval from prose.
+Reviewed and Leave for later form clicks are also recorded after their guide
+checkpoint succeeds. Choices remain review decisions, not final Save receipts.
+Consecutive identical historical prompts render once; automatic refreshes do
+not invent owner turns, and selected refresh cards retain their decision context.
 Overlap cards show at most two recorded sources by default, prioritising exact
 quoted support; all other recorded sources remain available in a disclosure.
 Website extraction assigns each complete claim a subject. The application splits

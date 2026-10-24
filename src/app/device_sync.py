@@ -528,7 +528,8 @@ class SyncRoute(APIRoute):
                                 message[key] = answer[key]
                         # Keep one current guide card for another device to restore,
                         # rather than a transcript of form-driven refreshes.
-                        messages = [m for m in messages if not m.get("knowledge_refresh")]
+                        messages = [m for m in messages if not m.get("knowledge_refresh")
+                                    or (m.get("knowledge_card") or {}).get("selected")]
                         if refresh_only:
                             message["knowledge_refresh"] = True
                         messages.append(message)

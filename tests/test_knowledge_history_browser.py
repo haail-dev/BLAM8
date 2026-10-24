@@ -15,8 +15,12 @@ def test_knowledge_history_is_collapsed_and_current_message_visible(tmp_path,wid
     script='''
     const msgs=document.getElementById('messages');
     const ONB_STEP='knowledge', currentKnowledgeFormCard=null;
+    const oldCard={id:'old',batch_id:'batch',version:'v1',focus_hash:'old',
+      actions:[{action:'keep',label:'Keep note'}],selected:'keep',state:'prepared'};
     const log=[{role:'user',content:'Keep our original request.'},
-      {role:'assistant',content:'Stale correction: nothing changed yet.',knowledge_card:{id:'old'}},
+      {role:'assistant',content:'Stale correction: nothing changed yet.',knowledge_card:oldCard},
+      {role:'assistant',content:'Stale correction: nothing changed yet.',knowledge_card:{...oldCard}},
+      {role:'assistant',content:'Unconfirmed choice: please retry.',knowledge_card:{id:'failed',selected:'discard'}},
       {role:'assistant',content:'Review this current note.',knowledge_card:{id:'current'}}];
     const before=JSON.stringify(log);
     const clearPin=()=>{},refreshTitle=()=>{},pinToTop=()=>{},scrollDown=()=>{},appendTrailStrip=()=>{},appendNavLink=()=>{};
@@ -36,9 +40,14 @@ def test_knowledge_history_is_collapsed_and_current_message_visible(tmp_path,wid
     check(!document.body.innerText.includes('Stale correction'),'old instructions hidden');
     check(document.body.innerText.includes('Review this current note'),'current text visible');
     history.open=true;check(document.body.innerText.includes('Stale correction'),'history can be read');
+    check(history.textContent.split('Stale correction: nothing changed yet.').length===2,'repeated prompt shown once');
+    check(history.textContent.split('Your choice: Keep note').length===2,'confirmed owner choice shown once');
+    check(history.textContent.includes('review choice; not final Save'),'choice is not presented as saved');
+    check(!history.textContent.includes('Your choice: Leave'),'unconfirmed selection is not an owner decision');
     const status=document.createElement('p');status.dataset.knowledgeSavedStatus='';status.textContent='Knowledge saved';document.body.appendChild(status);
     renderAll();history=msgs.querySelector('details');
     check(!history.open&&!msgs.querySelector('button'),'saved history collapsed without controls');
+    history.open=true;check(history.textContent.includes('Your choice: Keep note'),'decision survives saved-state render');
     check(msgs.lastElementChild.textContent==='Knowledge saved','saved receipt current');
     check(JSON.stringify(log)===before,'transcript unchanged');
     check(document.documentElement.scrollWidth<=WIDTH,'no overflow');
