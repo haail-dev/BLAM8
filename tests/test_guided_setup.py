@@ -514,14 +514,90 @@ def test_records_kind_without_stated_plural_is_proposed_and_saved_with_derived_p
     assert [(g[0]['label'],g[0]['label_plural'],g[0]['cardinality']) for g in groups]==[('Property','Properties','many')]
 
 
-def test_records_kind_with_assumed_plural_is_still_rejected_without_storing(guide_journey,monkeypatch):
+def sourced(page,revision,rows):
+    """A proposal whose field values may be (value, source) pairs; others are owner_said."""
+    def assignment(k,v):
+        value,kind=v if isinstance(v,tuple) else (v,'owner_said')
+        return dict(field=k,value=value,source=kind,reference='Not stated' if kind=='assumed' else 'Owner supplied this answer')
+    return [dict(page=page,revision=revision,changes=[dict(op='append',id='',name=r['name'],held=None,
+        fields=[assignment(k,v) for k,v in r['fields'].items()]) for r in rows])]
+
+
+def test_records_kind_with_assumed_plural_uses_the_derived_plural_and_saves(guide_journey,monkeypatch):
     j=guide_journey;j.move('dependants/field')
-    proposal=change('dependants',0,[dict(name='group',fields={'label':'Property','plural':'Properties','cardinality':'many'})])
-    plural=next(f for f in proposal[0]['changes'][0]['fields'] if f['field']=='plural')
-    plural.update(source='assumed',reference='Standard English plural of Property')
+    model(monkeypatch,sourced('dependants',0,[dict(name='group',fields={'label':'Property','plural':('Properties','assumed'),'cardinality':'many'}),
+        dict(name='field',fields={'kind':'Property','label':'Address','type':'text'})]))
+    result=turn(j,'Call it Property. A landlord can have more than one. Keep the address.').json()
+    assert 'ready to review' in result['reply']
+    accept_current(j,'dependants')
+    groups=j.query('select to_jsonb(g) from requirement_groups g where tenant_id=%s',j.tenant,all=True)
+    assert [(g[0]['label'],g[0]['label_plural']) for g in groups]==[('Property','Properties')]
+
+
+def test_records_details_with_unasked_switches_are_proposed_with_usual_settings(guide_journey,monkeypatch):
+    # The 24 Oct rig run: stated details, every gate tagged assumed, the whole proposal refused.
+    j=guide_journey;j.move('dependants/field')
+    details=[dict(name='field',fields={'kind':'Property','label':label,'type':'text','required':(False,'assumed'),
+        'durability':'confirm','gate':(False,'assumed')}) for label in ('Address','Resident name','Access notes')]
+    model(monkeypatch,sourced('dependants',0,[dict(name='group',fields={'label':'Property','cardinality':'many'})]+details))
+    result=turn(j,'For each home we need the address, who lives there and any access notes.').json()
+    assert 'ready to review' in result['reply'] and 'assumed' not in result['reply']
+    card=j.row('tenant_config',j.tenant)['setup_cards']['dependants']
+    gate=card['lines'][1]['sources']['gate']
+    assert gate=={'kind':'inferred','reference':'Usual setting','evidence':[]}
+    accept_current(j,'dependants')
+    fields=j.query('select to_jsonb(g) from requirement_groups g where tenant_id=%s',j.tenant,all=True)[0][0]['fields']
+    assert [(f['label'],f['gate'],f['required']) for f in fields]==[('Address',False,False),('Resident name',False,False),('Access notes',False,False)]
+
+
+def test_stricter_assumed_booking_rule_is_reset_and_asked_in_plain_words(guide_journey,monkeypatch):
+    j=guide_journey;j.move('booking_details/field')
+    model(monkeypatch,sourced('booking_details',0,[dict(name='field',fields={'label':'Repair description',
+        'required':(True,'assumed'),'services':([],'assumed'),'remember':('ask','assumed'),'hint':('Describe it','assumed')})]))
+    result=turn(j,'We need to know what the repair is.').json()
+    assert 'Would you refuse to go ahead without Repair description?' in result['reply']
+    line=j.row('tenant_config',j.tenant)['setup_cards']['booking_details']['lines'][0]
+    assert line['fields']=={'label':'Repair description','required':False,'services':[],'remember':'ask','hint':''}
+
+
+def test_customer_field_gets_its_demanded_choices_as_usual_settings_and_saves(guide_journey,monkeypatch):
+    j=guide_journey;j.move('crm_fields/contact_field')
+    model(monkeypatch,sourced('crm_fields',0,[dict(name='contact_field',fields={'label':'Repair approval note',
+        'field_type':'text','required':(False,'assumed'),'probe_behaviour':('passive','assumed')})]))
+    turn(j,'A short note on who approves repairs, because it varies by agreement.')
+    line=j.row('tenant_config',j.tenant)['setup_cards']['crm_fields']['lines'][0]
+    assert line['fields']['durability']=='once' and line['fields']['staff_can_see'] is True
+    assert line['sources']['probe_behaviour']['reference']=='Usual setting'
+
+
+def test_leave_as_it_is_turn_keeps_the_assistant_reply_without_an_error(guide_journey,monkeypatch):
+    j=guide_journey;j.move('crm_settings/quiet_days')
+    proposal=[dict(page='crm_settings',revision=0,changes=[],considered=[dict(key='crm_settings/quiet_days',state='left_unchanged')])]
+    model(monkeypatch,proposal,reply='Keeping 14 days for now.')
+    result=turn(j,'Leave it at 14 for now.').json()
+    assert result['reply']=='Keeping 14 days for now.'
+    card=j.row('tenant_config',j.tenant)['setup_cards']['crm_settings']
+    assert card['lines']==[] and card['considered'][0]['key']=='crm_settings/quiet_days'
+
+
+def test_two_pages_in_one_reply_keep_the_current_page_and_say_so(guide_journey,monkeypatch):
+    j=guide_journey;j.move('dependants/field')
+    proposal=sourced('crm_fields',0,[dict(name='contact_field',fields={'label':'Approval note','field_type':'text','required':False,
+        'probe_behaviour':'passive','durability':'once','staff_can_see':True})])+sourced('dependants',0,[
+        dict(name='group',fields={'label':'Property','cardinality':'many'}),dict(name='field',fields={'kind':'Property','label':'Address','type':'text'})])
     model(monkeypatch,proposal)
-    response=turn(j,'Call it Property. A landlord can have more than one.',expected=422)
-    assert 'assumed rather than supplied' in response.text
+    result=turn(j,'Yes, that looks right.').json()
+    assert 'ready to review' in result['reply'] and 'its own page' in result['reply']
+    cards=j.row('tenant_config',j.tenant)['setup_cards']
+    assert 'dependants' in cards and 'crm_fields' not in cards
+
+
+def test_unusable_proposal_keeps_the_assistant_reply_ahead_of_the_reason(guide_journey,monkeypatch):
+    j=guide_journey;j.move('dependants/field')
+    model(monkeypatch,sourced('dependants',0,[dict(name='group',fields={'label':('Thing','assumed'),'cardinality':'many'})]),
+          reply='Here is what I would set up.')
+    result=turn(j,'We look after things.').json()
+    assert result['reply'].startswith('Here is what I would set up.') and 'What do you call each one?' in result['reply']
     assert 'dependants' not in (j.row('tenant_config',j.tenant).get('setup_cards') or {})
 
 

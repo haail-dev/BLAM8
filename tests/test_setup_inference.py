@@ -114,3 +114,15 @@ def test_customer_affecting_fields_have_owner_words_and_questions():
             assert wording.question(page, row, field, 'X'), (page, row, field)
     for words in wording.WORDS.values():
         assert '_' not in words[0]
+
+
+def test_filled_rows_pass_their_row_parsers():
+    from app import setup_rows
+    cases = [('booking_details', 'field', {'label': 'Detail'}),
+             ('dependants', 'group', {'label': 'Item'}),
+             ('dependants', 'field', {'kind': 'Item', 'label': 'Detail'})]
+    for page, row, fields in cases:
+        patch = {'op': 'append', 'name': row, 'fields': dict(fields),
+                 'sources': {k: {'kind': 'owner_said', 'reference': 'x'} for k in fields}}
+        kept, _ = inference.resolve(page, [patch], None, SIGNALS)
+        assert setup_rows.parse(page, row, kept[0]['fields'])['problems'] == [], (page, row)

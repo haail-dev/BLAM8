@@ -569,7 +569,8 @@ def unresolved_required(context, substep):
 
 def model_context(context, stop):
     return ('GUIDED SETUP: only the current small decision is being discussed. Ask one question, clarify ambiguity, '
-        'and reuse exact saved answers. Product or unrelated questions do not advance the guide. Do not invent values. '
+        'and reuse exact saved answers. Product or unrelated questions do not advance the guide. Do not invent values: '
+        'each value is the owner’s, their saved website’s, or inferred from BUSINESS CONTEXT with its evidence. '
         'Use setup_changes for explicit choices within CURRENT CATALOGUE. If the owner explicitly supplies a later-area answer, '
         'hold its exact supported row with held=true and keep the current question. Never infer a later answer from a product question. '
         'No links, selectors or actions from prose. Do not repeat applied or left lines. Current question: '+stop['question']+'\n'

@@ -181,7 +181,28 @@ def schema(base):
     return result
 
 
-def context(cards, path, cfg=None):
+# Guided setup swaps these RULE sentences: there an inferred value with cited
+# evidence is allowed, because setup_inference checks it before anything is kept.
+INFERENCE_SWAPS = (
+    ("Every field has its own source and reference. owner_said references the owner's\n"
+     "words; owner_site references supplied source material. assumed states the assumption\n"
+     "plainly. Never relabel an assumption as an owner fact. Missing decisions should be\n"
+     "asked, not guessed from the business type.",
+     "Every field has its own source, reference and evidence. owner_said references the owner's\n"
+     "words; owner_site references supplied source material; inferred gives a one-line reason\n"
+     "from BUSINESS CONTEXT, with the ids of the signals it rests on in evidence ([] for a usual\n"
+     "setting). Never relabel an inference as an owner fact, and never infer from a business type's name."),
+    ("Never infer these choices, remove saved options,",
+     "Infer these choices only from cited facts or as the usual setting; never remove saved options,"),
+)
+
+
+def context(cards, path, cfg=None, *, inference=False):
+    """The card contract and current cards for the help model.
+
+    ``inference`` is for guided setup, whose server settles every value with
+    setup_inference: the rules then allow cited inferences and usual settings.
+    """
     from app import intake, setup_catalogue
     pages = {}
     for page in sorted(MODEL_PAGES):
@@ -194,7 +215,12 @@ def context(cards, path, cfg=None):
                           "required_new_invoice": sorted(setup_card_invoices.REQUIRED_NEW)}, ensure_ascii=False, separators=(",", ":"))
     if len(encoded) > 60_000:
         raise setup_cards.Invalid("The saved proposals are too large for this conversation. Edit or leave lines in the panel first.")
-    return setup_catalogue.FOUNDATION + '\n' + RULE + encoded
+    if not inference:
+        return setup_catalogue.FOUNDATION + '\n' + RULE + encoded
+    rule = RULE
+    for strict, inferred in INFERENCE_SWAPS:
+        rule = rule.replace(strict, inferred)
+    return setup_catalogue.GUIDED_FOUNDATION + '\n' + rule + encoded
 
 
 def unpack(raw):

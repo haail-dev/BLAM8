@@ -397,3 +397,14 @@ def test_unpack_keeps_evidence_only_for_inferred_values():
     assert sources["timing"] == {"kind": "inferred", "reference": "Usual setting", "evidence": []}
     schema_source = model.ASSIGNMENT["properties"]["source"]["enum"]
     assert "inferred" in schema_source and "evidence" in model.ASSIGNMENT["required"]
+
+
+def test_guided_inference_wording_swaps_every_strict_sentence_and_help_stays_strict():
+    from app import setup_catalogue
+    for strict, _ in model.INFERENCE_SWAPS:
+        assert strict in model.RULE, strict
+    guided = model.context({}, "/app/diary/dependants", inference=True)
+    help_prompt = model.context({}, "/app/diary/dependants")
+    assert guided.startswith(setup_catalogue.GUIDED_FOUNDATION) and "inferred gives a one-line reason" in guided
+    assert all(strict not in guided for strict, _ in model.INFERENCE_SWAPS)
+    assert help_prompt.startswith(setup_catalogue.FOUNDATION) and "never fill a default" in guided

@@ -40,11 +40,15 @@ NATIVE_DEFAULTS = {
     ('crm_settings', 'stage'): {'stage_type': 'active', 'display_order': 100},
 }
 
-# New rows whose acceptance adapter demands these choices explicitly. Other
-# adapters fill their own blank-row defaults, so only these are added when
-# the model leaves them out.
+# Choices a new row must state explicitly (setup_rows.parse, setup_card_fields,
+# setup_card_crm). When the model leaves one out it gets the usual setting, the
+# same as an unasked one; the remaining fields default inside their parsers.
 FILL_MISSING = {
+    ('booking_details', 'field'): ('required',),
+    ('dependants', 'group'): ('cardinality',),
+    ('dependants', 'field'): ('type', 'required', 'durability', 'gate'),
     ('crm_fields', 'contact_field'): ('field_type', 'required', 'probe_behaviour', 'durability', 'staff_can_see'),
+    ('crm_settings', 'stage'): ('stage_type', 'display_order'),
 }
 
 # Fields whose value changes what customers are asked, refused or told.
