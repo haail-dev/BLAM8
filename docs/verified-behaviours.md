@@ -1,5 +1,16 @@
 # Verified behaviours — what is PROVEN to work, and what guards it
 
+## Guided setup presentation (24 October 2026)
+
+Earlier Knowledge questions and recorded owner choices remain readable in the
+collapsed setup history. Review buttons are never restored outside Knowledge;
+source strips and navigation links collapse with their originating message.
+All nine later-onboarding sections explain their purpose, and Related records
+uses customer-facing language without changing record collection or booking rules.
+Native guide replays restore a settled and unsettled Knowledge transcript across
+Diary, Records and Charges, then verify current proposal editing and acceptance.
+This is local evidence; it does not claim deployment or completion of the live rig.
+
 ## Knowledge review and Voice: local verification (23 October 2026)
 
 Local synthetic evidence, awaiting review and deliberate migration/release. See

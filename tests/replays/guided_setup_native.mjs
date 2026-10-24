@@ -56,6 +56,29 @@ try{
    await until('Blam8GuidedSetup.currentStop()==="diary_settings/stay_mode"');
  }
  await until('window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question .guided-title")');
+ // Restore the real cross-page transcript, including settled and unsettled
+ // Knowledge cards. Earlier tests started empty and missed orphaned controls.
+ const priorReview=[
+   {role:'assistant',content:'Service exclusions: We do not offer short stays. Does this look right?',
+    knowledge_card:{batch_id:'review',version:'v1',focus_hash:'exclusions',focus:{kind:'note',id:'exclusions'},
+      actions:[{action:'keep',label:'Keep note'},{action:'discard',label:'Leave out'}],selected:'keep',state:'prepared'}},
+   {role:'assistant',content:'Service area: Please provide a postcode. Does this look right?',
+    knowledge_card:{batch_id:'review',version:'v1',focus_hash:'area',focus:{kind:'note',id:'area'},
+      actions:[{action:'keep',label:'Keep note'},{action:'discard',label:'Leave out'}]}},
+   {role:'user',content:'Your choice: Service area — Reviewed to keep (review choice; not final Save).'},
+   {role:'assistant',content:'Knowledge review finished.',trail:[{label:'Reviewed source'}],links:[{label:'Previous settings',href:'/app/crm/settings'}]}
+ ];
+ await evaluate('Blam8DeviceSync.transcript('+JSON.stringify(priorReview)+')');
+ await cdp('Page.reload');
+ await until('window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question .guided-title") && document.querySelector(".guided-history:not([hidden])")');
+ assert(await evaluate('document.querySelector(".guided-context")?.textContent.length>30'));
+ assert(await evaluate('!document.querySelector("#bc-messages").innerText.includes("Service exclusions") && !document.querySelector("#bc-messages").innerText.includes("Previous settings")'));
+ await button('Earlier conversation');
+ assert(await evaluate('document.querySelector("#bc-messages").innerText.includes("Service exclusions") && document.querySelector("#bc-messages").innerText.includes("Your choice: Keep note.")'));
+ assert(await evaluate('!document.querySelector("#bc-messages [data-knowledge-guide-actions]") && !document.querySelector("#bc-messages").textContent.includes("Chosen during review") && !document.querySelector("#bc-messages").textContent.includes("review choice; not final Save")'));
+ assert.deepEqual(await evaluate('Blam8DeviceSync.state().payload.messages'),priorReview);
+ await shot('00-history-context');
+ await button('Hide earlier conversation');
  await evaluate(`localStorage.setItem('blam8-theme',${JSON.stringify(theme)});document.documentElement.dataset.theme=${JSON.stringify(theme)};true`);
  await evaluate("window.trustedEvents=[];document.addEventListener('click',e=>trustedEvents.push(e.isTrusted));true");
  await shot('01-question');

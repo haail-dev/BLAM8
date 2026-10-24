@@ -5,6 +5,17 @@
   var previews=window.Blam8ProposalForms;
   var associating={};
   var revealed=null;
+  var sectionContext={
+    'diary.activities':'Choose which activities the assistant can help arrange, and which you will arrange yourself.',
+    'diary.time':'Set the times and capacity available for bookings. These rules apply only when booking is enabled.',
+    'diary.conditions':'Choose what customers must provide before a booking can go ahead, such as answers or documents.',
+    'records.relationships':'Keep separate records for people, places or items linked to a customer. Give each type a name that fits your business.',
+    'records.information':'Choose the details to keep on each record, and when the assistant should ask for or confirm them.',
+    'records.progress':'Choose whether to track stages for customers or their related records, and what should happen when a stage changes.',
+    'charges.responsibility':'Choose who is responsible for charges and which business details appear on quotes and invoices.',
+    'charges.terms':'Review your charges, payment deadlines and any deposit rules.',
+    'charges.methods':'Choose how customers can pay and which payment instructions to include.'
+  };
   var resumeButton=null, stream=null, conversation=null, navigation=null, historyButton=null, messageObserver=null, navigating=false;
   function messagesChanged(){
     if(!conversation)return;
@@ -112,11 +123,11 @@
     }
     if(opener&&(!window.Blam8DeviceSync||window.Blam8DeviceSync.isReady()))opener();
     var stop=state.stop;
-    var groups={diary:'Diary',records:'Records and workflows',charges:'Charges and payments'};
-    var group=(stop.substep||'').split('.')[0];
-    host.appendChild(el('p',state.section?'Guided setup · '+state.section.group+' · '+state.section.badge:'Guided setup','guided-progress'));
-    if(state.section)host.appendChild(el('p',state.section.label+' · '+state.remaining_sections+' sections to review','guided-section'));
+    var sectionNumber=state.section?{A:1,B:2,C:3}[state.section.badge]:null;
+    host.appendChild(el('p',state.section?state.section.group+(sectionNumber?' · Section '+sectionNumber+' of 3':''):'Guided setup','guided-progress'));
+    if(state.section&&state.section.label!==stop.title)host.appendChild(el('p',state.section.label,'guided-section'));
     host.appendChild(el('p',stop.title,'guided-title'));
+    if(sectionContext[stop.substep])host.appendChild(el('p',sectionContext[stop.substep],'guided-context'));
     var viewPage=button(document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page',function(){
       document.body.classList.toggle('guided-page-expanded');
       viewPage.textContent=document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page';
@@ -208,10 +219,13 @@
       note('The current question is on its owning page. Your position is kept.');
     }
     if(panel)project(panel.data);
-    if(stream&&revealed!==stop.id){stream.scrollTop=0;conversation.classList.remove('guided-show-history');}
+    if(stream&&revealed!==stop.id){
+      stream.scrollTop=0;conversation.classList.remove('guided-show-history');
+      historyButton.setAttribute('aria-expanded','false');historyButton.textContent='Earlier conversation';
+    }
     fit();
-    if(revealed!==stop.id && highlight){revealed=stop.id;requestAnimationFrame(function(){
-      if(!document.activeElement||!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))highlight.scrollIntoView({block:'start',behavior:'instant'});
+    if(revealed!==stop.id){revealed=stop.id;if(highlight)requestAnimationFrame(function(){
+      if(highlight&&(!document.activeElement||!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)))highlight.scrollIntoView({block:'start',behavior:'instant'});
     });}
   }
   function matches(card,line){
