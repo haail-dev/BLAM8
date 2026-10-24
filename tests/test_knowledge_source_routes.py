@@ -153,6 +153,7 @@ def test_website_import_retains_raw_source_without_returning_it_to_browser(sourc
     seen = []
     monkeypatch.setattr(kb, 'is_configured', lambda: True)
     monkeypatch.setattr(db, 'get_tenant', lambda *a, **k: {})
+    monkeypatch.setattr(db, 'get_tenant_config', lambda *a, **k: {})
     pages = [{k:p[k] for k in ('url','text')} for p in evidence['pages']]
     async def build(*a, **kw):
         return {'site':'https://example.invalid','pages':['https://example.invalid'],

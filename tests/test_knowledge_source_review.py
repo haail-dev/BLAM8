@@ -224,7 +224,7 @@ def test_merges_preserve_mixed_and_legacy_authorship_through_saved_review():
     entry['content'] = 'A new owner clarification.'
     entry['content_segments'] = [{'kind': 'owner_said', 'text': entry['content'], 'reference': 'Owner edit'}]
     context['reviews'].append(next_row)
-    candidate = next(m for m in admission.candidates(entry, context, next_row['id']) if m['kind'] == 'saved')
+    candidate = next(m for m in admission.candidates(entry, context, next_row['id'], include_merge_targets=True) if m['kind'] == 'saved')
     merged = admission.effective_entries(context, next_row, [entry], {'action_'+entry['id']: 'merge_saved:'+candidate['id']})[0]
     assert merged['content_segments'] == segments + entry['content_segments']
     changed = dict(source, content='Changed outside the recorded review')
