@@ -74,7 +74,9 @@ see *Deliberately not doing*.
 requirement_groups (           -- the definition ("what a Dog is", per tenant)
   id uuid pk, tenant_id uuid,
   label text,                  -- operator's word, singular: 'Dog'
-  label_plural text,           -- 'Dogs' (prompt + UI copy)
+  label_plural text,           -- 'Dogs' (prompt + UI copy); derived from label
+                               --   when not stated, in the editor and in
+                               --   assistant proposals alike
   cardinality text default 'many',   -- 'one' | 'many' per contact
   fields jsonb not null,       -- ordered [{key, label, type(text|number|date|
                                --   bool|dropdown), options, required,

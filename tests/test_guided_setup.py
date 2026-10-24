@@ -489,6 +489,27 @@ def test_records_kind_and_first_detail_use_one_native_dependency_acceptance(guid
     (tmp_path/'records-receipts.json').write_text(json.dumps(dict(card=card,state=j.state(),groups=groups),indent=2),encoding='utf-8')
 
 
+def test_records_kind_without_stated_plural_is_proposed_and_saved_with_derived_plural(guide_journey,monkeypatch):
+    j=guide_journey;j.move('dependants/field')
+    model(monkeypatch,change('dependants',0,[dict(name='group',fields={'label':'Property','cardinality':'many'}),
+        dict(name='field',fields={'kind':'Property','label':'Address','type':'text','required':False,'durability':'once','gate':False,'hint':''})]))
+    turn(j,'Call it Property. A landlord can have more than one. Keep the address for each.')
+    accept_current(j,'dependants')
+    groups=j.query('select to_jsonb(g) from requirement_groups g where tenant_id=%s',j.tenant,all=True)
+    assert [(g[0]['label'],g[0]['label_plural'],g[0]['cardinality']) for g in groups]==[('Property','Properties','many')]
+
+
+def test_records_kind_with_assumed_plural_is_still_rejected_without_storing(guide_journey,monkeypatch):
+    j=guide_journey;j.move('dependants/field')
+    proposal=change('dependants',0,[dict(name='group',fields={'label':'Property','plural':'Properties','cardinality':'many'})])
+    plural=next(f for f in proposal[0]['changes'][0]['fields'] if f['field']=='plural')
+    plural.update(source='assumed',reference='Standard English plural of Property')
+    model(monkeypatch,proposal)
+    response=turn(j,'Call it Property. A landlord can have more than one.',expected=422)
+    assert 'assumed rather than supplied' in response.text
+    assert 'dependants' not in (j.row('tenant_config',j.tenant).get('setup_cards') or {})
+
+
 def test_charges_explicit_required_batch_saves_empty_false_values_without_payment_enablement(guide_journey,monkeypatch,tmp_path):
     j=guide_journey
     stop=next(s for s in guided_setup.registry().values() if s['page']=='invoice_settings' and len(s['catalogue'])>3)

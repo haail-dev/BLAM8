@@ -163,7 +163,8 @@ resource: name, count, rate (number or null), rate_unit (booking/hour/day/night/
 booking_details field: label, required (boolean), kind (answer/document), hint,
 services (array of saved service names, [] means all; Stays is also valid on a
 stay diary), remember (ask/once/confirm/expires).
-dependants group: label, plural, cardinality (one/many).
+dependants group: label, cardinality (one/many), plural only when the owner states
+it (otherwise omit it; the server derives it from the label).
 dependants field: kind (group label), label, type (text/number/date/bool/dropdown),
 options (array for dropdown), required (boolean), durability (once/confirm/expires),
 recall_days (1..365 for expires only), gate (boolean, only true for expires), hint.
