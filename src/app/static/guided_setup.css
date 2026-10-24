@@ -68,8 +68,7 @@
 @media(max-width:767px){
  .guided-running[data-onboarding-shell]{position:fixed;inset:0}
  .guided-running[data-onboarding-shell] > .min-h-full{height:100dvh;min-height:0}
- .guided-running[data-onboarding-shell] [data-onboarding-main]{flex:none;overflow-y:auto;scroll-padding:5rem 0 1rem;overscroll-behavior:contain}
- .guided-running[data-onboarding-shell] [data-stepper-total]{top:0}
+ .guided-running[data-onboarding-shell] [data-onboarding-main]{flex:none;overflow-y:auto;scroll-padding:1rem 0;overscroll-behavior:contain}
  .guided-running[data-onboarding-shell] #bc-panel{bottom:var(--guided-keyboard-inset,0px)!important}
 }
 

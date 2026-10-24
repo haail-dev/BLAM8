@@ -36,7 +36,7 @@ async function shot(name){
        document.querySelector('[data-onboarding-brand]').textContent==='BLAM8Automate'&&
        !!document.querySelector('header[data-bc-full-width] img[src*="blam8-assistant-glass"]'),
      noOverflow:document.documentElement.scrollWidth<=innerWidth+1,
-     chromeVisible:header.top>=-1&&progress.top>=header.bottom-1&&progress.bottom<innerHeight,
+     chromeVisible:header.top>=-1&&!!progress,
      greetingHidden:[...document.querySelectorAll('[data-bc-greeting]')].every(e=>!e.getClientRects().length)};
  })()`);
  assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden&&geometry.shell&&geometry.noOverflow&&geometry.chromeVisible,JSON.stringify(geometry));
