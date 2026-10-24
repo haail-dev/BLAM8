@@ -154,7 +154,7 @@ def test_setup_status_fresh_unconfigured_tenant_shows_all_steps(client, monkeypa
     data = client.get("/concierge/setup-status").json()
     assert data["show"] is True
     assert [s["key"] for s in data["steps"]] == \
-        ["diary", "records", "charges"]
+        ["records", "diary", "charges"]
     assert all(not s["done"] for s in data["steps"])
 
 

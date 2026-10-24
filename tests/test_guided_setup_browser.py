@@ -137,7 +137,9 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             return response
         return page
     views={path:view}
-    if area.startswith('handoff'):views.update({'/app/diary':dashboard.diary_view,'/app/diary/settings':dashboard.diary_settings})
+    if area.startswith('handoff'):views.update({'/app/diary/dependants':dashboard.diary_dependants,
+        '/app/crm/fields':dashboard.crm_fields_page,'/app/crm/settings':dashboard.crm_settings_page,
+        '/app/diary':dashboard.diary_view,'/app/diary/settings':dashboard.diary_settings})
     page_routes=[APIRoute(url,render(handler)) for url,handler in views.items()]
     for route in page_routes:app.router.routes.insert(0,route)
     requests=[]
@@ -190,6 +192,8 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             saved=j.row('scheduling_config',j.tenant)
             assert not intake.stay_mode(saved)
             assert j.state()['guide']['intro_ack'] is True
+            assert {c:j.state()['capabilities'].get(c) for c in ('related_records','record_information','lifecycle')}=={
+                'related_records':'deferred','record_information':'deferred','lifecycle':'deferred'}
             assert j.state()['guide']['decisions']['diary_settings/stay_mode']=='applied'
             assert next(a for a in j.state()['answers'].values() if a['question']=='activity.purpose')['value']=='We inspect equipment.'
         elif area=='hours':

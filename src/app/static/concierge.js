@@ -982,8 +982,8 @@
   // so the copy promises exactly that: tap the button, I'll take it from
   // there.
   var SETUP_MESSAGES = {
-    diary: "I'm the BLAM8 AI assistant. This is {POS}: Diary. Review the relevant activities, time and conditions in independently saved sections. Existing answers can be reused; booking permission still depends on the saved settings.",
-    records: "Now {POS}: Records and workflows. Choose which records, information and follow-up you need. Each section can be reviewed, left off or deferred without creating arbitrary records or stages.",
+    records: "I'm the BLAM8 AI assistant. This is {POS}: Records and workflows. Choose which records, information and follow-up you need. Each section can be reviewed, left off or deferred without creating arbitrary records or stages.",
+    diary: "Now {POS}: Diary. Review the relevant activities, time and conditions in independently saved sections. Existing answers can be reused; booking permission still depends on the saved settings.",
     charges: "Now {POS}: Charges and payments. Review only the charging and payment capabilities you need. Completing the review does not require bank details or enable payments.",
     requirements: "Now {POS}: your booking requirements — the checklist of " +
       "details the agent must collect before it books anyone in. It's " +

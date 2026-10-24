@@ -2,8 +2,9 @@
 
 The four initial onboarding steps retain their existing validation. Knowledge
 Continue opens a brief introduction. Starting explicitly acknowledges it and
-opens Diary orientation, followed by the existing settings owners in grouped
-substep order. Existing completed tenants acquire no new mandatory flow.
+opens Records and workflows, followed by Diary orientation and the remaining
+settings owners in grouped substep order. Existing completed tenants acquire no
+new mandatory flow.
 
 The introduction has one route: its Start/Resume button and the assistant's
 matching button call the same guide action. The old grouped-review shortcut is

@@ -5,18 +5,14 @@ import json
 
 from app import setup_card_scalars, setup_card_invoices, setup_card_crm
 
+# Records comes first: Diary's activities, requirements and date views refer
+# to the customers, subjects and fields that Records sets up.
 GROUPS = {
-    'diary': 'Diary',
     'records': 'Records and workflows',
+    'diary': 'Diary',
     'charges': 'Charges and payments',
 }
 SUBSTEPS = {
-    'diary.activities': ('diary', 'A', 'Activities and permissions', 'time_occupancy',
-                         [('/app/diary/settings#booking-mode', 'Booking mode and activities')]),
-    'diary.time': ('diary', 'B', 'Time and resources', 'time_occupancy',
-                   [('/app/diary/settings', 'Availability, timing and resources')]),
-    'diary.conditions': ('diary', 'C', 'Conditions for proceeding', 'information_collection',
-                         [('/app/diary/intake', 'Answers and documents required to proceed')]),
     'records.relationships': ('records', 'A', 'Records and relationships', 'related_records',
                               [('/app/diary/dependants', 'Related subjects and their information')]),
     'records.information': ('records', 'B', 'Information and evidence', 'record_information',
@@ -24,6 +20,12 @@ SUBSTEPS = {
                              ('/app/diary/dependants', 'Related subject fields and evidence')]),
     'records.progress': ('records', 'C', 'Progress and follow-up', 'lifecycle',
                          [('/app/crm/settings', 'Stages and follow-up')]),
+    'diary.activities': ('diary', 'A', 'Activities and permissions', 'time_occupancy',
+                         [('/app/diary/settings#booking-mode', 'Booking mode and activities')]),
+    'diary.time': ('diary', 'B', 'Time and resources', 'time_occupancy',
+                   [('/app/diary/settings', 'Availability, timing and resources')]),
+    'diary.conditions': ('diary', 'C', 'Conditions for proceeding', 'information_collection',
+                         [('/app/diary/intake', 'Answers and documents required to proceed')]),
     'charges.responsibility': ('charges', 'A', 'Responsibility and document details', 'charging',
                                [('/app/invoices/settings', 'Document identity and responsibility')]),
     'charges.terms': ('charges', 'B', 'Charging rules and terms', 'charging',
@@ -221,6 +223,10 @@ def legacy_evidence(cfg, groups):
     return result
 
 
+def subjects_available(modules):
+    return 'crm' in modules or bool({'scheduling', 'tms', 'fsm'} & set(modules))
+
+
 def group_steps(modules, cfg=None, state=None, groups=None):
     state = read_state(state)
     out = []
@@ -232,13 +238,14 @@ def group_steps(modules, cfg=None, state=None, groups=None):
         for sid, (gid, badge, neutral, capability, links) in SUBSTEPS.items():
             if gid != identity:
                 continue
-            # CRM-only controls require CRM; subject controls require a diary module.
+            # CRM-only controls require CRM. Related subjects are kept on CRM
+            # contacts as well as bookings, so either module offers them.
             if sid == 'records.progress' and 'crm' not in modules:
                 continue
-            if sid == 'records.relationships' and not {'scheduling', 'tms', 'fsm'} & set(modules):
+            if sid == 'records.relationships' and not subjects_available(modules):
                 continue
             links = [(href, text) for href, text in links if not (
-                (href == '/app/diary/dependants' and not {'scheduling', 'tms', 'fsm'} & set(modules)) or
+                (href == '/app/diary/dependants' and not subjects_available(modules)) or
                 (href.startswith('/app/crm/') and 'crm' not in modules))]
             decision = state['capabilities'].get(capability, 'undecided')
             review = state['reviews'].get(sid, {}).get('state', 'unreviewed')

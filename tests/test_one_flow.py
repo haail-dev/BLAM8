@@ -203,14 +203,15 @@ def test_the_widget_counts_nine_and_has_no_dismiss():
     assert "setup-dismiss" not in strip and 'x.textContent = "×"' not in strip
     assert "Setup's done" not in js
     # Historical registered guard name retained; the grouping now totals seven.
-    assert 'diary: "I\'m the BLAM8 AI assistant. This is {POS}: Diary.' in js
+    assert 'records: "I\'m the BLAM8 AI assistant. This is {POS}: Records and workflows.' in js
+    assert 'diary: "Now {POS}: Diary.' in js
 
 
 def test_the_wizard_stepper_draws_all_nine():
     """The first four retain their routes; three later groups stay visible as
     upcoming. The registered historical test name remains for outcome coverage."""
     ctx = onboarding._step_ctx("interview")
-    assert [t["label"] for t in ctx["tuning"]] == ["Diary", "Records and workflows", "Charges and payments"]
+    assert [t["label"] for t in ctx["tuning"]] == ["Records and workflows", "Diary", "Charges and payments"]
     assert ctx["step_count"] + len(ctx["tuning"]) == setup_handoff.WIZARD_STEPS + 3
     html = _read("src/app/templates/onboarding/base.html")
     assert 'data-stepper-total="{{ total }}"' in html

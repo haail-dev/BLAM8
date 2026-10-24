@@ -41,7 +41,7 @@ async function shot(name){
  })()`);
  assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden&&geometry.shell&&geometry.noOverflow&&geometry.chromeVisible,JSON.stringify(geometry));
  assert(geometry.title.includes('Setup'));
- const expectedStep=area==='records'?6:['charges','knowledge_conflict'].includes(area)?7:5;
+ const expectedStep=area==='records'||name.includes('records')?5:['charges','knowledge_conflict'].includes(area)?7:6;
  assert((await evaluate('document.querySelector("[data-current-step]").getAttribute("aria-label")')).startsWith('Step '+expectedStep+':'));
  }
 try{
@@ -62,6 +62,15 @@ try{
      if(await evaluate('document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-bubble');
      await click('[data-guided-entry]');
    }else await click('[data-guided-start]');
+   // Records comes first. An owner who is not ready leaves each section for later.
+   await until('location.pathname==="/app/diary/dependants" && window.Blam8GuidedSetup?.currentStop()==="relevance.records.relationships"');
+   await shot('00-records-handoff');
+   for(const [stop,next] of [['relevance.records.relationships','/app/crm/fields'],['relevance.records.information','/app/crm/settings'],
+                             ['relevance.records.progress','/app/diary']]){
+     await until('window.Blam8GuidedSetup?.currentStop()==='+JSON.stringify(stop)+' && window.Blam8DeviceSync?.isReady()');
+     await button('Decide later');
+     await until('location.pathname==='+JSON.stringify(next)+' && document.querySelector(".guided-title")');
+   }
    await until('location.pathname==="/app/diary" && document.querySelector(".guided-title")?.textContent==="Your diary"');
    await shot('00-diary-handoff');
    assert(await evaluate(`getComputedStyle(document.querySelector('[data-tour-diary]')).outlineStyle==='none'`));

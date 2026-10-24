@@ -23,12 +23,12 @@ def render(path, done=(), status=None, dismissed=False):
 
 
 @pytest.mark.parametrize('path,current',[
-    ('/app/setup/guide',5),('/app/setup',5),('/app/diary',5),
-    ('/app/diary/settings',5),('/app/diary/intake',5),('/app/setup/diary',5),
-    ('/app/diary/dependants',6),('/app/crm/fields',6),('/app/crm/settings',6),('/app/setup/records',6),
+    ('/app/setup/guide',5),('/app/setup',5),
+    ('/app/diary/dependants',5),('/app/crm/fields',5),('/app/crm/settings',5),('/app/setup/records',5),
+    ('/app/diary',6),('/app/diary/settings',6),('/app/diary/intake',6),('/app/setup/diary',6),
     ('/app/money',7),('/app/invoices/settings',7),('/app/setup/charges',7)])
 def test_native_setup_keeps_seven_positions_and_one_shared_shell(path,current):
-    html=render(path,done=('diary',) if current>5 else ())
+    html=render(path,done=('records',) if current>5 else ())
     tags=Tags(html).tags
     buttons=[a for _,a in tags if 'data-step-name-toggle' in a]
     assert len(buttons)==7

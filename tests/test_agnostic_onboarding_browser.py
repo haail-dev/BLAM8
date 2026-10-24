@@ -33,7 +33,7 @@ def render_group(theme, *, long=False):
         device_sync_enabled=lambda: False, review_groups=groups,
         onboarding_app_progress=setup_handoff.onboarding_progress,
         setup_strip_raw={'steps': groups, 'onboarded_at': '2026-10-23', 'dismissed_at': None},
-        setup_strip_fn=setup_handoff.strip, **onboarding_routes.page_context(context, groups[0]))
+        setup_strip_fn=setup_handoff.strip, **onboarding_routes.page_context(context, next(g for g in groups if g['key'] == 'diary')))
     for name in ('onboarding_group.css', 'setup_stepper.css', 'guided_setup.css'):
         body = (ROOT / 'src/app/static' / name).read_text(encoding='utf-8')
         page = re.sub(r'<link rel="stylesheet" href="/static/' + re.escape(name) + r'[^\"]*">', lambda m: '<style>' + body + '</style>', page)

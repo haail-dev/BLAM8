@@ -1,5 +1,15 @@
 # Verified behaviours — what is PROVEN to work, and what guards it
 
+## Records before Diary in guided setup (24 October 2026)
+
+Later setup runs Records and workflows (step 5), Diary (6), then Charges and
+payments (7). Starting the guide opens Records on the real Related records page;
+Diary orientation follows Records' last section. An owner who leaves all three
+Records sections for later reaches the Diary with nothing configured. Related
+subjects are offered with CRM or a diary module, because CRM contacts hold them.
+Guards: `test_agnostic_onboarding.py`, `test_guided_setup.py` and the native
+handover replay in `test_guided_setup_browser.py`. Local evidence only.
+
 ## Guided setup presentation (24 October 2026)
 
 Earlier Knowledge questions and recorded owner choices remain readable in the
