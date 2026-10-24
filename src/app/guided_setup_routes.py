@@ -1,7 +1,7 @@
 """Permission checked guide metadata and conversation on existing card adapters."""
 from copy import deepcopy
 from uuid import uuid4
-from typing import Literal
+from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, ConfigDict, Field
@@ -123,6 +123,9 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
             reuse_confirmed_answers(ctx, context, state)
             state['guide'].update(status='active', intro_ack=True)
             state['guide']['current'] = guide.steps({**context, 'state': state})[1]['id']
+            if state['guide']['current'] == guide.DIARIES_STOP:
+                from app import diary_discovery
+                diary_discovery.refresh(context, state)
         else:
             current, stop = guide.current(context, body.stop)
             current = state['guide']
@@ -181,8 +184,14 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
             elif body.operation in ('next', 'back'):
                 if body.choice is not None:
                     raise ValueError('Next and Back only change position.')
+                if body.operation == 'next' and stop['kind'] in ('diaries', 'profile') and not guide._answer(state, stop['question_id']):
+                    raise ValueError('Choose your diaries, or say you’re not sure, before moving on.' if stop['kind'] == 'diaries'
+                                     else 'Confirm your diaries, or choose Decide later, before moving on.')
                 current['explained'][stop['id']] = guide.VERSION
                 _move(context, current, stop, 1 if body.operation == 'next' else -1)
+                if current['current'] == guide.DIARIES_STOP:
+                    from app import diary_discovery
+                    diary_discovery.refresh(_with_knowledge(ctx, context), state)
             elif body.operation == 'keep_current':
                 if stop['kind']!='decision' or body.choice is not None:
                     raise ValueError('Choose a current settings decision.')
@@ -200,7 +209,7 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                     if body.operation == 'review' and pending:
                         raise ValueError('Pending suggestions remain. Save or leave them, or explicitly defer this section.')
                     unresolved = [a for a in state['answers'].values() if a['substep']==stop['substep'] and
-                                  a['state'] in ('unknown','deferred','unanswered')]
+                                  a['state'] in ('unknown','deferred','unanswered') and guide.discovery_counts(state, a)]
                     if body.operation=='review' and (unresolved or state_store.unresolved_dependencies(state,stop['substep'])):
                         raise ValueError('Related or unanswered decisions remain. Resolve them or explicitly defer this section.')
                     if body.operation=='review' and guide.unresolved_required({**context,'state':state},stop['substep']):
@@ -225,6 +234,233 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
         raise HTTPException(400, str(exc) if isinstance(exc, ValueError) else 'Invalid guide data.') from None
     card_write = card_write or prepare_known_choice(ctx, context, state)
     return save(ctx, context, state, card_write)
+
+
+def _with_knowledge(ctx, context):
+    """Discovery reads saved Knowledge; load it only when entering discovery."""
+    if context.get('knowledge') is not None or context.get('knowledge_unavailable'):
+        return context
+    loaded = state_store.load(ctx, knowledge=True)
+    return {**context, 'knowledge': loaded['knowledge'], 'knowledge_unavailable': loaded['knowledge_unavailable']}
+
+
+class DiaryAction(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    revision: int = Field(strict=True, ge=0)
+    stop: str = Field(max_length=200)
+    operation: Literal['choose', 'accept_label', 'rename', 'remove', 'order', 'answer', 'accept_prefill',
+                       'dismiss_prefill', 'confirm', 'later', 'edit', 'add_more']
+    diary: str | None = Field(default=None, max_length=64)
+    label: str | None = Field(default=None, max_length=120)
+    suggestions: list[str] = Field(default_factory=list, max_length=5)
+    labels: list[str] = Field(default_factory=list, max_length=8)
+    ids: list[str] = Field(default_factory=list, max_length=8)
+    state: Literal['answered', 'unknown', 'deferred', 'not_applicable'] | None = None
+    value: Any = None
+
+
+def _list_answer(state, actor, status='answered'):
+    ids = [d['id'] for d in contract.active_diaries(state)]
+    state_store._confirmed_answer(state, contract.question('diary.list'), 'organisation', 'organisation',
+                                  status, ids if status == 'answered' else None, actor)
+
+
+def _discovery_value(state, stop, status, raw):
+    """Validate one control answer for the current discovery stop."""
+    from app import diary_profile
+    spec = contract.question(stop['question_id'])
+    value = contract.answer_value(spec, raw) if status == 'answered' else None
+    if status == 'answered' and stop['kind'] == 'diary_fact':
+        if value not in (None,) and spec['kind'] == 'choice' and value not in diary_profile.choices(state, stop['diary'], spec['id']):
+            raise ValueError('Choose an offered option.')
+        if spec['id'] == 'diary.date_source' and value != 'not_recorded' and value not in {
+                d['id'] for d in (state['guide'].get('diary') or {}).get('date_sources', [])}:
+            raise ValueError('Choose one of the dates your records keep.')
+    return spec, value
+
+
+def _confirm_profile(ctx, context, state, status):
+    """The confirmed profile replaces the yes/no time gate (spec §4.5)."""
+    from app import diary_profile
+    state_store._confirmed_answer(state, contract.question('diary.profile'), 'organisation', 'organisation',
+        status, [d['id'] for d in contract.active_diaries(state)] if status == 'answered' else None, ctx.user_id)
+    timed = False
+    for diary in contract.active_diaries(state):
+        result = diary_profile.support(state, diary['id'], context['modules'])
+        diary['support'] = dict(result, at=state_store.stamp())
+        if status == 'answered':
+            diary['status'] = 'confirmed'
+        timed = timed or (result['state'] == 'ready' and result['kind'] == 'diary')
+    listed = guide._answer(state, 'diary.list')
+    capability = ('deferred' if status != 'answered' else 'needed' if timed else
+                  'off' if not contract.active_diaries(state) or (listed or {}).get('state') == 'not_applicable' else 'deferred')
+    state['capabilities']['time_occupancy'] = capability
+    for sid, sub in contract.SUBSTEPS.items():
+        if sub[3] == 'time_occupancy':
+            if capability == 'needed':
+                state['reviews'].pop(sid, None)
+            else:
+                state['reviews'][sid] = dict(state=capability, at=state_store.stamp(), by=ctx.user_id)
+
+
+@router.post('/diary', dependencies=[Depends(require_csrf_header)])
+def diary_action(body: DiaryAction, ctx: TenantCtx = Depends(require_onboarded)):
+    from app import diary_discovery, diary_profile
+    context = _with_knowledge(ctx, context_for(ctx, body.revision))
+    state = deepcopy(context['state'])
+    try:
+        progress, stop = guide.current(context, body.stop)
+        if progress['status'] != 'active' or stop['kind'] not in guide.DISCOVERY:
+            raise ValueError('Open the current diary question first.')
+        saved = state['guide'].setdefault('diary', {})
+        op = body.operation
+        if op == 'choose':
+            if stop['kind'] != 'diaries':
+                raise ValueError('Choose diaries on the diaries question.')
+            if body.state in ('unknown', 'deferred', 'not_applicable'):
+                if body.suggestions or body.labels or contract.active_diaries(state):
+                    raise ValueError('Remove your diaries first, or keep them and continue.')
+                _list_answer(state, ctx.user_id, body.state)
+            else:
+                offered = {s['id']: s for s in saved.get('suggestions', [])}
+                if any(i not in offered for i in body.suggestions):
+                    raise ValueError('Those suggestions changed. Reload and choose again.')
+                for identity in body.suggestions:
+                    item = offered[identity]
+                    diary_profile.create(state, item['label'], ctx.user_id, provenance='owner_selected_suggestion',
+                                         suggestion=dict(reason=item['reason'], signal_ids=item['signal_ids']),
+                                         seed=item.get('seed'))
+                for label in body.labels:
+                    diary_profile.create(state, label, ctx.user_id, provenance='owner_typed')
+                if not contract.active_diaries(state):
+                    raise ValueError('Choose at least one diary, or say you’re not sure.')
+                _list_answer(state, ctx.user_id)
+        elif op == 'accept_label':
+            proposed = next((p for p in saved.get('proposed_labels', []) if p['label'] == body.label), None)
+            if not proposed:
+                raise ValueError('That suggested name is no longer available.')
+            diary_profile.create(state, proposed['label'], ctx.user_id, provenance='owner_selected_suggestion',
+                                 example=proposed.get('example'))
+            saved['proposed_labels'] = [p for p in saved['proposed_labels'] if p is not proposed]
+            _list_answer(state, ctx.user_id)
+        elif op in ('rename', 'remove'):
+            if op == 'rename':
+                diary_profile.rename(state, body.diary, body.label, ctx.user_id)
+            else:
+                diary_profile.remove(state, body.diary, ctx.user_id)
+                (saved.get('prefills') or {}).pop(body.diary, None)
+            if guide._answer(state, 'diary.list'):
+                _list_answer(state, ctx.user_id)
+        elif op == 'order':
+            diary_profile.reorder(state, body.ids)
+        elif op == 'answer':
+            if stop['kind'] not in ('diary_fact', 'hours') or body.state is None:
+                raise ValueError('Answer the current diary question.')
+            spec, value = _discovery_value(state, stop, body.state, body.value)
+            scope = ('diary', stop['diary']) if stop['kind'] == 'diary_fact' else ('organisation', 'organisation')
+            state_store._confirmed_answer(state, spec, *scope, body.state, value, ctx.user_id)
+            (saved.get('prefills') or {}).get(scope[1], {}).pop(spec['id'], None)
+        elif op in ('accept_prefill', 'dismiss_prefill'):
+            view = guide.discovery_view(context, context['state']['guide'], stop)
+            if not view['prefill']:
+                raise ValueError('There is nothing to confirm here.')
+            scope = ('diary', stop['diary']) if stop['kind'] == 'diary_fact' else ('organisation', 'organisation')
+            if op == 'accept_prefill':
+                if view['prefill'].get('value') is None:
+                    raise ValueError('Choose the values below to confirm them.')
+                spec, value = _discovery_value(state, stop, 'answered', view['prefill']['value'])
+                state_store._confirmed_answer(state, spec, *scope, 'answered', value, ctx.user_id,
+                    provenance=dict(kind='owner_confirmed_prefill', reference=view['prefill'].get('source', 'context'),
+                                    signal_ids=view['prefill'].get('signal_ids', []),
+                                    evidence_revision=saved.get('context_revision')))
+            (saved.get('prefills') or {}).get(scope[1], {}).pop(stop['question_id'], None)
+            if op == 'dismiss_prefill' and stop['kind'] == 'hours':
+                saved['context_prefills'] = {k: v for k, v in (saved.get('context_prefills') or {}).items() if k != 'diary.hours'}
+                saved['hours_prefill_dismissed'] = saved.get('context_revision')
+        elif op in ('confirm', 'later'):
+            if stop['kind'] != 'profile':
+                raise ValueError('Confirm your diaries on the summary.')
+            if op == 'confirm':
+                waiting = [d['label'] for d in contract.active_diaries(state) if not diary_profile.profiled(state, d['id'])]
+                if waiting:
+                    raise ValueError('Answer, or mark as not sure, the questions for: ' + ', '.join(waiting) + '.')
+                if not guide._answer(state, 'diary.hours'):
+                    raise ValueError('Answer the hours question first, or mark it as not sure.')
+            _confirm_profile(ctx, context, state, 'answered' if op == 'confirm' else 'deferred')
+            sequence = guide.steps({**context, 'state': state})
+            index = next(i for i, s in enumerate(sequence) if s['id'] == guide.PROFILE_STOP)
+            state['guide']['current'] = sequence[min(index + 1, len(sequence) - 1)]['id']
+            state['guide']['question_revision'] += 1
+        elif op == 'edit':
+            diary_profile.get(state, body.diary)
+            first = diary_profile.applicable(state, body.diary)[0]
+            state['guide']['current'] = 'diary.ask.' + body.diary + '.' + first.split('.', 1)[1]
+            state['guide']['question_revision'] += 1
+        elif op == 'add_more':
+            state['guide']['current'] = guide.DIARIES_STOP
+            state['guide']['question_revision'] += 1
+        if op not in ('confirm', 'later', 'edit', 'add_more'):
+            diary_discovery.move_on(state)
+        diary_discovery.refresh(context, state)
+    except (ValueError, KeyError) as exc:
+        raise HTTPException(400, str(exc) if isinstance(exc, ValueError) else 'Invalid diary data.') from None
+    return save(ctx, context, state)
+
+
+@router.post('/diary/suggest', dependencies=[Depends(require_csrf_header)])
+async def diary_suggest(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
+    """Model suggestions for the diaries question; the fallback list stays if it fails."""
+    from app import diary_discovery, setup_context, usage
+    context = _with_knowledge(ctx, context_for(ctx, body.revision))
+    try:
+        _, stop = guide.current(context, body.stop)
+        if stop['kind'] != 'diaries' or body.operation != 'suggest':
+            raise ValueError('Suggestions belong to the diaries question.')
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from None
+    pack = setup_context.build(context)
+    saved = (context['state']['guide'].get('diary') or {})
+    if saved.get('suggestions_source') == 'model' and saved.get('suggestions_revision') == pack['evidence_revision']:
+        return guide.describe(context)
+    try:
+        suggestions, msg = await diary_discovery.suggest(ctx.tenant_id, pack, context['state'])
+        usage.record_anthropic(ctx.tenant_id, msg.model, msg.usage, operation='concierge_help', module='concierge')
+    except Exception:
+        return guide.describe(context)
+    latest = context_for(ctx, body.revision)
+    state = deepcopy(latest['state'])
+    diary_discovery.refresh({**context, 'state': state}, state)
+    if suggestions:
+        state['guide']['diary'].update(suggestions=suggestions, suggestions_source='model',
+                                       suggestions_revision=pack['evidence_revision'])
+    else:
+        state['guide']['diary'].update(suggestions_source='model')
+    return save(ctx, latest, state)
+
+
+async def discovery_turn(ctx, context, body, stop):
+    """Owner words on a discovery stop become validated answers, never settings."""
+    from app import concierge, diary_discovery, setup_context, usage
+    context = _with_knowledge(ctx, context)
+    pack = setup_context.build(context)
+    history = concierge.sanitize_history([t.model_dump() for t in body.history], 12, 4000)
+    try:
+        data, msg = await diary_discovery.interpret(ctx.tenant_id, stop, body.question, history, pack, context['state'])
+        usage.record_anthropic(ctx.tenant_id, msg.model, msg.usage, operation='concierge_help', module='concierge')
+    except Exception:
+        return dict(**guide.describe(context), fallback=True,
+                    reply='I couldn’t interpret that just now. Your reply is kept. You can answer with the options shown.')
+    latest = context_for(ctx, body.revision)
+    state = deepcopy(latest['state'])
+    text, _ = diary_discovery.apply(state, stop, data, body.question, ctx.user_id,
+                                    (state['guide'].get('diary') or {}).get('date_sources', []))
+    diary_discovery.move_on(state)
+    diary_discovery.refresh({**context, 'state': state}, state)
+    output = save(ctx, latest, state)
+    model_reply = ' '.join(str(data.get('reply') or '').split())[:600]
+    reply = (text + (' ' + model_reply if model_reply else '')).strip() if text else (
+        model_reply or 'I didn’t find an answer in that. You can answer with the options shown.')
+    return dict(**output, reply=reply, fallback=False)
 
 
 def reuse_confirmed_answers(ctx, context, state):
@@ -414,6 +650,8 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
             raise ValueError('Resolve the changed Knowledge answer shown here before asking for another suggestion. You can also answer a factual question directly.')
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from None
+    if stop['kind'] in guide.DISCOVERY:
+        return await discovery_turn(ctx, context, body, stop)
     from app import concierge, concierge_routes, usage
     cards = setup_card_store.load_all(ctx.tenant_id, client=ctx.client)
     tenant = concierge_routes._tenant_context(ctx) or {}
