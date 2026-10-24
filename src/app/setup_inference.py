@@ -108,7 +108,7 @@ def resolve(page, patches, card, signals, *, strict=True):
 
     Per field: owner_said and owner_site stay. inferred stays when its evidence
     checks out; a stricter-than-usual customer-facing value is marked
-    ``check`` so it is accepted on its own. Any other value takes the usual
+    ``check`` so the card flags it for the owner. Any other value takes the usual
     setting when there is one (a customer-facing switch also gets a question,
     so the owner can make it stricter), or, for a set on a saved line, is left
     out so the saved value carries forward. A new row missing a field that has
