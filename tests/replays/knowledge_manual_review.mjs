@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 const events={},sections=[];let calls=[],guidance=null;
-const node=(dataset={})=>({dataset,attributes:{},value:'',hidden:false,disabled:false,textContent:'',style:{},setAttribute(k,v){this.attributes[k]=v;},getAttribute(k){return this.attributes[k];},hasAttribute(k){return Object.hasOwn(this.attributes,k);}});
+const node=(dataset={})=>({dataset,attributes:{},value:'',hidden:false,disabled:false,textContent:'',style:{},scrollHeight:100,closest(){return null;},setAttribute(k,v){this.attributes[k]=v;},getAttribute(k){return this.attributes[k];},hasAttribute(k){return Object.hasOwn(this.attributes,k);}});
 function form(key,ids){const f=node({knowledgeReview:key});f.elements={};f.notice=node();f.querySelector=s=>s==='[data-review-status]'?f.notice:null;f.querySelectorAll=s=>s==='[data-draft]'?f.sections:[];f.sections=ids.map(id=>{const section=node({draft:id}),detail=node(),status=node(),preview=node();detail.open=id===ids[0];section.detail=detail;section.matches=[];section.form=f;
 section.tools=['edit','source','more'].map(tool=>node({noteTool:tool}));section.panels=['edit','source','more'].map(tool=>node({notePanel:tool}));section.actions=['reviewed','later'].map(kind=>{const b=node();b.attributes['data-note-'+kind]='';b.closest=s=>s==='[data-draft]'?section:f;return b;});section.querySelector=s=>s==='[data-note-details]'?detail:s==='[data-note-status]'?status:s==='[data-note-preview]'?preview:null;
 section.querySelectorAll=s=>s==='[data-note-tool]'?section.tools:s==='[data-note-panel]'?section.panels:s.includes('checkbox')?section.matches:s.includes('data-note-reviewed')?section.actions:[];
@@ -8,7 +8,7 @@ section.closest=s=>s==='[data-knowledge-review]'?f:null;
 f.elements['action_'+id]=node();f.elements['content_'+id]=node();f.elements['content_'+id].value='Exact owner text '+id;f.elements['action_'+id].dispatchEvent=()=>{};sections.push(section);return section;});f.appendChild=el=>{f.elements[el.name]=el;};return f;}
 const first=form('first',['a','b']),second=form('second',['c']);
 const document={getElementById(){return null;},querySelectorAll:()=>[first,second],addEventListener(name,fn){(events[name]??=[]).push(fn);},createElement:()=>node()};
-const window={addEventListener(){},dispatchEvent(){},get Blam8KnowledgeGuide(){return guidance;}};
+const window={innerHeight:844,addEventListener(){},dispatchEvent(){},get Blam8KnowledgeGuide(){return guidance;}};
 vm.runInNewContext(fs.readFileSync('src/app/static/knowledge_onboarding_review.js','utf8'),{document,window,Event:class{},console});
 async function click(section,kind){const button=section.actions[kind==='reviewed'?0:1];for(const fn of events.click||[])await fn({target:{closest:s=>s==='[data-note-tool]'?null:button}});}
 assert(first.sections[0].panels.every(p=>p.hidden));

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 from difflib import SequenceMatcher
+from app.knowledge_note_structure import SUBJECT_NOTES
 
 # (key, label, what the agent needs it for, the question to ask, keywords)
 KINDS: list[dict] = [
@@ -183,14 +184,14 @@ def prompt_block(cov: dict) -> str:
     lines.append("When you have facts, put each as its own note in `notes` (or the `knowledge` "
                  "recommend page as \"Label | content\"): a short label in their words and the "
                  "fact stated plainly IN THE BUSINESS'S OWN VOICE — first person plural, 'We "
-                 "open at 7am', never 'the business opens' — numbers exact, one topic per note — ONE note per kind "
-                 "(all the prices in one Prices note, not a note per price line). Propose "
+                 "open at 7am', never 'the business opens' — numbers exact, one clear subject per note. Propose "
                  "ONLY the new notes from this turn's answers — never a fact lifted from another "
                  "note or the website, never an inference. Ask about at most three kinds per "
                  "turn — count them. 'Covered' means SOME note of that kind exists: when the "
                  "covering note is plainly partial (one item priced, not the main services; the "
                  "hours of one day), still ask for the rest — Prices is only really covered when "
                  "the main services carry a price.")
+    lines.append(SUBJECT_NOTES)
     return "\n".join(lines)
 
 

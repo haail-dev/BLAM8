@@ -27,6 +27,7 @@ import httpx
 
 from app import agent, knowledge as kb, knowledge_capture, llm, usage
 from app.config import settings
+from app.knowledge_note_structure import SUBJECT_NOTES
 
 log = logging.getLogger(__name__)
 
@@ -78,10 +79,10 @@ SYSTEM = (
         # to customers, so "We open at 7am" is right and "The business opens at
         # 7am" is not.
         "You read the text of a small business's website and distill it into a knowledge base for the "
-        "AI assistant that answers this business's customer emails. Produce one note per topic customers ask about, as many notes as the pages hold (there is no "
+        "AI assistant that answers this business's customer emails. Produce one note per narrow, independently editable subject, as many notes as the pages hold (there is no "
         "target count), and keep EVERY distinct rule, price and policy the pages state — never drop one "
         "to shorten the list; each note covers "
-        "ONE topic: what the business does, the services or products offered, "
+        "ONE specific subject. Business identity, included services, excluded services, geographic coverage, hours and contact routes are separate subjects when present. Do not bundle them into What We Do or Hours and Contact. Other subjects include "
         "prices, opening hours, service area, booking / cancellation / deposit policies, delivery and "
         "collection, contact details, frequently asked questions. Rules: every fact must come from the "
         "pages — NEVER invent or guess a price, time or policy that is not stated; keep the business's "
@@ -114,6 +115,11 @@ SYSTEM += ("\nFor every note, identify relevant topic keys and cite page URLs wi
            "Write each distinct fact once within a note. Prefer complete original source sentences rather than paraphrasing and then repeating the source. Preserve every exception and qualification. Do not remove apparent duplicate proposals across notes: the owner reviews overlap explicitly. "
            "Ask only about details not already stated in the supplied pages. A source saying a rule varies "
            "by agreement is an answer about scope, not a reason to ask for one universal value.")
+SYSTEM += "\n" + SUBJECT_NOTES
+SYSTEM += (" Cite only the complete source statements relevant to that note's subject, not an entire "
+           "multi-subject paragraph when separate complete statements support it. Preserve all "
+           "material conditions in those statements. Check that every distinct source fact appears "
+           "in a suitable note before returning; never omit facts merely to meet a target count.")
 
 
 class DistilledEntries(list):
@@ -306,7 +312,7 @@ async def distill(tenant_id: str, site: str, pages: list[dict], *,
         client=agent.client(), tenant_id=tenant_id, operation="kb_website",
         model=settings.anthropic_model,
         cache=False,   # one-shot unique payload — a breakpoint is a pure write surcharge
-        max_tokens=4000,
+        max_tokens=8000,  # More focused notes repeat citation structure; truncation still fails closed.
         system=SYSTEM,
         messages=[{"role": "user",
                    "content": _build_prompt(site, pages, business_name, industry)}],
