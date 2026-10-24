@@ -93,6 +93,12 @@ assert.equal(c.log.find(m=>m.knowledge_card?.state==='editing').knowledge_card.s
 c.log=JSON.parse(saved);current=null;c.renderAll();
 assert.equal(cards().length,0); // stale controls are not restored into history
 assert.equal(msgs.querySelectorAll('[data-knowledge-history]').length,1);
+const historyText=()=>msgs.querySelector('[data-knowledge-history]').children.map(el=>el.textContent).join('\n');
+assert.match(historyText(),/Your choice: Keep this note/);
+assert.match(historyText(),/Your choice: Keep both notes/);
+assert.match(historyText(),/Your choice: Leave unknown/);
+assert.match(historyText(),/Your choice: Edit note \(editor opened; no change saved\)/);
+assert(!historyText().includes('Your choice: Leave this note out'));
 assert(c.log.some(m=>m.knowledge_card?.selected==='keep'));
 assert(c.log.some(m=>m.knowledge_card?.selected==='keep_both'));
 const before=calls.length;card.children[0]?.click();assert.equal(calls.length,before);
@@ -130,9 +136,31 @@ assert.equal(msgs.querySelectorAll('[data-knowledge-current-status]').length,2);
 assert.equal(c.log.length,oldLogLength);
 assert(buttons(cards().at(-1)).every(b=>!b.disabled));
 
+// A real form review has an owner event; ordinary refreshes above have none.
+c.window.blam8KnowledgeReviewChanged(current,{batch_id:'batch',label:'Hours <unchanged>',action:'keep'});
+assert.equal(c.log.length,oldLogLength+1);
+assert.equal(c.log.at(-1).role,'user');
+assert.match(c.log.at(-1).content,/Hours <unchanged>.*Reviewed to keep.*not final Save/);
+c.window.blam8KnowledgeReviewChanged({...current,recovered_after_error:true},{batch_id:'batch',label:'Not confirmed',action:'keep'});
+assert.equal(c.log.length,oldLogLength+1);
+c.window.blam8KnowledgeReviewChanged(current,{batch_id:'other',label:'Wrong batch',action:'keep'});
+assert.equal(c.log.length,oldLogLength+1);
+
 // Closing/reopening reconstructs the same ephemeral current card, not an empty panel.
 c.renderAll();
 assert.equal(msgs.querySelectorAll('[data-knowledge-current-status]').length,2);
 assert.equal(cards().length,1);
 assert(buttons(cards()[0]).every(b=>!b.disabled));
-assert.equal(c.log.length,oldLogLength);
+assert.equal(c.log.length,oldLogLength+1);
+
+// A choice made on the ephemeral form card must survive reload too.
+const ephemeral=current;
+queued.push(data('note','after-form',{review_decision:receipt(ephemeral,'keep')}));
+buttons(cards().at(-1))[0].click();await tick();
+assert(c.log.some(m=>m.knowledge_card?.focus.id==='form-next'&&m.knowledge_card.selected==='keep'));
+c.log=JSON.parse(saved);current=null;c.renderAll();
+assert.match(historyText(),/Your choice: Keep this note/);
+
+// Repeated automatic refreshes keep one current view, not duplicate history.
+await show(data('note','refresh'));await show(data('note','refresh'));
+assert.equal(c.log.filter(m=>m.knowledge_refresh&&!m.knowledge_card?.selected).length,1);

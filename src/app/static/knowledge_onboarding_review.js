@@ -184,10 +184,12 @@
     notice(form,deferred?'Left the last note pending for later. It has not been discarded; decide every draft before saving.':'Marked the last note reviewed to keep. Source and overlap decisions still apply; nothing saved.');
     var guide=window.Blam8KnowledgeGuide;
     if(guide && guide.available(form) && !guide.working()){
+      var ownerChoice={batch_id:form.dataset.knowledgeReview,action:deferred?'later':'keep',
+        label:form.elements['label_'+id].value};
       button.disabled=true;
       try{
         var data=await guide.ask('Show the current note',form);
-        if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged(data);
+        if(window.blam8KnowledgeReviewChanged)window.blam8KnowledgeReviewChanged(data,ownerChoice);
         var focus=data.focus || {};
         var next=focus.kind==='note'||focus.kind==='support'?focus.id:focus.note_id || focus.target;
         if(deferred && next===id){

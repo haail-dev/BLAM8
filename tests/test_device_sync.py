@@ -711,3 +711,27 @@ def test_current_note_refresh_updates_guide_without_synthetic_chat_messages(sync
     assert len(payload['messages'])==1
     assert payload['messages'][0]['role']=='assistant' and payload['messages'][0]['knowledge_refresh'] is True
     assert payload['guide']['data']['focus']['kind']=='note'
+
+
+def test_selected_refresh_card_survives_next_guide_and_another_device(sync_app):
+    c=client(sync_app)
+    version=re.search(r'name="version"[^>]*value="([^"]+)"',c.get('/onboarding/knowledge').text)[1]
+    url='/onboarding/knowledge/review/review-one/guide'
+    form={'version':version}
+    def ask(question,focus_hash=''):
+        state=c.get('/device-sync/flow').json()
+        response=c.post(url,json={'form':form,'question':question,'focus_hash':focus_hash},headers={
+            'X-CSRF-Token':'test-csrf','X-Blam8-Operation':str(uuid4()),'X-Blam8-Revision':str(state['revision'])})
+        assert response.status_code==200,response.text
+        answer=response.json();form.update(answer.get('patches',{}));return answer
+    first=ask('Show the current note')
+    accepted=ask('Keep this note',first['focus_hash'])
+    assert accepted['review_decision']['action']=='keep'
+    ask('Show the current note')
+    payload=client(sync_app).get('/device-sync/flow').json()['payload']
+    selected=[m for m in payload['messages'] if (m.get('knowledge_card') or {}).get('selected')]
+    assert len(selected)==1
+    assert selected[0]['content']==first['reply']
+    assert selected[0]['knowledge_card']['state']=='prepared'
+    assert selected[0]['knowledge_card']['focus']['id']==first['focus']['id']
+    assert len([m for m in payload['messages'] if m.get('knowledge_refresh') and not (m.get('knowledge_card') or {}).get('selected')])==1

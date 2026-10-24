@@ -55,6 +55,21 @@ def test_inline_edit_keeps_one_copy_and_other_review_decisions(tmp_path, width, 
     check(!visible(content)&&visible(preview),'source view restores readable content');
     tool.click();
     check(document.documentElement.scrollWidth<=WIDTH,'no horizontal overflow');
+    const decisions=[];
+    let failGuide=false;
+    window.Blam8KnowledgeGuide={available:()=>true,working:()=>false,ask:async()=>{
+      if(failGuide)throw Error('Checkpoint unavailable');
+      return {batch_id:form.dataset.knowledgeReview,focus:{kind:'ready'}};
+    }};
+    window.blam8KnowledgeReviewChanged=(data,choice)=>decisions.push(choice);
+    const reviewed=section.querySelector('[data-note-reviewed]'),later=section.querySelector('[data-note-later]');
+    reviewed.click();await new Promise(r=>setTimeout(r,0));
+    check(decisions.length===1&&decisions[0].label==='Updated subject'&&decisions[0].action==='keep','real Reviewed click records named owner choice');
+    later.click();await new Promise(r=>setTimeout(r,0));
+    check(decisions.length===2&&decisions[1].action==='later','real Leave for later is distinguished from discard');
+    failGuide=true;reviewed.click();await new Promise(r=>setTimeout(r,0));
+    check(decisions.length===2,'failed checkpoint does not record confirmed choice');
+    window.Blam8KnowledgeGuide=null;
     let attempts=0,submitted;
     window.fetch=async(url,options)=>{attempts++;submitted=options.body;return {ok:attempts>1,json:async()=>attempts===1?{detail:'Review the changed note before saving.'}:{saved:true,return_to:'#saved'}};};
     const save=form.querySelector('button[value=save]');

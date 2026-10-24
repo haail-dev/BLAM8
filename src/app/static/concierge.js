@@ -459,6 +459,7 @@
     lastAssistant.dataset.bcGreeting = "";
     if (!receiptText) msgs.appendChild(lastAssistant);
     var knowledgeHistory = null;
+    var lastHistoryPrompt = null, lastHistoryDecision = null;
     var currentIndex = -1;
     if (ONB_STEP === 'knowledge' && !receiptText && !currentKnowledgeFormCard) {
       for (var i = log.length - 1; i >= 0; i--) {
@@ -479,7 +480,29 @@
           knowledgeHistory.appendChild(heading); msgs.appendChild(knowledgeHistory);
         }
         // History is reference text, never a second set of actionable controls.
-        knowledgeHistory.appendChild(bubbleEl(m.role, m.content));
+        var card = m.knowledge_card;
+        // Refreshes are presentation, not another exchange. Older transcripts
+        // may contain consecutive copies of the same prompt; render it once.
+        var promptKey = card && JSON.stringify([card.batch_id, card.version, card.focus_hash, m.content]);
+        if (!promptKey || promptKey !== lastHistoryPrompt) {
+          knowledgeHistory.appendChild(bubbleEl(m.role, m.content));
+          lastHistoryDecision = null;
+        }
+        lastHistoryPrompt = promptKey;
+        // The selection was settled against an item-scoped receipt. Never
+        // infer an owner decision from the assistant's acknowledgement prose.
+        if (card && card.selected && ['prepared', 'editing', 'preview'].includes(card.state)) {
+          var choice = (card.actions || []).find(function (action) { return action.action === card.selected; });
+          var label = card.selected === 'edit' ? 'Edit note' : choice && choice.label;
+          var decisionKey = promptKey + ':' + card.selected + ':' + card.state;
+          if (label && decisionKey !== lastHistoryDecision) {
+            var qualifier = card.state === 'editing' ? 'editor opened; no change saved'
+              : card.state === 'preview' ? 'correction preview; not applied or saved'
+              : 'review choice; not final Save';
+            knowledgeHistory.appendChild(bubbleEl('user', 'Your choice: ' + label + ' (' + qualifier + ').'));
+            lastHistoryDecision = decisionKey;
+          }
+        }
         return;
       }
       // Keep the transcript for reference, but don't present a completed
@@ -1461,6 +1484,13 @@
   function settleKnowledgeChoice(decision) {
     // A receipt names the submitted item, not the next item returned by the planner.
     if (decision && ['prepared', 'editing', 'preview'].includes(decision.state)) {
+      // A form refresh can supply the current card without a transcript turn.
+      // Once acted on, retain that exact question with its confirmed choice.
+      var formCard = currentKnowledgeFormCard;
+      if (formCard && formCard.batch_id === decision.batch_id && formCard.version === decision.version &&
+          formCard.focus_hash === decision.focus_hash && formCard.focus.kind === decision.kind && formCard.focus.id === decision.id) {
+        log.push({role:'assistant',content:formCard.reply,knowledge_card:formCard});
+      }
       for (var i = log.length - 1; i >= 0; i--) {
         var card = log[i].knowledge_card;
         if (card && card.batch_id === decision.batch_id && card.version === decision.version &&
@@ -1536,6 +1566,7 @@
   }
 
   async function onboardTurn(text, history) {
+    var submittedFormCard = currentKnowledgeFormCard;
     currentKnowledgeFormCard=null;
     msgs.querySelectorAll('[data-knowledge-current-status]').forEach(function(el){el.remove();});
     var current = readCurrent();
@@ -1565,7 +1596,11 @@
             ? "The items listed as kept for later below were recorded as suggestions, not applied settings or saved Knowledge."
             : "No new items were recorded as kept for later in this turn.");
       }
-      if (knowledgeGuide) settleKnowledgeChoice(data.review_decision);
+      if (knowledgeGuide) {
+        currentKnowledgeFormCard=submittedFormCard;
+        settleKnowledgeChoice(data.review_decision);
+        currentKnowledgeFormCard=null;
+      }
     } catch (e) {
       spoke = false;
       if (window.Blam8DeviceSync && window.Blam8DeviceSync.automatic) { hideTyping(); return false; }
@@ -1580,6 +1615,10 @@
         focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || [],save:!!data.guide_save};
     }
     if (ONB_STEP === 'knowledge') {
+      // Read-only refreshes replace one another; selected questions remain in
+      // history so the owner's decision always has its original context.
+      log = log.filter(function (m) { return !m.knowledge_refresh || m.knowledge_card && m.knowledge_card.selected; });
+      if (['', 'show the current note', 'start reviewing the notes', 'show the next decision'].includes(text.trim().toLowerCase())) entry.knowledge_refresh=true;
       currentKnowledgeFormCard = {}; renderAll(); currentKnowledgeFormCard = null;
     }
     log.push(entry); saveLog(log);
@@ -2896,8 +2935,15 @@
 
   // Start from actual stored drafts when they arrive. Keep browser integration
   // outside the onboarding-turn function and its standalone replay boundary.
-  window.blam8KnowledgeReviewChanged = function (data) {
-    // Presentation state is not a transcript entry or approval receipt.
+  window.blam8KnowledgeReviewChanged = function (data, ownerChoice) {
+    // Only a real form click supplies ownerChoice; hydration and automatic
+    // refreshes must not invent decisions. The guide has checkpointed the form.
+    if (ownerChoice && !data.recovered_after_error && data.batch_id === ownerChoice.batch_id) {
+      log.push({role:'user',content:'Your choice: ' + ownerChoice.label + ' — ' +
+        (ownerChoice.action === 'later' ? 'Leave for later (still pending; not discarded).' : 'Reviewed to keep (review choice; not final Save).')});
+      saveLog(log);
+    }
+    // Current guidance itself is presentation, not a transcript turn.
     currentKnowledgeFormCard = data.focus && data.focus_hash ? {
       batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
       focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || data.actions || [],
