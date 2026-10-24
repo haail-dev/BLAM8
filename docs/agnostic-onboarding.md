@@ -60,6 +60,15 @@ or renamed services fail safely instead of rebinding by a generated label.
 Duration and price proposals change only that bound service. Organisation-wide
 availability/authority cannot express different per-activity rules here.
 
+Diary discovery answers use a separate `diary` scope whose ID is one of the
+owner's named diaries in the state's `diaries` map, never a service-bound
+activity. A removed diary keeps its answers in history, but they no longer
+count towards review, and neither do answers to questions a diary stopped
+asking after an earlier answer changed. Discovery questions are marked
+`discovery` and are asked only by the guide's discovery stops, never as generic
+facts or grouped-review rows. A pre-filled answer the owner confirms carries the
+`owner_confirmed_prefill` provenance with the facts it came from.
+
 Saved Knowledge question decisions can be explicitly routed/reused without
 rewriting Knowledge. Pending extraction and generated default questions are not
 imported. Owner answers are reused only with current coverage evidence; expired
@@ -112,6 +121,9 @@ All grouped read/write routes inherit the existing application subscription
 gate, including expired-trial denial before loading or saving review data.
 
 ## Compatibility and migration
+
+The `diaries` map is additive: existing states load with it empty, and the
+existing state writer accepts it without a migration.
 
 Prepare `db/migrations/20261023_agnostic_onboarding.sql` after existing setup-card
 migrations. It adds one JSON metadata column and an immutable revision history
