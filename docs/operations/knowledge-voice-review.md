@@ -104,3 +104,20 @@ Owner corrections may name just the changed value: unchanged draft words retain
 their provenance, while each introduced token must be present in the owner request.
 Explicit exact duplicate removals preserve another occurrence. Apply remains a
 previewed draft operation, automatically rechecks, and still requires review and Save.
+
+
+Subject-focused notes and inline editing: the heading and paragraph become the
+editable fields in their original positions. Done editing restores the draft
+preview; typing clears only that note's reviewed decision. Source and More
+options remain separate disclosures, and final Save retains existing validation.
+
+Website extraction and assistant note creation share the subject-note guidance:
+one independently maintainable fact or closely related group, titled in the
+business's own terms. Broad topic tags are coverage hints, not one-note buckets.
+Keep coherent price schedules and ordered procedures together; preserve each
+amount/rule's scope, conditions and exceptions. The website output budget is
+8,000 tokens to accommodate more note/citation structure; output truncation and
+the thirty-note batch limit still fail closed without dropping facts. This is
+model authoring guidance, not a deterministic semantic-coverage guarantee.
+Existing saved notes and pending batches are not automatically repartitioned.
+Source-accounting and configuration-question routing are unchanged.

@@ -112,6 +112,14 @@
   function noteTool(section,tool){
     section.querySelectorAll('[data-note-tool]').forEach(function(button){button.setAttribute('aria-expanded',button.dataset.noteTool===tool?'true':'false');});
     section.querySelectorAll('[data-note-panel]').forEach(function(panel){panel.hidden=panel.dataset.notePanel!==tool;});
+    var editing=tool==='edit';
+    section.querySelectorAll('[data-note-preview],[data-note-label-preview]').forEach(function(preview){preview.hidden=editing;});
+    var button=section.querySelector('[data-note-tool="edit"]');if(button)button.textContent=editing?'Done editing':'Edit';
+    if(editing){var field=section.querySelector('textarea[name^="content_"]');growEditor(field);}
+  }
+  function growEditor(field){
+    if(!field || field.closest('[hidden]'))return;
+    field.style.height='auto';field.style.height=Math.min(field.scrollHeight+2,window.innerHeight*.6)+'px';
   }
   function focusNote(form,id,tool){
     if(!form || !id)return false;
@@ -134,6 +142,9 @@
       status.style.color=value==='keep'?'#047857':'';
       var preview=section.querySelector('[data-note-preview]'),content=form.elements['content_'+id];
       if(preview && content)preview.textContent=content.value;
+      var title=section.querySelector('[data-note-label-preview]'),heading=form.elements['label_'+id];
+      if(title && heading)title.textContent=heading.value;
+      if(content)growEditor(content);
       section.querySelectorAll('[data-note-reviewed],[data-note-later]').forEach(function(button){button.setAttribute('aria-pressed',button.hasAttribute('data-note-reviewed')?String(value==='keep'):String(!value && !!(later && later.value)));});
     });
   }
@@ -153,7 +164,7 @@
   }
   document.addEventListener('click',async function(event){
     var tool=event.target.closest('[data-note-tool]');
-    if(tool){var section=tool.closest('[data-draft]');noteTool(section,tool.getAttribute('aria-expanded')==='true'?null:tool.dataset.noteTool);return;}
+    if(tool){var section=tool.closest('[data-draft]');noteTool(section,tool.getAttribute('aria-expanded')==='true'?null:tool.dataset.noteTool);if(tool.dataset.noteTool==='edit' && tool.getAttribute('aria-expanded')==='true'){var heading=section.querySelector('input[name^="label_"]');if(heading)heading.focus();}return;}
     var button=event.target.closest('[data-note-reviewed],[data-note-later]');
     if(!button)return;
     var form=button.closest('[data-knowledge-review]'),section=button.closest('[data-draft]');

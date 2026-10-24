@@ -1,6 +1,6 @@
 """The knowledge interview never re-proposes a saved note (hot tub run
 2026-09-04: every turn re-listed all saved notes until the reply overflowed)
-and asks for one note per kind, not one per price line."""
+and asks for one clear subject per note without splitting every price line."""
 from pathlib import Path
 
 from app import knowledge_coverage as kc
@@ -13,7 +13,8 @@ def test_saved_notes_are_named_and_forbidden():
     assert "ALREADY SAVED" in block
     assert "Prices; Where we work" in block
     assert "Propose ONLY the new notes" in block
-    assert "ONE note per kind" in block
+    assert "subject-focused notes" in block
+    assert "ONE note per kind" not in block
 
 
 def test_no_saved_notes_means_no_saved_line():
