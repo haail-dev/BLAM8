@@ -136,7 +136,7 @@ def test_native_quoted_comparison_layout(tmp_path, width, theme):
     url = 'https://example.test/'+'long-source-path/'*15
     one = entry(content='Our office closes at 5 pm on weekdays.')
     two = entry('two','Office hours','Our office closes at 4 pm on weekdays.')
-    two['provenance']=[{'source':url,'excerpt':'4 pm'},{'source':url,'excerpt':'weekdays'}]
+    two['provenance']=[{'source':url,'excerpt':'4 pm'},{'source':url,'excerpt':'weekdays'}]+[{'source':f'https://example.test/source-{i}','excerpt':'Other details.'} for i in range(6)]
     ctx,row=context([one,two])
     env=Environment(loader=FileSystemLoader(root/'src/app/templates'),autoescape=True)
     html=env.get_template('_knowledge_review.html').render(review=review.review_view(ctx,row),csrf_token=lambda _: 'csrf',request={})
@@ -151,7 +151,10 @@ def test_native_quoted_comparison_layout(tmp_path, width, theme):
         '</style><body class="bg-slate-100 text-slate-700" style="margin:0;width:'+str(width)+'px;padding:12px;box-sizing:border-box">'+card+
         '<script>const card=document.querySelector("[data-duplicate-candidate]");'
         'const quotes=card.querySelectorAll("blockquote");'
-        'document.body.dataset.result=(quotes.length===2&&Array.from(quotes).every(q=>q.textContent.startsWith("“")&&q.getBoundingClientRect().height>0)&&card.scrollWidth<=card.clientWidth+1)?"PASS":"FAIL";'
+        'const extra=card.querySelector("details"), sources=Array.from(card.querySelectorAll("p")).filter(p=>p.textContent.startsWith("Source:"));'
+        'const compact=extra&&!extra.open&&sources.filter(p=>!extra.contains(p)).length===2&&sources.length===7;'
+        'extra.open=true;const expanded=card.scrollWidth<=card.clientWidth+1;extra.open=false;'
+        'document.body.dataset.result=(compact&&expanded&&quotes.length===2&&Array.from(quotes).every(q=>q.textContent.startsWith("“")&&q.getBoundingClientRect().height>0)&&card.scrollWidth<=card.clientWidth+1)?"PASS":"FAIL";'
         '</script></body></html>',encoding='utf-8')
     result=subprocess.run([chromium_binary(),'--headless=new','--no-sandbox','--disable-gpu','--no-first-run',
         '--disable-background-networking','--disable-component-update','--disable-sync','--no-proxy-server',
@@ -170,3 +173,16 @@ def test_containment_never_calls_a_numeric_prefix_repeated_text():
     from app.knowledge_comparison import comparison
     pairs=comparison('Base amount £10', 'Base amount £100 and other conditions.')
     assert not any(p['type']=='repeated' for p in pairs)
+
+
+def test_comparison_sources_rank_quoted_support_and_keep_full_audit_collapsed():
+    from app.knowledge_review import comparison_sources
+    quote='We confirm every request before agreeing a date.'
+    target={'provenance':[{'source':'https://example.test/unrelated','excerpt':'Other information.'},
+        {'source':'https://example.test/relevant','excerpt':quote},
+        {'source':'https://example.test/relevant','excerpt':quote}]}
+    assert comparison_sources(target,[{'right':quote}])==['https://example.test/relevant','https://example.test/unrelated']
+    from pathlib import Path
+    template=Path('src/app/templates/_knowledge_review.html').read_text(encoding='utf-8')
+    assert 'm.source_labels[:2]' in template and 'm.source_labels[2:]' in template
+    assert '<summary class="cursor-pointer text-brand">All ' in template

@@ -35,7 +35,7 @@ for (const [step, held, fails] of [
       return {reply: 'Please review.', form_fill: values, ready_to_advance: false, held_for: held};
     },
     hideTyping() {}, saveLog() {}, bubbleEl: (role, text) => ({role, text}),
-    msgs: {appendChild: bubble => bubbles.push(bubble)},
+    msgs: {appendChild: bubble => bubbles.push(bubble), querySelectorAll: () => []},
     appendHeldLine: receipts => events.push(['held', receipts]),
     showContinueHint: () => events.push(['continue']), pinToTop() {},
     // Unexpected navigation, record creation or submission has no fake implementation.

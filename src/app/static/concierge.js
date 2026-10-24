@@ -450,13 +450,38 @@
   function renderAll() {
     var savedStatus = document.querySelector('[data-knowledge-saved-status]');
     var receiptText = savedStatus ? savedStatus.textContent.trim() : '';
+    if (currentKnowledgeFormCard && currentKnowledgeFormCard.focus_hash &&
+        (receiptText || !window.Blam8KnowledgeGuide || !window.Blam8KnowledgeGuide.isCurrent(currentKnowledgeFormCard.focus_hash, currentKnowledgeFormCard.batch_id, currentKnowledgeFormCard.version))) currentKnowledgeFormCard = null;
     clearPin();
     msgs.innerHTML = "";
     msgs.appendChild(caveatEl(log.length === 0));
     var lastAssistant = bubbleEl("assistant", greeting());
     lastAssistant.dataset.bcGreeting = "";
-    msgs.appendChild(lastAssistant);
-    log.forEach(function (m) {
+    if (!receiptText) msgs.appendChild(lastAssistant);
+    var knowledgeHistory = null;
+    var currentIndex = -1;
+    if (ONB_STEP === 'knowledge' && !receiptText && !currentKnowledgeFormCard) {
+      for (var i = log.length - 1; i >= 0; i--) {
+        if (log[i].role === 'assistant') {
+          if (log[i].knowledge_card && knowledgeCardCurrent(log[i].knowledge_card)) currentIndex = i;
+          break;
+        }
+      }
+    }
+    log.forEach(function (m, index) {
+      if (ONB_STEP === 'knowledge' && index !== currentIndex) {
+        if (!knowledgeHistory) {
+          knowledgeHistory = document.createElement('details');
+          knowledgeHistory.setAttribute('data-knowledge-history', '');
+          knowledgeHistory.className = 'rounded-lg border border-slate-200 p-3 text-xs text-slate-500';
+          var heading = document.createElement('summary');
+          heading.textContent = receiptText ? 'Earlier conversation · review completed' : 'Earlier conversation';
+          knowledgeHistory.appendChild(heading); msgs.appendChild(knowledgeHistory);
+        }
+        // History is reference text, never a second set of actionable controls.
+        knowledgeHistory.appendChild(bubbleEl(m.role, m.content));
+        return;
+      }
       // Keep the transcript for reference, but don't present a completed
       // review's old "not saved" instructions as the current state.
       if (m.role === 'assistant' && (receiptText || m.knowledge_card && knowledgeBatchSaved(m.knowledge_card.batch_id))) {
@@ -482,6 +507,12 @@
         });
       }
     });
+    if (!receiptText && currentKnowledgeFormCard && currentKnowledgeFormCard.focus_hash) {
+      lastAssistant = bubbleEl('assistant', currentKnowledgeFormCard.reply);
+      lastAssistant.setAttribute('data-knowledge-current-status', ''); msgs.appendChild(lastAssistant);
+      var currentCard = knowledgeCardNode(currentKnowledgeFormCard, true);
+      currentCard.setAttribute('data-knowledge-current-status', ''); msgs.appendChild(currentCard);
+    }
     if (receiptText) {
       lastAssistant = bubbleEl('assistant', receiptText);
       lastAssistant.setAttribute('data-knowledge-current-status', '');
@@ -1547,6 +1578,9 @@
     if (data && data.focus_hash && knowledgeGuide && data.batch_id && data.version) {
       entry.knowledge_card = {batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
         focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || [],save:!!data.guide_save};
+    }
+    if (ONB_STEP === 'knowledge') {
+      currentKnowledgeFormCard = {}; renderAll(); currentKnowledgeFormCard = null;
     }
     log.push(entry); saveLog(log);
     var replyEl = bubbleEl("assistant", reply);
@@ -2863,19 +2897,13 @@
   // Start from actual stored drafts when they arrive. Keep browser integration
   // outside the onboarding-turn function and its standalone replay boundary.
   window.blam8KnowledgeReviewChanged = function (data) {
-    // A form receipt updates chat without a model call or a second mutation.
-    msgs.querySelectorAll('[data-knowledge-current-status]').forEach(function(el){el.remove();});
-    var receipt=bubbleEl('assistant', data.reply || 'Review updated.');
-    receipt.setAttribute('data-knowledge-current-status','');
-    msgs.appendChild(receipt);
-    if(data.focus && data.focus_hash){
-      currentKnowledgeFormCard={batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
-        focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || data.actions || [],save:!!data.save_ready};
-      var card=knowledgeCardNode(currentKnowledgeFormCard,true);
-      card.setAttribute('data-knowledge-current-status','');msgs.appendChild(card);
-    }
-    settleKnowledgeChoice(null);pinToTop(receipt);
-    showContinueHint();
+    // Presentation state is not a transcript entry or approval receipt.
+    currentKnowledgeFormCard = data.focus && data.focus_hash ? {
+      batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
+      focus:{kind:data.focus.kind,id:data.focus.id},actions:data.guide_actions || data.actions || [],
+      save:!!data.save_ready,reply:data.reply || 'Review updated.'
+    } : null;
+    renderAll(); settleKnowledgeChoice(null); showContinueHint();
   };
   window.blam8KnowledgeGuideStart = async function () {
     if (!ONB_MODE || ONB_STEP !== "knowledge" || sending) return false;
