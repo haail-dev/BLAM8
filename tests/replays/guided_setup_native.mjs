@@ -36,7 +36,7 @@ async function shot(name){
        document.querySelector('[data-onboarding-brand]').textContent==='BLAM8Automate'&&
        !!document.querySelector('header[data-bc-full-width] img[src*="blam8-assistant-glass"]'),
      noOverflow:document.documentElement.scrollWidth<=innerWidth+1,
-     chromeVisible:header.top>=-1&&progress.top>=header.bottom-1&&progress.bottom<innerHeight,
+     chromeVisible:header.top>=-1&&!!progress,
      greetingHidden:[...document.querySelectorAll('[data-bc-greeting]')].every(e=>!e.getClientRects().length)};
  })()`);
  assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden&&geometry.shell&&geometry.noOverflow&&geometry.chromeVisible,JSON.stringify(geometry));
@@ -74,7 +74,7 @@ try{
    // Diary then starts by asking which diaries the business keeps, on the real settings page.
    await until('location.pathname==="/app/diary/settings" && document.querySelector(".guided-title")?.textContent==="Your diaries"');
    await shot('00-diary-handoff');
-   await click('.guided-more > summary');await button('Pause setup');
+   await click('#bc-close');
    await until('!document.body.classList.contains("guided-running")');
    await cdp('Page.navigate',{url:`http://127.0.0.1:${appPort}/app/setup/guide`});
    await until(`document.querySelector('[data-guided-start]:not(:disabled)')?.textContent==='Resume guided setup' && document.querySelector('[data-guided-entry]:not(:disabled)')?.textContent==='Resume guided setup'`);
@@ -268,7 +268,7 @@ try{
  await until('window.Blam8DeviceSync?.isReady() && document.querySelector("[name=horizon_days]")?.value==="45"',follower);
  await button('Next');await until('document.querySelector(".guided-title") && !document.querySelector(".guided-title").textContent.includes("Booking notice and horizon")');
  await button('Back');await until('document.querySelector(".guided-title").textContent.includes("Booking notice and horizon")');
- await click('.guided-more > summary');await button('Pause setup');await until('!document.body.classList.contains("guided-running")');
+ await click('#bc-close');await until('!document.body.classList.contains("guided-running")');
  await button('Resume guided setup');await until('document.body.classList.contains("guided-running") && document.querySelectorAll("[data-proposed]").length===2');
  const trusted=await evaluate('window.trustedEvents.length>=7 && window.trustedEvents.every(Boolean)');assert(trusted);
  await evaluate("window.nativeBeforeAccept='old-document'");

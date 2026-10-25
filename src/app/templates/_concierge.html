@@ -104,7 +104,13 @@
 
 <style>
   {% if concierge_onboarding_step or setup_strip %}
-  #bc-cta { padding:.75rem; }
+  /* Continue floats over the foot of the thread with no box behind it; the
+     messages fade out above it instead of showing beneath it. concierge.js
+     publishes the bar's height as --bc-cta-h so the thread can scroll clear. */
+  #bc-cta { position:relative; z-index:1; margin-top:calc(-1 * var(--bc-cta-h, 0px)); padding:.75rem; border-top:0; background:transparent; }
+  #bc-cta::before { content:''; position:absolute; left:0; right:0; top:-1.5rem; bottom:0; z-index:-1; pointer-events:none;
+    background:linear-gradient(to bottom,rgb(var(--c-bg-slate-50)/0),rgb(var(--c-bg-slate-50)/.7) .8rem,rgb(var(--c-bg-slate-50)) 1.5rem); }
+  #bc-messages { padding-bottom:calc(.75rem + var(--bc-cta-h, 0px)); }
   #bc-cta > * + * { margin-top:.5rem !important; }
   #bc-cta > p { margin-bottom:0; }
   {% endif %}

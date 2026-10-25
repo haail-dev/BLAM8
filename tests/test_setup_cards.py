@@ -122,3 +122,19 @@ def test_no_implicit_write_adapter_for_other_pages():
     card = start(append("field", label="Detail", required=True), page="booking_details")
     with pytest.raises(cards.Invalid, match="not available"):
         cards.diary_patch(card, [card["lines"][0]["id"]], {})
+
+
+def test_inferred_sources_carry_bounded_evidence_and_other_kinds_stay_plain():
+    patch = append("field", label="Repair", required=True)
+    patch["sources"]["required"] = {"kind": "inferred", "reference": "Your site asks first",
+                                    "evidence": ["source_text:abc"], "check": True}
+    card = start(patch, page="booking_details")
+    assert card["lines"][0]["sources"]["required"]["evidence"] == ["source_text:abc"]
+    for bad in ({"kind": "owner_said", "reference": "x", "evidence": []},
+                {"kind": "inferred", "reference": "x", "evidence": ["a", "b", "c", "d"]},
+                {"kind": "inferred", "reference": "x", "check": False},
+                {"kind": "guessed", "reference": "x"}):
+        broken = append("field", label="Repair", required=True)
+        broken["sources"]["required"] = bad
+        with pytest.raises(cards.Invalid):
+            start(broken, page="booking_details")

@@ -380,16 +380,24 @@ async def _run_learning_scoped(tenant_id: str, mailbox_id: str | None) -> str:
         return "failed"
 
 
+_TASKS: set = set()
+
+
 def spawn(tenant_id: str, mailbox_id: str | None = None) -> asyncio.Task:
     """Fire-and-forget learning run (opt-in only: the onboarding voice step and
     the Settings re-run — never the OAuth callback). run_learning owns its
-    errors; this guard is belt-and-braces."""
+    errors; this guard is belt-and-braces. Call it from the event loop (an async
+    route), not a threadpool worker, which has no running loop. The task is
+    retained until done so it is not garbage-collected mid-run."""
     async def _run():
         try:
             await run_learning(tenant_id, mailbox_id)
         except Exception:
             log.exception("voice learning task crashed (tenant %s)", tenant_id)
-    return asyncio.create_task(_run())
+    task = asyncio.get_running_loop().create_task(_run())
+    _TASKS.add(task)
+    task.add_done_callback(_TASKS.discard)
+    return task
 
 
 def discard_profile(tenant_id: str, client=None) -> None:

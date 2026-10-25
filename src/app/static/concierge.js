@@ -68,6 +68,12 @@
   var sendBtn = document.getElementById("bc-send");
   var titleEl = document.getElementById("bc-title");
   var usageEl = document.getElementById("bc-usage");
+  // The onboarding Continue floats over the foot of the thread
+  // (_concierge.html); its height lets the thread pad so the last message can
+  // scroll clear of it.
+  if (cta && panel && window.ResizeObserver) new ResizeObserver(function () {
+    panel.style.setProperty("--bc-cta-h", cta.offsetHeight + "px");
+  }).observe(cta);
   var setupCards = null;
   var questionLimit = 20;
   var questionsRemaining = null;
@@ -694,9 +700,10 @@
     var state = window.Blam8OnboardingJourney ? window.Blam8OnboardingJourney.read(PENDING_KB_CARDS.length) : {ready:!!btn, action:btn};
     cta.innerHTML = "";
     if (!state.ready) {
-      var reason = notice(state.reason || "No Continue action is available on this page.", state.blocker === "busy");
+      // A disabled Continue speaks for itself (the page says what is missing);
+      // without one, the reason is the only thing the panel can show.
       if(state.journey && state.journey.current==='voice'){var disabled=document.createElement('button');disabled.type='button';disabled.disabled=true;disabled.className='w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white opacity-50 cursor-not-allowed';disabled.textContent='Continue';disabled.setAttribute('aria-describedby','voice-completion-status');cta.appendChild(disabled);}
-      cta.appendChild(reason);
+      else cta.appendChild(notice(state.reason || "No Continue action is available on this page.", state.blocker === "busy"));
       cta.classList.remove("hidden");
       return;
     }
@@ -733,9 +740,6 @@
         }, 4000);
       });
       cta.appendChild(go);
-      var p = notice(document.querySelector('[data-knowledge-saved-status]') ? 'Your Knowledge is saved. Continue when you’re ready.' : 'Review the visible form before saving your choices.');
-      p.className += " mt-1.5";
-      cta.appendChild(p);
     } else {
       var hint = notice("Looks good? Review the form and hit Continue.");
       cta.appendChild(hint);
@@ -2375,6 +2379,14 @@
   // settings, or /help in the search box).
   window.blam8ConciergeAsk = function (text) {
     openWith(text);
+  };
+  // A reply the guided setup produced by itself (a page's first drafted
+  // suggestion): it joins the thread as the assistant, with no owner turn.
+  window.blam8ConciergeAssistantSay = function (text) {
+    if (!text || !String(text).trim()) return;
+    log.push({ role: "assistant", content: text,
+      guide_stop: window.Blam8GuidedSetup ? window.Blam8GuidedSetup.currentStop() : '' }); saveLog(log);
+    msgs.appendChild(bubbleEl("assistant", text));
   };
 
   // The landing FAQ's "Run it past BLAM8" link: [data-scenario-open] opens the chat

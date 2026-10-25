@@ -43,7 +43,7 @@ busy=false;assert.equal(state.read(1).ready,false);
 assert.equal(state.read(0).ready,true);
 cta.children=[];context.showContinueHint();
 assert(!cta.children.some(el=>el.className.includes('bc-busy')),'busy marker removed when operation ends');
-assert(cta.children.some(el=>el.children.some(child=>child.className==='bc-notice-text')),'the ready-state notice also shines');
+assert(!cta.children.some(el=>el.children.some(child=>child.className==='bc-notice-text')),'a ready Continue stands alone, with no hint line');
 note='Unsaved';cta.children=[];context.showContinueHint();
 assert(!cta.children.some(el=>el.className.includes('bc-busy')),'a review decision is not active work');
 assert.equal(cta.children[0].className,'bc-notice');

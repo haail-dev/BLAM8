@@ -8,21 +8,84 @@
    something that belongs to the customer. The operator names the kind in
    their own word and lists what to know about each one; the agent asks,
    remembers each one on the customer's record, prefills and gates per
-   instance. Same fold idiom as Booking requirements: a glass sheet of rows
-   that state their value, opening to edit. #}
+   instance. Each detail reads as one line (its name and how long it stays
+   true); the rarer choices fold under More so the page reads without the
+   assistant (Kris 2026-10-24). #}
+{% macro field_row(f=none, gi=0) %}
+{% set expires = f and f.durability == 'expires' %}
+<div class="dep-field rounded-lg border border-slate-200 px-3 py-2 space-y-2">
+  <input type="hidden" name="f_group" value="{{ gi }}">
+  <div class="grid grid-cols-12 gap-2 items-center">
+    <input name="f_label" value="{{ f.label if f else '' }}" required aria-label="What you need to know" class="col-span-12 sm:col-span-6 rounded-lg border-slate-300 border px-2.5 py-1.5 text-sm">
+    <select name="f_durability" aria-label="How long it stays true" class="col-span-9 sm:col-span-5 w-full rounded-lg border-slate-300 border px-2 py-1.5 text-xs bg-white">
+      <option value="once" {{ 'selected' if f and f.durability == 'once' }}>Ask once</option>
+      <option value="confirm" {{ 'selected' if f and f.durability == 'confirm' }}>Check each time</option>
+      <option value="expires" {{ 'selected' if expires }}>Runs out on a date</option>
+    </select>
+    <button type="button" class="remove-field col-span-3 sm:col-span-1 text-xs text-slate-400 hover:text-rose-600">Remove</button>
+  </div>
+  <details class="dep-more text-xs text-slate-600">
+    <summary class="cursor-pointer font-medium text-slate-500">More</summary>
+    <div class="mt-2 grid grid-cols-12 gap-2 items-center">
+      <label class="col-span-12 sm:col-span-4 f-type-wrap" {{ 'hidden' if expires }}>Answer
+        <select name="f_type" class="mt-1 w-full rounded-lg border-slate-300 border px-2 py-1.5 text-xs bg-white">
+          {% for t, tl in [('text','Words'),('number','A number'),('date','A date'),('bool','Yes or no'),('dropdown','One of a list')] %}
+          <option value="{{ t }}" {{ 'selected' if (f and f.type == t) or (not f and t == 'text') }}>{{ tl }}</option>
+          {% endfor %}
+        </select></label>
+      <input name="f_options" value="{{ (f.options or [])|join(', ') if f else '' }}" placeholder="The choices, separated by commas" aria-label="The choices, separated by commas" class="f-options col-span-12 sm:col-span-8 rounded-lg border-slate-300 border px-2.5 py-1.5 text-xs" {{ '' if f and f.type == 'dropdown' else 'hidden' }}>
+      <label class="col-span-12 inline-flex items-center gap-1.5"><input type="hidden" name="f_required" value="{{ '1' if f and f.required else '0' }}"><input type="checkbox" class="accent-blue-600 f-required" {{ 'checked' if f and f.required }}>Must be collected</label>
+      {# Who may CHANGE this fact (Kris 2026-09-21). On: whatever the customer
+         sends becomes a confirm chip for you, never a silent write. #}
+      <label class="col-span-12 inline-flex items-center gap-1.5"><input type="hidden" name="f_setby" value="{{ '1' if f and f.set_by == 'owner' else '0' }}"><input type="checkbox" class="accent-blue-600 f-setby" {{ 'checked' if f and f.set_by == 'owner' }}>I approve changes the customer sends</label>
+      <label class="col-span-12 inline-flex items-center gap-1.5 f-expiry" {{ '' if expires else 'hidden' }}><input type="hidden" name="f_gate" value="{{ '1' if f and f.gate else '0' }}"><input type="checkbox" class="accent-blue-600 f-gate" {{ 'checked' if f and f.gate }}>Stop a booking when it has run out</label>
+      {# Proof (Kris 2026-09-21): a gate the customer can satisfy by typing a
+         date is not evidence. With this on, the certificate has to be on the
+         record too. Only means anything alongside the gate. #}
+      <label class="col-span-12 inline-flex items-center gap-1.5 f-expiry" {{ '' if expires else 'hidden' }}><input type="hidden" name="f_proof" value="{{ '1' if f and f.proof else '0' }}"><input type="checkbox" class="accent-blue-600 f-proof" {{ 'checked' if f and f.proof }}>Need the document on file, not just the date</label>
+      <label class="col-span-12 inline-flex items-center gap-1.5 f-recall-wrap" {{ '' if expires else 'hidden' }}>Remind <input name="f_recall" type="number" min="1" max="365" value="{{ (f.recall_days if f else none) or 30 }}" class="w-14 rounded-lg border-slate-300 border px-1.5 py-1 text-xs"> days before it runs out</label>
+      <input name="f_hint" value="{{ f.hint if f else '' }}" placeholder="Note for the assistant (optional)" aria-label="Note for the assistant" class="col-span-12 rounded-lg border-slate-300 border px-2.5 py-1.5 text-xs">
+    </div>
+  </details>
+</div>
+{% endmacro %}
+{% macro group_card(g=none, gi=0) %}
+<div class="glass-card p-4 sm:p-5 space-y-3 dep-group" data-gi="{{ gi }}">
+  <input type="hidden" name="g_id" value="{{ g.id if g and g.id else '' }}">
+  <div class="grid sm:grid-cols-2 gap-3">
+    <label class="block">
+      <span class="block text-xs text-slate-500 mb-1">What do you call it?</span>
+      <input name="g_label" value="{{ g.label if g else '' }}" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
+    </label>
+    <label class="block">
+      <span class="block text-xs text-slate-500 mb-1">Can a customer have more than one?</span>
+      <select name="g_cardinality" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
+        <option value="many" {{ 'selected' if not g or g.cardinality == 'many' }}>Yes</option>
+        <option value="one" {{ 'selected' if g and g.cardinality == 'one' }}>No, just one</option>
+      </select>
+    </label>
+  </div>
+  {# An empty plural is worked out from the name on save (requirement_groups.clean). #}
+  <details class="text-xs text-slate-600">
+    <summary class="cursor-pointer font-medium text-slate-500">Word for more than one</summary>
+    <input name="g_plural" value="{{ g.label_plural if g else '' }}" placeholder="Worked out from the name" aria-label="Word for more than one" class="mt-2 w-full sm:w-1/2 rounded-lg border-slate-300 border px-3 py-2 text-sm">
+  </details>
+  <div class="space-y-2 dep-fields">
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">What do you need to know about each one?</p>
+    {% if g %}{% for f in g.fields %}{{ field_row(f, gi) }}{% endfor %}{% endif %}
+  </div>
+  <div class="flex items-center justify-between">
+    <button type="button" class="add-field text-sm font-medium text-brand" {{ 'hidden' if g and g.fields|length >= max_fields }}>+ Add something to know</button>
+    <span class="dep-field-limit text-xs text-slate-400" {{ '' if g and g.fields|length >= max_fields else 'hidden' }}>{{ max_fields }} details is the most for one</span>
+    <button type="button" class="remove-group text-xs text-slate-400 hover:text-rose-600">Remove</button>
+  </div>
+</div>
+{% endmacro %}
 <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-4">
 
   <div class="glass-card p-4 sm:p-5">
-    <p class="font-semibold text-navy">Records linked to a customer</p>
-    <p class="text-sm text-slate-500 mt-1.5">A customer may have several people, places or items you need to keep track of separately. Name the type of record and choose which details to keep for each one. The assistant can then collect those details and link them to the right customer.</p>
-    <details class="mt-3 text-sm text-slate-500">
-    <summary class="cursor-pointer font-medium text-slate-600">When details are collected</summary>
-    <ul class="mt-3 space-y-1 text-sm text-slate-500">
-      <li><span class="font-medium text-slate-600">Ask once</span> — asked when missing, then reused from the saved record.</li>
-      <li><span class="font-medium text-slate-600">Confirm each time</span> — prefilled and re-confirmed in one line ("is that still correct?").</li>
-      <li><span class="font-medium text-slate-600">Expires</span> — a date that lapses (an expiring certificate); tick <em>must cover the booking</em> and a lapsed one blocks that one, not the others.</li>
-    </ul>
-    </details>
+    <p class="font-semibold text-navy">Do you keep track of people, places or items for your customers?</p>
+    <p class="text-sm text-slate-500 mt-1.5">Name each one in your own words, then list what you need to know about it. Each customer gets their own records, linked to them.</p>
   </div>
 
   <div class="flex justify-end">
@@ -37,70 +100,12 @@
   </div>
   {% endif %}
 
-  <form method="post" action="/app/diary/dependants" class="space-y-4" id="dep-form" data-guided-editor="dependants">
+  <form method="post" action="/app/diary/dependants" class="space-y-4" id="dep-form" data-guided-editor="dependants" data-max-fields="{{ max_fields }}">
     <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 
     <div id="groups" class="space-y-4">
-      {% for g in groups %}
-      {% set gi = loop.index0 %}
-      <div class="glass-card p-4 sm:p-5 space-y-3 dep-group" data-gi="{{ gi }}">
-        <input type="hidden" name="g_id" value="{{ g.id or '' }}">
-        <div class="grid sm:grid-cols-3 gap-3">
-          <label class="block">
-            <span class="block text-xs text-slate-500 mb-1">Kind (singular)</span>
-            <input name="g_label" value="{{ g.label }}" required placeholder="Subject" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
-          </label>
-          <label class="block">
-            <span class="block text-xs text-slate-500 mb-1">Plural</span>
-            <input name="g_plural" value="{{ g.label_plural }}" placeholder="Subjects" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm">
-          </label>
-          <label class="block">
-            <span class="block text-xs text-slate-500 mb-1">Per customer</span>
-            <select name="g_cardinality" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white">
-              <option value="many" {{ 'selected' if g.cardinality == 'many' }}>Several</option>
-              <option value="one" {{ 'selected' if g.cardinality == 'one' }}>Just one</option>
-            </select>
-          </label>
-        </div>
-        <div class="space-y-2 dep-fields">
-          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">What to know about each one</p>
-          {% for f in g.fields %}
-          <div class="dep-field grid grid-cols-12 gap-2 items-center rounded-lg border border-slate-200 px-3 py-2">
-            <input type="hidden" name="f_group" value="{{ gi }}">
-            <input name="f_label" value="{{ f.label }}" required placeholder="Current preference" class="col-span-12 sm:col-span-4 rounded-lg border-slate-300 border px-2.5 py-1.5 text-sm">
-            <select name="f_type" class="col-span-4 sm:col-span-2 rounded-lg border-slate-300 border px-2 py-1.5 text-xs bg-white">
-              {% for t, tl in [('text','Text'),('number','Number'),('date','Date'),('bool','Yes / no'),('dropdown','One of')] %}
-              <option value="{{ t }}" {{ 'selected' if f.type == t }}>{{ tl }}</option>
-              {% endfor %}
-            </select>
-            <select name="f_durability" class="col-span-4 sm:col-span-3 rounded-lg border-slate-300 border px-2 py-1.5 text-xs bg-white">
-              <option value="once" {{ 'selected' if f.durability == 'once' }}>Ask once</option>
-              <option value="confirm" {{ 'selected' if f.durability == 'confirm' }}>Confirm each time</option>
-              <option value="expires" {{ 'selected' if f.durability == 'expires' }}>Expires (a date)</option>
-            </select>
-            <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600"><input type="hidden" name="f_required" value="{{ '1' if f.required else '0' }}"><input type="checkbox" class="accent-blue-600 f-required" {{ 'checked' if f.required }}>Req.</label>
-            <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600" title="A lapsed date blocks the booking for this one"><input type="hidden" name="f_gate" value="{{ '1' if f.gate else '0' }}"><input type="checkbox" class="accent-blue-600 f-gate" {{ 'checked' if f.gate }}>Gate</label>
-            {# Proof (Kris 2026-09-21): a gate the customer can satisfy by typing a
-               date is not evidence. With this on, the certificate has to be on the
-               record too. Only means anything alongside Gate. #}
-            <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600" title="Also needs the certificate itself on file — a date the customer types is not evidence"><input type="hidden" name="f_proof" value="{{ '1' if f.proof else '0' }}"><input type="checkbox" class="accent-blue-600 f-proof" {{ 'checked' if f.proof }}>Proof</label>
-            {# Who may CHANGE this fact (Kris 2026-09-21). On: whatever the customer
-               sends becomes a confirm chip for you, never a silent write. #}
-            <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600" title="You confirm this one — what the customer sends becomes a chip to accept, never a silent change"><input type="hidden" name="f_setby" value="{{ '1' if f.set_by == 'owner' else '0' }}"><input type="checkbox" class="accent-blue-600 f-setby" {{ 'checked' if f.set_by == 'owner' }}>You confirm</label>
-            <label class="col-span-12 sm:col-span-3 inline-flex items-center gap-1 text-xs text-slate-600 f-recall-wrap" {{ '' if f.durability == 'expires' else 'hidden' }} title="Recall this many days before it lapses (30 usual; 90 for a three-year certificate)">recall <input name="f_recall" type="number" min="1" max="365" value="{{ f.recall_days or 30 }}" class="w-14 rounded-lg border-slate-300 border px-1.5 py-1 text-xs"> days before</label>
-            <input name="f_options" value="{{ (f.options or [])|join(', ') }}" placeholder="Option one, Option two" title="The choices, separated by commas" class="f-options col-span-12 rounded-lg border-slate-300 border px-2.5 py-1.5 text-xs" {{ '' if f.type == 'dropdown' else 'hidden' }}>
-            <input name="f_hint" value="{{ f.hint }}" placeholder="Hint for the agent (optional)" class="col-span-10 sm:col-span-7 rounded-lg border-slate-300 border px-2.5 py-1.5 text-xs">
-            <button type="button" class="remove-field col-span-2 text-xs text-slate-400 hover:text-rose-600">Remove</button>
-          </div>
-          {% endfor %}
-        </div>
-        <div class="flex items-center justify-between">
-          <button type="button" class="add-field text-sm font-medium text-brand">+ Add something to know</button>
-          <button type="button" class="remove-group text-xs text-slate-400 hover:text-rose-600">Remove this kind</button>
-        </div>
-      </div>
-      {% endfor %}
+      {% for g in groups %}{{ group_card(g, loop.index0) }}{% endfor %}
     </div>
 
 
@@ -145,10 +150,11 @@
        the add button along with the row and a first kind could not be added
        by hand (2026-10-22). Until one exists the row stays: data-save-always. #}
     <div data-save-row {% if not groups %}data-save-always{% endif %} class="flex flex-wrap items-center gap-3">
-      {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add a record type</button>{% endif %}
+      {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add {{ 'another' if groups else 'one' }}</button>
+      {% else %}<span class="text-xs text-slate-400">{{ max_groups }} is the most for now</span>{% endif %}
       <button type="submit" data-save-row class="ml-auto rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
     </div>
-    <p class="text-xs text-slate-400">Up to {{ max_groups }} kinds, {{ max_fields }} things to know about each. Booking-level details (the date, the address, who to call) stay in {% if setup_walk_active %}<span class="font-medium">Booking requirements</span>{% else %}<a href="/app/diary/intake" class="text-brand">Booking requirements</a>{% endif %}.</p>
+    <p class="text-xs text-slate-400">Details about a single booking (its date, address or who to call) belong in {% if setup_walk_active %}<span class="font-medium">Booking requirements</span>{% else %}<a href="/app/diary/intake" class="text-brand">Booking requirements</a>{% endif %}.</p>
   </form>
 </div>
 
@@ -174,69 +180,54 @@
     <div class="sm:col-span-2 flex items-end justify-end"><button type="button" class="remove-ladder text-xs text-slate-400 hover:text-rose-600">Remove</button></div>
   </div>
 </template>
-<template id="group-template">
-  <div class="glass-card p-4 sm:p-5 space-y-3 dep-group">
-    <input type="hidden" name="g_id" value="">
-    <div class="grid sm:grid-cols-3 gap-3">
-      <label class="block"><span class="block text-xs text-slate-500 mb-1">Kind (singular)</span><input name="g_label" required placeholder="Subject" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm"></label>
-      <label class="block"><span class="block text-xs text-slate-500 mb-1">Plural</span><input name="g_plural" placeholder="Subjects" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm"></label>
-      <label class="block"><span class="block text-xs text-slate-500 mb-1">Per customer</span><select name="g_cardinality" class="w-full rounded-lg border-slate-300 border px-3 py-2 text-sm bg-white"><option value="many">Several</option><option value="one">Just one</option></select></label>
-    </div>
-    <div class="space-y-2 dep-fields"><p class="text-xs font-semibold uppercase tracking-wider text-slate-400">What to know about each one</p></div>
-    <div class="flex items-center justify-between">
-      <button type="button" class="add-field text-sm font-medium text-brand">+ Add something to know</button>
-      <button type="button" class="remove-group text-xs text-slate-400 hover:text-rose-600">Remove this kind</button>
-    </div>
-  </div>
-</template>
-<template id="field-template">
-  <div class="dep-field grid grid-cols-12 gap-2 items-center rounded-lg border border-slate-200 px-3 py-2">
-    <input type="hidden" name="f_group" value="0">
-    <input name="f_label" required placeholder="Current preference" class="col-span-12 sm:col-span-4 rounded-lg border-slate-300 border px-2.5 py-1.5 text-sm">
-    <select name="f_type" class="col-span-4 sm:col-span-2 rounded-lg border-slate-300 border px-2 py-1.5 text-xs bg-white"><option value="text">Text</option><option value="number">Number</option><option value="date">Date</option><option value="bool">Yes / no</option><option value="dropdown">One of</option></select>
-    <select name="f_durability" class="col-span-4 sm:col-span-3 rounded-lg border-slate-300 border px-2 py-1.5 text-xs bg-white"><option value="once">Ask once</option><option value="confirm">Confirm each time</option><option value="expires">Expires (a date)</option></select>
-    <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600"><input type="hidden" name="f_required" value="0"><input type="checkbox" class="accent-blue-600 f-required">Req.</label>
-    <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600" title="A lapsed date blocks the booking for this one"><input type="hidden" name="f_gate" value="0"><input type="checkbox" class="accent-blue-600 f-gate">Gate</label>
-    <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600" title="Also needs the certificate itself on file — a date the customer types is not evidence"><input type="hidden" name="f_proof" value="0"><input type="checkbox" class="accent-blue-600 f-proof">Proof</label>
-    <label class="col-span-2 sm:col-span-1 inline-flex items-center gap-1 text-xs text-slate-600" title="You confirm this one — what the customer sends becomes a chip to accept, never a silent change"><input type="hidden" name="f_setby" value="0"><input type="checkbox" class="accent-blue-600 f-setby">You confirm</label>
-    <label class="col-span-12 sm:col-span-3 inline-flex items-center gap-1 text-xs text-slate-600 f-recall-wrap" hidden title="Recall this many days before it lapses (30 usual; 90 for a three-year certificate)">recall <input name="f_recall" type="number" min="1" max="365" value="30" class="w-14 rounded-lg border-slate-300 border px-1.5 py-1 text-xs"> days before</label>
-    <input name="f_options" placeholder="Option one, Option two" title="The choices, separated by commas" class="f-options col-span-12 rounded-lg border-slate-300 border px-2.5 py-1.5 text-xs" hidden>
-    <input name="f_hint" placeholder="Hint for the agent (optional)" class="col-span-10 sm:col-span-7 rounded-lg border-slate-300 border px-2.5 py-1.5 text-xs">
-    <button type="button" class="remove-field col-span-2 text-xs text-slate-400 hover:text-rose-600">Remove</button>
-  </div>
-</template>
+<template id="group-template">{{ group_card() }}</template>
+<template id="field-template">{{ field_row() }}</template>
 <script>
 (function () {
   var form = document.getElementById("dep-form"), groups = document.getElementById("groups");
   var gTpl = document.getElementById("group-template"), fTpl = document.getElementById("field-template");
+  var maxFields = +form.dataset.maxFields;
   function renumber() {
     groups.querySelectorAll(".dep-group").forEach(function (g, gi) {
       g.dataset.gi = gi;
       g.querySelectorAll('input[name="f_group"]').forEach(function (h) { h.value = gi; });
     });
   }
+  // The add button gives way to the limit only once a kind is full.
+  function fieldLimit(g) {
+    var full = g.querySelectorAll(".dep-field").length >= maxFields;
+    g.querySelector(".add-field").hidden = full;
+    g.querySelector(".dep-field-limit").hidden = !full;
+  }
   // The checkboxes post through their hidden twins so an unticked box still
   // posts a "0" in position — the rows are positionally aligned arrays.
   form.addEventListener("change", function (e) {
     if (e.target.matches(".f-required, .f-gate, .f-proof, .f-setby")) e.target.previousElementSibling.value = e.target.checked ? "1" : "0";
-    // A "One of" field shows its options box; every row still posts one.
+    // A "One of a list" detail shows its choices box; every row still posts one.
     if (e.target.matches('select[name="f_type"]')) {
       var ob = e.target.closest(".dep-field").querySelector(".f-options");
       if (ob) ob.hidden = e.target.value !== "dropdown";
     }
-    // Certificates (slice 4): the recall lead shows only for an expiring field.
+    // A detail that runs out is a date (the server forces it too), so its
+    // answer type gives way to the expiry choices: gate, proof and recall.
     if (e.target.matches('select[name="f_durability"]')) {
-      var wrap = e.target.closest(".dep-field").querySelector(".f-recall-wrap");
-      if (wrap) wrap.hidden = e.target.value !== "expires";
+      var row = e.target.closest(".dep-field"), expires = e.target.value === "expires";
+      row.querySelectorAll(".f-expiry, .f-recall-wrap").forEach(function (el) { el.hidden = !expires; });
+      row.querySelector(".f-type-wrap").hidden = expires;
+      if (expires) {
+        row.querySelector('select[name="f_type"]').value = "date";
+        row.querySelector(".f-options").hidden = true;
+      }
     }
   });
   form.addEventListener("click", function (e) {
     if (e.target.matches(".add-field")) {
       var g = e.target.closest(".dep-group");
       g.querySelector(".dep-fields").appendChild(fTpl.content.cloneNode(true));
-      renumber();
+      renumber(); fieldLimit(g);
     } else if (e.target.matches(".remove-field")) {
-      e.target.closest(".dep-field").remove();
+      var owner = e.target.closest(".dep-group");
+      e.target.closest(".dep-field").remove(); fieldLimit(owner);
     } else if (e.target.matches(".remove-group")) {
       e.target.closest(".dep-group").remove(); renumber();
     } else if (e.target.matches(".remove-ladder")) {
@@ -249,6 +240,7 @@
     } else if (e.target.id === "add-group") {
       groups.appendChild(gTpl.content.cloneNode(true)); renumber();
       var g = groups.lastElementChild; g.querySelector(".dep-fields").appendChild(fTpl.content.cloneNode(true)); renumber();
+      g.querySelector('input[name="g_label"]').focus();
     }
   });
 })();

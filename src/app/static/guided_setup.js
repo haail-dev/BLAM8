@@ -48,7 +48,9 @@
       stream.appendChild(host);
       stream.appendChild(conversation);conversation.appendChild(messages);
       if(panel){stream.appendChild(panel.error);stream.appendChild(panel.tray);}
-      if(!navigation)navigation=el('div',null,'guided-navigation');stream.appendChild(navigation);
+      // The step's question and answers stay pinned under the thread; More
+      // options sits just below them, revealed by scrolling the pinned bar.
+      if(!navigation)navigation=el('div',null,'guided-navigation');parent.insertBefore(navigation,parent.querySelector('#bc-form'));
       messagesChanged();
       document.getElementById('bc-title').textContent='BLAM8 assistant — Setup';
       document.getElementById('bc-input').placeholder='Answer or ask a question…';
@@ -57,7 +59,7 @@
       parent.insertBefore(host,parent.querySelector('#bc-form'));
       parent.insertBefore(messages,parent.querySelector('#bc-form'));
       if(panel){parent.insertBefore(panel.error,parent.querySelector('#bc-form'));parent.insertBefore(panel.tray,parent.querySelector('#bc-form'));}
-      stream.remove();stream=null;conversation=null;navigation=null;historyButton=null;
+      stream.remove();if(navigation)navigation.remove();stream=null;conversation=null;navigation=null;historyButton=null;
       if(messageObserver){messageObserver.disconnect();messageObserver=null;}
       parent.setAttribute('aria-live','polite');
       document.getElementById('bc-input').placeholder='Ask a question…';
@@ -66,7 +68,7 @@
   }
   function el(tag,text,cls){var n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
   function button(text,work,primary){var b=el('button',text,primary?'guided-primary':'');b.type='button';b.disabled=busy;b.addEventListener('click',work);return b;}
-  function controlsBusy(on){if(host)(stream||host).querySelectorAll('.guided-question button,.guided-navigation button').forEach(function(b){b.disabled=on;});
+  function controlsBusy(on){if(host)document.querySelectorAll('.guided-question button,.guided-navigation button').forEach(function(b){b.disabled=on;});
     document.querySelectorAll('[data-guided-start],[data-guided-entry]').forEach(function(b){b.disabled=on;});}
   function note(text){if(status)status.textContent=text;
     var intro=document.querySelector('[data-guided-intro-status]');if(intro&&!active())intro.textContent=text;}
@@ -212,15 +214,17 @@
         secondary.appendChild(button('Decide later',function(){action('later');}));
         secondary.appendChild(button('Not needed',function(){action('not_needed');}));
         if(stop.kind==='decision'&&!pending&&decision!=='applied')actions.appendChild(button('Keep current settings',function(){action('keep_current');}));
+        if(state.draft&&!pending&&drafting!==stop.id&&!busy)requestDraft(stop);
       }
     }
     if(state.index>0)actions.appendChild(button('Back',function(){action('back');}));
-    secondary.appendChild(button('Pause setup',function(){action('pause');}));
     if(state.guide.knowledge_unavailable){
       host.appendChild(el('p','Reviewed Knowledge could not be loaded. Your existing answers are kept.','guided-why'));
       secondary.appendChild(button('Retry Knowledge',function(){action('retry_knowledge');}));
     }
-    navigation.replaceChildren(actions,more);host.appendChild(status);
+    var pinned=[actions];if(stop.kind==='relevance'||stop.kind==='need')pinned.unshift(el('p',stop.question,'guided-ask'));
+    if(secondary.childElementCount)pinned.push(more);
+    navigation.replaceChildren.apply(navigation,pinned);host.appendChild(status);pin();
     if(location.pathname!==stop.href.split('#')[0]){
       var link=el('a','Open '+stop.title);link.href=stop.href;link.className='guided-owning-link';
       link.addEventListener('click',function(e){e.preventDefault();navigate();});host.appendChild(link);
@@ -237,7 +241,18 @@
     });}
   }
   // ── Diary discovery: answers first, settings after ─────────────────────────
-  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null;
+  var DISCOVERY=['diaries','diary_fact','hours','profile'], suggesting=null, suggestRetried=null, drafting=null;
+  // The first suggestion for a records or booking-requirements page, drafted once by the server
+  // from the business's own facts. Its reply joins the conversation and the card loads beside it.
+  function requestDraft(stop){
+    drafting=stop.id;note('Drafting a suggestion from what you’ve told us so far…');
+    request('/draft',{revision:state.revision,stop:stop.id,operation:'draft'}).then(function(next){
+      if(next.revision<state.revision)return;
+      state=next;note('');
+      if(next.reply&&window.blam8ConciergeAssistantSay)window.blam8ConciergeAssistantSay(next.reply);
+      if(panel)panel.load();paint();
+    }).catch(function(){note('');});
+  }
   // What the owner typed or ticked survives a repaint (suggestions arrive while they type).
   var draft={stop:null,text:'',picked:{}};
   var DAYS=[['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
@@ -394,7 +409,9 @@
     if(state.guide.diary&&state.guide.diary.suggestions_source!=='model'&&suggesting!==state.stop.id&&!busy){
       suggesting=state.stop.id;
       request('/diary/suggest',{revision:state.revision,stop:state.stop.id,operation:'suggest'})
-        .then(function(next){if(next.revision>=state.revision){state=next;paint();}}).catch(function(){});
+        .then(function(next){if(next.revision>=state.revision){state=next;paint();}})
+        // One retry on the next paint: a failure must not leave the question without suggestions for good.
+        .catch(function(){if(suggestRetried!==suggesting){suggestRetried=suggesting;suggesting=null;}});
     }
   }
   function discovery(stop,actions,secondary){
@@ -450,7 +467,7 @@
       }
     }
     if(!previews)return;
-    var projected=0, pending=0;
+    var projected=0, pending=0, why=null;
     (data.cards||[]).forEach(function(card){card.lines.forEach(function(line){
       if(!matches(card,line)||['proposed','held'].indexOf(line.status)===-1)return;
       pending++;
@@ -471,11 +488,20 @@
         panel.guidedDraft={control:control,raw:raw};
         panel.mutate(card,'/changes',{revision:card.revision,changes:[{op:'set',id:line.id,fields:{value:value},
           sources:{value:{kind:'owner_said',reference:'Owner edited the proposed control'}}}]});
-      }})){projected++;reveal(control);}
+      }})){projected++;reveal(control);
+        if(!why)why=((line.reasons&&line.reasons.lines)||[]).filter(function(r){return r.text.indexOf('Suggested: ')===0;})[0];}
     });});
     if(pending&&!projected)note('Review the existing card beside this editor. Compound or locally edited controls stay unchanged until you Accept.');
-    else if(projected)note('Proposed — not saved.');
+    else if(projected)note('Proposed — not saved.'+(why?' '+why.text.replace('Suggested: ','Suggested because: '):''));
     if(state.stop.kind==='explanation'&&t)reveal(t);
+  }
+  // The pinned bar shows the question and buttons; anything after them (More
+  // options) stays below its fold until the bar itself is scrolled.
+  function pin(){
+    if(!navigation)return;navigation.style.maxHeight='';navigation.scrollTop=0;
+    var actions=navigation.querySelector(':scope > .guided-actions');if(!actions||!navigation.querySelector(':scope > .guided-more'))return;
+    var box=navigation.getBoundingClientRect(),end=actions.getBoundingClientRect().bottom;
+    navigation.style.maxHeight=Math.ceil(end-box.top+parseFloat(getComputedStyle(navigation).paddingBottom))+'px';
   }
   function fit(){
     if(!active())return;
@@ -487,6 +513,7 @@
     var p=document.getElementById('bc-panel');if(p)document.documentElement.style.setProperty('--guided-panel',p.getBoundingClientRect().height+'px');
     var main=document.querySelector('main');if(main){main.style.maxHeight=innerWidth<=767&&p?
       Math.max(0,p.getBoundingClientRect().top-main.getBoundingClientRect().top-12)+'px':'';}
+    pin();
   }
   function startGuide(){
     if(!state){location.reload();return;}
@@ -529,5 +556,4 @@
       document.activeElement&&/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))return;
     try{var next=await request('/state');if(next.revision>state.revision||JSON.stringify(next.knowledge_conflicts)!==JSON.stringify(state.knowledge_conflicts)){state=next;clear();paint();if(panel)panel.load();resumeLocation();}}catch(_){}
   },2500);
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&active()&&host&&host.contains(e.target))action('pause');});
 })();

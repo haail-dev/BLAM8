@@ -6,11 +6,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* The navy strip and header bars reserve the phone's top inset down to the
- * bottom of the camera cut-out, not the whole status-bar row: iOS reports the
- * inset about 11pt below the Dynamic Island (59pt on a 48pt island). Phones
- * with a plain 20pt status bar keep all of it so the clock never overlaps the
- * bar; in a normal browser the inset and the reserve are 0. */
+/* The navy strip and header bars reserve the phone's top inset only down to
+ * the camera cut-out, not the whole status-bar row: iOS reports the inset
+ * about 11pt below the Dynamic Island (59pt on a 48pt island). The bar starts
+ * 4pt above the island's lower edge (Kris 2026-10-24: a touch smaller still);
+ * the island sits on the navy and the clock stays clear. Phones with a plain
+ * 20pt status bar keep all of it so the clock never overlaps the bar; in a
+ * normal browser the inset and the reserve are 0. */
 :root {
-  --top-reserve: max(min(env(safe-area-inset-top, 0px), 20px), calc(env(safe-area-inset-top, 0px) - 11px));
+  --top-reserve: max(min(env(safe-area-inset-top, 0px), 20px), calc(env(safe-area-inset-top, 0px) - 15px));
 }

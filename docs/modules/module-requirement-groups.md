@@ -148,10 +148,9 @@ config.* Four surfaces, one concept:
    books you, is the booking about something or someone that belongs to them —
    a pet, a child, a vehicle, a property?" A yes routes the tenant's own answer
    through the same prose→group translation and proposes it in the wizard.
-   The existing `PROFILE_INTAKE` sector packs (kennels already ships pet +
-   vaccine fields) demote from code-seeded intake lists to *suggestion data*
-   for this step — packs become examples the agent adapts, never templates the
-   product hardcodes.
+   The sector packs that used to sit in `intake.py` were removed on
+   24 October 2026: guided setup now drafts suggestions from the business's
+   own cited facts, never from a per-industry template.
 4. **Proactive detection, later.** The settings-recommend idiom: when
    extraction keeps meeting the same dependant-shaped references in a tenant's
    threads (named non-contacts with recurring attributes), the concierge

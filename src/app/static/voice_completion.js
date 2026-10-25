@@ -11,7 +11,9 @@
   function refresh(){
     var state=read(), status=document.getElementById('voice-completion-status');
     document.querySelectorAll('[data-onb-continue]').forEach(function(button){button.disabled=!state.valid || saving;button.setAttribute('aria-describedby','voice-completion-status');});
-    if(status)status.textContent=state.reason;
+    // The page speaks only while saving or after a failed save; the disabled
+    // Continue already shows when required fields are missing.
+    if(status)status.textContent=saving?state.reason:failure;
     window.dispatchEvent(new Event('blam8:onboarding-readiness'));
   }
   window.Blam8VoiceCompletion={read:read};

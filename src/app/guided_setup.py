@@ -483,7 +483,13 @@ def describe(context):
             [dict(type='activity',id=k,label=v['label']) for k,v in context['state']['scopes'].items()]+
             [dict(type='record_group',id=str(g['id']),label=g['label']) for g in context['groups']],
         summary_href='/app/setup/'+(stop.get('substep') or 'charges.terms').split('.')[0],
-        discovery=discovery_view(context, guide, stop) if stop['kind'] in DISCOVERY else None)
+        discovery=discovery_view(context, guide, stop) if stop['kind'] in DISCOVERY else None,
+        draft=_draftable(context['state'], stop))
+
+
+def _draftable(state, stop):
+    from app import setup_draft  # imports setup_card_model; kept lazy like the other card helpers
+    return setup_draft.draftable(state, stop)
 
 
 def discovery_view(context, guide, stop):
@@ -569,7 +575,8 @@ def unresolved_required(context, substep):
 
 def model_context(context, stop):
     return ('GUIDED SETUP: only the current small decision is being discussed. Ask one question, clarify ambiguity, '
-        'and reuse exact saved answers. Product or unrelated questions do not advance the guide. Do not invent values. '
+        'and reuse exact saved answers. Product or unrelated questions do not advance the guide. Do not invent values: '
+        'each value is the owner’s, their saved website’s, or inferred from BUSINESS CONTEXT with its evidence. '
         'Use setup_changes for explicit choices within CURRENT CATALOGUE. If the owner explicitly supplies a later-area answer, '
         'hold its exact supported row with held=true and keep the current question. Never infer a later answer from a product question. '
         'No links, selectors or actions from prose. Do not repeat applied or left lines. Current question: '+stop['question']+'\n'

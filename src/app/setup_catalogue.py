@@ -14,6 +14,18 @@ FOUNDATION = (
     'Use sourced setup_changes. Preview validates dependent choices before acceptance. '
     'Proposing, holding and accepting are different states; only a confirmed receipt means saved.'
 )
+# Guided setup checks every value's evidence on the server (setup_inference), so
+# there a value may also be inferred from the business's own cited facts.
+GUIDED_FOUNDATION = (
+    'Propose settings from the owner’s answers, their saved website or Knowledge, or what this business’s own '
+    'facts in BUSINESS CONTEXT support, and mark which source each value has. An industry name or a template is '
+    'never evidence for any setting. Ask the catalogue question when an answer makes that control relevant. '
+    'Preserve existing choices unless the owner changes them. A choice the owner was not asked about takes its '
+    'usual setting, marked inferred with reference "Usual setting" and evidence []; never fill a default silently. '
+    'Never propose a stricter customer-facing choice (refusing work, asking customers, expiry) without a fact that '
+    'supports it; ask instead. Use sourced setup_changes. Preview validates dependent choices before acceptance. '
+    'Proposing, holding and accepting are different states; only a confirmed receipt means saved.'
+)
 
 _CONTROLS = json.loads(Path(__file__).with_name('setup_catalogue_controls.json').read_text(encoding='utf-8'))
 ROW_QUESTIONS = {

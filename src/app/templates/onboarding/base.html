@@ -34,7 +34,7 @@
        the wizard card can size naturally within it. */
     header[data-bc-full-width] { padding-left: .5rem; padding-right: .5rem; }
     body[data-onboarding-shell] header[data-bc-full-width] { position:sticky;top:0;z-index:40; }
-    html:has(body[data-onboarding-shell]) { scroll-padding-top:7rem; }
+    html:has(body[data-onboarding-shell]) { scroll-padding-top:calc(var(--onboarding-bar) + var(--top-reserve) + 1rem); }
     @media (min-width: 768px) {
       body[data-onboarding-shell] { --onboarding-gutter:10px; --onboarding-chat-width:22rem; }
       /* Override the shared dock's single body reserve, never add a second one. */
@@ -53,8 +53,8 @@
       }
     }
     [data-stepper-total] { position:relative; --label-start:0px; --label-end:0px; }
-    /* Kris 2026-10-24: no band behind the stepper; the page background shows through. */
-    body[data-onboarding-shell] [data-stepper-total] { position:sticky;top:calc(var(--onboarding-bar) + var(--top-reserve));z-index:30; }
+    /* The stepper has no band behind it and scrolls away with the page; only
+       the navy bar stays on screen. */
     .onboarding-stepper-row { display:grid;grid-template-columns:repeat(var(--stepper-count),minmax(0,1fr));height:2.8rem; }
     [data-stepper-inspecting] .onboarding-stepper-row { height:4.2rem; }
     .onboarding-stepper-item { min-width:0; }

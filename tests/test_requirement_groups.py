@@ -341,7 +341,7 @@ def test_the_editor_renders_the_tenants_kinds_and_saves_them(client, monkeypatch
     r = client.get("/app/diary/dependants")
     assert r.status_code == 200
     assert 'value="Horse"' in r.text and 'value="Current shoeing"' in r.text
-    assert "Expires (a date)" in r.text and "must cover the booking" in r.text
+    assert "Runs out on a date" in r.text and "Stop a booking when it has run out" in r.text
     r = client.post("/app/diary/dependants", data={
         "settings_snapshot":json.dumps(snapshot),
         "g_label": ["Dog"], "g_plural": [""], "g_cardinality": ["many"], "g_id": [""],

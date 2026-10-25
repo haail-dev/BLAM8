@@ -234,9 +234,14 @@ def prepare_field(definition: dict, existing: list[dict]) -> dict:
 
 
 def seeds_for_tenant(tenant: dict, defined: list[dict]) -> dict:
-    """The industry's seed suggestions MINUS anything already defined — the
-    wizard's 'accept, edit or skip' chips."""
-    seeds = industry_lingo.crm_seeds_for((tenant or {}).get("industry"))
+    """The generic seed suggestions MINUS anything already defined — the
+    fields page's 'accept, edit or skip' chips.
+
+    The industry label never chooses them: business-specific suggestions come
+    from guided setup, which cites this business's own facts. The per-industry
+    seed data stays in industry_lingo because existing definitions are still
+    matched against it for the sensitive-data flag."""
+    seeds = industry_lingo.crm_seeds_for(None)
     have = {(d["entity"], d["key"]) for d in defined}
     out = {}
     for entity in ENTITIES:

@@ -379,3 +379,12 @@ def test_interview_saves_owner_description_verbatim(client, monkeypatch):
     template = _read("src/app/templates/onboarding/interview.html")
     assert '<input id="industry"' in template
     assert '<select id="industry"' not in template and 'name="industry_other"' not in template
+
+
+def test_stepper_scrolls_away_with_the_page_under_the_sticky_bar():
+    html = _read("src/app/templates/onboarding/base.html")
+    assert "body[data-onboarding-shell] header[data-bc-full-width] { position:sticky;top:0;z-index:40; }" in html
+    assert "[data-stepper-total] { position:sticky" not in html
+    assert "scroll-padding-top:calc(var(--onboarding-bar) + var(--top-reserve) + 1rem);" in html
+    css = _read("src/app/static/guided_setup.css")
+    assert "[data-stepper-total]{top:0}" not in css

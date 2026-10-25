@@ -14,7 +14,12 @@ domains and link back to the group. Team assignment remains in People.
 `onboarding_contract.py` owns stable capability, group, substep and question IDs.
 Labels are bounded, escaped presentation metadata with their own provenance and
 version. Saved related-subject labels can suggest contextual wording. Industry
-classification never installs a schema or grants permission. Resetting wording
+classification never installs a schema or grants permission. Guided setup may
+suggest a setting inferred from this business's own facts in the setup context
+pack, citing the signals it rests on and its reason; the industry label and
+per-industry templates are never evidence, and changing the label alone changes
+no suggestion. A suggestion becomes the owner's choice only when they accept it
+(see guided-setup.md). Resetting wording
 does not reset answers, scope identities or settings. Group rendering is
 deterministic and does not request model output. Existing help uses its existing
 model/provider and receives the scoped answer ledger as data, with explicit
