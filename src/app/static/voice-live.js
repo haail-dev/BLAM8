@@ -1352,14 +1352,14 @@ export function createVoiceLive(deps) {
   // ("start" builds today's agenda and begins; "next" moves it on). Not while the
   // screen is still connecting or has stopped listening: a tap then belongs to the
   // mic, and the debrief would talk into a connection that is not there.
-  function startDebrief(step) {
+  function startDebrief(step, finished) {
     if (!open) return false;
     if (phase === "connecting" || phase === "paused" || phase === "error" || phase === "idle") {
       notify(phase === "connecting" ? "One moment — still connecting" : "Tap the mic first");
       return false;
     }
     const next = step === "next";
-    runTurn(next ? DEBRIEF_NEXT : DEBRIEF_START, { debrief: next ? "next" : "start" });
+    Promise.resolve(runTurn(next ? DEBRIEF_NEXT : DEBRIEF_START, { debrief: next ? "next" : "start" })).then(finished, finished);
     return true;
   }
 

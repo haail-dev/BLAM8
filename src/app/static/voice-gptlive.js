@@ -600,6 +600,7 @@ export function taskBannerText(attention, running, stopped = 0) {
 }
 
 export function createVoiceLive(deps) {
+  let finishDebrief = null;
   let open = false, root = null, session = null, generation = 0, timer = null, muted = false, after = 0;
   let polling = false, lastTurn = null, workingTurn = null, terminalTurn = false, fragments = [], captionIds = new Set(), closedPromise = Promise.resolve();
   let activities = new Map(), knownTurns = new Set(), finishedTurns = new Set(), activityFlash = '', flashTimer = null, notices = [], noticeTimer = null, noticeOpen = false, noticeHiddenAt = 0;
@@ -987,6 +988,7 @@ export function createVoiceLive(deps) {
         if(event.kind==='context'){try{deps.onNativeContext?.(event.turns || []);}catch(_){status('Context display could not update.');}}
         if(event.kind==='activity' && event.turn_id && knownTurns.has(event.turn_id) && !finishedTurns.has(event.turn_id)){if(event.state==='finished'){activities.delete(event.turn_id);finishedTurns.add(event.turn_id);if(event.turn_id===lastTurn)terminalTurn=true;}else if(event.state==='running'){activities.delete(event.turn_id);activities.set(event.turn_id,{id:event.turn_id,state:'running',text:String(event.text || '').slice(0,120)});}paintFeed();}
         if(event.kind==='task' || event.kind==='result')taskHint=true;
+        if(event.kind==='debrief_finished' && finishDebrief){finishDebrief();finishDebrief=null;}
         if(event.kind==='status' || event.kind==='task'){status(event.text);}
         if(event.kind==='guard'){transport.silence('guard',event.seq);status(event.text);}
       }
@@ -1261,7 +1263,7 @@ export function createVoiceLive(deps) {
       timer=setInterval(()=>poll(g),500);
     },
     close(reason='unknown') {
-      if(!open)return closedPromise;open=false;++generation;workingTurn=null;terminalTurn=true;activities.clear();clearInterval(timer);timer=null;clearTimeout(flashTimer);clearTimeout(noticeTimer);flashTimer=null;noticeTimer=null;notices=[];noticeOpen=false;allowanceSession=null;if(allowanceBeat){clearInterval(allowanceBeat);allowanceBeat=0;}if(allowancePaintBeat){clearInterval(allowancePaintBeat);allowancePaintBeat=0;}
+      if(!open)return closedPromise;if(finishDebrief){finishDebrief();finishDebrief=null;}open=false;++generation;workingTurn=null;terminalTurn=true;activities.clear();clearInterval(timer);timer=null;clearTimeout(flashTimer);clearTimeout(noticeTimer);flashTimer=null;noticeTimer=null;notices=[];noticeOpen=false;allowanceSession=null;if(allowanceBeat){clearInterval(allowanceBeat);allowanceBeat=0;}if(allowancePaintBeat){clearInterval(allowancePaintBeat);allowancePaintBeat=0;}
       for(const controller of requests)controller.abort();requests.clear();
       for(const cancel of holdCancels)cancel();
       window.removeEventListener('blam8:task',onTaskEvent);document.removeEventListener('visibilitychange',updateHint);document.removeEventListener('visibilitychange',noticeVisibility);clearTimeout(hintTimer);hintTimer=null;hintSince=0;if(els.hint)els.hint.hidden=true;
@@ -1277,9 +1279,10 @@ export function createVoiceLive(deps) {
     // The Debrief button. The data channel takes no client commands, so the browser
     // asks the server (control → debrief), which runs the request and hands the
     // verified reply to the voice. Unlike control(), it never silences anything.
-    async startDebrief(step){
+    async startDebrief(step, finished){
       if(!open || paused || !transport.ready() || !transport.session()){status(transport.active()?'One moment — still connecting.':'Hold Mist to start the conversation first.');return false;}
       const g=generation;
+      finishDebrief=finished;
       try {
         const {response,data}=await boundedRequest('control',{session:transport.session(),operation:'debrief',step:step==='next'?'next':'start',control_id:transport.controlId?.() || ''},g);
         if(!open || g!==generation)return false;

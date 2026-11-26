@@ -50,7 +50,7 @@
       <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ 'Scheduled draft' if e.kind=='scheduled_plan' else ('Outreach draft' if e.kind=='tenant_outreach' else 'Drafted reply') }}</p>
       <span class="text-xs text-slate-400">edit before sending if needed</span>
     </div>
-    <textarea id="draft_reply" name="draft_reply" rows="10" class="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">{{ e.draft_reply }}</textarea>
+    <textarea id="draft_reply" data-fix-draft="{{ e.id }}" name="draft_reply" rows="10" class="mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 leading-relaxed focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none">{{ e.draft_reply }}</textarea>
     <div class="mt-4 flex flex-wrap items-center gap-3">
       <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Approve &amp; send</button>
       <button type="submit" formaction="/app/drafts/{{ e.id }}/skip" formnovalidate class="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-600 hover:border-slate-400 transition">Skip</button>

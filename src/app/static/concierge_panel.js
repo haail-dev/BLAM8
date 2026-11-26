@@ -1201,7 +1201,7 @@
     // group count and a tap means "next group". The newest reply says where in
     // the walk we are (payload.debrief). Owner and managers only — the walk
     // crosses every door — which the panel root declares in data-debrief.
-    var debriefBtns = [], debriefState = null;
+    var debriefBtns = [], debriefState = null, debriefRequest = null;
     var DEBRIEF_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v8"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m8 6 4-4 4 4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg>';
     function debriefAllowed() { return root.getAttribute('data-debrief') === 'on'; }
     function paintDebrief() {
@@ -1209,9 +1209,14 @@
       debriefBtns.forEach(function (btn) {
         var step = btn.querySelector('.cz-debrief-step');
         btn.classList.toggle('is-running', running);
-        if (step) { step.hidden = !running; step.textContent = running ? s.step + '/' + s.of : ''; }
-        btn.setAttribute('aria-label', running
-          ? 'Debrief, group ' + s.step + ' of ' + s.of + (s.label ? ' — ' + s.label : '') + '. Tap for the next group.'
+        btn.disabled = !!debriefRequest;
+        btn.setAttribute('aria-busy', String(btn.disabled));
+        if (step) {
+          step.hidden = !running && !btn.disabled;
+          step.textContent = btn.disabled ? 'Working…' : running ? 'Topic ' + s.step + '/' + s.of : '';
+        }
+        btn.setAttribute('aria-label', btn.disabled ? 'Preparing your debrief' : running
+          ? 'Debrief, group ' + s.step + ' of ' + s.of + (s.label ? ' — ' + s.label : '') + (s.step === s.of ? '. Tap to finish.' : '. Tap for the next group.')
           : 'Debrief — go through today with the Concierge');
         btn.title = running ? (s.label ? s.label + ' — tap for the next group' : 'Tap for the next group') : 'Debrief';
       });
@@ -1224,8 +1229,17 @@
     }
     function debriefPress() {
       var live = voiceLiveInstance;
-      if (!live || !live.isOpen() || typeof live.startDebrief !== 'function') return;
-      live.startDebrief(debriefState && !debriefState.finished ? 'next' : 'start');
+      if (debriefRequest || !live || !live.isOpen() || typeof live.startDebrief !== 'function') return;
+      var request = {};
+      debriefRequest = request;
+      paintDebrief();
+      function finished() {
+        if (debriefRequest === request) { debriefRequest = null; paintDebrief(); }
+      }
+      try {
+        Promise.resolve(live.startDebrief(debriefState && !debriefState.finished ? 'next' : 'start', finished))
+          .then(function (accepted) { if (!accepted) finished(); }, finished);
+      } catch (_) { finished(); }
     }
     function mountDebrief(overlay) {
       if (!debriefAllowed() || overlay.querySelector('.cz-debrief')) return;
@@ -1600,6 +1614,15 @@
           api.skip().then(function (ok) { tapped(ok ? 'Skipped.' : null); });
         });
         acts.appendChild(send);
+        if (d.log_id) {
+          var fix = document.createElement('a');
+          fix.className = 'cz-draft-btn cz-draft-fix';
+          fix.href = '/app/drafts/' + encodeURIComponent(d.log_id) + '#correct-draft';
+          fix.title = 'Correct this draft with the assistant';
+          fix.setAttribute('aria-label', fix.title);
+          fix.innerHTML = THUMB_UP;
+          acts.appendChild(fix);
+        }
         acts.appendChild(skip);
       }
       var api = {
@@ -2213,7 +2236,7 @@
     }
     async function openVoiceLive(opts) {
       timing('voice.click', { mode: savedVoiceMode() });
-      debriefState = null; paintDebrief();   // a new conversation starts with no walk
+      debriefRequest = null; debriefState = null; paintDebrief();   // a new conversation starts with no walk
       if (savedVoiceMode() === 'standard' && !VOICE_ON) { veil(false); return; }
       if (savedVoiceMode() === 'gptlive' && root.getAttribute('data-gptlive') !== 'on') {
         veil(false); bubble('assistant', 'GPT-Live is unavailable here. Choose Standard or try later.'); return;
@@ -2387,6 +2410,7 @@
     // voice reads it at the start of each conversation. The mic runs only
     // while this sheet is open.
     var sheet = root.querySelector('#cz-settings');
+    var settingsFromLive = false;
     var VOICE_CHOICE_KEY = 'blam8.conciergeVoice';
     var VOICE_CHOICES = Array.from(root.querySelectorAll('[name="cz-voice"]'), function (radio) { return radio.value; });
     function savedConciergeVoice() {
@@ -2610,9 +2634,28 @@
     }
     function openSettingsFromVoice() {
       var voice = voiceLiveInstance;
+      settingsFromLive = true;
       voiceLiveInstance = null;
-      return closeVoiceBeforeSettings(voice, function () { showSettings(true); });
+      return closeVoiceBeforeSettings(voice, function () {
+        if (!settingsFromLive) return;
+        window.history.pushState(Object.assign({}, window.history.state, { czVoiceSettings: true }), '');
+        showSettings(true);
+      });
     }
+    function leaveSettings() {
+      if (settingsFromLive && window.history.state && window.history.state.czVoiceSettings) { window.history.back(); return; }
+      var resume = settingsFromLive;
+      settingsFromLive = false;
+      showSettings(false);
+      if (resume) openVoiceLive({ paused: true });
+    }
+    window.addEventListener('popstate', function () {
+      if (settingsFromLive && !(window.history.state && window.history.state.czVoiceSettings)) leaveSettings();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape' || !sheet || sheet.hidden) return;
+      event.preventDefault(); event.stopImmediatePropagation(); leaveSettings();
+    }, true);
     root.addEventListener('click', function (event) {
       if (event.target.closest && event.target.closest('[data-cz-settings]')) showSettings();
     });
@@ -2717,9 +2760,11 @@
       paintTalk();
     }
     if (sheet) {
-      sheet.querySelector('[data-cz-settings-close]').addEventListener('click', function () { showSettings(false); });
+      sheet.querySelector('[data-cz-settings-close]').addEventListener('click', leaveSettings);
       var tourBtn = sheet.querySelector('#cz-tour-start');
       if (tourBtn) tourBtn.addEventListener('click', function () {
+        settingsFromLive = false;
+        if (window.history.state && window.history.state.czVoiceSettings) window.history.back();
         showSettings(false);   // hands the mic back before voice asks for it
         if (!VOICE_ON) { startVoice(); return; }   // says why voice can't run here
         openVoiceLive().then(function () { if (voiceLiveInstance) voiceLiveInstance.startTour(); });
@@ -3038,7 +3083,10 @@
       scrollDown: scrollDown,
       voice: startVoice,
       settings: function () { showSettings(); },
-      hideSettings: function () { showSettings(false); },
+      hideSettings: function () {
+        if (settingsFromLive && window.history.state && window.history.state.czVoiceSettings) window.history.back();
+        settingsFromLive = false; showSettings(false);
+      },
       // What the page's right-hand column (concierge_sidebar.js) reads and asks for. Read-only except
       // review(), which goes through the same code as a tap on a waiting chip (the card keeps its own checks).
       sidebar: {

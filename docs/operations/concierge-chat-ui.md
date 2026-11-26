@@ -22,9 +22,17 @@ reveals and expands Waiting for you. It disappears when there is nothing waiting
 Wide layouts retain their existing waiting shortcut and side-by-side column.
 
 In Live Concierge, the circular bottom-right arrow or the Right Arrow key opens
-the side page. The return control or Left Arrow key brings the voice screen
+the side page when it has items. Settings is hidden while the cards are showing.
+The return control or Left Arrow key brings the voice screen
 back. The voice controls slide out as the cards slide in over the same stationary
 water and glow. The BLAM8 mark belongs to the voice orb. The same controls work in the full page and the modal.
+
+Closing settings opened from Live Concierge returns to voice paused. Settings
+opened from text returns to text. The debrief button shows Working until its
+topic finishes and ignores further presses during that request. Topic counts
+reflect the groups included in the current briefing. A pending draft's
+thumbs-down opens the correction assistant for that draft. The owner reviews
+the proposed rule or knowledge edit before applying it and reviewing the redraft.
 
 When the voice screen opens the mobile side page, the page content clears the
 iPhone safe areas on all four edges. Empty space in its transparent overlay

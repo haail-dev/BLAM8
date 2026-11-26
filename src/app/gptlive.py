@@ -1233,6 +1233,8 @@ async def run_debrief(session, ctx, step):
     finally:
         if job["state"] in {"queued", "working"}:
             job["state"] = "unconfirmed"
+        if not session.closed:
+            session.publish("debrief_finished")
 
 
 async def safe_trace(*args, **kwargs):

@@ -44,7 +44,7 @@ def test_both_voice_screens_can_start_it():
     native = (STATIC / "voice-gptlive.js").read_text(encoding="utf-8")
     assert "    startDebrief,\n" in live
     # native mode asks the server — it has no channel to the provider — and never silences
-    start = native.split("async startDebrief(step){", 1)[1].split("\n    notify(text)", 1)[0]
+    start = native.split("async startDebrief(step, finished){", 1)[1].split("\n    notify(text)", 1)[0]
     assert "operation:'debrief'" in start and "transport.silence" not in start
     assert "boundedRequest('control'" in start
 

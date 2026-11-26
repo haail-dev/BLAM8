@@ -2271,6 +2271,8 @@
         row.remove();
         // Swap the fresh draft into the page's textarea, if the thread is showing it.
         var ta = document.getElementById("draft-" + logId);
+        var review = document.querySelector("textarea[data-fix-draft]");
+        if (!ta && review && review.dataset.fixDraft === logId) ta = review;
         if (ta && data.draft) {
           ta.value = data.draft;
           ta.dispatchEvent(new Event("input", { bubbles: true }));
@@ -2415,6 +2417,11 @@
     touch();           // a fresh thread, never judged stale on open
     setOpen(true);     // paints the question; the first turn is theirs to start
   };
+  var reviewDraft = document.querySelector("textarea[data-fix-draft]");
+  if (reviewDraft && location.hash === "#correct-draft") {
+    window.blam8ConciergeFix(reviewDraft.dataset.fixDraft);
+    history.replaceState(history.state, "", location.pathname + location.search);
+  }
   document.addEventListener("click", function (e) {
     var trigger = e.target.closest && e.target.closest("[data-concierge-ask]");
     if (!trigger) return;

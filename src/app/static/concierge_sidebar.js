@@ -98,7 +98,7 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   // z-index: the swipe worked and the panel opened out of sight (Kris 2026-10-17). While the voice screen is up the column is moved onto the page body.
   //
   // The foreground and the transparent card column use the same pan progress over a stationary backdrop.
-  + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:calc(max(1rem,env(safe-area-inset-top)) + 3.25rem) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));z-index:93;background:none;pointer-events:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
+  + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:max(1rem,env(safe-area-inset-top)) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));z-index:93;background:none;pointer-events:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
   + '.cz-side-over>*{pointer-events:auto}'
   + 'body.cz-voice-side>.cz-side.cz-side-over,body.cz-panning>.cz-side.cz-side-over{visibility:visible}'
   + VOICE_FOREGROUND.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{translate:calc(var(--cz-pan,0) * -1 * var(--cz-w,100vw)) 0}'
@@ -106,7 +106,8 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   + '.cz-side-over>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}'
   + '.cz-side-home{display:none}'
   + 'body>.cz-voice-side-next{display:none;position:fixed;z-index:92;top:auto;left:auto;right:max(1rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom));font-size:1.4rem;line-height:1}'
-  + 'body.voice-live-open:not(.cz-voice-side)>.cz-voice-side-next{display:inline-flex}'
+  + 'body.voice-live-open:not(.cz-voice-side)>.cz-voice-side-next:not([hidden]){display:inline-flex}'
+  + 'body.cz-voice-side #voice-live-root .vl-corner,body.cz-voice-side #voice-gptlive-root .vl-corner{visibility:hidden}'
   + '.cz-pager-on>.cz-side>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}';
 
 export function ageOf(then, now) {
@@ -185,7 +186,7 @@ export function mountSidebar(root, api, doc) {
   var pagerOn = false, revealed = false, loaded = false;
   // The column is on screen: wide window, or the strip's right half has been shown. Its reads wait until then.
   function visible() { return pagerOn ? revealed : (!mq || mq.matches); }
-  function ensureLoaded() { if (loaded || !visible()) return; loaded = true; status.load(); }
+  function ensureLoaded() { if (loaded || (!visible() && !voiceUp())) return; loaded = true; status.load(); }
   function calm() { return !!(view && view.matchMedia && view.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   function slideTo(left) {
     if (!pager) return;
@@ -216,12 +217,12 @@ export function mountSidebar(root, api, doc) {
   // Over the live voice screen the column is a panel on top, not the strip's second half.
   var body = doc.body || null;
   var next = el('button', 'cz-voice-side-next', '\u2192');
-  next.type = 'button';
+  next.type = 'button'; next.hidden = true;
   next.title = 'Open Concierge side panel';
   next.setAttribute('aria-label', next.title);
   if (pager && body && body.appendChild) body.appendChild(next);
   function openVoiceSide() {
-    if (!voiceUp() || !pager) return;
+    if (!voiceUp() || !pager || next.hidden) return;
     setPager(true);
     reveal();
     if (home.focus) home.focus({ preventScroll: true });
@@ -305,12 +306,12 @@ export function mountSidebar(root, api, doc) {
     doc.addEventListener('keydown', function (e) {
       if (!voiceUp() || !pager || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
       if (e.target && e.target.closest && e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"],[role="tablist"],[role="dialog"]')) return;
-      if (e.key === 'ArrowRight' && !sideOpen()) { e.preventDefault(); openVoiceSide(); }
+      if (e.key === 'ArrowRight' && !sideOpen() && !next.hidden) { e.preventDefault(); openVoiceSide(); }
       else if (e.key === 'ArrowLeft' && sideOpen()) { e.preventDefault(); backToVoice(); }
     });
     doc.addEventListener('touchstart', function (e) {
       var t = touchOf(e, 'touches');
-      drag = t && pagerOn && voiceUp() && (!e.touches || e.touches.length === 1)
+      drag = t && pagerOn && voiceUp() && (sideOpen() || !next.hidden) && (!e.touches || e.touches.length === 1)
         ? { x: t.clientX, y: t.clientY, t: now(), from: sideOpen() ? 1 : 0, locked: false, p: null } : null;
     }, { passive: true });
     doc.addEventListener('touchmove', function (e) {
@@ -333,6 +334,7 @@ export function mountSidebar(root, api, doc) {
   if (typeof MutationObserver !== 'undefined' && body && body.nodeType) {
     new MutationObserver(function () {
       if (pmq && !pmq.matches && (!voiceUp() || (!sideOpen() && !body.classList.contains('cz-panning')))) setPager(false);
+      if (voiceUp()) ensureLoaded();
       if (voiceUp()) floatSide(true); else { sideOverVoice(false, true); floatSide(false); }
     }).observe(body, { attributes: true, attributeFilter: ['class'] });
   }
@@ -405,6 +407,11 @@ export function mountSidebar(root, api, doc) {
     waitBox.note.textContent = said(focused);
     openBox.node.setAttribute('data-empty', open.length ? 'false' : 'true');
     waitBox.node.setAttribute('data-focus', focused.length ? 'true' : 'false');
+    paintArrow();
+  }
+  var waitingCount = 0;
+  function paintArrow() {
+    next.hidden = !(items.length || waitingCount || tasksBox.node.getAttribute('data-empty') === 'false' || status.hasRows());
   }
   function markBody(on) { if (doc.body && doc.body.classList) doc.body.classList.toggle('cz-side-wide', !!on); }
   function relayout() {
@@ -498,9 +505,10 @@ export function mountSidebar(root, api, doc) {
       var l = ledgerLine(it);
       waitList.appendChild(expandRow('?', l.line, [l.meta, l.detail]));
     });
-    status.paint();
+    waitingCount = waiting.length + extra.length;
+    status.paint(); paintArrow();
   }
-  api.onChange(function () { paint(); if (visible()) status.schedule(); });
+  api.onChange(function () { paint(); if (visible() || voiceUp()) status.schedule(); });
   paint();
   ensureLoaded();
   return { paint: paint, node: col, host: host, relayout: relayout, openItems: function () { return items.length; } };

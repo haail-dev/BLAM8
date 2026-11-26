@@ -61,6 +61,7 @@ export function mountStatus(c) {
   function fill(b, rows) {
     b.body.textContent = '';
     rows.forEach(function (r) { b.body.appendChild(r); });
+    b.hasRows = rows.length > 0;
     dotsFor(b, rows.length);
     b.node.setAttribute('data-empty', rows.length ? 'false' : 'true');
   }
@@ -190,5 +191,6 @@ export function mountStatus(c) {
     waiting.forEach(function (w) { ids[w.proposal_id || w.log_id] = 1; });
     return open().filter(function (it) { return !ids[it.id] && (it.state === 'Needs you' || it.state === 'Check this one' || it.state === 'Expired'); });
   }
-  return { paint: paint, schedule: schedule, load: load, boxes: boxes, enrich: enrich, extras: extras, nodes: boxes.map(function (b) { return b.node; }) };
+  function hasRows() { return boxes.some(function (b) { return b.hasRows; }); }
+  return { hasRows: hasRows, paint: paint, schedule: schedule, load: load, boxes: boxes, enrich: enrich, extras: extras, nodes: boxes.map(function (b) { return b.node; }) };
 }

@@ -40,10 +40,10 @@ def test_two_ways_across_and_the_strip_slides_when_something_opens_in_the_column
     assert "active: function () { return pagerOn || !mq || mq.matches; }," in SIDE  # offered cards use the right-hand page on phones too
 
 
-def test_the_columns_reads_wait_until_it_is_on_screen():
+def test_column_status_loads_for_visible_columns_and_live_navigation():
     assert "function visible() { return pagerOn ? revealed : (!mq || mq.matches); }" in SIDE
-    assert "function ensureLoaded() { if (loaded || !visible()) return; loaded = true; status.load(); }" in SIDE
-    assert "api.onChange(function () { paint(); if (visible()) status.schedule(); });" in SIDE
+    assert "function ensureLoaded() { if (loaded || (!visible() && !voiceUp())) return; loaded = true; status.load(); }" in SIDE
+    assert "api.onChange(function () { paint(); if (visible() || voiceUp()) status.schedule(); });" in SIDE
     assert "\n  status.load();\n" not in SIDE
 
 

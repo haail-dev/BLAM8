@@ -153,6 +153,7 @@ async def test_background_words_do_not_hide_the_debrief_result(unit, monkeypatch
     await live.control(live.Control(session=s.id, operation="debrief"), unit)
     await asyncio.gather(*list(s.jobs))
     assert s.counters["input_held"] == 1 and "input_cancellation" not in s.counters
+    assert s.events[-1]["kind"] == "debrief_finished"
     assert any(e["kind"] == "result" for e in s.events)
     assert not any("newer words take priority" in e.get("text", "") for e in s.events)
     assert s.socket.sent[-1]["type"] == "session.commentary.append" and s.socket.sent[-1]["content"] == "Morning. Five things need you."

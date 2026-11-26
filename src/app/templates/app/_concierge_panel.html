@@ -500,8 +500,11 @@
     #voice-live-root .cz-debrief.is-running, #voice-gptlive-root .cz-debrief.is-running {
       border-color: #7dd3fc; color: #bae6fd; background: rgba(125, 211, 252, 0.14); }
     #voice-live-root .cz-debrief-step, #voice-gptlive-root .cz-debrief-step {
-      position: absolute; top: calc(100% + 0.25rem); left: 50%; transform: translateX(-50%);
+      position: absolute; top: calc(100% + 0.25rem); right: 0;
       font: 600 0.65rem/1 Inter, system-ui, sans-serif; color: #bae6fd; white-space: nowrap; pointer-events: none; }
+    .cz-draft-fix svg { transform: rotate(180deg); }
+    #voice-live-root .cz-debrief[aria-busy="true"], #voice-gptlive-root .cz-debrief[aria-busy="true"] {
+      cursor: progress; border-color: #7dd3fc; background: #213d51; }
     #voice-live-root .cz-debrief-step[hidden], #voice-gptlive-root .cz-debrief-step[hidden] { display: none; }
     /* Keep pending-review badges immediately left of the same-size debrief button. */
     #voice-live-root.has-debrief .cz-badges, #voice-gptlive-root.has-debrief .cz-badges { right: calc(0.8rem + 2.75rem + 0.5rem); pointer-events: none; }

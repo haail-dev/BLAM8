@@ -123,14 +123,15 @@ function panelRig({allowed = true, instance} = {}) {
   const c = {root: panelRoot, document: {createElement: tag => new El(tag)}, voiceLiveInstance: instance || null, Object};
   vm.createContext(c);
   for (const name of ['debriefAllowed', 'paintDebrief', 'debriefPress', 'mountDebrief']) vm.runInContext(panel(name), c);
-  vm.runInContext(panelSource.match(/^    var debriefBtns = \[\], debriefState = null;$/m)[0], c);
+  vm.runInContext(panelSource.match(/^    var debriefBtns = \[\], debriefState = null, debriefRequest = null;$/m)[0], c);
   const icon = panelSource.match(/^    var DEBRIEF_ICON = .*$/m)[0];
   vm.runInContext(icon, c);
   return {c, panelRoot};
 }
 {
   const calls = [];
-  const instance = {isOpen: () => true, startDebrief: s => calls.push(s)};
+  let finish;
+  const instance = {isOpen: () => true, startDebrief: (s, done) => { calls.push(s); finish = done; return true; }};
   const {c} = panelRig({instance});
   const overlay = new El('div');
   c.mountDebrief(overlay); c.mountDebrief(overlay);                 // idempotent: one button per screen
@@ -141,15 +142,17 @@ function panelRig({allowed = true, instance} = {}) {
   assert.equal(btn.step.hidden, true);
   // idle → a tap starts; the tap is the button's own, not the screen's
   const e = btn.click(); assert.deepEqual(calls, ['start']); assert.equal(e.stopped, true);
+  assert.equal(btn.disabled, true); assert.equal(btn.step.textContent, 'Working…');
+  btn.click(); assert.deepEqual(calls, ['start']); finish(); assert.equal(btn.disabled, false);
   // the newest reply says the walk is on: the button wears the count and a tap is "next"
   c.debriefState = {step: 2, of: 5, label: 'Drafts waiting', finished: false}; c.paintDebrief();
-  assert.equal(btn.step.hidden, false); assert.equal(btn.step.textContent, '2/5'); assert(btn.classes.has('is-running'));
+  assert.equal(btn.step.hidden, false); assert.equal(btn.step.textContent, 'Topic 2/5'); assert(btn.classes.has('is-running'));
   assert.match(btn.attrs['aria-label'], /group 2 of 5 — Drafts waiting\. Tap for the next group/);
-  btn.click(); assert.deepEqual(calls, ['start', 'next']);
+  btn.click(); assert.deepEqual(calls, ['start', 'next']); finish();
   // finished (or cleared): back to a start button
   c.debriefState = {step: 5, of: 5, label: '', finished: true}; c.paintDebrief();
   assert.equal(btn.step.hidden, true); assert(!btn.classes.has('is-running'));
-  btn.click(); assert.equal(calls.at(-1), 'start');
+  btn.click(); assert.equal(calls.at(-1), 'start'); finish();
   c.debriefState = null; c.paintDebrief(); assert.equal(btn.title, 'Debrief');
 }
 {
