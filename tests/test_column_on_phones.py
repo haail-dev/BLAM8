@@ -87,18 +87,12 @@ def test_over_the_voice_screen_the_column_is_moved_onto_the_body_so_the_popup_ca
     assert "if (on && voiceUp()) floatSide(true);" in SIDE
 
 
-def test_on_a_phone_the_voice_screen_and_the_column_are_one_canvas_with_the_water_running_under_both():
-    # Kris 2026-10-17: not a panel dragged over the voice screen, and not a flat backdrop either: one canvas twice the phone's width, the voice screen the
-    # left half and the column the right half, with the water running all the way across. --cz-pan (0..1) is how far across it is; everything that moves
-    # is driven by the same number, with the individual `translate` property so the orb's own transform and transitions are untouched.
+def test_voice_controls_and_cards_pan_over_one_stationary_background():
     assert "translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0" in SIDE                  # the column: the right half
     assert "{translate:calc(var(--cz-pan,0) * -1 * var(--cz-w,100vw)) 0}" in SIDE                  # the voice screen: the left half
     assert "var VOICE_ROOTS = ['#voice-live-root.is-open', '#voice-gptlive-root.is-open'];" in SIDE  # both voice screens
-    # GPT-Live's water (canvas.vl-pond, and the glow .vl-ambient) is NOT excluded from the pan: it is made two screens wide and pans with the canvas.
-    # Only the first screen's water (.vl-ripples) stays put behind both halves.
-    assert "r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)'" in SIDE and ":not(.vl-ambient)" not in SIDE
-    assert "var VOICE_WATER = ['#voice-gptlive-root.is-open .vl-stage>.vl-pond', '#voice-gptlive-root.is-open .vl-stage>.vl-ambient'];" in SIDE
-    assert "{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}" in SIDE        # !important: the canvas carries inline sizes
+    assert ".vl-stage>:not(.vl-ripples):not(.vl-pond):not(.vl-ambient):not(.vl-live)" in SIDE
+    assert "width:calc(2 * var(--cz-w" not in SIDE
     assert "z-index:93;background:none;pointer-events:none;touch-action:pan-y;" in SIDE             # empty overlay space lets the water receive taps
     assert ".cz-side-over>*{pointer-events:auto}" in SIDE                                         # the column controls remain interactive
     assert "radial-gradient" not in SIDE and "#0b1220" not in SIDE                                 # no backdrop anywhere: the water shows through
@@ -106,15 +100,3 @@ def test_on_a_phone_the_voice_screen_and_the_column_are_one_canvas_with_the_wate
     assert "(d.p > 0.3 || v < -0.45)" in SIDE and "(d.p < 0.7 || v > 0.45)" in SIDE                # settles on the nearer half, or the way it was flicked
     assert "function glide(to) {" in SIDE and "paintPan(from + (to - from) * e);" in SIDE         # one clock for everything that moves
     assert "sideOverVoice(false, true)" in SIDE                                                    # a reset (the voice screen ended) is instant
-
-
-def test_the_pond_lays_its_lake_out_from_its_canvas_so_it_can_be_wider_than_the_stage_on_a_phone():
-    WATER = (ROOT / "src/app/static/water-core.js").read_text(encoding="utf-8")
-    POND = (ROOT / "src/app/static/voice-pond.js").read_text(encoding="utf-8")
-    assert "lakeFromCanvas: true," in POND                                                         # opt-in: nothing else that uses the water engine changes
-    assert "const lakeBox = () => (options.lakeFromCanvas && canvas.clientWidth > 0 && canvas.clientHeight > 0 ? canvas : host);" in WATER
-    assert "const box = lakeBox();" in WATER and "const r = box.getBoundingClientRect(); left = r.left; top = r.top;" in WATER
-    assert "const hr = lakeBox().getBoundingClientRect(); left = hr.left; top = hr.top;" in WATER   # what it keeps clear is measured from the same place
-    assert "if (options.lakeFromCanvas) ro?.observe(canvas);" in WATER                             # a canvas that changes size re-lays the lake out
-    assert "function syncOrigin() {" in WATER and "function local(e) { syncOrigin();" in WATER      # a press measures the lake again: it can have been swiped across
-    assert "host.clientWidth" not in WATER and "host.getBoundingClientRect" not in WATER.replace("lakeBox", "")

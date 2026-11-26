@@ -21,14 +21,10 @@ var WORD = { queued: 'queued', working: 'working', waiting: 'waiting for you', d
 // orb's column .vl-live; voice-live.js (the first) keeps a canvas.vl-ripples inside .vl-live. Roots and stage are laid out alike.
 var VOICE_ROOTS = ['#voice-live-root.is-open', '#voice-gptlive-root.is-open'];
 var PHONE_VOICE = 'body.voice-live-open.cz-pager-body ';
-// The corner Settings stay visible on either page. What pans with the column excludes .vl-ripples, the first screen's water, which stays where it is behind both halves.
-// GPT-Live's water is NOT excluded: it is made as wide as the whole canvas (below) and pans with it, so the water runs all the way across.
+// Only foreground controls pan. Both voice screens keep their water and ambient light fixed.
 var VOICE_FOREGROUND = [].concat.apply([], VOICE_ROOTS.map(function (r) {
-  return [r + '>:not(.vl-stage):not(.vl-corner)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-live)', r + ' .vl-live>:not(.vl-ripples)'];
+  return [r + '>:not(.vl-stage):not(.vl-corner)', r + ' .vl-stage>:not(.vl-ripples):not(.vl-pond):not(.vl-ambient):not(.vl-live)', r + ' .vl-live>:not(.vl-ripples)'];
 }));
-// GPT-Live's lake and its glow are laid out two screens wide (the engine sizes the lake from its canvas: water-core.js lakeFromCanvas), so ripples
-// run on past the voice screen's right edge into the column's half instead of bouncing back off it. !important: the canvas carries inline sizes.
-var VOICE_WATER = ['#voice-gptlive-root.is-open .vl-stage>.vl-pond', '#voice-gptlive-root.is-open .vl-stage>.vl-ambient'];
 export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (pointer:fine){'
   + '#cz-root.cz-has-side{--cz-w:min(48rem,calc(100vw - 21rem - 2rem));width:var(--cz-w);max-width:none;'
   + 'margin-left:max(1rem,calc((100vw - var(--cz-w) - 21rem)/2));margin-right:0}'
@@ -101,17 +97,12 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   // The pop-up is a fixed layer of its own (z-index 80), so a column left inside it sits UNDER the voice screen (z-index 90) however high its own
   // z-index: the swipe worked and the panel opened out of sight (Kris 2026-10-17). While the voice screen is up the column is moved onto the page body.
   //
-  // One canvas twice the phone's width (Kris 2026-10-17): the voice screen (orb, words, controls) is its left half and the column its right half, and the
-  // water runs under both. --cz-pan on the body is how far across it is (0 the voice screen, 1 the column; --cz-w is the screen's width). Everything that
-  // moves, the water included, moves by the same number, in step, with the individual `translate` property so an element's own transform and transitions
-  // (the orb's) are untouched. The first voice screen's water stays where it is instead (see VOICE_FOREGROUND).
-  // concierge_sidebar.js sets the number: a finger sets it while dragging and a release glides it to 0 or 1. Phones only (.cz-pager-body).
+  // The foreground and the transparent card column use the same pan progress over a stationary backdrop.
   + 'body>.cz-side.cz-side-over{display:flex;position:fixed;top:0;right:0;bottom:0;left:auto;width:100%;box-sizing:border-box;padding:calc(max(1rem,env(safe-area-inset-top)) + 3.25rem) max(1rem,env(safe-area-inset-right)) max(1rem,env(safe-area-inset-bottom)) max(1rem,env(safe-area-inset-left));z-index:93;background:none;pointer-events:none;touch-action:pan-y;translate:calc((1 - var(--cz-pan,0)) * var(--cz-w,100vw)) 0;visibility:hidden}'
   + '.cz-side-over>*{pointer-events:auto}'
   + 'body.cz-voice-side>.cz-side.cz-side-over,body.cz-panning>.cz-side.cz-side-over{visibility:visible}'
   + VOICE_FOREGROUND.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{translate:calc(var(--cz-pan,0) * -1 * var(--cz-w,100vw)) 0}'
   + VOICE_ROOTS.map(function (r) { return PHONE_VOICE + r; }).join(',') + '{touch-action:pan-y}'
-  + VOICE_WATER.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}'
   + '.cz-side-over>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}'
   + '.cz-side-home{display:none}'
   + 'body>.cz-voice-side-next{display:none;position:fixed;z-index:92;top:auto;left:auto;right:max(1rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom));font-size:1.4rem;line-height:1}'
