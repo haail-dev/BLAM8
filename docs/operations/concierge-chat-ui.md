@@ -21,6 +21,10 @@ It has a transparent fill and a slowly moving amber hazard border. Tapping it
 reveals and expands Waiting for you. It disappears when there is nothing waiting.
 Wide layouts retain their existing waiting shortcut and side-by-side column.
 
+In Live Concierge, the circular bottom-right arrow or the Right Arrow key opens
+the side page. The return control or Left Arrow key brings the voice screen
+back. The same controls work in the full page and the modal.
+
 When the voice screen opens the mobile side page, the page content clears the
 iPhone safe areas on all four edges. Empty space in its transparent overlay
 passes taps through to the voice background; the panel controls keep their own
