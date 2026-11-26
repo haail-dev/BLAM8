@@ -3225,12 +3225,8 @@
         slot.appendChild(strip);
         timing('panel.mount-start');
         api = mount(root);
-        // A phone opens the Concierge as this pop-up, so the column has to be here too (Kris 2026-10-16: no way to it on mobile).
-        try {
-          if (window.matchMedia('(max-width: 767px)').matches) {
-            import('/static/concierge_sidebar.js').then(function (m) { m.mountSidebar(root, api.sidebar); }).catch(function () {});
-          }
-        } catch (e) {}
+        // Live voice can start from the pop-up at any width.
+        import('/static/concierge_sidebar.js').then(function (m) { m.mountSidebar(root, api.sidebar); }).catch(function () {});
         timing('panel.mount-end');
         return api;
       })

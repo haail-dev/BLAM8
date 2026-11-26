@@ -344,13 +344,16 @@
     #cz-modal #cz-root .cz-settings-launch { display: none; }
     #voice-live-root .cz-voice-settings, #voice-gptlive-root .cz-voice-settings {
       position: absolute; top: max(0.9rem, env(safe-area-inset-top)); left: 1rem; z-index: 5;
+      display: inline-flex;
+    }
+    #voice-live-root .cz-voice-settings, #voice-gptlive-root .cz-voice-settings, .cz-voice-side-next {
       width: 2.75rem; height: 2.75rem; padding: 0; border: 1px solid rgba(148,163,184,.45);
       border-radius: 9999px; background: rgba(226,232,240,.08); color: #e2e8f0;
-      display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+      align-items: center; justify-content: center; cursor: pointer;
       -webkit-tap-highlight-color: transparent; touch-action: manipulation;
     }
     #voice-live-root .cz-voice-settings svg, #voice-gptlive-root .cz-voice-settings svg { display: block; width: 1.4rem; height: 1.4rem; flex: none; }
-    #voice-live-root .cz-voice-settings:focus-visible, #voice-gptlive-root .cz-voice-settings:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+    #voice-live-root .cz-voice-settings:focus-visible, #voice-gptlive-root .cz-voice-settings:focus-visible, .cz-voice-side-next:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
     .cz-set-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
     .cz-set-title { font-weight: 600; font-size: 1rem; color: rgb(var(--c-tx-navy)); }
     .cz-set-x { width: 2.25rem; height: 2.25rem; display: inline-flex; align-items: center; justify-content: center;

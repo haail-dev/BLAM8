@@ -26,7 +26,7 @@ def test_a_phone_gets_a_snapping_two_page_strip_and_the_column_is_its_second_hal
     assert ".cz-pager.cz-pager-on>#cz-root{flex:0 0 100%;width:100%;max-width:none;margin:0;min-width:0;scroll-snap-align:start;scroll-snap-stop:always}" in SIDE
     assert ".cz-pager.cz-pager-on>.cz-side{display:flex;position:static;flex:0 0 100%;" in SIDE and "scroll-snap-stop:always}" in SIDE
     assert "(on ? pager : root).appendChild(col);" in SIDE
-    assert "view.matchMedia('(max-width:' + PAGER_PX + 'px)')" in SIDE
+    assert "view.matchMedia('(max-width:' + (inModal ? 767 : PAGER_PX) + 'px)')" in SIDE
 
 
 def test_two_ways_across_and_the_strip_slides_when_something_opens_in_the_column():
@@ -59,10 +59,10 @@ def test_the_column_replay_passes():
 def test_the_pop_up_a_phone_opens_gets_the_strip_and_the_column_too():
     modal = PANEL[PANEL.index("  // ── the modal frame (every other app page)"):]
     assert "strip.id = 'cz-pager'; strip.className = 'cz-pager';" in modal and "while (slot.firstChild) strip.appendChild(slot.firstChild);" in modal
-    assert "if (window.matchMedia('(max-width: 767px)').matches) {" in modal
     assert "import('/static/concierge_sidebar.js').then(function (m) { m.mountSidebar(root, api.sidebar); })" in modal
     assert "if (strip) strip.scrollLeft = 0;" in modal                       # it opens on the Concierge
-    # the page frame still mounts it for a computer or a touch device; the pop-up on a computer still has none
+    # Both entry points provide the live side panel. The normal wide pop-up keeps its single column.
+    assert "if (!inModal) root.classList.add('cz-has-side');" in SIDE
     assert PANEL.count("import('/static/concierge_sidebar.js')") == 2
 
 
@@ -72,7 +72,7 @@ def test_over_the_live_voice_screen_the_column_is_a_panel_on_top_with_a_swipe():
     assert "if (voiceUp()) { floatSide(true); sideOverVoice(true); return; }" in SIDE   # reveal() brings the panel in, it does not slide the strip under the voice screen
     assert "if (Math.abs(dx) < Math.abs(dy) * 1.2) { drag = null; return; }" in SIDE   # mostly vertical is a scroll, never a pan
     assert "target = dx < 0 ? 1 : 0;" in SIDE and "if (target === 1) reveal(); else sideOverVoice(false);" in SIDE
-    assert "if (voiceUp()) sideOverVoice(false); else slideTo(0);" in SIDE
+    assert "if (voiceUp()) backToVoice(); else slideTo(0);" in SIDE
     assert "body.classList.toggle('cz-pager-body', on)" in SIDE
     # a card opened from the Waiting box shows in the column wherever one exists (a phone included), not at the foot of the voice screen
     assert "if (held._czColumn && sideHost && sideHost.focusable()) {" in PANEL

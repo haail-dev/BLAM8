@@ -303,7 +303,8 @@ t.rows(wb)[1].click(); assert.deepEqual(t.state.reviewed.map((x) => x.proposal_i
 // 9c. over the live voice screen the column is a panel on top (Kris 2026-10-16): a swipe left brings it in, a swipe right puts it away
 {
   const bodyOn = new Set(['voice-live-open']), handlers = {}, slid = [];
-  const body = { classList: { toggle: (c, on) => (on ? bodyOn.add(c) : bodyOn.delete(c)), contains: (c) => bodyOn.has(c) }, appendChild() {} };
+  const body = new El('body');
+  body.classList = { toggle: (c, on) => (on ? bodyOn.add(c) : bodyOn.delete(c)), contains: (c) => bodyOn.has(c) };
   const pagerV = new El('div');
   pagerV.classList = { toggle() {}, add() {} }; pagerV.scrollWidth = 800; pagerV.clientWidth = 400; pagerV.scrollLeft = 0; pagerV.scrollTo = (o) => slid.push(o.left);
   const phoneV = { ...doc, body, addEventListener: (t, f) => { handlers[t] = f; }, getElementById: (id) => (id === 'cz-pager' ? pagerV : null),
@@ -312,6 +313,14 @@ t.rows(wb)[1].click(); assert.deepEqual(t.state.reviewed.map((x) => x.proposal_i
   const apiV = { tasks: () => [], waiting: () => [], refused: () => ({}), onChange() {}, host: (h) => { host.h = h; }, focusTask() {}, review() {} };
   const sbV = mountSidebar(rootV, apiV, phoneV);
   assert.ok(bodyOn.has('cz-pager-body'));                                                // voice swipe navigation is enabled
+  const next = body.all(c => c.className === 'cz-voice-side-next')[0];
+  next.click();
+  assert.ok(bodyOn.has('cz-voice-side'));
+  handlers.keydown({key: 'ArrowLeft', preventDefault() {}});
+  assert.ok(!bodyOn.has('cz-voice-side'));
+  handlers.keydown({key: 'ArrowRight', preventDefault() {}});
+  assert.ok(bodyOn.has('cz-voice-side'));
+  sbV.node.all(c => c.className === 'cz-side-home')[0].click();
   const swipe = (x1, y1, x2, y2) => { handlers.touchstart({ touches: [{ clientX: x1, clientY: y1 }] }); handlers.touchend({ changedTouches: [{ clientX: x2, clientY: y2 }] }); };
   swipe(300, 400, 120, 410);                                                             // a swipe left
   assert.ok(bodyOn.has('cz-voice-side')); assert.deepEqual(slid, []);                    // a panel over the voice screen, not a slide of the strip

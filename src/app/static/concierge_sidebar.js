@@ -114,6 +114,8 @@ export var CSS = '@media (min-width:' + WIDE_PX + 'px) and (hover:hover) and (po
   + VOICE_WATER.map(function (sel) { return PHONE_VOICE + sel; }).join(',') + '{width:calc(2 * var(--cz-w,100vw)) !important;max-width:none !important}'
   + '.cz-side-over>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}'
   + '.cz-side-home{display:none}'
+  + 'body>.cz-voice-side-next{display:none;position:fixed;z-index:92;top:auto;left:auto;right:max(1rem,env(safe-area-inset-right));bottom:max(1rem,env(safe-area-inset-bottom));font-size:1.4rem;line-height:1}'
+  + 'body.voice-live-open:not(.cz-voice-side)>.cz-voice-side-next{display:inline-flex}'
   + '.cz-pager-on>.cz-side>.cz-side-home{display:block;flex:none;align-self:flex-start;padding:0;border:0;background:none;cursor:pointer;font:inherit;font-size:.75rem;font-weight:600;color:rgb(var(--c-tx-brand,37 99 235))}';
 
 export function ageOf(then, now) {
@@ -181,12 +183,14 @@ export function mountSidebar(root, api, doc) {
     fetchJson: function (url) { return fetch(url, { credentials: 'same-origin' }).then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); }); } });
   var home = el('button', 'cz-side-home', '\u2039 Concierge'); home.type = 'button'; col.appendChild(home);
   [openBox, status.boxes[0], waitBox, tasksBox, status.boxes[1], status.boxes[2], status.boxes[3], status.boxes[4], status.boxes[5]].forEach(function (b) { col.appendChild(b.node); });
-  root.appendChild(col); root.classList.add('cz-has-side');
+  var inModal = !!(root.closest && root.closest('#cz-modal'));
+  root.appendChild(col);
+  if (!inModal) root.classList.add('cz-has-side');
   // The phone strip: concierge.html's #cz-pager holds the panel and, on a phone, the column. Neither exists in the unit tests' fake DOM.
   var view = doc.defaultView || (typeof window !== 'undefined' ? window : null);
-  var mq = view && view.matchMedia ? view.matchMedia('(min-width:' + WIDE_PX + 'px) and (hover:hover) and (pointer:fine)') : null;
+  var mq = view && view.matchMedia ? view.matchMedia(inModal ? 'not all' : '(min-width:' + WIDE_PX + 'px) and (hover:hover) and (pointer:fine)') : null;
   var pager = (doc.getElementById && doc.getElementById('cz-pager')) || null;
-  var pmq = pager && view && view.matchMedia ? view.matchMedia('(max-width:' + PAGER_PX + 'px)') : null;
+  var pmq = pager && view && view.matchMedia ? view.matchMedia('(max-width:' + (inModal ? 767 : PAGER_PX) + 'px)') : null;
   var pagerOn = false, revealed = false, loaded = false;
   // The column is on screen: wide window, or the strip's right half has been shown. Its reads wait until then.
   function visible() { return pagerOn ? revealed : (!mq || mq.matches); }
@@ -220,6 +224,18 @@ export function mountSidebar(root, api, doc) {
   }
   // Over the live voice screen the column is a panel on top, not the strip's second half.
   var body = doc.body || null;
+  var next = el('button', 'cz-voice-side-next', '\u2192');
+  next.type = 'button';
+  next.title = 'Open Concierge side panel';
+  next.setAttribute('aria-label', next.title);
+  if (pager && body && body.appendChild) body.appendChild(next);
+  function openVoiceSide() {
+    if (!voiceUp() || !pager) return;
+    setPager(true);
+    reveal();
+    if (home.focus) home.focus({ preventScroll: true });
+  }
+  next.addEventListener('click', openVoiceSide);
   function voiceUp() { return !!(body && body.classList && body.classList.contains && body.classList.contains('voice-live-open')); }
   // --cz-pan: 0 the voice screen, 1 the column. A finger sets it while dragging; otherwise it glides to 0 or 1. All of it is driven from here, in one
   // number, so the foreground and the column can never drift apart (CSS transitions would be one clock per element, and would replace the orb's own).
@@ -268,7 +284,11 @@ export function mountSidebar(root, api, doc) {
       (pagerOn && pager ? pager : root).appendChild(col);
     }
   }
-  home.addEventListener('click', function () { if (voiceUp()) sideOverVoice(false); else slideTo(0); });
+  function backToVoice() {
+    sideOverVoice(false);
+    if (next.focus) next.focus({ preventScroll: true });
+  }
+  home.addEventListener('click', function () { if (voiceUp()) backToVoice(); else slideTo(0); });
   // The voice screen and the column are one canvas twice the phone's width: a finger drags it, it follows, and on release it settles on whichever half
   // is nearer (or the way it was flicked). Mostly-vertical movement is a scroll and is left alone; a tap or a press never gets this far.
   var drag = null;
@@ -291,6 +311,12 @@ export function mountSidebar(root, api, doc) {
     if (target === 1) reveal(); else sideOverVoice(false);
   }
   if (doc.addEventListener) {
+    doc.addEventListener('keydown', function (e) {
+      if (!voiceUp() || !pager || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+      if (e.target && e.target.closest && e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="slider"],[role="tablist"],[role="dialog"]')) return;
+      if (e.key === 'ArrowRight' && !sideOpen()) { e.preventDefault(); openVoiceSide(); }
+      else if (e.key === 'ArrowLeft' && sideOpen()) { e.preventDefault(); backToVoice(); }
+    });
     doc.addEventListener('touchstart', function (e) {
       var t = touchOf(e, 'touches');
       drag = t && pagerOn && voiceUp() && (!e.touches || e.touches.length === 1)
@@ -314,7 +340,10 @@ export function mountSidebar(root, api, doc) {
   }
   // The panel does not outlast the voice screen it slid over.
   if (typeof MutationObserver !== 'undefined' && body && body.nodeType) {
-    new MutationObserver(function () { if (voiceUp()) floatSide(true); else { sideOverVoice(false, true); floatSide(false); } }).observe(body, { attributes: true, attributeFilter: ['class'] });
+    new MutationObserver(function () {
+      if (pmq && !pmq.matches && (!voiceUp() || (!sideOpen() && !body.classList.contains('cz-panning')))) setPager(false);
+      if (voiceUp()) floatSide(true); else { sideOverVoice(false, true); floatSide(false); }
+    }).observe(body, { attributes: true, attributeFilter: ['class'] });
   }
   if (pager) {
     pager.addEventListener('scroll', function () { if (pagerOn && pager.scrollLeft > 8 && !revealed) { revealed = true; ensureLoaded(); } }, { passive: true });
