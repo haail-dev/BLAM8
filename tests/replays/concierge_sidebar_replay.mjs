@@ -314,6 +314,8 @@ t.rows(wb)[1].click(); assert.deepEqual(t.state.reviewed.map((x) => x.proposal_i
   const sbV = mountSidebar(rootV, apiV, phoneV);
   assert.ok(bodyOn.has('cz-pager-body'));                                                // voice swipe navigation is enabled
   const next = body.all(c => c.className === 'cz-voice-side-next')[0];
+  assert.equal(next.hidden, true); next.click(); assert.ok(!bodyOn.has('cz-voice-side'));
+  apiV.waiting = () => [{summary: 'Review this draft'}]; sbV.paint(); assert.equal(next.hidden, false);
   next.click();
   assert.ok(bodyOn.has('cz-voice-side'));
   handlers.keydown({key: 'ArrowLeft', preventDefault() {}});

@@ -32,6 +32,7 @@ SOURCE_CAPABILITIES = {
     'src/app/templates/app/crm_fields.html': 'crm',
     'src/app/templates/app/crm_settings.html': 'crm',
     'src/app/templates/app/diary.html': 'scheduling',
+    'src/app/templates/app/draft_review.html': 'email',
     'src/app/guided_setup.py': 'product.help',
     'src/app/diary_discovery.py': 'product.help',
     'src/app/diary_profile.py': 'product.help',
