@@ -46,16 +46,15 @@ def test_the_voice_reaches_the_pond_through_the_signals_the_mist_already_reads()
 def test_right_pager_page_uses_perimeter_sources_while_the_voice_page_keeps_the_orb_source():
     assert "classList.contains('cz-pager-body')" in POND
     assert "getPropertyValue('--cz-pan')" in POND and "> 0.5" in POND
-    assert "const cx = mic.x + host.clientWidth, radius = host.clientWidth * 0.43" in POND
+    assert "const cx = host.clientWidth / 2, radius = host.clientWidth * 0.43" in POND
     assert "CFG.perimeterPoints" in POND and "water.addStone(cx + Math.cos(angle) * radius" in POND
     assert "water.addStone(mic.x, mic.y," in POND
 
 
-def test_the_right_page_has_the_centered_stateful_blam8_mark():
+def test_the_cards_share_the_voice_backdrop_and_only_the_orb_has_a_mark():
     assert "BLAM8_MOTION_MARK" in SCREEN and "blam8-mark-motion.js" in SCREEN
-    assert "replace('vl-ghost-mark','vl-side-mark')" in SCREEN
-    assert "replaceAll('vl-motion-gear-mask','vl-motion-gear-mask-side')" in SCREEN
-    assert "left:150%; top:50%" in SCREEN and ".vl-side-mark .vl-gear" in SCREEN
+    assert "vl-side-mark" not in SCREEN
+    assert "lakeFromCanvas: true" not in POND
     for mode in ("user", "thinking", "agent"):
         assert f'data-mist-mode="{mode}"' in SCREEN
 

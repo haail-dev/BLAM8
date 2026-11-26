@@ -67,7 +67,6 @@ export function createPond(host, orb, options = {}) {
     // added to the screen's root beside the stage, and a press on them is a press on the screen like any other.
     surface: host.parentElement || host,
     canvasClass: 'vl-pond',
-    lakeFromCanvas: true,   // on a phone the lake is laid out as wide as the page you can swipe across to (concierge_sidebar.js), not just the stage
     mount(canvas) { const ambient = host.querySelector('.vl-ambient'); host.insertBefore(canvas, ambient ? ambient.nextSibling : host.firstChild); },
     ignore: target => Boolean(target.closest?.('.vl-end')),   // ending the conversation is not a place to drop a stone
     keep: keepClear,
@@ -85,7 +84,7 @@ export function createPond(host, orb, options = {}) {
           const e = clamp(mic.env, 0, 1);
           const body = host.ownerDocument.body, rightPage = body?.classList.contains('cz-pager-body') && parseFloat(body.style.getPropertyValue('--cz-pan') || '0') > 0.5;
           if (rightPage) {
-            const cx = mic.x + host.clientWidth, radius = host.clientWidth * 0.43;
+            const cx = host.clientWidth / 2, radius = host.clientWidth * 0.43;
             const amp = CFG.perimeterAmp[0] + (CFG.perimeterAmp[1] - CFG.perimeterAmp[0]) * e;
             for (let n = 0; n < CFG.perimeterPoints; n++) {
               const angle = (Math.PI * 2 * n) / CFG.perimeterPoints;

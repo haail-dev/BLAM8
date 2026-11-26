@@ -51,7 +51,7 @@ def test_live_modes_keep_settings_and_center_without_extra_corner_brand():
         assert not corner.find_all('img')
         assert corner.one('button').attrs['aria-label'] == 'Concierge settings'
         assert 'vl-orb' in source
-    assert 'vl-side-mark' in (ROOT / 'src/app/static/voice-gptlive.js').read_text(encoding='utf-8')
+    assert 'vl-side-mark' not in (ROOT / 'src/app/static/voice-gptlive.js').read_text(encoding='utf-8')
 
 
 def test_shared_glass_animation_visibility_and_fallback_replay():

@@ -23,7 +23,8 @@ Wide layouts retain their existing waiting shortcut and side-by-side column.
 
 In Live Concierge, the circular bottom-right arrow or the Right Arrow key opens
 the side page. The return control or Left Arrow key brings the voice screen
-back. The same controls work in the full page and the modal.
+back. The voice controls slide out as the cards slide in over the same stationary
+water and glow. The BLAM8 mark belongs to the voice orb. The same controls work in the full page and the modal.
 
 When the voice screen opens the mobile side page, the page content clears the
 iPhone safe areas on all four edges. Empty space in its transparent overlay
