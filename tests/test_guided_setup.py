@@ -82,10 +82,10 @@ def change(page,revision,patches):
         for k,v in p['fields'].items()]) for p in patches])]
 
 
-def turn(j,text,expected=200):
+def turn(j,text,expected=200,history=()):
     description=j.http.get('/app/setup/guide/state').json()
     response=j.http.post('/app/setup/guide/turn',json=dict(revision=j.state()['revision'],
-        stop=j.state()['guide']['current'],question=text,path=description['stop']['href'].split('#')[0],history=[]))
+        stop=j.state()['guide']['current'],question=text,path=description['stop']['href'].split('#')[0],history=list(history)))
     assert response.status_code==expected,response.text
     return response
 
@@ -710,6 +710,50 @@ def test_customer_field_gets_its_demanded_choices_as_usual_settings_and_saves(gu
     assert line['sources']['probe_behaviour']['reference']=='Usual setting'
 
 
+@pytest.mark.parametrize('already_on_explanation',[False,True])
+def test_saved_followup_days_advance_to_held_stages(guide_journey,monkeypatch,already_on_explanation):
+    j=guide_journey
+    j.move('crm_settings/quiet_days')
+    model(monkeypatch,change('crm_settings',0,[dict(name='stage',fields=dict(name='Quote sent'))]))
+    assert turn(j,'Track the Quote sent stage.').json()['stop']['id']=='crm_settings/quiet_days'
+    model(monkeypatch,change('crm_settings',1,[dict(fields=dict(key='quiet_days',value=7))]))
+    turn(j,'Flag a contact after seven days.')
+    if already_on_explanation:
+        assert j.guide_action('next').json()['stop']['id']=='explain.crm_settings/quiet_days'
+    card=j.row('tenant_config',j.tenant)['setup_cards']['crm_settings']
+    reminder=next(line for line in card['lines'] if line['name']=='setting')
+    accept_current(j,'crm_settings',[reminder['id']])
+    assert j.row('tenant_config',j.tenant)['crm_quiet_days']==7
+    assert j.state()['guide']['current']=='crm_settings/stage'
+    stage=next(line for line in j.row('tenant_config',j.tenant)['setup_cards']['crm_settings']['lines'] if line['name']=='stage')
+    assert stage['status']=='held'
+    j.guide_action('refresh_preview')
+    accept_current(j,'crm_settings',[stage['id']])
+    assert j.query('select name from crm_stages where tenant_id=%s',j.tenant,all=True)==[('Quote sent',)]
+    assert j.row('tenant_config',j.tenant)['crm_quiet_days']==7
+
+
+def test_complete_progress_opens_diary_and_records_review(guide_journey):
+    j=guide_journey
+    j.move('dependants/ladder')
+    assert j.http.get('/app/setup/guide/state').json()['finish_progress']
+    result=j.guide_action('finish_progress').json()
+    assert result['stop']['id']==guided_setup.DIARIES_STOP
+    assert result['guide']['decisions']['dependants/ladder']=='reviewed_unchanged'
+    assert j.state()['reviews']['records.progress']['state']=='reviewed'
+
+
+def test_pending_stage_requires_review_before_diary(guide_journey,monkeypatch):
+    j=guide_journey
+    j.move('crm_settings/stage')
+    model(monkeypatch,change('crm_settings',0,[dict(name='stage',fields=dict(name='Enquiry'))]))
+    turn(j,'Track Enquiry.')
+    j.move('dependants/ladder')
+    assert not j.http.get('/app/setup/guide/state').json()['finish_progress']
+    j.guide_action('finish_progress',expected=400)
+    assert 'records.progress' not in j.state()['reviews']
+
+
 def test_leave_as_it_is_turn_keeps_the_assistant_reply_without_an_error(guide_journey,monkeypatch):
     j=guide_journey;j.move('crm_settings/quiet_days')
     proposal=[dict(page='crm_settings',revision=0,changes=[],considered=[dict(key='crm_settings/quiet_days',state='left_unchanged')])]
@@ -828,6 +872,27 @@ def test_next_past_absent_required_answer_cannot_mark_section_reviewed_or_finish
     assert j.state()['reviews']['diary.activities']['state']=='deferred'
 
 
+def test_reopen_older_record_field_review_and_answer_missed_entity_questions(guide_journey):
+    j=guide_journey
+    context=onboarding_state.load(j.ctx)
+    state=deepcopy(context['state'])
+    state['capabilities'].update(record_information='needed',related_records='off')
+    state['guide']['current']='relevance.records.progress'
+    state['guide']['decisions'].update({'review.records.information':'reviewed','crm_fields/contact_field':'applied'})
+    state['reviews']['records.information']=dict(state='reviewed',at=onboarding_state.stamp(),by=j.ctx.user_id)
+    onboarding_state.save(j.ctx,context['state'],state)
+    review=j.guide_action('reopen_record_fields').json()
+    assert review['stop']['href']=='/app/crm/fields'
+    assert {s['id'] for s in review['unresolved']}=={'need.company_fields','need.deal_fields'}
+    j.guide_action('review',expected=400)
+    j.guide_action('revisit','need.company_fields')
+    j.guide_action('need','deferred')
+    review=j.guide_action('need','off').json()
+    assert review['field_review'] and not review['review_blocked']
+    assert j.guide_action('review').json()['stop']['id']=='relevance.records.progress'
+    assert j.state()['guide']['decisions']['crm_fields/contact_field']=='applied'
+
+
 def test_expired_subscription_blocks_new_guide_reads_answers_and_positions(journey,monkeypatch):
     from app import auth,trial
     from app.config import settings
@@ -842,6 +907,48 @@ def test_expired_subscription_blocks_new_guide_reads_answers_and_positions(journ
         r=j.http.post('/app/setup/guide'+path,json={},follow_redirects=False)
         assert r.status_code==303 and r.headers['location']=='/billing/plans'
     assert j.state()['revision']==0
+
+
+def test_confirmed_service_recap_creates_two_reviewable_lines(guide_journey, monkeypatch):
+    from app import setup_context
+    j = guide_journey
+    j.move('diary_settings/service')
+    packages = [('Half-day coverage', 240, 750), ('Full-day coverage', 480, 1200)]
+    recap = 'Half-day coverage is four hours for £750. Full-day coverage is eight hours for £1,200. Both reserve the whole date. Shall I propose both?'
+    monkeypatch.setattr(db, 'knowledge_source_texts', lambda *a, **k: [dict(source='Coverage', text=recap.split(' Shall')[0])])
+    pack = routes._pack(j.ctx, onboarding_state.load(j.ctx))
+    source = next(s['id'] for s in setup_context.model_view(pack, 'diary')['signals'] if s['kind'] == 'source_text')
+    changes = change('diary_settings', 0, [
+        dict(name='service', fields=dict(name=name, minutes=minutes, price=price, timing='day', days=[]))
+        for name, minutes, price in packages])
+    for row in changes[0]['changes']:
+        for item in row['fields']:
+            if item['field'] in ('price', 'minutes'):
+                item.update(source='inferred', reference='Saved coverage note', evidence=[source])
+            elif item['field'] == 'days':
+                item.update(source='assumed', reference='No weekdays specified')
+    model(monkeypatch, changes)
+    result = turn(j, 'Yes', history=[dict(role='assistant', content=recap)]).json()
+    assert 'ready to review' in result['reply']
+    assert not j.row('scheduling_config', j.tenant)
+    lines = j.row('tenant_config', j.tenant)['setup_cards']['diary_settings']['lines']
+    assert len(lines) == 2 and all(l['status'] == 'proposed' and 'days' not in l['fields'] for l in lines)
+    accept_current(j, 'diary_settings')
+    saved = j.row('scheduling_config', j.tenant)['service_types']
+    assert [(s['name'], s['minutes'], float(s['price']), s['timing']) for s in saved] == [
+        (name, minutes, price, 'day') for name, minutes, price in packages]
+
+
+def test_service_confirmation_asks_for_unstated_price(guide_journey, monkeypatch):
+    j = guide_journey
+    j.move('diary_settings/service')
+    changes = change('diary_settings', 0, [dict(name='service', fields=dict(name='Visit', minutes=60, timing='time', price=40))])
+    changes[0]['changes'][0]['fields'][-1].update(source='assumed', reference='Typical price')
+    model(monkeypatch, changes, reply='Your service is ready.')
+    result = turn(j, 'Yes', history=[dict(role='assistant', content='One hour for a Visit. Shall I propose it?')]).json()
+    assert result['reply'] == 'What price should I show for Visit?'
+    assert 'diary_settings' not in (j.row('tenant_config', j.tenant).get('setup_cards') or {})
+    assert not j.row('scheduling_config', j.tenant)
 
 
 def test_service_edits_keep_different_activity_answers_isolated(guide_journey,monkeypatch):

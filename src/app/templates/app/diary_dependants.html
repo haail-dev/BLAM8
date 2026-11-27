@@ -143,6 +143,7 @@
         {% if not onboarding_progress %}{% include "app/_help_hint.html" %}{% endif %}
       </div>
       <p class="text-sm text-slate-500">Track people, places or items linked to a customer. Choose the details to keep for each.</p>
+      <div data-pending-rows="group field" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
       <div id="groups">
       {% for g in groups %}{{ group_card(g, loop.index0) }}{% endfor %}
       </div>
@@ -170,6 +171,7 @@
         <h2 class="font-semibold text-navy">Progress</h2>
         <p class="text-sm text-slate-500 mt-1">Add stages for customers or their records. Customers can see their stage in the portal.</p>
       </div>
+      <div data-pending-rows="ladder" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
       <div id="ladders">
         {% for l in ladders %}
         <div class="rounded-lg border border-slate-200 dep-ladder">

@@ -11,7 +11,11 @@
 .guided-progress{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--guided-muted);margin-bottom:.5rem}
 .guided-title{font-size:1rem;font-weight:650;margin-bottom:.5rem}
 .guided-section{font-size:.8rem;color:var(--guided-muted);margin-bottom:.35rem}
-.guided-context{color:var(--guided-muted);margin-bottom:1rem}
+.guided-title:has(+ .guided-context){margin-bottom:.25rem}
+.guided-context{color:var(--guided-muted);margin-bottom:1.25rem}
+.guided-answer-field{display:block;margin-top:.875rem}
+.guided-covered{color:#047857}
+[data-theme="dark"] .guided-covered{color:#6ee7b7}
 .guided-why,.guided-status{font-size:.8rem;color:var(--guided-muted);margin-top:.65rem}
 .guided-status:empty{display:none}
 .guided-status:not(:empty){padding:.65rem;border-left:3px solid #3b82f6;background:rgb(59 130 246 / .07);border-radius:0 .4rem .4rem 0}

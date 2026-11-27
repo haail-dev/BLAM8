@@ -32,8 +32,21 @@
   }
 </style>
 <div class="record-fields max-w-4xl mx-auto p-6 space-y-5">
+  <template id="saved-record-field-review">
+    {% for entity, title, blurb in entities %}
+    <section class="mb-2">
+      <strong>{{ title }}</strong>
+      {% for field in by_entity[entity] %}
+      <p data-saved-field>{{ field.label }} · {{ 'required' if field.required else 'optional' }} · {{ {'passive':'never ask','probe_once':'ask once','probe_persistent':'ask up to three times'}.get(field.probe_behaviour, 'never ask') }}{% if not field.staff_can_see %} · private{% endif %}</p>
+      {% else %}
+      <p>No saved fields</p>
+      {% endfor %}
+      {% if entity != 'contact' %}<p data-review-need="{{ entity }}_fields"></p>{% endif %}
+    </section>
+    {% endfor %}
+  </template>
   {% if not onboarding_progress %}<div class="flex justify-end">{% include "app/_help_hint.html" %}</div>{% endif %}
-  <p class="text-sm text-slate-500 max-w-2xl">Choose what to track from emails. A hint tells BLAM8 what to look for. You review uncertain matches and choose whether to ask for missing details.</p>
+  <p class="text-sm text-slate-500 max-w-2xl">Add a field for a detail you use, like a contact’s phone number or a deal’s budget. Choose whether BLAM8 should ask for it if it’s missing. Leave any section you don’t use empty.</p>
 
   {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">{% if added %}{{ added }} field{{ '' if added == '1' else 's' }} added from your assistant's card.{% else %}Saved.{% endif %}</div>{% endif %}
   {% if msg == 'deleted' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Field removed.</div>{% endif %}

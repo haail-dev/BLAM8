@@ -164,6 +164,7 @@
   var api=window.Blam8DeviceSync={
     ready:null,
     isReady:function(){return initialized && !conflict && !applying;},
+    hasConflict:function(){return conflict;},
     isRestoring:function(){return applying;},
     isFlow:function(){return flow;},
     state:function(){return states[channel()] || {payload:{},revision:0};},
@@ -172,26 +173,31 @@
     clear:function(){return write(channel(),{messages:[]});},
     flush:function(){clearTimeout(timer);return serial(async function(){await api.ready;await flushNow();});},
     refresh:refresh,
-    request:async function(url,options){
-      await api.flush();
-      if (conflict) throw Error('Reload the shared session before continuing.');
-      var path=new URL(url,location.href).pathname;
-      var name=path.indexOf('/onboarding/')===0 || path==='/concierge/onboard' ? 'flow' : flow && (path==='/concierge/help' || path.indexOf('/concierge/setup-cards/')===0) ? 'flow' : 'assistant';
-      if (!states[name]) states[name]=await read(name);
-      if(name==='flow') await serial(async function(){
-        if(JSON.stringify(capture())!==JSON.stringify(states.flow.payload.form || {})){dirty=true;await flushNow();}
-      });
-      var operation=own(options.syncOperation || uuid());
-      options=Object.assign({},options,{headers:Object.assign({},options.headers,{
-        'X-CSRF-Token':csrf(),'X-Blam8-Operation':operation,
-        'X-Blam8-Revision':String(states[name].revision),'X-Blam8-Channel':name,
-        'X-Blam8-Automatic':api.automatic ? '1' : '0'})});
-      var result=await fetch(url,options);
-      if (result.headers.get('X-Blam8-Revision')) states[name]=await read(name);
-      if (result.status===409 && !api.automatic && result.headers.get('X-Blam8-Review-Validation')!=='1') { conflict=true; warn('This work changed or is running on another device. Reload before continuing.'); }
-      return result;
+    request:function(url,options){
+      return serial(function(){return syncedRequest(url,options);});
     }
   };
+  async function syncedRequest(url,options){
+    await api.ready;
+    clearTimeout(timer);
+    await flushNow();
+    if (conflict) throw Error('Reload the shared session before continuing.');
+    var path=new URL(url,location.href).pathname;
+    var name=path.indexOf('/onboarding/')===0 || path==='/concierge/onboard' ? 'flow' : flow && (path==='/concierge/help' || path.indexOf('/concierge/setup-cards/')===0) ? 'flow' : 'assistant';
+    if (!states[name]) states[name]=await read(name);
+    if(name==='flow' && JSON.stringify(capture())!==JSON.stringify(states.flow.payload.form || {})){dirty=true;await flushNow();}
+    var operation=own(options.syncOperation || uuid());
+    options=Object.assign({},options,{headers:Object.assign({},options.headers,{
+      'X-CSRF-Token':csrf(),'X-Blam8-Operation':operation,
+      'X-Blam8-Revision':String(states[name].revision),'X-Blam8-Channel':name,
+      'X-Blam8-Automatic':api.automatic ? '1' : '0'})});
+    var result=await fetch(url,options);
+    if (result.headers.get('X-Blam8-Revision')) states[name]=await read(name);
+    // Setup-card validation can reject a proposal after device sync has completed its own claim.
+    var cardReceipt=path.indexOf('/concierge/setup-cards/')===0 && result.headers.has('X-Blam8-Revision');
+    if (result.status===409 && !cardReceipt && !api.automatic && result.headers.get('X-Blam8-Review-Validation')!=='1') { conflict=true; warn('This work changed or is running on another device. Reload before continuing.'); }
+    return result;
+  }
   api.ready=(async function(){
     if (document.readyState==='loading') await new Promise(function(resolve){document.addEventListener('DOMContentLoaded',resolve,{once:true});});
     flow=flow || guided || (tuningPaths.indexOf(here)!==-1 && !!document.querySelector('[data-setup-strip]'));

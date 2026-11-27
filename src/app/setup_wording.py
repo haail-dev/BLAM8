@@ -10,6 +10,13 @@ the owner or their saved material supplied.
 # (page, row, field) -> (label, question). A question of None means the field is
 # never asked on its own; it is shown with the usual setting.
 WORDS = {
+    ('diary_settings', 'service', 'name'): ('Service name', 'What should I call this service?'),
+    ('diary_settings', 'service', 'minutes'): ('Duration', 'How long does {label} last?'),
+    ('diary_settings', 'service', 'price'): ('Price', 'What price should I show for {label}?'),
+    ('diary_settings', 'service', 'timing'): ('Booking slot', 'Does {label} reserve a specific time, half a day or the whole day?'),
+    ('diary_settings', 'service', 'resource'): ('Resource', 'Whose time or which resource does {label} reserve?'),
+    ('diary_settings', 'service', 'days'): ('Available days', 'Which days can customers book {label}?'),
+    ('diary_settings', 'service', 'at_once'): ('Capacity', 'How many bookings for {label} can run at once?'),
     ('booking_details', 'field', 'label'): ('Detail', 'What detail do you need?'),
     ('booking_details', 'field', 'required'): ('Needed before going ahead',
         'Would you refuse to go ahead without {label}?'),

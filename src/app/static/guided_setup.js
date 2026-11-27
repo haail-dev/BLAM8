@@ -10,7 +10,7 @@
     'diary.time':'Set the times and capacity available for bookings. These rules apply only when booking is enabled.',
     'diary.conditions':'Choose what customers must provide before a booking can go ahead, such as answers or documents.',
     'records.relationships':'Keep separate records for people, places or items linked to a customer. Give each type a name that fits your business.',
-    'records.information':'Choose the details to keep on each record, and when the assistant should ask for or confirm them.',
+    'records.information':'A field is a detail you want to keep, such as a phone number. Tell me what you collect and whether I should ask if it’s missing. You can leave a record type empty.',
     'records.progress':'Choose whether to track stages for customers or their related records, and what should happen when a stage changes.',
     'charges.responsibility':'Choose who is responsible for charges and which business details appear on quotes and invoices.',
     'charges.terms':'Review your charges, payment deadlines and any deposit rules.',
@@ -31,6 +31,10 @@
       var old=!!item.dataset.bcRole && item.dataset.guideStop!==(state&&state.stop?state.stop.id:'') &&
         item.dataset.guideStop!==(state&&state.stop?state.stop.decision_id:undefined);
       item.classList.toggle('guided-earlier',old);if(old)earlier++;
+    });
+    messages.querySelectorAll(':scope > .bc-setup-applied').forEach(function(record){
+      record.classList.add('guided-earlier');
+      earlier++;
     });
     if(historyButton)historyButton.hidden=!earlier;
   }
@@ -109,7 +113,10 @@
     var composer=Array.from(document.querySelectorAll('#bc-input,#bc-form button[type="submit"]')).map(function(e){var prior=e.disabled;e.disabled=true;return [e,prior];});
     try{
       var body={revision:state.revision,stop:state.stop?state.stop.id:'intro',operation:operation};if(choice)body.choice=choice;
-      state=await request('/action',body);clear();if(panel)await panel.load();
+      state=operation==='answer'
+        ? await request('/answer',{revision:state.revision,stop:state.stop.id,state:'answered',value:choice,advance:true})
+        : await request('/action',body);
+      clear();if(panel)await panel.load();
       if(operation==='knowledge_use_updated'||operation==='knowledge_keep_earlier')revealed=null;
       paint();
       if(operation==='pause'&&window.blam8ConciergeClose)window.blam8ConciergeClose();
@@ -139,7 +146,9 @@
         document.getElementById('record-type-choice').action='/app/setup/guide/related-records?revision='+state.revision;
       } else submit.removeAttribute('formaction');
     }
-    ensureHost();if(!host)return;host.replaceChildren();
+    ensureHost();if(!host)return;
+    var previousField=host.querySelector('.guided-answer-field .guided-direct-answer');
+    host.replaceChildren();
     var hasGuide=!!(state&&state.guide), running=active();
     document.body.classList.toggle('guided-running',running);
     arrange();
@@ -155,8 +164,11 @@
     var sectionNumber=state.section?{A:1,B:2,C:3}[state.section.badge]:null;
     host.appendChild(el('p',state.section?state.section.group+(sectionNumber?' · Section '+sectionNumber+' of 3':''):'Guided setup','guided-progress'));
     if(state.section&&state.section.label!==stop.title)host.appendChild(el('p',state.section.label,'guided-section'));
-    host.appendChild(el('p',stop.title,'guided-title'));
-    if(sectionContext[stop.substep]&&DISCOVERY.indexOf(stop.kind)===-1)host.appendChild(el('p',sectionContext[stop.substep],'guided-context'));
+    var fieldSnapshot=state.field_review && document.getElementById('saved-record-field-review');
+    var emptyFields=fieldSnapshot && !fieldSnapshot.content.querySelector('[data-saved-field]');
+    host.appendChild(el('p',emptyFields?'Choose what to track':stop.title,'guided-title'));
+    var contextText=stop.description || (['relevance','fact'].includes(stop.kind) && sectionContext[stop.substep]);
+    if(contextText)host.appendChild(el('p',contextText,'guided-context'));
     var viewPage=button(document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page',function(){
       document.body.classList.toggle('guided-page-expanded');sheet(null);
       viewPage.textContent=document.body.classList.contains('guided-page-expanded')?'Return to conversation':'Expand page';
@@ -169,15 +181,26 @@
     var reviewingExample=stop.question_id==='diary.example' && state.discovery && state.discovery.prefill && state.discovery.prefill.value!=null;
     if(pricingQuestion)host.appendChild(el('p',prices.saved?'Review your saved prices':'Do these prices from your Knowledge note still apply?'));
     else if(reviewingExample)host.appendChild(el('p','Review your example entry'));
+    else if((stop.decision_id||stop.id)==='crm_settings/quiet_days' && decision==='applied'){
+      host.appendChild(el('p',state.guide.stages_first?'Your follow-up reminder is saved.':'Your follow-up reminder is saved. Next, review your pipeline stages.'));
+    }
+    else if(emptyFields){
+      host.appendChild(el('p','You haven’t saved any fields. Add one if there’s a detail you use, such as a phone number for a contact or a budget for a deal. You can also leave these forms empty.'));
+    }
     else if((!pending||stop.kind==='explanation')&&(!pinnedQuestion||decision==='applied'||decision==='cancelled'))host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?(stop.id==='crm_fields/contact_field'?'Your contact fields were saved. Next, review Companies.':'The displayed changes were saved. Next walks through the affected controls.'):
       decision==='cancelled'?'You left these suggestions. Next moves on without saving them.':pending?'Review your suggested changes, then choose what to save.':stop.question));
     if(stop.kind==='explanation'&&decision)host.appendChild(el('p',decision==='applied'?'The displayed changes were saved.':
       decision==='cancelled'?'You left these suggestions. The page shows its current settings.':
       decision==='partial'?'Some choices were saved and others left. Review their receipts in the setup record.':'','guided-why'));
     if(prices)host.appendChild(el('p',(prices.saved?'Your saved prices: ':'From Knowledge: ')+prices.text,'guided-why'));
-    (stop.kind==='fact'&&!pricingQuestion?state.answers||[]:[]).forEach(function(a){host.appendChild(el('p',
-      (a.provenance&&['knowledge_owner_review','about_you_owner_review'].indexOf(a.provenance.kind)!==-1?'Already covered — ':'Your answer — ')+
-      (typeof a.value==='boolean'?(a.value?'Yes':'No'):String(a.value)),'guided-why'));});
+    (stop.kind==='fact'&&!pricingQuestion?state.answers||[]:[]).forEach(function(a){
+      var covered=a.provenance&&['knowledge_owner_review','about_you_owner_review'].includes(a.provenance.kind);
+      var row=el('p',null,'guided-why');
+      if(covered)row.appendChild(el('span','Already covered','guided-covered'));
+      else row.append('Your answer');
+      row.append(' — '+(typeof a.value==='boolean'?(a.value?'Yes':'No'):(stop.choice_labels||{})[a.value]||String(a.value)));
+      host.appendChild(row);
+    });
     (state.knowledge_conflicts||[]).forEach(function(conflict){
       var box=el('section',null,'guided-knowledge-conflict');box.setAttribute('role','status');
       box.appendChild(el('p',conflict.message));
@@ -188,26 +211,22 @@
       if(conflict.candidate&&['answered','not_applicable'].indexOf(conflict.candidate.state)!==-1)box.appendChild(button('Use updated answer',function(){action('knowledge_use_updated',conflict.id);}));
       host.appendChild(box);
     });
-    if(stop.why&&!pending){var why=el('details',null,'guided-why');why.appendChild(el('summary','Why this matters'));why.appendChild(el('p',stop.why));host.appendChild(why);}
+    if(stop.why && stop.why!==contextText && !pending && !stop.why.startsWith('The owner ')){var why=el('details',null,'guided-why');why.appendChild(el('summary','Why this matters'));why.appendChild(el('p',stop.why));host.appendChild(why);}
     if(stop.kind==='fact'){
-      var direct=el('details'),summary=el('summary',pricingQuestion?'Review or edit prices':'Answer directly');direct.appendChild(summary);
+      var direct=el('label',pricingQuestion?'Review or edit prices':'Answer directly','guided-answer-field');
       var field;
       if(stop.answer_kind==='boolean'||stop.answer_kind==='choice'){
         field=el('select');var blank=el('option','Choose an answer');blank.value='';field.appendChild(blank);
         var choices=stop.answer_kind==='boolean'?['true','false']:stop.choices;
-        choices.forEach(function(value){var words={true:'Yes',false:'No',owner_arranges:'I arrange and confirm times',
-          review_booking_settings:'Review the assistant’s booking rules'};
+        choices.forEach(function(value){var words=stop.choice_labels||{true:'Yes',false:'No'};
           var option=el('option',words[value]||value);option.value=value;field.appendChild(option);});
-      }else{field=el('textarea');field.rows=2;field.maxLength=2000;
-        if(pricingQuestion){field.value=prices.text;direct.open=!prices.saved;}}
+      }else{field=el('textarea');field.rows=2;field.maxLength=2000;}
+      var savedAnswer=(state.answers||[]).find(function(answer){return answer.question===stop.question_id;});
+      var savedValue=savedAnswer?String(savedAnswer.value):pricingQuestion&&prices.saved?prices.text:'';
+      field.value=pricingQuestion?prices.text:savedValue;
+      field.dataset.key=JSON.stringify([stop.id,state.guide.scope_type,state.guide.scope_id,state.revision]);
+      if(previousField && previousField.dataset.key===field.dataset.key)field.value=previousField.value;
       field.setAttribute('aria-label',stop.question);field.className='guided-direct-answer';direct.appendChild(field);
-      direct.appendChild(button('Save and continue',async function(){
-        if(busy)return;var value=field.value;if(stop.answer_kind==='boolean'){if(!value){note('Choose Yes or No.');return;}value=value==='true';}
-        busy=true;controlsBusy(true);
-        try{state=await request('/answer',{revision:state.revision,stop:stop.id,state:'answered',value:value,advance:true});paint();navigate();}
-        catch(e){note(e.message+' Your direct answer is kept.');}
-        finally{busy=false;controlsBusy(false);}
-      }));
       host.appendChild(direct);
     }
     if(stop.kind==='fact'&&(state.scopes||[]).length>1){
@@ -229,22 +248,54 @@
       actions.appendChild(button('Not needed',function(){action(operation,'off');}));
       actions.appendChild(button('Decide later',function(){action(operation,'deferred');}));
     }else if(stop.kind==='review'){
-      (state.unresolved||[]).forEach(function(item){actions.appendChild(button('Review '+item.title,function(){action('revisit',item.id);}));});
-      if(!state.review_blocked)actions.appendChild(button('Continue - reviewed',function(){action('review');},true));
+      var savedFields=fieldSnapshot;
+      if(savedFields){
+        var summary=savedFields.content.cloneNode(true);
+        summary.querySelectorAll('[data-review-need]').forEach(function(row){
+          var choice=state.guide.decisions['need.'+row.dataset.reviewNeed];
+          row.textContent={needed:'Tracking requested',off:'Not needed',deferred:'Left for later'}[choice]||'Still to answer';
+        });
+        host.appendChild(summary);
+      }
+      (state.unresolved||[]).forEach(function(item){actions.appendChild(button(item.id==='need.company_fields'?'Choose whether to track companies':item.id==='need.deal_fields'?'Choose whether to track deals':'Review '+item.title,function(){action('revisit',item.id);}));});
+      if(!state.review_blocked && (!state.field_review || savedFields))actions.appendChild(button(state.field_review?'Continue to Progress and follow-up':'Continue - reviewed',function(){action('review');},true));
       else host.appendChild(el('p','Some decisions are still open. Revisit them or defer this section to continue.','guided-why'));
       actions.appendChild(button('Defer this section',function(){action('later');},state.review_blocked));
+    }else if(state.finish_progress){
+      if(state.draft&&drafting!==stop.id&&!busy)requestDraft(stop);
+      actions.appendChild(button('Continue to Diary',function(){
+        if(confirmDiscard('Continuing to Diary'))action('finish_progress');
+      },true));
+      host.appendChild(el('p','Continuing keeps your current progress settings and completes Records and workflows.','guided-why'));
+      secondary.appendChild(button('Review this section',function(){action('next');}));
     }else if(stop.kind==='finished'){
       actions.appendChild(button('Finish and open Home',function(){action('finish');},true));
     }else if(DISCOVERY.indexOf(stop.kind)!==-1){
       discovery(stop,actions,secondary);
     }else{
-      actions.appendChild(button('Next',function(){action('next');},!pending));
+      var nextLabel=(stop.decision_id||stop.id)==='crm_settings/quiet_days' && decision==='applied' && !state.guide.stages_first?'Next: Pipeline stages':'Next';
+      if(field){
+        var nextAnswer=button('Next',function(){
+          if(field.value===savedValue)return action('next');
+          if(!field.value.trim()){note('Enter an answer or choose an option below.');field.focus();return;}
+          return action('answer',stop.answer_kind==='boolean'?field.value==='true':field.value);
+        },true);
+        function labelNext(){nextAnswer.textContent=field.value===savedValue?'Next':'Save and continue';}
+        field.addEventListener('input',labelNext);
+        field.addEventListener('change',labelNext);
+        labelNext();actions.appendChild(nextAnswer);
+      }else{
+        actions.appendChild(button(nextLabel,function(){action('next');},!pending));
+      }
       if(stop.kind==='decision'||stop.kind==='fact'){
         secondary.appendChild(button('Decide later',function(){action('later');}));
         secondary.appendChild(button('Not needed',function(){action('not_needed');}));
         if(stop.kind==='decision'&&!pending&&decision!=='applied')actions.appendChild(button('Keep current settings',function(){action('keep_current');}));
         if(state.draft&&!pending&&drafting!==stop.id&&!busy)requestDraft(stop);
       }
+    }
+    if(stop.id==='relevance.records.progress' && state.guide.decisions['review.records.information']==='reviewed'){
+      secondary.appendChild(button('Review record fields again',function(){action('reopen_record_fields');}));
     }
     if(state.guide.knowledge_unavailable){
       host.appendChild(el('p','Reviewed Knowledge could not be loaded. Your existing answers are kept.','guided-why'));
@@ -309,6 +360,11 @@
   }
   function shown(question,value){
     if(value==null)return '';
+    if(question==='diary.starter'){
+      var summary={we_arrange:'You arrange it',both:'Customers ask, or you arrange it',
+        from_records:'It follows a date you already keep',internal:'It’s for your business only'};
+      if(summary[value])return summary[value];
+    }
     if(question==='diary.hours')return hoursText(value);
     if(question==='diary.length' && value.unit==='depends')return value.detail;
     if(question==='diary.date_source'){var source=(state.discovery.date_sources||[]).find(function(d){return d.id===value;});return source?source.label:String(value);}
@@ -326,7 +382,10 @@
     var box=el('section',null,'guided-prefill');box.setAttribute('role','status');
     var source={conversation:'what you said',suggestion:'the suggestion you chose',context:'your setup'}[prefill.source]||'your setup';
     if(prefill.value!=null){
-      box.appendChild(el('p',(prefill.change?'You gave a different answer earlier. Change it to: ':'From '+source+': ')+shown(stop.question_id,prefill.value)+'. Is that right?'));
+      var prefix=prefill.change?'You gave a different answer earlier. Change it to: ':prefill.source==='conversation'?'':'From '+source+': ';
+      var statement=prefix+shown(stop.question_id,prefill.value);
+      box.appendChild(el('p',/[.!?]$/.test(statement)?statement:statement+'.'));
+      box.appendChild(el('p','Is that right?'));
       box.appendChild(button(prefill.change?'Use the new answer':'Confirm answer',function(){diaryAction('accept_prefill');},true));
       box.appendChild(button(prefill.change?'Keep the earlier answer':'Change it',function(){diaryAction('dismiss_prefill');}));
     }else if(prefill.words){box.appendChild(el('p','From your notes: “'+prefill.words+'”'));}
@@ -481,10 +540,14 @@
     var p=t;while(p){if(p.tagName==='DETAILS')p.open=true;p=p.parentElement;}
     if(highlight&&highlight!==t)highlight.classList.remove('guided-target');highlight=t;t.classList.add('guided-target');
   }
+  function outdated(card, version){
+    var pending=state && state.pending;
+    return !!(pending && pending.card_id===card.id && (pending.revision!==card.revision ||
+      (version && pending.settings_version!==version)));
+  }
   function project(data){
     if(!active()||state.stop.href.split('#')[0]!==location.pathname)return;
     clear();var t=target();if(t)reveal(t);else if(state.stop.anchor)note('This control is unavailable here. Use its owning page or defer this decision; it remains unresolved.');
-    if(host){var obsoleteRefresh=host.querySelector('[data-guided-refresh]');if(obsoleteRefresh)obsoleteRefresh.remove();}
     if((state.knowledge_conflicts||[]).length){note('Knowledge changed. Resolve the earlier answer before accepting or displaying it as a current proposal.');return;}
     var newCard=(data.cards||[]).find(function(card){return selection(card).length&&(!state.pending||card.id!==state.pending.card_id);});
     if(newCard){
@@ -497,9 +560,8 @@
     if(['applied','cancelled','partial'].indexOf(state.guide.decisions[state.stop.decision_id||state.stop.id])!==-1)return;
     if(state.pending){var v=data.views[state.pending.page],c=(data.cards||[]).find(function(c){return c.id===state.pending.card_id;});
       var snapshot=v&&v.all&&!v.all.error?v.all.settings_version:null;
-      if(c&&(c.revision!==state.pending.revision || snapshot&&snapshot!==state.pending.settings_version)){
+      if(c&&outdated(c,snapshot)){
         note('The card or saved settings changed. Your suggestion is kept; review the current difference before accepting.');
-        if(host&&!host.querySelector('[data-guided-refresh]')){var refresh=button('Review current difference',function(){action('refresh_preview');});refresh.dataset.guidedRefresh='';host.appendChild(refresh);}
         return;
       }
     }
@@ -528,7 +590,7 @@
       }})){projected++;reveal(control);
         if(!why)why=((line.reasons&&line.reasons.lines)||[]).filter(function(r){return r.text.indexOf('Suggested: ')===0;})[0];}
     });});
-    if(pending&&!projected)note('Review the existing card beside this editor. Compound or locally edited controls stay unchanged until you Accept.');
+    if(pending&&!projected)note('Review the suggested changes, then choose Accept to save them.');
     else if(projected)note('Proposed — not saved.'+(why?' '+why.text.replace('Suggested: ','Suggested because: '):''));
     if(state.stop.kind==='explanation'&&t)reveal(t);
   }
@@ -576,7 +638,8 @@
     },messagesChanged:messagesChanged,followCurrentStop:navigate,pause:function(){return action('pause');},
     attach:function(cards,open){panel=cards;opener=open;Promise.all([api.ready,
       window.Blam8DeviceSync?window.Blam8DeviceSync.ready:Promise.resolve()]).then(function(){paint();cards.paint();resumeLocation();});},
-    selection:selection,matches:matches,project:project,
+    selection:selection,matches:matches,project:project,outdated:outdated,
+    reviewDifference:function(){return action('refresh_preview');},
     beforeApply:function(){if((state.knowledge_conflicts||[]).length){note('Resolve the changed Knowledge answer before accepting.');return false;}return confirmDiscard('Accepting this suggestion');},
     changed:async function(){try{await refresh();}catch(e){clear();note(e.message);}},
     turn:async function(question,history){
@@ -587,6 +650,8 @@
       }finally{busy=false;controlsBusy(false);}
     }};
   api.ready=(async function(){try{await refresh();}catch(_){state=null;note('The guide could not be loaded. Reload to try again; your saved setup is kept.');}
+    var widget=document.querySelector('[data-guide-loading]');
+    if(widget)widget.removeAttribute('data-guide-loading');
     document.querySelectorAll('[data-guided-start]').forEach(function(b){b.disabled=false;b.addEventListener('click',startGuide);});return state;})();
   window.addEventListener('guided:submit-blocked',function(){note('These are proposed values. Use Accept in the card to save them, or Leave to restore the page.');});
   window.addEventListener('guided:projection-conflict',function(){note('Your restored edits differ from this preview. They are kept; reload the card and review before applying it.');});

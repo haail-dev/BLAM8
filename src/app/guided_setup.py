@@ -40,6 +40,8 @@ OPTIONAL = {
 # Short product explanations, attached to native controls. These never choose
 # a value; the card remains the only approval surface.
 EXPLANATIONS = {
+    'quiet_days': 'BLAM8 flags a contact on Home and in your contact list once they have been quiet for this many days. You decide whether to follow up.',
+    'stage': 'Stages are the columns on your pipeline. Moving an enquiry to a won, lost or dormant stage closes it.',
     'min_notice_hours': 'Notice is the minimum lead time before a new booking can start. It keeps last-minute requests outside the times the assistant can offer.',
     'horizon_days': 'The booking horizon limits how far ahead a new booking can be offered. It does not reserve time or confirm a booking.',
     'working_days': 'These are the weekdays when work may be booked. They can differ from the days you answer messages.',
@@ -110,6 +112,12 @@ def registry():
             projection='scalar' if key and entry['page'] != 'packages' else 'native_editor',
             why=entry['ask_when'], controls=entry['controls'],need=optional_need(entry))
     # The common notice/horizon decision is one small dependency batch.
+    result['crm_settings/quiet_days'].update(title='Follow-up reminders',
+        question='After how many days without contact would you like a reminder?')
+    result['crm_settings/stage'].update(title='Pipeline stages',
+        question='Which stages does an enquiry move through, and which ones close it?')
+    result['dependants/ladder'].update(title='Customer progress stages',
+        question='Do customers or their related records need their own progress stages, separate from your enquiry pipeline?')
     a, b = 'diary_settings/min_notice_hours', 'diary_settings/horizon_days'
     result[a].update(title='Booking notice and horizon',
         question='How much notice do you need, and how far ahead can customers book?', catalogue=[a, b],required=True)
@@ -189,6 +197,11 @@ def registry():
     if 'diary_settings/service' in result:
         result['diary_settings/service'].update(substep='diary.activities', title='The activities you arrange',
             question='Which activities should the diary handle? We can review their duration, timing and resource needs together.')
+    for stop in result.values():
+        if len(stop['catalogue']) == 1:
+            stop['description'] = EXPLANATIONS.get(stop['id'].split('/', 1)[1])
+        elif stop['why'] and not stop['why'].startswith('The owner '):
+            stop['description'] = stop['why']
     return result
 
 
@@ -371,11 +384,13 @@ def steps(context):
         if state['capabilities'].get(sub['capability']) in ('off', 'deferred'):
             continue
         candidates = [deepcopy(s) for s in rows.values() if s['substep'] == sid]
+        if sid == 'records.progress' and guide.get('stages_first'):
+            candidates.sort(key=lambda candidate: candidate['id'] != 'crm_settings/stage')
         question_specs = list(contract.QUESTIONS.values()) + [q for identity, q in state.get('routed_questions', {}).items()
                                                              if identity.startswith('knowledge.')]
         facts = [dict(id='question.'+q['id'], question_id=q['id'], kind='fact', title=sub['label'],
             question=q['text'], substep=sid, href=sub['links'][0][0].split('#')[0] if sub['links'] else '/app/setup/'+sid.split('.')[0],
-            anchor=None, scopes=q['scopes'],required=True,answer_kind=q['kind'],choices=q.get('choices'))
+            anchor=None, scopes=q['scopes'],required=True,answer_kind=q['kind'],choices=q.get('choices'),choice_labels=q.get('choice_labels'))
             for q in question_specs if q['substep']==sid and not q['adapter'] and not q.get('discovery')
             and contract.need_selected(state,q.get('need'))]
         # CRM controls and diary editors remain behind their actual module gates.
@@ -414,10 +429,10 @@ def steps(context):
             stop['decision'] = guide['decisions'].get(stop['id'])
             filtered.append(stop)
             pending = guide['pending'].get(stop['id'])
-            # Once the contact field is saved, the native form already shows it.
-            # Keep an existing explanation cursor usable across an upgrade.
-            contact_applied = stop['id'] == 'crm_fields/contact_field' and stop['decision'] == 'applied'
-            if pending and (not contact_applied or guide['current'] == 'explain.crm_fields/contact_field'):
+            # These single decisions already show the accepted result on their form.
+            # An owner who reached an explanation before the update can still leave it.
+            saved_on_form = stop['id'] in ('crm_fields/contact_field', 'crm_settings/quiet_days', 'crm_settings/stage') and stop['decision'] == 'applied'
+            if pending and (not saved_on_form or guide['current'] == 'explain.' + stop['id']):
                 proposal = state['proposals'].get(pending['proposal'], {})
                 # Explain the exact represented choices, never the whole
                 # catalogue. One stable stop per affected native control.
@@ -455,9 +470,10 @@ def steps(context):
                 ordered += [f for f in gated if contract.QUESTIONS[f['question_id']]['need'] == stop['need']]
         ordered += [f for f in gated if f not in ordered]
         result.extend(ordered)
-        result.append(dict(id='review.'+sid, kind='review', substep=sid, title='Review '+sub['label'],
-            question='Review the saved results and anything left for later. Continuing records your review; it does not make booking or payments ready.',
-            href=candidates[-1]['href'] if candidates else result[-1]['href'], anchor=None,
+        field_review = sid == 'records.information' and 'crm' in context['modules']
+        result.append(dict(id='review.'+sid, kind='review', substep=sid, title='Review record fields' if field_review else 'Review '+sub['label'],
+            question='Check the saved fields and your choices below.' if field_review else 'Review the saved results and anything left for later. Continuing records your review; it does not make booking or payments ready.',
+            href=ROUTES['crm_fields'] if field_review else (candidates[-1]['href'] if candidates else result[-1]['href']), anchor=None,
             capability=sub['capability']))
         if sid == last_diary:
             result.append(orientation(context, sid))
@@ -497,6 +513,16 @@ def price_reference(context, stop):
     return None
 
 
+def can_finish_progress(context, stop, following):
+    if stop['id'] != 'dependants/ladder' or [s['id'] for s in following[:2]] != ['review.records.progress', DIARIES_STOP]:
+        return False
+    state = context['state']
+    return (not review_blocker(state, 'records.progress')
+            and not unresolved_required(context, 'records.progress')
+            and not any(state['guide']['decisions'].get(s['id']) == 'deferred'
+                        for s in steps(context) if s.get('substep') == 'records.progress'))
+
+
 def describe(context):
     guide = read(context['state'])
     if not guide:
@@ -516,7 +542,8 @@ def describe(context):
     decision_id = stop.get('decision_id', stop['id'])
     reviewing = stop['kind'] == 'review'
     unresolved=unresolved_required(context,stop['substep']) if reviewing else []
-    return dict(section=section, progress=[dict(key=g['key'], done=g['done']) for g in groups],
+    field_review = stop['id'] == 'review.records.information' and 'crm' in context['modules']
+    return dict(section=section, field_review=field_review, finish_progress=can_finish_progress(context,stop,sequence[index+1:]), progress=[dict(key=g['key'], done=g['done']) for g in groups],
         unresolved=[dict(id=s['id'],title=s['question'] if s['kind'] in ('fact', 'need', 'relevance') else s['title'])
                     for s in sequence if s['id'] in unresolved],
         review_blocked=bool(reviewing and (unresolved or review_blocker(context['state'], stop['substep']))),
@@ -615,6 +642,11 @@ def unresolved_required(context, substep):
         return ['relevance.'+substep]
     missing=[]
     for stop in steps(context):
+        if (stop.get('substep') == substep and stop.get('entity') and stop['kind'] == 'need'
+                and progress['current'] == 'review.'+substep
+                and progress['decisions'].get(stop['id']) not in ('needed', 'off', 'deferred')):
+            missing.append(stop['id'])
+            continue
         if stop.get('substep')==substep and knowledge_conflicts(state,stop):
             missing.append(stop['id'])
             continue

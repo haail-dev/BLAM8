@@ -220,6 +220,11 @@ def context(cards, path, cfg=None, *, inference=False):
     rule = RULE
     for strict, inferred in INFERENCE_SWAPS:
         rule = rule.replace(strict, inferred)
+    rule = ("For Diary services, an affirmative reply to a specific recap confirms the values in that recap "
+            "for a proposal. Submit those services together for review. Reference the confirmed wording "
+            "for each value. Keep coverage duration separate from the time the booking reserves. "
+            "Omit unmentioned optional fields. If the recap gave alternatives, ask which one the owner meant.\n"
+            + rule)
     return setup_catalogue.GUIDED_FOUNDATION + '\n' + rule + encoded
 
 

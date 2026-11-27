@@ -209,6 +209,15 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 if body.choice is not None:
                     raise ValueError('Unexpected guide choice.')
                 current['status'] = 'paused' if body.operation == 'pause' else 'active'
+            elif body.operation == 'reopen_record_fields':
+                if (stop['id'] != 'relevance.records.progress' or body.choice is not None
+                        or current['decisions'].get('review.records.information') != 'reviewed'
+                        or not any(s['id'] == 'review.records.information' for s in guide.steps(context))):
+                    raise ValueError('Reopen record fields from the start of Progress and follow-up.')
+                current['current'] = 'review.records.information'
+                current['question_revision'] += 1
+                current['decisions'].pop(current['current'])
+                state['reviews'].pop('records.information', None)
             elif body.operation == 'revisit':
                 target=next((s for s in guide.steps(context) if s['id']==body.choice),None)
                 if stop['kind']!='review' or not target or target['substep']!=stop['substep'] or target['kind']=='review':
@@ -229,6 +238,15 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 if current['current'] == guide.DIARIES_STOP:
                     from app import diary_discovery
                     diary_discovery.refresh(_with_knowledge(ctx, context), state)
+            elif body.operation == 'finish_progress':
+                sequence = guide.steps(context)
+                index = next(i for i,s in enumerate(sequence) if s['id'] == stop['id'])
+                if body.choice is not None or not guide.can_finish_progress(context, stop, sequence[index+1:]):
+                    raise ValueError('Review the remaining progress choices before continuing to Diary.')
+                current['decisions'].setdefault(stop['id'], 'reviewed_unchanged')
+                current['decisions']['review.records.progress'] = 'reviewed'
+                state['reviews']['records.progress'] = dict(state='reviewed', at=state_store.stamp(), by=ctx.user_id)
+                _move(context, current, sequence[index+1], 1)
             elif body.operation == 'keep_current':
                 if stop['kind']!='decision' or body.choice is not None:
                     raise ValueError('Choose a current settings decision.')
@@ -852,7 +870,9 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
                     reply = _with_questions('Your suggestion is ready to review.', questions)
                 elif not (choice == 'needed' and not card_write and '?' in reply):
                     reply = f"{stop['title']}: {label}."
-                    if card_write:
+                    if card_write and target_id == 'crm_settings/stage':
+                        reply += ' Your suggested stages are listed under Pipeline stages on the CRM page. You can approve or edit them at the stage question.'
+                    elif card_write:
                         reply += ' Your additional suggestion is held for review.'
             output = save(ctx, context, state, card_write) if advanced or card_write else guide.describe(context)
             return dict(**output, reply=reply, fallback=False, guide_advanced=advanced)
@@ -892,7 +912,13 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         patches, questions = setup_inference.resolve(entry['page'], patches, card, setup_inference.signal_trust(pack))
         considered = entry.get('considered')
         if not patches and not considered:
+            if entry['page'] == 'diary_settings' and questions:
+                return finish_turn(_with_questions('', questions).strip())
             return finish_turn(_with_questions(result.reply, questions))
+        if patches and choice == 'needed' and stop['id'] == 'relevance.records.progress' and target['id'] == 'crm_settings/stage':
+            state['guide']['stages_first'] = True
+            state['guide']['current'] = target['id']
+            held = False
         if held:
             patches=[dict(p,held=True) if p['op']!='remove' else p for p in patches]
         # No later provider result can overwrite a newer owner or device turn.
@@ -1131,6 +1157,13 @@ def commit_linked_card(ctx, page, revision, card, *, snapshot=None, patch=None):
                     proposal['answer_revision']=proposal['answers'][proposal['answer']]
         else:
             link_card(ctx, context, state, stop, None, card,preserve_knowledge=True)
+    guide_state = state['guide']
+    stage_link = guide_state['pending'].get('crm_settings/stage')
+    if (patch and 'crm_quiet_days' in patch and stage_link
+            and guide_state['current'] in ('crm_settings/quiet_days', 'explain.crm_settings/quiet_days')
+            and state['proposals'][stage_link['proposal']]['status'] == 'proposed'):
+        guide_state['current'] = 'crm_settings/stage'
+        guide_state['question_revision'] += 1
     state_store.save(ctx, context['state'], state, card_write=dict(page=page, revision=revision, card=card,
         expected_settings=snapshot, settings_patch=patch))
     return card

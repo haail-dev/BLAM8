@@ -41,7 +41,7 @@ async function shot(name){
  })()`);
  assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden&&geometry.shell&&geometry.noOverflow&&geometry.chromeVisible,JSON.stringify(geometry));
  assert(geometry.title.includes('Setup'));
- const expectedStep=['records','contact_fields'].includes(area)||name.includes('records')?5:['charges','knowledge_conflict'].includes(area)?7:6;
+ const expectedStep=['records','contact_fields','pipeline','held_pipeline'].includes(area)||name.includes('records')?5:['charges','knowledge_conflict'].includes(area)?7:6;
  assert((await evaluate('document.querySelector("[data-current-step]").getAttribute("aria-label")')).startsWith('Step '+expectedStep+':'));
  }
 try{
@@ -60,6 +60,7 @@ try{
    }
    // Records comes first. An owner who is not ready leaves each section for later.
    await until('location.pathname==="/app/diary/dependants" && window.Blam8GuidedSetup?.currentStop()==="relevance.records.relationships"');
+   assert.equal(await evaluate('window.initialTranscriptVisibility'),'hidden');
    assert.deepEqual(await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`),chrome);
    assert(await evaluate(`!document.querySelector('[data-guided-intro]')`));
    const layout = await evaluate(`({
@@ -74,6 +75,15 @@ try{
    for(const [stop,next] of [['relevance.records.relationships','/app/crm/fields'],['relevance.records.information','/app/crm/settings'],
                              ['relevance.records.progress','/app/diary/settings']]){
      await until('window.Blam8GuidedSetup?.currentStop()==='+JSON.stringify(stop)+' && window.Blam8DeviceSync?.isReady()');
+     if(stop==='relevance.records.progress'){
+       assert(await evaluate(`(()=>{
+         const card=document.querySelector('[data-onboarding-card]'), title=card.querySelector('h1');
+         const help=title.parentElement.querySelector('a[href="/help"]');
+         if(!help || title.textContent.trim()!=='CRM' || card.querySelector('a[href="/app/crm/fields"]'))return false;
+         const heading=title.getBoundingClientRect(), link=help.getBoundingClientRect();
+         return link.left>=heading.right && link.top<heading.bottom && link.bottom>heading.top;
+       })()`),'CRM heading and Help share a row, without a Fields detour');
+     }
      if(stop==='relevance.records.relationships' && area==='handoff'){
        await click('[data-record-type-choice] [value=deferred]');
      }else {
@@ -150,6 +160,19 @@ try{
    await button('That’s right');
    await until('document.querySelector(".guided-question")?.textContent.includes("Already covered — We inspect equipment.")');
    await shot('01-reused-answer');
+   const direct='.guided-answer-field .guided-direct-answer';
+   assert(await evaluate(`document.querySelector('${direct}').checkVisibility() && !document.querySelector('${direct}').closest('details')`));
+   if(area==='handoff_assistant'){
+     await type(direct,'I inspect equipment on site.');
+     await button('Save and continue');
+   }else{
+     await button('Next');
+   }
+   await until('Blam8GuidedSetup.currentStop()==="question.activity.authority" && document.querySelector(".guided-answer-field select")');
+   await click(direct);await key('ArrowDown','ArrowDown',40);await key('Enter','Enter',13);
+   await until('document.querySelector(".guided-navigation .guided-primary")?.textContent==="Save and continue"');
+   await button('Save and continue');
+   await until('Blam8GuidedSetup.currentStop()!=="question.activity.authority"');
    for(let n=0;n<12&&await evaluate('Blam8GuidedSetup.currentStop()!=="diary_settings/stay_mode"');n++){
      const before=await evaluate('Blam8GuidedSetup.currentStop()');await button('Next');
      await until('Blam8GuidedSetup.currentStop()!=='+JSON.stringify(before));
@@ -172,7 +195,7 @@ try{
  await evaluate('Blam8DeviceSync.transcript('+JSON.stringify(priorReview)+')');
  await cdp('Page.reload');
  await until('window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question .guided-title") && document.querySelector(".guided-history:not([hidden])")');
- assert(await evaluate('document.querySelector(".guided-context")?.textContent.length>30'));
+ assert(await evaluate('document.querySelector(".guided-question").innerText.trim().length>30'));
  assert(await evaluate('!document.querySelector("#bc-messages").innerText.includes("Service exclusions") && !document.querySelector("#bc-messages").innerText.includes("Previous settings")'));
  await button('Earlier conversation');
  assert(await evaluate('document.querySelector("#bc-messages").innerText.includes("Service exclusions") && document.querySelector("#bc-messages").innerText.includes("Your choice: Keep note.")'));
@@ -198,6 +221,36 @@ try{
    assert(await evaluate('!document.querySelector(".guided-question").textContent.includes("Your answer — false")'));
    await shot('05-exact-resume');
    console.log('Actual Knowledge Continue, one-time handover, diary discovery and profile, answer reuse, proposed mode, explanation and Accept passed');
+ }else if(area==='pipeline'||area==='held_pipeline'){
+   if(area==='pipeline'){
+     await type('#bc-input',"Yes. I'd like to track each enquiry as New enquiry, Quote sent, Booked or Declined.");
+     await key('Enter','Enter',13);
+   }else{
+     await until('document.querySelector(".bc-setup-tray").innerText.includes("Review current difference")');
+     assert(!await evaluate('document.querySelector(".bc-setup-tray").innerText.includes("Accept displayed changes")'));
+     const rejected=await evaluate(`(async()=>{
+       const id=document.querySelector('.bc-setup-tray [data-line-id]').dataset.lineId;
+       const response=await Blam8DeviceSync.request('/concierge/setup-cards/crm_settings/preview',{
+         method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:1,ids:[id]})});
+       return {status:response.status,conflict:Blam8DeviceSync.hasConflict()};
+     })()`);
+     assert.deepEqual(rejected,{status:409,conflict:false});
+     await button('Review current difference');
+   }
+   await until('Blam8GuidedSetup.currentStop()==="crm_settings/stage" && document.querySelector(".bc-setup-tray").innerText.includes("Accept displayed changes")');
+   const summary=await evaluate('document.querySelector("[data-pending-stages]").innerText');
+   for(const label of ['New enquiry','Quote sent','Booked','Declined','Pending review'])assert(summary.includes(label));
+   assert(await evaluate('document.querySelectorAll("[data-stage-row]").length===0'));
+   await button('Accept displayed changes');
+   await until('document.querySelectorAll("[data-stage-row]").length===4 && document.querySelector("[data-pending-stages]").hidden');
+   assert.deepEqual((await evaluate('Array.from(document.querySelectorAll("[data-stage-row] [name=name]"),el=>el.value)')).sort(),['Booked','Declined','New enquiry','Quote sent']);
+   await button('Next');
+   if(area==='pipeline'){
+     await until('Blam8GuidedSetup.currentStop()==="crm_settings/quiet_days"');
+     await until('document.querySelector(".guided-context")?.innerText.includes("flags a contact")');
+   }else{
+     await until('Blam8GuidedSetup.currentStop()!=="crm_settings/stage"');
+   }
  }else if(area==='contact_fields'){
    await type('#bc-input',"Yes. I'd like to keep a phone number. It's optional and only I should see it.");
    await key('Enter','Enter',13);
@@ -213,8 +266,11 @@ try{
    const defaults = await evaluate(`Array.from(document.querySelectorAll('${card} details')).find(el=>el.querySelector('summary').textContent==='Defaults used')?.textContent`);
    assert(defaults && defaults.includes('Format: Text') && defaults.includes('Expiry: Does not expire'), defaults);
    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${card}')).borderTopWidth`),'0px');
+   await until('document.querySelector(".bc-setup-applied")?.getClientRects().length===0 && !document.querySelector(".guided-history").hidden');
+   await click('.guided-history');
    await click('.bc-setup-applied summary',true);
    await until('document.querySelector(".bc-setup-applied[open]")?.innerText.includes("Pending review: Phone number")');
+   await click('.guided-history');
    await shot('02-contact-proposed');
    const peerTab=await cdp('Target.createTarget',{url:`http://127.0.0.1:${appPort}/app/crm/fields`});
    const peer=(await cdp('Target.attachToTarget',{targetId:peerTab.targetId,flatten:true})).sessionId;
@@ -259,14 +315,20 @@ try{
    await button('Next');
    await until('Blam8GuidedSetup.currentStop()==="need.company_fields" && document.querySelector(".guided-target")?.dataset.recordEntity==="company"');
    assert.equal(await evaluate('location.pathname'),'/app/crm/fields');
-   await click('#bc-close');await until('!document.body.classList.contains("guided-running")');
+   await click('#bc-close');await until('!document.body.classList.contains("guided-running") && document.querySelector("#bc-panel").classList.contains("hidden")');
    assert.equal(await evaluate('!!document.querySelector(".guided-resume")'),false);
+   // Closing the dock animates the page width. The help link moves with its header.
+   await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))).then(()=>Promise.all(document.getAnimations().filter(a=>a.transitionProperty==="padding-right").map(a=>a.finished.catch(()=>{}))))');
    await click('main a[href="/help"]');
    await until('!document.querySelector("#bc-panel").classList.contains("hidden")');
    await button('Resume guided setup');await until('document.body.classList.contains("guided-running")');
    await button('Needed');await until('Blam8GuidedSetup.currentStop()==="editor.company_fields"');
    await button('Next');await until('Blam8GuidedSetup.currentStop()==="need.deal_fields" && document.querySelector(".guided-target")?.dataset.recordEntity==="deal"');
-   await button('Not needed');await until('Blam8GuidedSetup.currentStop()!=="need.deal_fields"');
+   await button('Not needed');await until('Blam8GuidedSetup.currentStop()==="review.records.information"');
+   await until('document.querySelector(".guided-question").innerText.includes("Phone number · optional · never ask · private")');
+   assert(await evaluate('[...document.querySelectorAll(".bc-setup-applied")].every(el=>!el.getClientRects().length)'));
+   assert(await evaluate('document.querySelector(".guided-question").innerText.includes("Tracking requested") && document.querySelector(".guided-question").innerText.includes("Not needed")'));
+   assert(await evaluate('document.querySelector(".guided-navigation").innerText.includes("Continue to Progress and follow-up")'));
  }else if(area==='knowledge_conflict'){
    await until('document.querySelector(".guided-knowledge-conflict")?.innerText.includes("Within 14 days")');
    assert(await evaluate('document.querySelector(".guided-knowledge-conflict").innerText.includes("Before work begins") && !document.querySelector("[name=payment_terms][data-proposed]")'));
@@ -327,8 +389,10 @@ try{
      const card=cards.cards.find(c=>c.page==='dependants'),line=card.lines.find(l=>l.name==='field');
      const selector='[data-line-id="'+line.id+'"]';
      await evaluate(`document.querySelector(${JSON.stringify(selector)}).querySelectorAll('button').forEach(b=>{if(b.textContent==='Edit')b.dataset.nativeTarget=''})`);
+     await evaluate('document.querySelector("[data-native-target]").scrollIntoView({block:"center"})');
      await click('[data-native-target]');await type('[data-field=label]','Owner reference');await button('Keep changes');
      await until('document.querySelector(".bc-setup-tray").innerText.includes("Owner reference")');
+     await until('document.querySelector("[data-pending-rows~=group]")?.innerText.includes("Owner reference")');
    }else{
      await type('[name=payment_terms]','After completion');await key('Tab','Tab',9);
      await until('document.querySelector(".bc-setup-tray").innerText.includes("After completion")');

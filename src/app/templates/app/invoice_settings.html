@@ -281,6 +281,7 @@
       <div class="{{ foldbody }}">
         <input type="hidden" name="pkg_form" value="1">
         <p class="text-xs text-slate-400">Blocks, passes and prepaid hours. A package line on an invoice adds its sessions or hours to the customer's wallet when the invoice is sent; bookings spend them per your Diary settings (Cancellations &amp; credits). The customer sees the balance on the portal and the agent quotes it.</p>
+        <div data-pending-rows="package" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
         <div id="pkg-rows" class="space-y-2">
           {% for p in pkgs %}
           <div class="pkg-row grid sm:grid-cols-12 gap-2 rounded-lg border border-slate-200 p-3">
