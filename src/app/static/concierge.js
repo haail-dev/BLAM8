@@ -195,14 +195,21 @@
     : "";
   var mailboxConnected = ONB_STEP === "mailbox" && !!document.querySelector("[data-connected-inbox]") && !!document.querySelector("[data-onb-continue]");
   var mailboxNext = "Your inbox is connected. Review your import status or continue to Voice.";
+  function knowledgeOpening() {
+    if (document.querySelector('[data-knowledge-review]')) return "Your draft notes are ready. Which would you like to keep or change?";
+    if (document.querySelector('[data-knowledge-saved-status]')) return document.querySelector('[data-knowledge-sample][data-approved="yes"]')
+      ? "Your notes are saved and you approved the sample reply. You can continue."
+      : "Your notes are saved. Let's try a typical customer enquiry.";
+    if (document.querySelector('[data-onb-held-notes]')) return "You mentioned some business facts earlier. Let's check those first.";
+    if (ONB_SITE) return "We'll use your website (" + ONB_SITE + ") to prepare notes for you to check. You can also tell me a fact here.";
+    return "Let's add the facts I can use when replying to customers. What do you offer, and what do you charge? I'll turn your answer into a note for you to check.";
+  }
   var ONB_GREETINGS = {
     interview: ONB_INTRO,
     industry: "Let's get you set up — I'm the BLAM8 AI assistant. Tell me what your business does and I'll pick your sector and fill it in for you.",
     voice: "I'm the BLAM8 AI assistant. How should your replies sound, and how would you like to sign off?",
     mailbox: mailboxConnected ? "I'm the BLAM8 AI assistant. " + mailboxNext : "I'm the BLAM8 AI assistant. Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
-    knowledge: ONB_SITE
-      ? "I'm the BLAM8 AI assistant. Once " + ONB_SITE + " has been read, we'll go through your actual notes together. Tell me what to keep or correct; I'll ask about anything that needs your decision. Nothing from the drafts is available to the agent until you save the review."
-      : "I'm the BLAM8 AI assistant. What should I know about your business? I'll draft notes for you to check. Your agent can use them once you save.",
+    knowledge: ONB_STEP === 'knowledge' ? knowledgeOpening() : '',
     data: "Last step — which systems do you run on? I'm the BLAM8 AI assistant: tell me and I'll point you to the right boxes to tick.",
   };
   // Mid-thread step hand-offs: same job as the greetings but WITHOUT the
@@ -215,9 +222,7 @@
     industry: "Picking your sector from the list — tell me what your business does and I'll pick the closest match for you.",
     voice: "Next: your agent's voice — how replies should sound and sign off. With your mailbox connected you can have it learned from your sent emails in one click (it only ever runs on your say-so), or just describe it and I'll fill the form for you to review.",
     mailbox: mailboxConnected ? mailboxNext : "Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
-    knowledge: ONB_SITE
-      ? "I'll help you review the notes prepared from " + ONB_SITE + ". We'll check each note and any decisions it needs together. Drafts and corrections stay pending until you save your reviewed decisions."
-      : "What should I know about your business? You can keep, change or leave out each note before saving.",
+    knowledge: ONB_STEP === 'knowledge' ? knowledgeOpening() : '',
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
   };
   var GREETING = document.querySelector('[data-guided-intro]')
@@ -240,7 +245,7 @@
   var SCENARIO_GREETING = "Describe one real situation from your business, in a sentence or two, and I'll tell you how BLAM8 would deal with it. You can run a couple a day, so make it a good one.";
   var SCENARIO_MAX = 400;
   var ASK_PLACEHOLDER = null;
-  function greeting() { return FIX_LOG_ID ? FIX_GREETING : (SCENARIO ? SCENARIO_GREETING : GREETING); }
+  function greeting() { return FIX_LOG_ID ? FIX_GREETING : (SCENARIO ? SCENARIO_GREETING : ONB_STEP === 'knowledge' ? knowledgeOpening() : GREETING); }
   function setScenario(on) {
     SCENARIO = on;
     if (!input) return;
@@ -568,6 +573,23 @@
       lastAssistant.setAttribute('data-knowledge-current-status', '');
       msgs.appendChild(lastAssistant);
     }
+    var sampleBox = ONB_STEP === 'knowledge' && document.querySelector('[data-knowledge-sample]');
+    if (sampleBox && !currentKnowledgeFormCard && !(PENDING_KB_CARDS && PENDING_KB_CARDS.length)) {
+      var sampleText = sampleBox.querySelector('[data-sample-message]').innerText.trim();
+      if (sampleText) {
+        lastAssistant = bubbleEl('assistant', sampleText);
+        msgs.appendChild(lastAssistant);
+      }
+      var actions = document.createElement('div');
+      actions.className = 'flex flex-wrap gap-2';
+      sampleBox.querySelectorAll('button[data-sample-action]').forEach(function(original) {
+        var button = document.createElement('button');
+        button.type = 'button'; button.textContent = original.textContent; button.className = original.className;
+        button.addEventListener('click', function(){ original.click(); });
+        actions.appendChild(button);
+      });
+      msgs.appendChild(actions);
+    }
     refreshTitle();
     if (window.Blam8GuidedSetup) window.Blam8GuidedSetup.messagesChanged();
     // Opening the panel shows the latest assistant message from its first line,
@@ -686,6 +708,16 @@
   // out"). While any is pending, the panel's Next is replaced by a hold line,
   // and the page's own Next saves them first (see the capture listener below).
   var PENDING_KB_CARDS = [];
+  if (ONB_STEP === 'knowledge') document.addEventListener('submit', function(event) {
+    if (!event.target.closest('[data-knowledge-sample]')) return;
+    var note = document.querySelector('#kb-note [name="content"]');
+    if (PENDING_KB_CARDS.length || (note && note.value.trim()) || window.blam8KnowledgeImportBusy) {
+      event.preventDefault();
+      var status = document.querySelector('[data-knowledge-navigation-status]');
+      if (status) status.textContent = 'Finish reviewing your current notes before trying the enquiry.';
+      showContinueHint();
+    }
+  }, true);
   var ADVANCE_WANTED = false;
   function showContinueHint() {
     function notice(text, working) {
@@ -701,6 +733,11 @@
     ADVANCE_WANTED = true;
     var btn = pageContinueBtn();
     var state = window.Blam8OnboardingJourney ? window.Blam8OnboardingJourney.read(PENDING_KB_CARDS.length) : {ready:!!btn, action:btn};
+    if(state.journey && state.journey.current==='knowledge' && state.action){
+      var hideNext=!state.ready || state.action.disabled;
+      if(state.action.hidden!==hideNext)state.action.hidden=hideNext;
+      btn=hideNext ? null : state.action;
+    }
     cta.innerHTML = "";
     if (!state.ready) {
       // A disabled Continue speaks for itself (the page says what is missing);
@@ -892,6 +929,7 @@
     if (!open) finishSheetDrag();
     panel.classList.toggle("hidden", !open);
     panel.classList.toggle("flex", open);
+    document.body.removeAttribute("data-initial-chat-dock");
     bubble.classList.toggle("hidden", open);   // panel replaces the bubble while open
     bubble.setAttribute("aria-expanded", open ? "true" : "false");
     if (open && resizeHeader && resizeHandle) sizeMobileSheet();
@@ -1607,6 +1645,12 @@
   }
 
   async function onboardTurn(text, history) {
+    if (ONB_STEP === 'knowledge') {
+      var rehearsal = document.querySelector('[data-knowledge-sample] [data-sample-message]');
+      if (rehearsal && rehearsal.innerText.trim()) {
+        history = history.concat([{role:'assistant',content:rehearsal.innerText.trim().slice(0,4000)}]);
+      }
+    }
     var submittedFormCard = currentKnowledgeFormCard;
     currentKnowledgeFormCard=null;
     msgs.querySelectorAll('[data-knowledge-current-status]').forEach(function(el){el.remove();});
@@ -3024,13 +3068,16 @@
   if (IN_APP && window.Blam8SetupCards) {
     var setupFormGuard = new window.Blam8SetupCards.FormGuard(root.getAttribute("data-setup-scope") || "");
     setupCards = new window.Blam8SetupCards.Panel({ messages: msgs, form: form,
-      onApplying: function (card) { setupFormGuard.notify(card); },
-      onApplied: function () { fetchSetupStatus(); } });
+      onApplied: function (card, reloading) {
+        setupFormGuard.notify(card, reloading);
+        if (!reloading) fetchSetupStatus();
+      } });
     if(window.Blam8GuidedSetup)window.Blam8GuidedSetup.attach(setupCards,function(){if(panel.classList.contains('hidden'))setOpen(true,{focus:false});});
   }
 
-  var openFlag = sessionStorage.getItem(KEY_OPEN);
-  if (openFlag === "1" || (ONB_MODE && openFlag !== "0")) setOpen(true,{focus:!document.querySelector('[data-guided-active]')});
+  var openFlag;
+  try { openFlag = sessionStorage.getItem(KEY_OPEN); } catch (_) {}
+  if (document.body.hasAttribute("data-initial-chat-dock") || openFlag === "1" || (ONB_MODE && openFlag !== "0")) setOpen(true,{focus:!document.querySelector('[data-guided-active]')});
 
   // Held for later, on the wizard's knowledge step: rules and facts stated at
   // earlier steps arrive as a ready note card — saved with the owner's click,

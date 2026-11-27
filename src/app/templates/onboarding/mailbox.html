@@ -1,23 +1,25 @@
 {% extends "onboarding/base.html" %}
 {% block title %}Connect mailbox · Set up BLAM8{% endblock %}
 {% block heading %}{% if connected and not change %}Customer inbox connected{% elif connected %}Choose a different inbox{% else %}Connect the inbox your customers email{% endif %}{% endblock %}
-{% block subheading %}{% if connected and not change %}You can continue setup without importing historical mail.{% else %}Choose the account where you receive customer enquiries.{% endif %}{% endblock %}
+{% block subheading %}{% if not connected or change %}Choose the account where you receive customer enquiries.{% endif %}{% endblock %}
 {% block content %}
 {# Which account is which (Kris 2026-09-13): the stays-business sign-up connected a
    personal Hotmail here because nothing said "you signed in as X — that was
    your login; now pick the inbox customers write to". The strip names the
    login, then asks the one question that matters: same address, or another? #}
 <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm space-y-2.5">
+  {% if not (connected and same_as_login and not change) %}
   <div class="flex gap-2.5">
     <span class="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white">&#10003;</span>
     <p class="text-slate-600"><span class="font-semibold text-navy">Your BLAM8 login</span>{% if signer_email %} — <span class="font-medium text-slate-700" data-signer-email>{{ signer_email }}</span>{% endif %}. Signing in alone gives BLAM8 no access to your mail.</p>
   </div>
+  {% endif %}
   <div class="flex gap-2.5">
     {% if connected %}
     {# Step 2 ticks like step 1 once the inbox is connected (Kris, live on
        this step 2026-09-13). #}
     <span class="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-emerald-500 text-[11px] text-white">&#10003;</span>
-    <p class="text-slate-600"><span class="font-semibold text-navy"{% if same_as_login %} data-same-as-login{% endif %}>The inbox customers email</span> — <span class="font-medium text-slate-700" data-connected-inbox>{{ mailbox }}</span>. Connected{% if same_as_login %} — the same address as your login{% endif %}.</p>
+    <p class="text-slate-600"><span class="font-medium text-slate-700" data-connected-inbox>{{ mailbox }}</span>{% if same_as_login %} <span data-same-as-login>(also your login)</span>{% endif %}</p>
     {% else %}
     <span class="mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded-full bg-brand text-[11px] font-semibold text-white">2</span>
     <p class="text-slate-600"><span class="font-semibold text-navy">The inbox customers email</span>: connect that same account if customers email you there, or choose your business inbox.</p>
@@ -34,7 +36,7 @@
    on Gmail — so neither refuses. #}
 {% if personal_inbox and not same_as_login %}
 <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800" data-personal-inbox>
-  <span class="font-semibold">Is this where your customers' enquiries arrive?</span> {{ mailbox }} is a {{ mailbox_domain }} address — fine if that's the inbox customers use. If enquiries go to a business address instead, connect that one — it replaces this connection.
+  <span class="font-semibold">Is this where your customers’ enquiries arrive?</span> If they use another inbox, you can switch below.
 </div>
 {% endif %}
 {# Honest about the go-live hold (Julius 2026-09-02): drafting does NOT
@@ -42,7 +44,6 @@
    drafting in Settings once they've been through what's arriving. #}
 {% include "_backlog_status.html" %}
 <script src="/static/backlog_status.js?v={{ asset_rev }}" defer></script>
-<p class="mt-2 text-sm text-slate-500">Review your sending settings before enabling drafting.</p>
 <div class="mt-5 flex items-center justify-between">
   <a href="/onboarding/mailbox?change=1" class="text-sm text-slate-500 hover:text-navy transition">Use a different account</a>
   <a href="/onboarding/voice" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</a>

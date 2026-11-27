@@ -6,12 +6,12 @@ const helper=fs.readFileSync('src/app/static/onboarding_journey.js','utf8');
 const widget=fs.readFileSync('src/app/static/concierge.js','utf8');
 const a=widget.indexOf('function showContinueHint()'),b=widget.indexOf('// ── open / close',a);
 assert(a>0 && b>a);
-let action, step='interview', pending=0, note='', clicks=0, busy=false, saved=true;
+let action, step='interview', pending=0, note='', clicks=0, busy=false, saved=true, approved=true;
 const cta={children:[],innerHTML:'',appendChild(el){this.children.push(el);},classList:{remove(){}}};
 const doc={
   getElementById:()=>({textContent:JSON.stringify({current:step,next:{label:'Voice'}})}),
   querySelectorAll(selector){return selector==='[data-onb-continue]'?(action?[action]:[]):Array(pending).fill({});},
-  querySelector(selector){return selector.includes('content')?{value:note}:selector==='[data-knowledge-saved-status]'&&saved?{textContent:'Knowledge saved'}:null;},
+  querySelector(selector){return selector==='[data-knowledge-sample][data-approved="yes"]'?approved:selector.includes('content')?{value:note}:selector==='[data-knowledge-saved-status]'&&saved?{textContent:'Knowledge saved'}:null;},
   createElement(){return {className:'',textContent:'',children:[],listeners:{},setAttribute(name,value){this[name]=value;},appendChild(el){this.children.push(el);},addEventListener(name,fn){this.listeners[name]=fn;}};}
 };
 const window={Blam8KnowledgeSourceReview:{working:()=>busy}};
@@ -53,6 +53,26 @@ assert.equal(cta.children[0].className,'bc-notice');
 assert.match(cta.children[0].children[0].textContent,/Complete the required form fields/);
 console.log('Journey readiness and explicit-click replay passed');
 
-step="knowledge";saved=false;assert.equal(state.read(0).ready,false);assert.equal(state.read(0).blocker,"knowledge_required");
+step="knowledge";action=makeAction();saved=false;assert.equal(state.read(0).ready,false);assert.equal(state.read(0).blocker,"knowledge_required");
 
 action.disabled=true;assert.equal(state.read(0).blocker,"knowledge_required");
+assert.match(state.read(0).reason,/add and save your first note/i);
+pending=1;assert.equal(state.read(0).blocker,'pending_reviews');
+context.showContinueHint();assert.equal(action.hidden,true);
+action.offsetParent=null;saved=true;pending=0;action.disabled=false;context.showContinueHint();assert.equal(action.hidden,false);
+approved=false;context.showContinueHint();assert.equal(action.hidden,true);assert.equal(state.read(0).blocker,'sample_required');
+approved=true;note='Unsaved edit';context.showContinueHint();assert.equal(action.hidden,true);
+note='';context.showContinueHint();assert.equal(action.hidden,false);
+
+// Knowledge always opens against the current page, including a conversation resumed from Voice.
+const opening=widget.slice(widget.indexOf('  function knowledgeOpening()'),widget.indexOf('  var ONB_GREETINGS'));
+const greeting=widget.match(/  function greeting\(\) \{[^\n]+/)[0];
+const markers=new Set();
+const entry=vm.createContext({document:{querySelector:s=>markers.has(s)},ONB_SITE:'',
+  ONB_STEP:'knowledge',FIX_LOG_ID:null,SCENARIO:false,GREETING:'Earlier Voice greeting'});
+vm.runInContext(opening+greeting,entry);
+assert.match(entry.greeting(),/what do you offer/i);
+entry.ONB_SITE='example.test';assert.match(entry.greeting(),/website/i);
+markers.add('[data-onb-held-notes]');assert.match(entry.greeting(),/mentioned.*earlier/i);
+markers.add('[data-knowledge-saved-status]');assert.match(entry.greeting(),/notes are saved/i);
+markers.add('[data-knowledge-review]');assert.match(entry.greeting(),/draft notes are ready/i);

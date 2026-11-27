@@ -186,11 +186,8 @@ def prompt_block(cov: dict) -> str:
                  "fact stated plainly IN THE BUSINESS'S OWN VOICE. Keep the owner's first-person wording "
                  "and any explicit writing preference. Keep numbers exact, one clear subject per note. Propose "
                  "ONLY the new notes from this turn's answers — never a fact lifted from another "
-                 "note or the website, never an inference. Ask about at most three kinds per "
-                 "turn — count them. 'Covered' means SOME note of that kind exists: when the "
-                 "covering note is plainly partial (one item priced, not the main services; the "
-                 "hours of one day), still ask for the rest — Prices is only really covered when "
-                 "the main services carry a price.")
+                 "note or the website, never an inference. Ask one question only if the answer would change the first reply. "
+                 "A policy for individual quotes or personal confirmation can be a complete answer.")
     lines.append(SUBJECT_NOTES)
     return "\n".join(lines)
 

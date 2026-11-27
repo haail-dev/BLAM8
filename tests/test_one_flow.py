@@ -128,14 +128,15 @@ def test_finish_lands_on_the_first_open_tuning_step(client, monkeypatch, review_
     monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
     monkeypatch.setattr(onboarding.db, "upsert_tenant_config", lambda *a, **k: None)
-    monkeypatch.setattr(onboarding,'_prepare_guided_setup',lambda ctx:'/app/setup/guide')
+    monkeypatch.setattr(onboarding.knowledge_sample,'current',lambda cfg, knowledge: {'approved':True})
+    monkeypatch.setattr(onboarding,'_prepare_guided_setup',lambda ctx:'/app/diary/dependants')
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: list(STEPS))
     review_store.sources = [{'source':'Reviewed facts','content':'Confirmed business facts.'}]
     assert review_store.rows == []  # saved Knowledge and no pending review allow handoff
     r = client.post("/onboarding/knowledge/text", data={"label": "", "content": "", "then": "continue"},
                     follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == "/app/setup/guide"  # explicit introduction before actual Diary
+    assert r.headers["location"] == "/app/diary/dependants"
     monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: [dict(s, done=True) for s in STEPS])
     r = client.post("/onboarding/knowledge/text", data={"label": "", "content": "", "then": "continue"},
                     follow_redirects=False)
@@ -148,9 +149,9 @@ def test_knowledge_button_says_next_with_the_first_step(client, monkeypatch, rev
     monkeypatch.setattr(onboarding.db, "list_knowledge_sources", lambda tid, client=None: [])
     monkeypatch.setattr(onboarding.db, "knowledge_source_texts", lambda tid, client=None: [])
     monkeypatch.setattr(onboarding.db, "get_tenant_config", lambda tid, client=None: {"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
-    monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: [dict(STEPS[0], done=False)] + STEPS[1:])
+    monkeypatch.setattr(setup_handoff, "load_steps", lambda tid, client=None: setup_handoff.steps({"crm"}, {}, [], 14, {}, review_state={}))
     r = client.get("/onboarding/knowledge")
-    assert ">Next: Guided setup</button>" in r.text
+    assert ">Next: Records and workflows</button>" in r.text
     assert "Finish setup</button>" not in r.text
 
 

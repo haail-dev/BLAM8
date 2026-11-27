@@ -18,7 +18,7 @@ def test_saved_knowledge_layout(tmp_path, width, theme):
     page=env.get_template('onboarding/knowledge.html').render(
         **onboarding._step_ctx('knowledge'),request=SimpleNamespace(state=SimpleNamespace(user_email='owner@example.test',tenant_id='offline'),url=SimpleNamespace(path='/onboarding/knowledge')),
         configured=True,asset_rev='offline',csrf_token=lambda _: 'offline',device_sync_enabled=lambda:False,
-        onboarding_identity=lambda _: {'mailbox':'owner@example.test','same':True},pending_reviews=[],saved_review_ids=['saved'],
+        onboarding_identity=lambda _: {'mailbox':'owner@example.test','same':True},sample={'approved':True},pending_reviews=[],saved_review_ids=['saved'],
         sources=[{'source':source,'display_label':'Opening hours','chunks':1}],source_texts={source:'We close at four.'},
         site_url='https://example.test/',site_done=True,site_state={'state':'saved','pending_notes':0,'saved_notes':1},next_label='Next: Guided setup')
     page=re.sub(r'<script\b[^>]*\bsrc=[^>]*></script>','',page)

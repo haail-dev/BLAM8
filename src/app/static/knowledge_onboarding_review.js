@@ -39,17 +39,11 @@
     var heading=document.querySelector('[data-onboarding-heading]'),helper=document.querySelector('[data-onboarding-helper]');
     if(!heading || !Array.from(holder.querySelectorAll('[data-knowledge-review]')).some(function(form){return form.dataset.reviewClosed!=='1';}))return;
     var savedStatus=document.querySelector('[data-knowledge-saved-status]');if(savedStatus)savedStatus.remove();
+    var sample=document.querySelector('[data-knowledge-sample]');if(sample)sample.remove();
     heading.textContent='Review Knowledge';if(helper)helper.hidden=true;
     holder.after(manual); // Move the existing controls, preserving unsaved inputs.
     var coverage=document.getElementById('knowledge-coverage-shell');
-    if(coverage){
-      if(coverage.dataset.compactCoverage!=='1'){
-        var panel=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Knowledge coverage';panel.className='mb-3 text-xs text-slate-600';panel.appendChild(summary);
-        while(coverage.firstChild)panel.appendChild(coverage.firstChild);
-        coverage.appendChild(panel);coverage.dataset.compactCoverage='1';
-      }
-      manual.after(coverage);
-    }
+    if(coverage)manual.after(coverage);
   }
   function replace(data, checkedId) {
     var parser=new DOMParser(), incoming=parser.parseFromString(data.review_html || '', 'text/html');

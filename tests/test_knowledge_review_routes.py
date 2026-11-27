@@ -30,6 +30,9 @@ def test_saved_page_uses_note_titles_and_authoritative_status(client, review_sto
     assert page.one(**{'data-knowledge-saved-status': None}).text.startswith('Knowledge saved 1 note')
     assert row['id'] in page.one(**{'data-knowledge-saved-reviews': None}).attrs['data-knowledge-saved-reviews']
     assert 'topics have saved notes' not in response.text
+    coverage = page.one(id='knowledge-review-coverage').text
+    assert '0 saved' not in coverage and '0 pending' not in coverage
+    assert '1 saved' in coverage
     # Starting another batch must not falsely say all reviews are complete.
     review_store.stage('tenant', [{'label':'New fact', 'content':'A new pending note.'}])
     pending = markup(client.get('/onboarding/knowledge').text)

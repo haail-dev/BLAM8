@@ -45,8 +45,6 @@
 .guided-target{scroll-margin-block:1rem}
 .guided-proposed-note{display:block;font-size:.75rem;color:#1d4ed8;margin:.35rem 0}
 .guided-proposed-note button{font:inherit;padding:.15rem .4rem}
-.guided-resume{position:fixed;right:1rem;top:3rem;z-index:80;border:1px solid #94a3b8;border-radius:.6rem;padding:.6rem .85rem;background:#1d4ed8;color:white;font-size:.875rem}
-.guided-resume[hidden]{display:none}
 .guided-running #bc-panel{display:flex!important;position:fixed;right:1rem;bottom:1rem;width:23rem;max-width:calc(100vw - 2rem);height:min(46rem,calc(var(--guided-viewport,100dvh) - 5rem))!important;max-height:calc(var(--guided-viewport,100dvh) - 5rem)!important;transition:none}
 .guided-running #bc-panel>header{flex:none}
 .guided-running #bc-form{flex:none}

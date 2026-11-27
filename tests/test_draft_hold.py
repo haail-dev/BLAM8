@@ -129,6 +129,7 @@ def test_a_junk_mode_is_ignored_rather_than_obeyed(client, monkeypatch):
 def test_finishing_onboarding_holds_drafting(monkeypatch):
     import app.onboarding as onboarding
     from app import knowledge_review
+    monkeypatch.setattr(onboarding.knowledge_sample, "current", lambda cfg, knowledge: {"approved": True})
     monkeypatch.setattr(knowledge_review,'load',lambda tid:{'sources':[{'source':'Reviewed facts','content':'Confirmed business facts.'}],'reviews':[]})
     monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     saved = {}
@@ -144,6 +145,7 @@ def test_a_broken_config_write_still_lets_signup_finish(monkeypatch):
     braces — it must never 500 the last step of signing up."""
     import app.onboarding as onboarding
     from app import knowledge_review
+    monkeypatch.setattr(onboarding.knowledge_sample, "current", lambda cfg, knowledge: {"approved": True})
     monkeypatch.setattr(knowledge_review,'load',lambda tid:{'sources':[{'source':'Reviewed facts','content':'Confirmed business facts.'}],'reviews':[]})
     monkeypatch.setattr(onboarding.db,"get_tenant_config",lambda *a,**k:{"agent_name":"Office team","tone":"Professional","sign_off":"Regards"})
     monkeypatch.setattr(onboarding.db, "set_onboarded", lambda *a, **k: None)
@@ -216,8 +218,8 @@ def test_the_connect_screen_does_not_promise_drafts(client, monkeypatch):
         app.dependency_overrides.pop(require_tenant, None)
     assert r.status_code == 200
     assert "Auto-draft is on" not in r.text
-    assert "continue setup without importing historical mail" in r.text
-    assert "sending settings before enabling drafting" in r.text
+    assert "data-onb-continue" in r.text
+    assert "Drafting and sending settings stay the same." in r.text
 
 
 # ── The two facts stop contradicting each other ────────────────────────────

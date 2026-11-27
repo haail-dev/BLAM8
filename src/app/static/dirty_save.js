@@ -27,6 +27,7 @@
   function signature(form) {
     var parts = [];
     (window.Blam8ProposalForms ? window.Blam8ProposalForms.data(form) : new FormData(form)).forEach(function (v, k) {
+      if (k === 'csrf_token' || k.indexOf('_sync_') === 0) return;
       /* Files have no readable value; name+size distinguishes a swapped pick. */
       parts.push(k + '=' + (v instanceof File ? v.name + ':' + v.size : v));
     });
@@ -41,7 +42,13 @@
     row.dataset.dirtyWatched = '1';
 
     var pristine = signature(form);
-    function sync() { row.hidden = signature(form) === pristine; }
+    function sync() {
+      row.hidden = signature(form) === pristine || (row.hasAttribute('data-save-valid') && (
+        form.matches(':invalid') || Array.from(form.querySelectorAll('[required]')).some(function (el) {
+          return !el.disabled && !el.value.trim();
+        })
+      ));
+    }
     sync();
 
     form.addEventListener('input', sync);

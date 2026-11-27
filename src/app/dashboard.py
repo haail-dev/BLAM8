@@ -447,12 +447,13 @@ def _ctx(active: str, ctx: TenantCtx, **extra) -> dict:
         except Exception:
             view_as_ok = False
     try:
-        guide_meta = (navcache.get_or_fill('t:'+ctx.tenant_id+':tcfg-strip', 15.0,
-            _fill_tcfg_strip(ctx)).get('onboarding_state') or {}).get('guide')
+        guide_state = (navcache.get_or_fill('t:'+ctx.tenant_id+':tcfg-strip', 15.0,
+            _fill_tcfg_strip(ctx)).get('onboarding_state') or {})
     except Exception:
-        guide_meta = None
+        guide_state = {}
     return {"active": active, "draft_count": draft_count,
-            "guided_setup_meta": guide_meta,
+            "guided_setup_meta": guide_state.get("guide"),
+            "guide_revision": guide_state.get("revision"),
             "platform_admin": platform_admin,
             "view_as_ok": view_as_ok,
             "scheduling_on": "scheduling" in mods,
@@ -4800,6 +4801,7 @@ def diary_dependants(request: Request, ctx: TenantCtx = Depends(require_onboarde
         ladders=ladders.from_groups(groups) + ladders.from_contact_defs(contact_defs),
         max_ladders=ladders.MAX_LADDERS, notify_options=ladders.NOTIFY,
         saved=request.query_params.get("dependants") == "saved",
+        record_choice_retry=request.query_params.get("guide") == "retry",
         setup_prefill=_setup_prefill(ctx, "dependants", fresh=not groups)))
 
 
@@ -4815,8 +4817,9 @@ def save_diary_dependants(g_label: list[str] = Form([]), g_plural: list[str] = F
                           l_who: list[str] = Form([]), l_label: list[str] = Form([]),
                           l_levels: list[str] = Form([]), l_notify: list[str] = Form([]),
                           l_gates: list[str] = Form([]),
-                          settings_snapshot: str = Form(""),
+                          settings_snapshot: str = Form(""), guide_revision: int | None = None,
                           ctx: TenantCtx = Depends(require_onboarded)):
+    from app import guided_setup_routes
     from app import ladders, requirement_groups as rgroups
     expected = setup_forms.parse(settings_snapshot, "dependants")
     groups = rgroups.parse_editor_form(g_label, g_plural, g_cardinality, f_group, f_label,
@@ -4831,8 +4834,21 @@ def save_diary_dependants(g_label: list[str] = Form([]), g_plural: list[str] = F
     from datetime import datetime, timezone
     operations = setup_forms.groups_plan(expected, groups, lads)
     operations.append(setup_forms.operation("scheduling_config", {"dependants_configured_at": datetime.now(timezone.utc).isoformat()}, ctx.tenant_id))
+    # A submitted record type answers the relevance question. Progress stages alone do not.
+    answers_record_choice = bool(groups) and guide_revision is not None
+    if answers_record_choice:
+        guided_setup_routes.records_choice_context(ctx, guide_revision)
     setup_forms.save(ctx, "dependants", expected, operations)
     _held_used(ctx, "dependants")
+    if answers_record_choice:
+        try:
+            context = guided_setup_routes.records_choice_context(ctx, guide_revision)
+            return guided_setup_routes.record_choice_redirect(ctx, context, 'needed')
+        except HTTPException as exc:
+            if exc.status_code not in (409, 503):
+                raise
+            # The settings transaction succeeded. Retry only the guide decision.
+            return RedirectResponse("/app/diary/dependants?dependants=saved&guide=retry", status_code=303)
     return RedirectResponse("/app/diary/dependants?dependants=saved", status_code=303)
 
 

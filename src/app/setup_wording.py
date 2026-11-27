@@ -48,7 +48,7 @@ WORDS = {
     ('crm_fields', 'contact_field', 'label'): ('Detail', 'What detail do you need?'),
     ('crm_fields', 'contact_field', 'field_type'): ('Format', None),
     ('crm_fields', 'contact_field', 'options'): ('Choices', 'What are the choices for {label}?'),
-    ('crm_fields', 'contact_field', 'required'): ('Must be filled in',
+    ('crm_fields', 'contact_field', 'required'): ('Required or optional',
         'Must every customer record have {label}?'),
     ('crm_fields', 'contact_field', 'extraction_hint'): ('What to look out for', None),
     ('crm_fields', 'contact_field', 'probe_behaviour'): ('Ask customers for it',

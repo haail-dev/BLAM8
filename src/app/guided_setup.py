@@ -414,7 +414,10 @@ def steps(context):
             stop['decision'] = guide['decisions'].get(stop['id'])
             filtered.append(stop)
             pending = guide['pending'].get(stop['id'])
-            if pending:
+            # Once the contact field is saved, the native form already shows it.
+            # Keep an existing explanation cursor usable across an upgrade.
+            contact_applied = stop['id'] == 'crm_fields/contact_field' and stop['decision'] == 'applied'
+            if pending and (not contact_applied or guide['current'] == 'explain.crm_fields/contact_field'):
                 proposal = state['proposals'].get(pending['proposal'], {})
                 # Explain the exact represented choices, never the whole
                 # catalogue. One stable stop per affected native control.
@@ -431,6 +434,18 @@ def steps(context):
                         question=EXPLANATIONS.get(key, 'The setup card shows the changes to '+entry['label'].lower()+'.'),
                         anchor='setting.'+key if entry.get('key') else 'editor.'+entry['page'],
                         catalogue=stop['catalogue'], focus_catalogue=identity))
+            if stop['id'] == 'crm_fields/contact_field':
+                for entity, title, question in (
+                    ('company', 'Companies', 'Do you want to keep any details about the companies you work with?'),
+                    ('deal', 'Deals', 'Do you want to track any details about individual sales opportunities?'),
+                ):
+                    need = entity + '_fields'
+                    section = dict(substep=sid, page=stop['page'], href=stop['href'], entity=entity, title=title)
+                    filtered.append(dict(section, id='need.'+need, kind='need', need=need, question=question))
+                    if guide.get('needs', {}).get(need):
+                        filtered.append(dict(section, id='editor.'+need, kind='native_form',
+                            question=f'What would you like to keep in {title}? You can ask me about the fields. '
+                                     f'Use Add in {title} to save each one, then choose Next.'))
         # A need-gated fact is asked right after its need stop, never before it.
         gated = [f for f in facts if contract.QUESTIONS.get(f['question_id'], {}).get('need')]
         ordered = [f for f in facts if f not in gated]

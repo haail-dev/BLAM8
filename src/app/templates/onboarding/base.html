@@ -38,10 +38,10 @@
     @media (min-width: 768px) {
       body[data-onboarding-shell] { --onboarding-gutter:10px; --onboarding-chat-width:22rem; }
       /* Override the shared dock's single body reserve, never add a second one. */
-      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) { padding-right:calc(var(--onboarding-chat-width) + var(--onboarding-gutter)) !important; }
-      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-bc-full-width] { margin-right:calc(-1 * (var(--onboarding-chat-width) + var(--onboarding-gutter))) !important; }
-      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-onboarding-main] { padding-left:var(--onboarding-gutter);padding-right:var(--onboarding-gutter);padding-top:var(--onboarding-gutter); }
-      body[data-onboarding-shell]:has(#bc-panel:not(.hidden)) [data-onboarding-column] { max-width:none; }
+      body[data-onboarding-shell]:is([data-initial-chat-dock], :has(#bc-panel:not(.hidden))) { padding-right:calc(var(--onboarding-chat-width) + var(--onboarding-gutter)) !important; }
+      body[data-onboarding-shell]:is([data-initial-chat-dock], :has(#bc-panel:not(.hidden))) [data-bc-full-width] { margin-right:calc(-1 * (var(--onboarding-chat-width) + var(--onboarding-gutter))) !important; }
+      body[data-onboarding-shell]:is([data-initial-chat-dock], :has(#bc-panel:not(.hidden))) [data-onboarding-main] { padding-left:var(--onboarding-gutter);padding-right:var(--onboarding-gutter);padding-top:var(--onboarding-gutter); }
+      body[data-onboarding-shell]:is([data-initial-chat-dock], :has(#bc-panel:not(.hidden))) [data-onboarding-column] { max-width:none; }
       body[data-onboarding-shell] #blam8-concierge #bc-panel {
         position:fixed;
         top:calc(var(--onboarding-bar) + var(--top-reserve) + var(--onboarding-gutter));
@@ -84,6 +84,19 @@
   </style>
 </head>
 <body data-onboarding-shell class="h-full font-sans bg-slate-100 text-slate-800 antialiased">
+<script>
+  // Reserve the desktop column before the first visible element is laid out.
+  (function () {
+    var scope = {{ ((request.state.tenant_id or '')[:12]) | tojson }};
+    var openFlag;
+    try { openFlag = sessionStorage.getItem('blam8_concierge_open' + (scope ? ':' + scope : '')); } catch (_) {}
+    var wizard = {{ (not onboarding_progress) | tojson }};
+    var activeGuide = {{ (guided_setup_meta is defined and guided_setup_meta and guided_setup_meta.status == 'active' and guided_setup_meta.intro_ack) | default(false,true) | tojson }};
+    if (openFlag === '1' || (wizard && openFlag !== '0') || activeGuide) {
+      document.body.setAttribute('data-initial-chat-dock', '');
+    }
+  })();
+</script>
 <div class="min-h-full flex flex-col">
   {# The shared assistant dock keeps this bar and its contents viewport-wide;
      only the wizard below reserves space when the assistant opens. #}

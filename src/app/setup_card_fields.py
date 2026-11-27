@@ -45,7 +45,10 @@ def named(row):
 
 
 def describe(fields):
-    return fields['label'] + ''.join(' · ' + str(fields[k]) for k in ('field_type', 'durability') if k in fields)
+    parts = [fields['label']]
+    if 'required' in fields:
+        parts.append('Required' if fields['required'] else 'Optional')
+    return ' \u00b7 '.join(parts)
 
 
 def patch(card, ids, snapshot):
@@ -116,8 +119,6 @@ def patch(card, ids, snapshot):
         # SQL receives only writable columns; saved unrelated attributes stay put.
         writes.append({k: deepcopy(after[k]) for k in FIELDS | {'id', 'key', 'entity', 'display_order', 'staff_can_see_set'} if k in after})
         notes = []
-        if after['durability'] == 'once':
-            notes.append('Recall and validity are inactive because this field does not expire.')
         if before and any(after.get(k) != before.get(k) for k in ('recall_days', 'valid_months')):
             notes.append('These expiry rules also apply to dates already saved on customer records.')
         if crm_fields.is_special_category(after):

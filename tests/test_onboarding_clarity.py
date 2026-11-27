@@ -131,10 +131,10 @@ def test_connected_personal_inbox_is_asked_about_not_refused(client, monkeypatch
     _mailbox_env(monkeypatch, "mummytomillieandella@hotmail.com")
     r = client.get("/onboarding/mailbox")
     # step 2 ticks with the connected address, like step 1 (Kris 2026-09-13)
-    assert "data-connected-inbox>mummytomillieandella@hotmail.com</span>. Connected." in r.text
+    assert "data-connected-inbox>mummytomillieandella@hotmail.com</span>" in r.text
     assert "data-personal-inbox" in r.text
-    assert "Is this where your customers' enquiries arrive?" in r.text
-    assert "is a hotmail.com address" in r.text              # says which kind, not "personal"
+    assert "Is this where your customers’ enquiries arrive?" in r.text
+    assert "data-signer-email>tallyandmicky@gmail.com" in r.text
     assert "data-same-as-login" not in r.text
     assert 'href="/onboarding/mailbox?change=1"' in r.text   # not straight into Microsoft
     assert "data-onb-continue" in r.text                     # still free to continue
@@ -157,7 +157,8 @@ def test_connected_inbox_same_as_login_says_so_not_personal(monkeypatch):
     the login and the inbox, and "is a personal address" read wrong — the
     note must say WHY it is shown: the same address as the login."""
     html = _same_as_login(monkeypatch, "business.blam8@gmail.com")
-    assert "Connected — the same address as your login." in html
+    assert "(also your login)" in html
+    assert 'data-signer-email' not in html
     assert "data-same-as-login" in html and "Customer inbox connected" in html
     assert "data-personal-inbox" not in html                 # same-as-login wins
     assert "personal address" not in html
@@ -317,8 +318,7 @@ def test_first_greeting_orients_before_it_asks():
     assert "Records and workflows, Diary, and Charges and payments" in intro
     assert "edit, accept or leave" in intro and "Next moves the walkthrough" in intro
     assert "five more" not in intro and "Nine in all" not in intro
-    assert "We'll check each note and any decisions it needs together." in js
-    assert "Drafts and corrections stay pending until you save your reviewed decisions." in js
+    assert "Your draft notes are ready." in js
     assert "Hit Finish setup" not in js and "After Finish setup" not in js   # one flow of nine
     assert intro.rstrip().endswith('what does your business do, and who are your customers?"')
     assert "AI assistant" in intro                              # Art 50 disclosure stays first
@@ -326,7 +326,7 @@ def test_first_greeting_orients_before_it_asks():
     # the knowledge greeting names the site being read when there is one
     assert 'var ONB_SITE = ' in js
     assert 'so I\'m reading it now' not in js
-    assert "Your agent can use them once you save." in js
+    assert "What do you offer, and what do you charge?" in js
 
 
 
