@@ -2,7 +2,8 @@
   "reasons": [
     "Current shared trade wording or context; remove or trace to explicitly applied tenant data in this closure step. No exemption.",
     "Exact CSS -webkit-touch-callout property suppresses the browser touch menu; it is not a business service or policy. Reviewed after landing-launcher markup replacement; detector remains unchanged.",
-    "Reviewed product-content port: existing marketing examples moved from help/KB Python literals into the shared article JSON, and llms.txt now resolves catalogue prices. These exact industry words remain tracked debt, not business configuration or an exemption; original U01/S1b ownership retained."
+    "Reviewed product-content port: existing marketing examples moved from help/KB Python literals into the shared article JSON, and llms.txt now resolves catalogue prices. These exact industry words remain tracked debt, not business configuration or an exemption; original U01/S1b ownership retained.",
+    "CSS structural selector positions the record form controls at narrow widths."
   ],
   "entries": [
     {
@@ -14286,30 +14287,6 @@
       "reason": 0
     },
     {
-      "path": "src/app/templates/_concierge.html",
-      "line": 197,
-      "kind": "asset",
-      "fingerprint": "aff84ffffa00ca5dbb3b99cc4c5c3cba88f8ea033f49a20a4f59c1a0ba54473c",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": ".bc-typing .bc-dot:nth-child(3) { animation-delay: 0.6s; }",
-      "owner": "U21",
-      "closure_step": "S4b",
-      "reason": 0
-    },
-    {
-      "path": "src/app/templates/_concierge.html",
-      "line": 196,
-      "kind": "asset",
-      "fingerprint": "f650f975de2b390b28fa63e741349d06ac2b1dbfc4f45bbe3836c08288b87eb8",
-      "scope": "<module>",
-      "occurrence": 0,
-      "excerpt": ".bc-typing .bc-dot:nth-child(2) { animation-delay: 0.3s; }",
-      "owner": "U21",
-      "closure_step": "S4b",
-      "reason": 0
-    },
-    {
       "path": "src/app/templates/admin/invites.html",
       "line": 48,
       "kind": "asset",
@@ -14610,6 +14587,18 @@
       "reason": 0
     },
     {
+      "path": "src/app/templates/app/crm_fields.html",
+      "line": 27,
+      "kind": "asset",
+      "fingerprint": "9f6fbf0e58d276d4b0b28e75fa03d3181642ec89f9177c39df5a92aa40744906",
+      "scope": "content",
+      "occurrence": 0,
+      "excerpt": "    .record-fields .saved-field > form:first-child { flex-basis: 100%; }",
+      "owner": "U21",
+      "closure_step": "S4b",
+      "reason": 3
+    },
+    {
       "path": "src/app/templates/app/diary.html",
       "line": 418,
       "kind": "asset",
@@ -14644,6 +14633,18 @@
       "owner": "U01",
       "closure_step": "S1b",
       "reason": 0
+    },
+    {
+      "path": "src/app/templates/app/diary_dependants.html",
+      "line": 43,
+      "kind": "asset",
+      "fingerprint": "09f9cc5be9033067e68935a1c5f47ccc77a5465a3860cf273703a07d007d7b08",
+      "scope": "content",
+      "occurrence": 0,
+      "excerpt": "    #dep-form .dep-ladder > :nth-child(n+3) { grid-column: 1 / -1; }",
+      "owner": "U21",
+      "closure_step": "S4b",
+      "reason": 3
     },
     {
       "path": "src/app/templates/app/diary_fleet.html",
