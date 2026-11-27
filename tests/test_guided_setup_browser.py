@@ -32,14 +32,14 @@ def test_real_diary_projections_edits_accept_and_device_restore(guide_journey,mo
     run_browser(guide_journey,monkeypatch,tmp_path,width,height,theme,'diary')
 
 
-@pytest.mark.parametrize('area,width,height,theme',[('records',390,844,'dark'),('charges',1280,900,'light')])
+@pytest.mark.parametrize('area,width,height,theme',[('records',390,844,'dark'),('records',820,1024,'dark'),('charges',1280,900,'light'),('contact_fields',820,1024,'dark')])
 def test_records_and_charges_real_native_decision_journeys(guide_journey,monkeypatch,tmp_path,area,width,height,theme):
     run_browser(guide_journey,monkeypatch,tmp_path,width,height,theme,area)
 
 
 @pytest.mark.parametrize('entry',['handoff','handoff_assistant'])
 def test_knowledge_handover_to_real_diary_without_intake_redirect(guide_journey,monkeypatch,tmp_path,entry):
-    run_browser(guide_journey,monkeypatch,tmp_path,390,844,'light',entry)
+    run_browser(guide_journey,monkeypatch,tmp_path,940 if entry=='handoff_assistant' else 390,844,'light',entry)
 
 
 def test_weekday_collection_projects_exact_members_without_serialising_proposals(guide_journey,monkeypatch,tmp_path):
@@ -55,6 +55,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         from app import onboarding, onboarding_state
         from copy import deepcopy
         seed_reviewed_voice(j)
+        monkeypatch.setattr(onboarding.knowledge_sample, 'current', lambda cfg, facts: {'approved':True})
         from app import knowledge_review
         saved_facts=[dict(source='Reviewed facts',content='Confirmed business facts.',mailbox_id=None,chunks=1)]
         monkeypatch.setattr(knowledge_review,'load',lambda tid:dict(sources=saved_facts,reviews=[],version='saved-facts'))
@@ -84,6 +85,18 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         j.move('diary_settings/min_notice_hours')
         path='/app/diary/settings';view=dashboard.diary_settings
         proposed=change('diary_settings',0,[dict(fields={'key':'min_notice_hours','value':24}),dict(fields={'key':'horizon_days','value':60})])
+    elif area=='contact_fields':
+        from app import setup_card_store
+        def history(tid, page, before=None, **kwargs):
+            rows = j.query('select revision,card from setup_card_revisions where tenant_id=%s and page=%s '
+                           'and revision < %s order by revision desc limit 50', tid, page, before or 2147483647, all=True)
+            return [dict(revision=rev, card=card) for rev, card in rows]
+        monkeypatch.setattr(setup_card_store, 'history', history)
+        monkeypatch.setattr(db, 'get_member', lambda *a, **kw: {'role':'owner'})
+        j.guide_action('relevance', 'off')
+        path='/app/crm/fields';view=dashboard.crm_fields_page
+        proposed=change('crm_fields',0,[dict(name='contact_field',fields=dict(label='Phone number',
+            required=False,probe_behaviour='passive',staff_can_see=False))])
     elif area=='records':
         j.move('dependants/field');path='/app/diary/dependants';view=dashboard.diary_dependants
         proposed=change('dependants',0,[dict(name='group',fields={'label':'Item','plural':'Items','cardinality':'many'}),
@@ -131,6 +144,13 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         def page(request:Request):
             request.state.tenant_id=j.tenant;request.state.user_email='owner@example.test'
             response=handler(request,ctx=ctx)
+            if area.startswith('handoff'):
+                response.body = response.body.replace(b'</main>', b"""</main><script>
+                  window.firstSetupLayout = {
+                    width: document.querySelector('[data-onboarding-column]').getBoundingClientRect().width,
+                    padding: parseFloat(getComputedStyle(document.body).paddingRight)
+                  };
+                </script>""")
             response.body=response.body.replace(b'<html lang="en"',('<html data-theme="'+theme+'" lang="en"').encode())
             response.headers['content-length']=str(len(response.body))
             response.set_cookie('bl_csrf','test-csrf')
@@ -186,7 +206,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
                     subprocess.run(['taskkill','/PID',str(browser.pid),'/T','/F'],stdout=log,stderr=log,timeout=5)
                 browser.kill();browser.wait(timeout=10)
         if area.startswith('handoff'):
-            assert len([r for r in requests if r['operation']=='start'])==1
+            assert not any(r['operation']=='start' for r in requests)
             assert len([r for r in requests if r['operation']=='resume'])==1
             from app import intake
             saved=j.row('scheduling_config',j.tenant)
@@ -203,6 +223,12 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             saved=j.row('scheduling_config',j.tenant)
             assert saved['min_notice_hours']==24 and saved['horizon_days']==45
             assert j.state()['guide']['decisions']['diary_settings/min_notice_hours']=='applied'
+        elif area=='contact_fields':
+            saved=j.query('select label from crm_field_definitions where tenant_id=%s', j.tenant, all=True)
+            assert saved == [('Phone number',)]
+            assert j.state()['guide']['decisions']['crm_fields/contact_field']=='applied'
+            assert j.state()['guide']['decisions']['need.company_fields']=='needed'
+            assert j.state()['guide']['decisions']['need.deal_fields']=='off'
         elif area=='records':
             saved=j.query('select to_jsonb(g) from requirement_groups g where tenant_id=%s',j.tenant,all=True)
             assert len(saved)==1 and saved[0][0]['fields'][0]['label']=='Owner reference'

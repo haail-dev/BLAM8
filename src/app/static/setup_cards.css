@@ -5,7 +5,7 @@
 .bc-setup-dot.held[aria-expanded=true]{background:#fef3c7}
 .bc-setup-tray{flex:none;max-height:40vh;overflow:auto;background:white;border:1px solid #cbd5e1;border-radius:12px;margin:4px 8px;padding:10px;font-size:12px;box-shadow:0 3px 12px #0f172a18}
 .bc-setup-heading,.bc-setup-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
-.bc-setup-line{border-top:1px solid #e2e8f0;padding:10px 0}
+.bc-setup-line{margin-top:8px}
 .bc-setup-line p{margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .bc-setup-line details{font-size:11px;color:#475569;margin:6px 0}
 .bc-setup-tray button,.bc-setup-error button{border:1px solid #cbd5e1;background:#f8fafc;border-radius:6px;padding:5px 8px;cursor:pointer}

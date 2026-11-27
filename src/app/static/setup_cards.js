@@ -16,13 +16,44 @@
     if (typeof value === "boolean") return value ? "Yes" : "No";
     return Array.isArray(value) ? value.join(", ") : String(value);
   }
-  function diff(parent, change) {
+  var CONTACT_LABELS = {
+    label: 'Field name', field_type: 'Format', options: 'Choices', required: 'Requirement',
+    extraction_hint: 'What to look for in emails', probe_behaviour: 'When missing',
+    durability: 'Expiry', recall_days: 'Reminder', valid_months: 'Expiry date', staff_can_see: 'Staff visibility'
+  };
+  var CONTACT_VALUES = {
+    field_type: {text:'Text', number:'Number', date:'Date', dropdown:'Dropdown', bool:'Yes or no'},
+    required: {true:'Required', false:'Optional'},
+    probe_behaviour: {passive:'Never ask', probe_once:'Ask once', probe_persistent:'Ask up to three times'},
+    durability: {once:'Does not expire', expires:'Expires'},
+    staff_can_see: {true:'Visible to staff', false:'Private-detail access required'}
+  };
+  function contactValue(key, value) {
+    if (value == null || value === '') return valueText(value);
+    if (key === 'valid_months') return value === 0 ? 'Use the date entered' : value + (value === 1 ? ' month' : ' months') + ' after the date entered';
+    if (key === 'recall_days') return value + (value === 1 ? ' day' : ' days') + ' before expiry';
+    var options = CONTACT_VALUES[key];
+    return options && Object.hasOwn(options, value) ? options[value] : valueText(value);
+  }
+  function contactUses(key, fields) {
+    if (key === 'valid_months' || key === 'recall_days') return fields.durability === 'expires';
+    if (key === 'options') return fields.field_type === 'dropdown';
+    return true;
+  }
+  function diff(parent, change, includeNotes) {
     var before = change.review_before || change.before || {}, after = change.review_after || change.after || {};
-    Array.from(new Set(Object.keys(before).concat(Object.keys(after)))).forEach(function (key) {
+    var contact = change.name === 'contact_field', added = contact && !change.before;
+    var keys = contact ? Object.keys(CONTACT_LABELS) : Array.from(new Set(Object.keys(before).concat(Object.keys(after))));
+    keys.forEach(function (key) {
+      if (contact && !contactUses(key, after) && !contactUses(key, before)) return;
       if (JSON.stringify(before[key]) === JSON.stringify(after[key])) return;
-      parent.appendChild(node("p", (LABELS[key] || key.replace(/_/g, " ")) + ": " + valueText(before[key]) + " → " + valueText(after[key])));
+      var label = contact ? CONTACT_LABELS[key] : LABELS[key] || key.replace(/_/g, " ");
+      var prior = contact ? contactValue(key, before[key]) : valueText(before[key]);
+      var next = contact ? contactValue(key, after[key]) : valueText(after[key]);
+      if (added && (after[key] == null || after[key] === '' || (Array.isArray(after[key]) && !after[key].length))) return;
+      parent.appendChild(node("p", label + ": " + (added ? next : prior + " \u2192 " + next)));
     });
-    (change.notes || []).forEach(function (note) { parent.appendChild(node("p", note)); });
+    if (includeNotes !== false) (change.notes || []).forEach(function (note) { parent.appendChild(node("p", note)); });
   }
   function csrf() {
     var match = document.cookie.match(/(?:^|;\s*)bl_csrf=([^;]+)/);
@@ -44,7 +75,6 @@
   function Panel(options) {
     var self = this;
     this.msgs = options.messages; this.form = options.form; this.onApplied = options.onApplied || function () {};
-    this.onApplying = options.onApplying || function () {};
     this.data = { cards: [], views: {}, options: {} }; this.generation = 0; this.busy = false;
     this.mode = null; this.editing = false; this.waiting = false;
     this.groupPreviews = {};
@@ -107,6 +137,27 @@
   Panel.prototype.disable = function () {
     this.tray.querySelectorAll("button,input,select,textarea").forEach(function (el) { el.disabled = true; });
   };
+  function pendingContactFields(cards) {
+    var box = document.querySelector('[data-pending-contact-fields]');
+    if (!box) return;
+    var card = cards.find(function (item) { return item.page === 'crm_fields'; });
+    var lines = card ? card.lines.filter(function (line) {
+      return line.name === 'contact_field' && ['held', 'proposed'].includes(line.status);
+    }) : [];
+    box.replaceChildren();
+    box.hidden = !lines.length;
+    if (!lines.length) return;
+    box.appendChild(node('strong', 'Suggested contact fields'));
+    lines.forEach(function (line) {
+      var fields = line.fields;
+      var details = [fields.label];
+      if (typeof fields.required === 'boolean') details.push(fields.required ? 'Required' : 'Optional');
+      if (fields.probe_behaviour === 'passive') details.push('Never ask');
+      if (fields.staff_can_see === false) details.push('Hidden from other staff');
+      box.appendChild(node('p', details.join(' · ')));
+    });
+    box.appendChild(node('p', 'Pending review in the assistant.'));
+  }
   Panel.prototype.paint = function () {
     var self = this; this.stale = false; this.dots.replaceChildren();
     var guided=window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active();
@@ -127,6 +178,7 @@
     if (this.mode && !this.pending(this.mode).length) this.mode = null;
     this.tray.replaceChildren(); this.tray.hidden = !this.mode || this.waiting;
     if (this.mode) this.paintTray();
+    pendingContactFields(this.data.cards);
     this.place();
     if(guided) this.dots.hidden=true;
     if(guided)window.Blam8GuidedSetup.project(this.data);
@@ -172,7 +224,7 @@
     row.appendChild(node("p", effective ? effective.display : line.display));
     if (effective) (effective.notes || []).forEach(function (note) { row.appendChild(node("p", note)); });
     if (effective) {
-      var changes = node("details"); changes.appendChild(node("summary", "Changes")); diff(changes, effective); row.appendChild(changes);
+      var changes = node("details"); changes.appendChild(node("summary", "Changes")); diff(changes, effective, false); row.appendChild(changes);
     }
     // Why each choice is suggested, in the owner's words; the server builds these lines.
     var reasons = line.reasons || { lines: [], usual: [] };
@@ -183,9 +235,18 @@
       parent.appendChild(node("p", (r.check ? "Check this. " : "") + r.label + ". " + r.text, r.check ? "bc-setup-check" : "bc-setup-reason"));
     });
     if (evidence.childElementCount > 1) row.appendChild(evidence);
-    if (reasons.usual.length) {
-      var usual = node("details"); usual.appendChild(node("summary", "Other choices use the usual settings"));
-      usual.appendChild(node("p", reasons.usual.join(", ")));
+    var defaults = reasons.usual;
+    if (line.name === 'contact_field') {
+      var fields = effective ? effective.fields : line.fields;
+      defaults = Object.keys(CONTACT_LABELS).filter(function (key) {
+        var source = (line.sources || {})[key];
+        return source && source.kind === 'inferred' && !(source.evidence || []).length && contactUses(key, fields);
+      }).map(function (key) { return CONTACT_LABELS[key] + ': ' + contactValue(key, fields[key]); });
+    }
+    if (defaults.length) {
+      var usual = node("details"); usual.appendChild(node("summary", line.name === 'contact_field' ? "Defaults used" : "Other choices use the usual settings"));
+      if (line.name === 'contact_field') defaults.forEach(function (text) { usual.appendChild(node("p", text)); });
+      else usual.appendChild(node("p", defaults.join(", ")));
       row.appendChild(usual);
     }
     var grouped=hasGroupAccept&&groupPreview&&effective;
@@ -206,15 +267,17 @@
     if(action==='/accept'&&window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active()&&!window.Blam8GuidedSetup.beforeApply())return;
     this.busy = true; this.disable(); ++this.generation;
     try {
-      if (action === "/accept") this.onApplying(card);
       var result = await request("/concierge/setup-cards/" + encodeURIComponent(card.page) + action, body);
       this.editing = false;
-      if(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.exists())await window.Blam8GuidedSetup.changed();
       if (action === "/accept") {
-        this.onApplied(result.card);
-        // The open page still shows what it loaded with: show what was saved.
-        if (this.onPage(card.page)) window.location.reload();
+        var reloading = this.onPage(card.page);
+        this.onApplied(result.card, reloading);
+        if (reloading) {
+          window.location.reload();
+          return;
+        }
       }
+      if(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.exists())await window.Blam8GuidedSetup.changed();
       await this.load();
       this.guidedDraft=null;
     } catch (err) {
@@ -245,7 +308,7 @@
       if (kind === 'ladder' && key === 'staff_can_see' && values.who !== 'contact') return;
       var stay = (self.data.views[card.page] || {}).stay;
       if (key === "at_once" && !stay) return;
-      var type = controls[key], label = node("label", scalar ? scalar.label : LABELS[key] || key.replace(/_/g, " ")), control;
+      var type = controls[key], label = node("label", scalar ? scalar.label : (kind === "contact_field" && CONTACT_LABELS[key]) || LABELS[key] || key.replace(/_/g, " ")), control;
       if (kind === "service" && stay && key === "timing") type = ["time"];
       if (kind === "service" && stay && key === "resource") type = [String(values.name || "")];
       var value = values[key], read;
@@ -264,7 +327,7 @@
         else if (choices.indexOf("") < 0) choices.unshift("");
         var actual = type === "services" ? (value || []) : value == null ? [] : [String(value)];
         actual.forEach(function (v) { if (choices.indexOf(v) < 0) choices.push(v); });
-        choices.forEach(function (v) { var opt = node("option", v === "" ? "Not specified" : CHOICES[v] || v); opt.value = v; opt.selected = actual.indexOf(v) >= 0; control.appendChild(opt); });
+        choices.forEach(function (v) { var opt = node("option", v === "" ? "Not specified" : kind === "contact_field" ? contactValue(key, v) : CHOICES[v] || v); opt.value = v; opt.selected = actual.indexOf(v) >= 0; control.appendChild(opt); });
         read = function () { return type === "services" ? Array.from(control.selectedOptions).map(function (o) { return o.value; }) : type === "boolean" ? (control.value === "" ? null : control.value === "true") : control.value; };
       } else {
         control = node(type === "list" || type === "prose" ? "textarea" : "input");
@@ -319,15 +382,31 @@
   }
   Panel.prototype.history = function () {
     var self = this;
-    this.msgs.querySelectorAll(".bc-setup-applied").forEach(function (el) { el.remove(); });
+    var expanded = new Set();
+    this.msgs.querySelectorAll(".bc-setup-applied").forEach(function (el) {
+      if (el.open) expanded.add(el.dataset.cardId);
+      el.remove();
+    });
     this.data.cards.forEach(function (card) {
       var applied = card.lines.filter(function (line) { return line.status === "applied"; });
       var view = self.data.views[card.page];
       if (!view) return;
       var record = node("details", null, "bc-setup-applied");
+      record.dataset.cardId = card.id;
+      record.open = expanded.has(card.id);
       var stamp = applied.length ? new Date(applied[applied.length - 1].applied_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
       record.appendChild(node("summary", view.label + (applied.length ? " · applied " + stamp + " · " + applied.length + " lines" : " · setup record") + ((card.considered || []).length ? " · " + card.considered.length + " considered" : "")));
       var content = node("div"); record.appendChild(content);
+      card.lines.forEach(function (line) {
+        if (line.status === 'held' || line.status === 'proposed') {
+          content.appendChild(node('p', 'Pending review: ' + (line.fields.label || line.display)));
+        } else if (line.status !== 'applied') {
+          content.appendChild(node('p', line.display + ' (' + line.status + ')'));
+        }
+      });
+      if (!card.lines.length && !(card.considered || []).length) {
+        content.appendChild(node('p', 'No current suggestions.'));
+      }
       consideredNotes(content, card);
       applied.forEach(function (line) { content.appendChild(node("p", line.display)); });
       var before, loaded = false, more = button("Earlier records", async function () {
@@ -427,10 +506,12 @@
     AFFECTED[value.page].forEach(function (group) { self.blocked[group] = true; });
     this.decorate();
   };
-  FormGuard.prototype.notify = function (card) {
+  FormGuard.prototype.notify = function (card, reloading) {
     if (!card || !Object.prototype.hasOwnProperty.call(AFFECTED, card.page)) return;
     var value = {scope: this.scope, page: card.page, at: Date.now(), token: String(Date.now()) + ":" + Math.random()};
-    this.receive(value);
+    // The saving page is already refreshing from the confirmed write.
+    if (reloading) this.seen[card.page] = value.token;
+    else this.receive(value);
     try { if (this.storage) localStorage.setItem(this.prefix + card.page, JSON.stringify(value)); } catch (_) {}
     try { if (this.channel) this.channel.postMessage(value); } catch (_) {}
   };

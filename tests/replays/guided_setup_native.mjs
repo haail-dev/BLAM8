@@ -13,7 +13,7 @@ function cdp(method,params={},session){return new Promise((r,j)=>{const id=++seq
 async function evaluate(expression,session){const r=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true},session);assert(!r.exceptionDetails,JSON.stringify(r.exceptionDetails));return r.result.value;}
 async function until(expression,session){const end=Date.now()+14000;while(Date.now()<end){if(await evaluate(expression,session))return;await new Promise(r=>setTimeout(r,50));}
  throw Error('Timed out '+expression+' '+await evaluate('document.body.innerText.slice(-6500)',session));}
-async function click(selector){const p=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});for(let p=e.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();const x=r.x+r.width/2,y=r.y+r.height/2;if(!e.contains(document.elementFromPoint(x,y))&&document.elementFromPoint(x,y)!==e)throw Error('Control covered: '+${JSON.stringify(selector)}+' by '+document.elementFromPoint(x,y)?.outerHTML.slice(0,200));return {x,y};})()`);
+async function click(selector, toggleSummary=false){const p=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});for(let p=e.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS'&&!(${toggleSummary}&&e.tagName==='SUMMARY'&&p===e.parentElement))p.open=true;e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();const x=r.x+r.width/2,y=r.y+r.height/2;if(!e.contains(document.elementFromPoint(x,y))&&document.elementFromPoint(x,y)!==e)throw Error('Control covered: '+${JSON.stringify(selector)}+' by '+document.elementFromPoint(x,y)?.outerHTML.slice(0,200));return {x,y};})()`);
  for(const type of ['mousePressed','mouseReleased'])await cdp('Input.dispatchMouseEvent',{type,button:'left',clickCount:1,...p});}
 async function button(text){await until(`[...document.querySelectorAll('button')].some(e=>e.textContent===${JSON.stringify(text)}&&!e.disabled&&e.getClientRects().length)`);await evaluate(`(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.textContent===${JSON.stringify(text)}&&!e.disabled&&e.getClientRects().length);e.dataset.nativeTarget='';})()`);await click('[data-native-target]');await evaluate("document.querySelector('[data-native-target]')?.removeAttribute('data-native-target')");}
 async function key(key,code,vk,modifiers=0){for(const type of ['keyDown','keyUp'])await cdp('Input.dispatchKeyEvent',{type,key,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk,modifiers,...(key==='Enter'&&type==='keyDown'?{text:'\r',unmodifiedText:'\r'}:{})});}
@@ -41,7 +41,7 @@ async function shot(name){
  })()`);
  assert(geometry.fits&&geometry.separate&&geometry.navClear&&geometry.singleScroll&&geometry.greetingHidden&&geometry.shell&&geometry.noOverflow&&geometry.chromeVisible,JSON.stringify(geometry));
  assert(geometry.title.includes('Setup'));
- const expectedStep=area==='records'||name.includes('records')?5:['charges','knowledge_conflict'].includes(area)?7:6;
+ const expectedStep=['records','contact_fields'].includes(area)||name.includes('records')?5:['charges','knowledge_conflict'].includes(area)?7:6;
  assert((await evaluate('document.querySelector("[data-current-step]").getAttribute("aria-label")')).startsWith('Step '+expectedStep+':'));
  }
 try{
@@ -50,25 +50,38 @@ try{
  if(area.startsWith('handoff')){
    await until('document.querySelector("[data-onb-continue]") && window.Blam8DeviceSync?.isReady() && window.Blam8OnboardingJourney?.read(0).ready');
    const chrome=await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`);
-   if(await evaluate('!document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-close');
-   await click('[data-onb-continue]');
-   await until('location.pathname==="/app/setup/guide" && document.querySelector("[data-guided-start]:not(:disabled)") && window.Blam8GuidedSetup && window.Blam8DeviceSync?.isReady()');
-   assert.deepEqual(await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`),chrome);
-   const intro=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(output+'/00-introduction.png',Buffer.from(intro.data,'base64'));
-   assert(await evaluate(`!document.querySelector('[data-guided-intro] a[href="/app/setup"]')`));
-   await until('document.querySelector("[data-guided-entry]:not(:disabled)") && document.querySelector("#bc-title").textContent.includes("Setup")');
-   assert(await evaluate(`document.querySelector('[data-guided-entry]').textContent===document.querySelector('[data-guided-start]').textContent && !document.querySelector('#bc-cta').textContent.includes('Diary →')`));
    if(area==='handoff_assistant'){
      if(await evaluate('document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-bubble');
-     await click('[data-guided-entry]');
-   }else await click('[data-guided-start]');
+     await until('document.querySelector("#bc-cta button")?.textContent.includes("Records")');
+     await click('#bc-cta button');
+   }else{
+     if(await evaluate('!document.querySelector("#bc-panel").classList.contains("hidden")'))await click('#bc-close');
+     await click('[data-onb-continue]');
+   }
    // Records comes first. An owner who is not ready leaves each section for later.
    await until('location.pathname==="/app/diary/dependants" && window.Blam8GuidedSetup?.currentStop()==="relevance.records.relationships"');
+   assert.deepEqual(await evaluate(`(()=>{const header=document.querySelector('header[data-bc-full-width]');return {brand:header.querySelector('[data-onboarding-brand]').textContent,height:header.getBoundingClientRect().height,background:getComputedStyle(document.body).backgroundColor,steps:document.querySelectorAll('[data-step-name-toggle]').length};})()`),chrome);
+   assert(await evaluate(`!document.querySelector('[data-guided-intro]')`));
+   const layout = await evaluate(`({
+     first: window.firstSetupLayout,
+     width: document.querySelector('[data-onboarding-column]').getBoundingClientRect().width,
+     padding: parseFloat(getComputedStyle(document.body).paddingRight)
+   })`);
+   assert.equal(layout.first.padding, layout.padding, 'Records dock space must be reserved before the widget loads');
+   assert(Math.abs(layout.first.width-layout.width)<=1, JSON.stringify(layout));
+   assert(+widthText>=768 ? layout.padding>300 : layout.padding===0, JSON.stringify(layout));
    await shot('00-records-handoff');
    for(const [stop,next] of [['relevance.records.relationships','/app/crm/fields'],['relevance.records.information','/app/crm/settings'],
                              ['relevance.records.progress','/app/diary/settings']]){
      await until('window.Blam8GuidedSetup?.currentStop()==='+JSON.stringify(stop)+' && window.Blam8DeviceSync?.isReady()');
-     await button('Decide later');
+     if(stop==='relevance.records.relationships' && area==='handoff'){
+       await click('[data-record-type-choice] [value=deferred]');
+     }else {
+       const selector = '.guided-navigation button';
+       await until(`Array.from(document.querySelectorAll('${selector}')).some(b=>b.textContent==='Decide later')`);
+       await evaluate(`Array.from(document.querySelectorAll('${selector}')).find(b=>b.textContent==='Decide later').dataset.chatLater='1'`);
+       await click('[data-chat-later]');
+     }
      await until('location.pathname==='+JSON.stringify(next)+' && document.querySelector(".guided-title")');
    }
    // Diary then starts by asking which diaries the business keeps, on the real settings page.
@@ -88,13 +101,18 @@ try{
    assert(!await evaluate(`document.querySelector('.guided-context')`));
    // The owner can drag the assistant taller; the guide keeps that size on its next page.
    const sheet=()=>evaluate(`Math.round(document.querySelector('#bc-panel').getBoundingClientRect().height)`);
-   assert(await evaluate(`getComputedStyle(document.querySelector('#bc-resize-handle')).display!=='none'`));
-   const before=await sheet(),grip=await evaluate(`(()=>{const r=document.querySelector('#bc-title').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
-   await cdp('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',buttons:1,clickCount:1,...grip});
-   for(const step of [50,100,150])await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',button:'left',buttons:1,x:grip.x,y:grip.y-step});
-   await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',buttons:0,clickCount:1,x:grip.x,y:grip.y-150});
-   const dragged=await sheet();assert(dragged>=before+140,JSON.stringify({before,dragged}));
-   assert(await evaluate(`(()=>{const m=document.querySelector('main').getBoundingClientRect(),p=document.querySelector('#bc-panel').getBoundingClientRect();return m.bottom<=p.top+1;})()`));
+   if (+widthText<768) {
+     assert(await evaluate(`getComputedStyle(document.querySelector('#bc-resize-handle')).display!=='none'`));
+     const before=await sheet(),grip=await evaluate(`(()=>{const r=document.querySelector('#bc-title').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+     await cdp('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',buttons:1,clickCount:1,...grip});
+     for(const step of [50,100,150])await cdp('Input.dispatchMouseEvent',{type:'mouseMoved',button:'left',buttons:1,x:grip.x,y:grip.y-step});
+     await cdp('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',buttons:0,clickCount:1,x:grip.x,y:grip.y-150});
+     const resized=await sheet();assert(resized>=before+140,JSON.stringify({before,resized}));
+     assert(await evaluate(`(()=>{const m=document.querySelector('main').getBoundingClientRect(),p=document.querySelector('#bc-panel').getBoundingClientRect();return m.bottom<=p.top+1;})()`));
+   } else {
+     assert(await evaluate(`document.querySelector('main').getBoundingClientRect().right <= document.querySelector('#bc-panel').getBoundingClientRect().left + 1`));
+   }
+   const dragged=await sheet();
    await cdp('Page.reload');
    await until('window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-title")?.textContent==="Your diaries"');
    assert(Math.abs(await sheet()-dragged)<=2,JSON.stringify({dragged,next:await sheet()}));
@@ -180,6 +198,75 @@ try{
    assert(await evaluate('!document.querySelector(".guided-question").textContent.includes("Your answer — false")'));
    await shot('05-exact-resume');
    console.log('Actual Knowledge Continue, one-time handover, diary discovery and profile, answer reuse, proposed mode, explanation and Accept passed');
+ }else if(area==='contact_fields'){
+   await type('#bc-input',"Yes. I'd like to keep a phone number. It's optional and only I should see it.");
+   await key('Enter','Enter',13);
+   await until('Blam8GuidedSetup.currentStop()==="crm_fields/contact_field" && document.querySelector(".bc-setup-tray").innerText.includes("Accept displayed changes")');
+   const summary = '[data-pending-contact-fields]';
+   assert(await evaluate(`document.querySelector('${summary}').innerText.includes('Phone number') && document.querySelector('${summary}').innerText.includes('Hidden from other staff')`));
+   assert(!await evaluate('document.querySelector(".guided-navigation").innerText.includes("Not needed") && document.querySelector(".guided-navigation").innerText.includes("Needed")'));
+   const card = '.bc-setup-line';
+   const changes = await evaluate(`document.querySelector('${card} details').textContent`);
+   assert(changes.includes('When missing: Never ask') && changes.includes('Requirement: Optional'), changes);
+   assert(changes.includes('Staff visibility: Private-detail access required'), changes);
+   assert(!/Recall days|valid months|Not set|passive|durability|Reminder|Choices:/.test(changes), changes);
+   const defaults = await evaluate(`Array.from(document.querySelectorAll('${card} details')).find(el=>el.querySelector('summary').textContent==='Defaults used')?.textContent`);
+   assert(defaults && defaults.includes('Format: Text') && defaults.includes('Expiry: Does not expire'), defaults);
+   assert.equal(await evaluate(`getComputedStyle(document.querySelector('${card}')).borderTopWidth`),'0px');
+   await click('.bc-setup-applied summary',true);
+   await until('document.querySelector(".bc-setup-applied[open]")?.innerText.includes("Pending review: Phone number")');
+   await shot('02-contact-proposed');
+   const peerTab=await cdp('Target.createTarget',{url:`http://127.0.0.1:${appPort}/app/crm/fields`});
+   const peer=(await cdp('Target.attachToTarget',{targetId:peerTab.targetId,flatten:true})).sessionId;
+   await until('window.Blam8DeviceSync?.isReady() && document.querySelector("[data-pending-contact-fields]:not([hidden])")',peer);
+   // Record even a short-lived warning on the old document before the refresh.
+   const watchWarnings=`new MutationObserver(()=>{if(document.querySelector('[data-setup-reload]'))
+     sessionStorage.setItem('testSawReloadWarning','yes');}).observe(document.body,{subtree:true,childList:true});true`;
+   await evaluate(watchWarnings,peer);
+   await cdp('Page.bringToFront');
+   await evaluate(watchWarnings);
+   await evaluate('window.beforeContactSave=true');
+   await button('Accept displayed changes');
+   await until('!window.beforeContactSave && document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelector("[data-pending-contact-fields]").hidden');
+   assert.equal(await evaluate('sessionStorage.getItem("testSawReloadWarning")'),null);
+   assert(!await evaluate('!!document.querySelector("[data-setup-reload]")'));
+   await until('sessionStorage.getItem("testSawReloadWarning")==="yes" || [...document.querySelectorAll("input[name=label]")].some(e=>e.value==="Phone number")',peer);
+   await cdp('Target.closeTarget',{targetId:peerTab.targetId});
+   const fieldsLayout = await evaluate(`Array.from(document.querySelectorAll('.add-field')).map(form=>{
+     const panel=form.closest('.field-panel'), card=form.closest('[data-onboarding-card]');
+     const left=form.getBoundingClientRect().left-card.getBoundingClientRect().left;
+     const hint=form.querySelector('[name=extraction_hint]').getBoundingClientRect();
+     return {entity:form.elements.entity.value, left, hint:hint.width, form:form.clientWidth,
+       fits:panel.scrollWidth<=panel.clientWidth+1};
+   })`);
+   assert.deepEqual(fieldsLayout.map(row=>row.entity),['contact','company','deal']);
+   assert(fieldsLayout.every(row=>row.left<=28 && row.hint>=row.form-2 && row.fits),JSON.stringify(fieldsLayout));
+   const visibility=await evaluate(`(()=>{
+     const form=document.querySelector('[data-record-entity=contact] .add-field');
+     const {field_type,durability,options,recall_days,valid_months}=form.elements;
+     function visible(control){return !control.disabled && !!control.getClientRects().length;}
+     function choose(control,value){control.value=value;control.dispatchEvent(new Event('change',{bubbles:true}));}
+     const textOnly=!visible(options)&&!visible(durability)&&!visible(recall_days);
+     choose(field_type,'dropdown');const dropdown=visible(options)&&!visible(durability);
+     choose(field_type,'date');const date=visible(durability)&&!visible(options)&&!visible(recall_days);
+     choose(durability,'expires');const expires=visible(recall_days)&&visible(valid_months);
+     choose(durability,'once');choose(field_type,'text');
+     return {textOnly,dropdown,date,expires};
+   })()`);
+   assert.deepEqual(visibility,{textOnly:true,dropdown:true,date:true,expires:true});
+   await evaluate(`document.querySelector('.add-field input[value=company]').closest('.field-panel').scrollIntoView({block:'start'})`);
+   await shot('05-companies-and-deals');
+   await button('Next');
+   await until('Blam8GuidedSetup.currentStop()==="need.company_fields" && document.querySelector(".guided-target")?.dataset.recordEntity==="company"');
+   assert.equal(await evaluate('location.pathname'),'/app/crm/fields');
+   await click('#bc-close');await until('!document.body.classList.contains("guided-running")');
+   assert.equal(await evaluate('!!document.querySelector(".guided-resume")'),false);
+   await click('main a[href="/help"]');
+   await until('!document.querySelector("#bc-panel").classList.contains("hidden")');
+   await button('Resume guided setup');await until('document.body.classList.contains("guided-running")');
+   await button('Needed');await until('Blam8GuidedSetup.currentStop()==="editor.company_fields"');
+   await button('Next');await until('Blam8GuidedSetup.currentStop()==="need.deal_fields" && document.querySelector(".guided-target")?.dataset.recordEntity==="deal"');
+   await button('Not needed');await until('Blam8GuidedSetup.currentStop()!=="need.deal_fields"');
  }else if(area==='knowledge_conflict'){
    await until('document.querySelector(".guided-knowledge-conflict")?.innerText.includes("Within 14 days")');
    assert(await evaluate('document.querySelector(".guided-knowledge-conflict").innerText.includes("Before work begins") && !document.querySelector("[name=payment_terms][data-proposed]")'));
@@ -207,6 +294,29 @@ try{
    assert.deepEqual(await evaluate('[...document.querySelectorAll("[name=working_days]:checked")].map(e=>e.value)'),['mon','wed']);
    await shot('04-weekdays-saved');
  }else if(area!=='diary'){
+   if(area==='records'){
+     const saveVisible="document.querySelector('#dep-form [type=submit]').getClientRects().length > 0";
+     async function checkSave(expected) { await until('('+saveVisible+') === '+expected); }
+     const editForm=async(selector,value)=>evaluate(`(()=>{const field=document.querySelector(${JSON.stringify(selector)});field.value=${JSON.stringify(value)};field.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+     await checkSave(false);
+     await evaluate("document.querySelector('#add-ladder').click()");
+     await checkSave(false);
+     const widths=await evaluate(`(()=>{
+       const form=document.querySelector('#dep-form');
+       const label=form.querySelector('[name=l_label]'),notify=form.querySelector('[name=l_notify]');
+       return [form.clientWidth,label.offsetWidth,notify.offsetWidth,form.scrollWidth];
+     })()`);
+     assert(widths[1]>=widths[0]-36 && widths[2]>=widths[0]-36 && widths[3]<=widths[0]+1,JSON.stringify(widths));
+     await shot('01-progress-editor');
+     await editForm('[name=l_label]','Booking status');await editForm('[name=l_levels]','Enquiry, Confirmed');
+     await checkSave(true);await editForm('[name=l_label]','');await checkSave(false);
+     await evaluate("document.querySelector('.remove-ladder').click();document.querySelector('#add-group').click()");
+     await checkSave(false);await editForm('[name=g_label]','Item');await editForm('[name=f_label]','Reference');
+     await checkSave(true);
+     await shot('01-record-type-editor');
+     await evaluate("document.querySelector('.remove-group').click()");
+     await checkSave(false);
+   }
    await type('#bc-input',area==='records'?'Track Items with an optional text Reference, remembered once. It never blocks a booking.':
       'No VAT, no business details printed; payment terms On completion, quotes valid 30 days. Prices exclude VAT.');
    await key('Enter','Enter',13);await until('document.querySelector(".bc-setup-tray")?.innerText.includes("Accept displayed changes")');
@@ -228,6 +338,12 @@ try{
    await until('window.nativeBeforeAccept!=="old-document" && window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question")?.innerText.includes("were saved")');
    await shot('04-saved');
    assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1 && document.getElementById("bc-input").getBoundingClientRect().bottom<=innerHeight+1'));
+   if(area==='records'){
+     const saveRow = "document.querySelector('#dep-form [type=submit]')";
+     await until(saveRow+'.getClientRects().length===0');
+     await evaluate("document.querySelector('.remove-group').click()");
+     await until(saveRow+'.getClientRects().length===1');
+   }
    console.log('Native '+area+' question, existing card edit, exact Accept and saved receipt passed');
  }else{
  await type('#bc-input','We need 24 hours notice and allow bookings 60 days ahead.');await key('Enter','Enter',13);
@@ -276,10 +392,9 @@ try{
  await type('[name=buffer_minutes]',originalBuffer);await key('Tab','Tab',9);await evaluate('Blam8DeviceSync.flush()');
  await cdp('Page.reload',{},follower);
  await until('window.Blam8DeviceSync?.isReady() && document.querySelector("[name=horizon_days]")?.value==="45"',follower);
- await button('Next');await until('document.querySelector(".guided-title") && !document.querySelector(".guided-title").textContent.includes("Booking notice and horizon")');
- await button('Back');await until('document.querySelector(".guided-title").textContent.includes("Booking notice and horizon")');
+ assert(await evaluate(`![...document.querySelectorAll('.guided-navigation button')].some(b=>b.textContent==='Back')`));
  await click('#bc-close');await until('!document.body.classList.contains("guided-running")');
- await button('Resume guided setup');await until('document.body.classList.contains("guided-running") && document.querySelectorAll("[data-proposed]").length===2');
+ await click('#bc-bubble');await button('Resume guided setup');await until('document.body.classList.contains("guided-running") && document.querySelectorAll("[data-proposed]").length===2');
  const trusted=await evaluate('window.trustedEvents.length>=7 && window.trustedEvents.every(Boolean)');assert(trusted);
  await evaluate("window.nativeBeforeAccept='old-document'");
  await button('Accept displayed changes');

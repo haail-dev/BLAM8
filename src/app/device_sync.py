@@ -180,6 +180,7 @@ def path_allowed(path):
                 "/app/diary/intake",
                 "/app/diary/dependants",
                 "/app/crm/settings",
+                "/app/crm/fields",
                 "/app/invoices/settings",
             )
         )

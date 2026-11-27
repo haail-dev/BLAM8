@@ -48,9 +48,7 @@ def test_17_the_gmail_button_does_not_read_as_workspace_only():
 
 
 def test_18_the_last_step_says_next_into_the_app_not_finish():
-    # one flow of nine (2026-09-13): the wizard's last button carries on into
-    # the app's tuning steps — "Next: Diary settings", never "Finish setup"
-    assert "its button says 'Next: Diary settings'" in concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
+    assert "Guided setup opens after the owner approves the sample reply" in concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
     prompt = concierge.build_onboarding_prompt("knowledge", {})
     assert "Continue, or Next on the last step" in prompt
 

@@ -1,11 +1,28 @@
 # Guided setup on actual application pages
 
 The four initial onboarding steps retain their existing validation. Knowledge
-Continue opens a brief introduction. Starting explicitly acknowledges it and
-opens Records and workflows, then Diary, which first asks which diaries the
+Continue starts the guide on the first available settings question and reuses
+reviewed answers. A guide already in progress resumes at its saved question.
+For a business using Records and Diary, Records and workflows opens first,
+then Diary asks which diaries the
 business keeps (Diary discovery, below), followed by the remaining settings
 owners in grouped substep order. Existing completed tenants acquire no new
 mandatory flow.
+
+On the Related records form, saving a record type answers the guide's relevance
+question. Owners can also choose Not needed or Decide later directly on the form.
+Decide later records a deferred decision for the business and shows For later
+in the Records and workflows review. It allows setup to continue without a timed reminder.
+Closing the assistant lets the owner continue in the form-based review.
+On Record fields, Help and the B button reopen the assistant. After the contact
+field review, the guide asks about Companies, then Deals. Choosing Needed highlights
+that form. The owner saves each field with Add and chooses Next when finished.
+
+A clear relevance answer can advance the guide while the assistant asks for a
+field detail. Pending contact fields appear under Contacts and in the setup
+record. The field review shows how missing values are handled, who can see them,
+and which defaults were used. Expiry reminders appear for expiring fields.
+Accepting a proposal writes the field to the business settings. The accepting page refreshes after the server confirms the save. Other open tabs with affected forms receive the change notification.
 
 The introduction has one route: its Start/Resume button and the assistant's
 matching button call the same guide action. The old grouped-review shortcut is

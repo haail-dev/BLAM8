@@ -16,7 +16,7 @@
     'charges.terms':'Review your charges, payment deadlines and any deposit rules.',
     'charges.methods':'Choose how customers can pay and which payment instructions to include.'
   };
-  var resumeButton=null, stream=null, conversation=null, navigation=null, historyButton=null, messageObserver=null, navigating=false;
+  var stream=null, conversation=null, navigation=null, historyButton=null, messageObserver=null, navigating=false;
   function showHistory(show){
     conversation.classList.toggle('guided-show-history',show);
     var label=show?'Hide earlier conversation':'Earlier conversation';
@@ -128,18 +128,26 @@
       document.dispatchEvent(new CustomEvent('onboarding:progress',{detail:{
         current:state.stop.substep.split('.')[0],groups:state.progress}}));
     }
+    var recordChoice=document.querySelector('[data-record-type-choice]');
+    if(recordChoice && state){
+      var onRecords=state.stop && state.stop.id==='relevance.records.relationships' &&
+        state.guide && (state.guide.status==='active' || state.guide.status==='paused');
+      recordChoice.hidden=!onRecords;
+      var submit=document.querySelector('#dep-form [type="submit"]');
+      if(onRecords){
+        submit.setAttribute('formaction','/app/diary/dependants?guide_revision='+state.revision);
+        document.getElementById('record-type-choice').action='/app/setup/guide/related-records?revision='+state.revision;
+      } else submit.removeAttribute('formaction');
+    }
     ensureHost();if(!host)return;host.replaceChildren();
     var hasGuide=!!(state&&state.guide), running=active();
     document.body.classList.toggle('guided-running',running);
     arrange();
-    if(hasGuide&&!resumeButton){resumeButton=button('Resume guided setup',function(){action('resume');});
-      resumeButton.className='guided-resume';document.body.appendChild(resumeButton);}
-    if(resumeButton)resumeButton.hidden=!hasGuide||state.guide.status!=='paused';
     if(!hasGuide)return;
     status=el('p',null,'guided-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     if(!running){
       if(state.guide.status==='paused'){host.appendChild(el('p','Guided setup is paused. Your question and pending suggestions are kept.'));
-        host.appendChild(button('Resume guided setup',function(){action('resume');},true));host.appendChild(status);}
+        host.appendChild(button('Resume guided setup',function(){action('resume');}));host.appendChild(status);}
       return;
     }
     if(opener&&(!window.Blam8DeviceSync||window.Blam8DeviceSync.isReady()))opener();
@@ -161,7 +169,7 @@
     var reviewingExample=stop.question_id==='diary.example' && state.discovery && state.discovery.prefill && state.discovery.prefill.value!=null;
     if(pricingQuestion)host.appendChild(el('p',prices.saved?'Review your saved prices':'Do these prices from your Knowledge note still apply?'));
     else if(reviewingExample)host.appendChild(el('p','Review your example entry'));
-    else if((!pending||stop.kind==='explanation')&&(!pinnedQuestion||decision==='applied'||decision==='cancelled'))host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?'The displayed changes were saved. Next walks through the affected controls.':
+    else if((!pending||stop.kind==='explanation')&&(!pinnedQuestion||decision==='applied'||decision==='cancelled'))host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?(stop.id==='crm_fields/contact_field'?'Your contact fields were saved. Next, review Companies.':'The displayed changes were saved. Next walks through the affected controls.'):
       decision==='cancelled'?'You left these suggestions. Next moves on without saving them.':pending?'Review your suggested changes, then choose what to save.':stop.question));
     if(stop.kind==='explanation'&&decision)host.appendChild(el('p',decision==='applied'?'The displayed changes were saved.':
       decision==='cancelled'?'You left these suggestions. The page shows its current settings.':
@@ -238,7 +246,6 @@
         if(state.draft&&!pending&&drafting!==stop.id&&!busy)requestDraft(stop);
       }
     }
-    if(state.index>0)actions.appendChild(button('Back',function(){action('back');}));
     if(state.guide.knowledge_unavailable){
       host.appendChild(el('p','Reviewed Knowledge could not be loaded. Your existing answers are kept.','guided-why'));
       secondary.appendChild(button('Retry Knowledge',function(){action('retry_knowledge');}));
@@ -460,6 +467,7 @@
   function editor(){return document.querySelector('[data-guided-editor="'+CSS.escape(state.stop.page||'')+'"]');}
   function target(){
     var stop=state.stop;
+    if(stop.entity)return document.querySelector('[data-record-entity="'+CSS.escape(stop.entity)+'"]');
     var specific=document.querySelector('[data-guided-decision="'+CSS.escape(stop.focus_catalogue||stop.decision_id||stop.id)+'"]');
     if(specific)return specific;
     if(stop.page==='dependants'&&!document.querySelector('#dep-form .dep-group'))return document.getElementById('add-group')||editor();

@@ -58,6 +58,7 @@ SOURCE_CAPABILITIES = {
     'src/app/knowledge_owner_corrections.py': 'knowledge.review',
     'src/app/knowledge_note_edits.py': 'knowledge.review',
     'src/app/knowledge_note_structure.py': 'knowledge.review',
+    'src/app/knowledge_sample.py': 'knowledge.review',
     'src/app/knowledge_coverage.py': 'knowledge.review',
     'src/app/device_sync.py': 'product.help',
     'src/app/static/device_sync.js': 'product.help',

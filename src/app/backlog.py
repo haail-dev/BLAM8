@@ -270,7 +270,7 @@ def status(tenant_id: str, conn_id: str, client=None) -> dict:
     elif state == "not_started":
         message = ({"skip": "Historical import skipped. You can choose it later in Settings.",
                     "later": "Historical import deferred. No historical import has started."}
-                   .get(choice.get("decision"), "Historical mail has not been imported. Choose whether to import it."))
+                   .get(choice.get("decision"), "Import older emails?"))
     elif state in {"failed", "interrupted"}:
         message = "The recent-message import did not finish. You can try importing again."
     elif ready:

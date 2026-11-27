@@ -5,9 +5,10 @@
     if (state.busy) return {ready:false, blocker:'busy', reason:'Wait for the current operation to finish.'};
     if (state.pendingCards) return {ready:false, reason:'Save or clear the pending notes card before continuing.'};
     if (state.step === 'knowledge') {
-      if (state.savedKnowledge === false) return {ready:false, blocker:'knowledge_required', reason:'Review and save your Knowledge before continuing.'};
       if (state.unsavedNote) return {ready:false, reason:'Your pasted note is unsaved. Review it or clear it before continuing.'};
       if (state.pendingReviews) return {ready:false, blocker:'pending_reviews', reason:'Review and save every pending draft before continuing.'};
+      if (state.savedKnowledge === false) return {ready:false, blocker:'knowledge_required', reason:'Add and save your first note to continue.'};
+      if (!state.sampleApproved) return {ready:false, blocker:'sample_required', reason:'Try a customer enquiry and approve the reply to continue.'};
     }
     if (!state.valid) return {ready:false, reason:'Complete the required form fields before continuing.'};
     return {ready:true, reason:''};
@@ -17,8 +18,9 @@
     try { return el ? JSON.parse(el.textContent) : null; } catch(e) { return null; }
   }
   function read(pendingCards) {
-    var journey=descriptor(), action=Array.from(document.querySelectorAll('[data-onb-continue]'))
-      .find(function(el){return el.offsetParent !== null;});
+    var journey=descriptor(), actions=Array.from(document.querySelectorAll('[data-onb-continue]'));
+    // Knowledge has one action, even while hidden. Its readiness must still be readable.
+    var action=journey && journey.current==='knowledge' ? actions[0] : actions.find(function(el){return el.offsetParent !== null;});
     var form=action && action.form;
     // Inspect validity without reporting errors or dispatching invalid events.
     var valid=!form || action.formNoValidate || Array.from(form.elements).every(function(el){return !el.willValidate || el.validity.valid;});
@@ -30,6 +32,7 @@
       busy:!!(action && action.disabled && (!journey || journey.current !== 'knowledge') || window.blam8KnowledgeImportBusy || sourceReview && sourceReview.working()),
       pendingCards:pendingCards || 0, valid:valid, unsavedNote:!!(note && note.value.trim()),
       savedKnowledge:!!document.querySelector('[data-knowledge-saved-status]'),
+      sampleApproved:!!document.querySelector('[data-knowledge-sample][data-approved="yes"]'),
       pendingReviews:document.querySelectorAll('[data-knowledge-review]').length});
     return {journey:journey, action:action, ready:state.ready, reason:state.reason, blocker:state.blocker};
   }

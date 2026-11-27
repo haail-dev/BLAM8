@@ -31,7 +31,7 @@ from app import operating_systems
 from app import partners
 from app import sign_off
 from app import storage
-from app import voice_learning, voice_completion
+from app import voice_learning, voice_completion, knowledge_sample
 from app.auth import require_tenant, TenantCtx
 from app.config import settings
 from app.security import require_csrf
@@ -333,6 +333,9 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
     knowledge = knowledge_review.load(ctx.tenant_id)
     if any(r['state'] == 'pending' for r in knowledge['reviews']) or not knowledge['sources']:
         return _kb_redirect(err='Review and save your Knowledge before continuing. Every pending note needs a decision.')
+    cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+    if not knowledge_sample.current(cfg, knowledge).get('approved'):
+        return _kb_redirect(err='Try a typical customer enquiry and approve the reply before continuing.')
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
     target = _prepare_guided_setup(ctx) if nxt else '/app/'
@@ -352,21 +355,21 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
 
 def _prepare_guided_setup(ctx: TenantCtx) -> str:
     """Knowledge's explicit Continue owns initial guide metadata, never a GET."""
-    from copy import deepcopy
-    from app import guided_setup, onboarding_state
-    context=onboarding_state.load(ctx)
-    if not context['state'].get('guide'):
-        after=deepcopy(context['state'])
-        after['guide']=guided_setup.neutral()
-        context['state']=onboarding_state.save(ctx,context['state'],after)
-    current=guided_setup.describe(context)
+    from app import guided_setup, guided_setup_routes, onboarding_state
+    guided_setup_routes.require_manager(ctx)
+    context = onboarding_state.load(ctx, knowledge=True)
+    existing = context['state'].get('guide') or {}
+    if existing.get('intro_ack') and existing.get('current') != 'intro':
+        current = guided_setup.describe(context)
+    else:
+        current = guided_setup_routes.start_guide(ctx, context)
     return current['stop']['href']
 
 
 def _next_step_target(ctx: TenantCtx) -> dict:
     from app import setup_handoff
     nxt = setup_handoff.first_open(setup_handoff.load_steps(ctx.tenant_id, client=ctx.client))
-    return {"label": "Guided setup", "href": "/app/setup/guide"} if nxt else {"label": "Today", "href": "/app/"}
+    return {"label": nxt["label"], "href": nxt["href"]} if nxt else {"label": "Today", "href": "/app/"}
 
 
 def _next_step_label(ctx: TenantCtx) -> str:
@@ -779,6 +782,8 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
     return templates.TemplateResponse(request, "onboarding/knowledge.html", _step_ctx(
         "knowledge", sources=sources, configured=kb.is_configured(), coverage=cov,
         review_coverage=knowledge_review.topic_view(review_context), pending_reviews=pending_reviews,
+        sample=knowledge_sample.current(cfg, review_context),
+        last_enquiry=((cfg.get('onboarding_state') or {}).get('knowledge_sample') or {}).get('enquiry', ''),
         source_texts=text_by_source,
         saved_review_ids=[r['id'] for r in review_context['reviews'] if r['state']=='saved'],
         coverage_ask=coverage_ask, site_url=website, auto_site=auto_site,
@@ -787,6 +792,49 @@ def knowledge_get(request: Request, ctx: TenantCtx = Depends(require_tenant)):
         next_target=next_target,
         next_label="Finish setup" if next_target["href"] == "/app/" else "Next: " + next_target["label"],
         msg=request.query_params.get("msg"), err=request.query_params.get("err")))
+
+
+@router.post("/knowledge/sample", dependencies=[Depends(require_csrf)])
+async def knowledge_sample_post(operation: str = Form(...), enquiry: str = Form("", max_length=2000),
+                                sample_id: str = Form(""), ctx: TenantCtx = Depends(require_tenant)):
+    from copy import deepcopy
+    from app import onboarding_contract, onboarding_state, knowledge_review
+    from app.onboarding_routes import require_manager
+    require_manager(ctx)
+    cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+    before = onboarding_contract.read_state(cfg.get('onboarding_state'))
+    stored = before.get('knowledge_sample') or {}
+    knowledge = knowledge_review.load(ctx.tenant_id)
+    if any(r['state'] == 'pending' for r in knowledge['reviews']):
+        return _kb_redirect(err='Save your Knowledge and finish reviewing drafts before testing a reply.')
+    current = knowledge_sample.current(cfg, knowledge)
+    if sample_id != current.get('id', ''):
+        return _kb_redirect(err='The sample changed. Review the current reply and try again.')
+    if operation == 'approve':
+        if not knowledge_sample.can_test(knowledge) or not current.get('reply') or current.get('question'):
+            return _kb_redirect(err='Review a sample reply before approving it.')
+        sample = dict(current, approved=True)
+    elif operation == 'try':
+        if not fairuse.onboarding_allowed(ctx.tenant_id, 'concierge_onboard', client=ctx.client):
+            return _kb_redirect(err='Your daily Assistant allowance has been reached. Try again tomorrow.')
+        try:
+            sample = await knowledge_sample.prepare(ctx.tenant_id, cfg, knowledge,
+                                                    enquiry.strip() or stored.get('enquiry', ''))
+        except HTTPException as exc:
+            return _kb_redirect(err=str(exc.detail))
+        except Exception:
+            logging.getLogger(__name__).exception('Knowledge sample failed for tenant %s', ctx.tenant_id)
+            return _kb_redirect(err='The sample reply could not be prepared. Please try again.')
+    else:
+        raise HTTPException(400, 'Unknown sample action.')
+    latest = knowledge_review.load(ctx.tenant_id)
+    latest_cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
+    if any(r['state'] == 'pending' for r in latest['reviews']) or knowledge_sample.version(latest_cfg, latest) != sample['version']:
+        return _kb_redirect(err='Your business facts changed. Try the enquiry again with the latest facts.')
+    after = deepcopy(before)
+    after['knowledge_sample'] = sample
+    onboarding_state.save(ctx, before, after)
+    return _kb_redirect()
 
 
 @router.post("/knowledge/text", dependencies=[Depends(require_csrf)])

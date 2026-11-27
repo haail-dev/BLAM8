@@ -115,6 +115,102 @@ def test_conversational_relevance_updates_the_current_question(guide_journey,mon
         assert j.row('scheduling_config',j.tenant) is None
 
 
+@pytest.mark.parametrize(('choice', 'paused'), [('off', False), ('deferred', True)])
+def test_related_records_native_choice_advances_without_settings(guide_journey, choice, paused):
+    j = guide_journey
+    if paused:
+        j.guide_action('pause')
+    revision = j.state()['revision']
+    path = f'/app/setup/guide/related-records?revision={revision}'
+    assert j.http.post(path, data=dict(choice='needed')).status_code == 409
+    response = j.http.post(path, data=dict(choice=choice), follow_redirects=False)
+    assert response.status_code == 303, response.text
+    target = '/app/setup/records#records.information' if paused else '/app/crm/fields'
+    assert response.headers['location'].split('?')[0] == target
+    state = j.state()
+    assert state['capabilities']['related_records'] == choice
+    assert state['guide']['current'] == 'relevance.records.information'
+    review = state['reviews']['records.relationships']
+    assert review['state'] == choice and review['at'] and review['by'] == 'owner'
+    assert j.row('scheduling_config', j.tenant) is None
+    assert j.http.post(path, data=dict(choice='off')).status_code == 409
+    assert j.state() == state
+
+
+@pytest.mark.parametrize('interrupted', [False, True])
+def test_native_record_save_answers_relevance_after_settings_commit(guide_journey, monkeypatch, interrupted):
+    from app import dashboard, setup_forms
+    from tests.test_setup_forms_database import FORWARD
+    j = guide_journey
+    j.execute('alter table requirement_instances add column if not exists data jsonb, add column if not exists archived_at timestamptz')
+    j.execute(FORWARD.read_text(encoding='utf8'))
+    original = j.rpc.rpc
+    def form_rpc(name, args):
+        if name == 'save_setup_form_checked':
+            return SimpleNamespace(execute=lambda: j.rpc.execute(name, args))
+        return original(name, args)
+    monkeypatch.setattr(j.rpc, 'rpc', form_rpc)
+    monkeypatch.setattr(dashboard, '_held_used', lambda *args: None)
+    before = j.query('select setup_form_snapshot(%s,%s)', j.tenant, 'dependants')[0]
+    revision = j.state()['revision']
+    path = '/app/diary/dependants?guide_revision='
+    data = dict(settings_snapshot=json.dumps(before), g_label='Site', f_group='0', f_label='Name')
+    assert j.http.post(path + str(revision-1), data=data, follow_redirects=False).status_code == 409
+    assert not j.query('select id from requirement_groups where tenant_id=%s', j.tenant)
+    with monkeypatch.context() as guard:
+        if interrupted:
+            from fastapi import HTTPException
+            def fail_guide_save(*args, **kwargs):
+                raise HTTPException(503, 'Simulated guide save failure')
+            guard.setattr(routes, 'save', fail_guide_save)
+        response = j.http.post(path + str(revision), data=data, follow_redirects=False)
+    assert response.status_code == 303, response.text
+    if interrupted:
+        assert 'guide=retry' in response.headers['location']
+        assert j.state()['guide']['current'] == 'relevance.records.relationships'
+        response = j.http.post(f'/app/setup/guide/related-records?revision={revision}',
+                               data=dict(choice='needed'), follow_redirects=False)
+        assert response.status_code == 303, response.text
+    assert j.query('select label from requirement_groups where tenant_id=%s', j.tenant, all=True) == [('Site',)]
+    assert j.state()['capabilities']['related_records'] == 'needed'
+    assert j.state()['guide']['current'] not in ('relevance.records.relationships', 'question.records.relationships')
+    assert any(answer['question'] == 'records.relationships' and answer['value'] is True
+               for answer in j.state()['answers'].values())
+
+
+def test_explicit_yes_then_private_contact_field_reaches_review(guide_journey, monkeypatch):
+    j = guide_journey
+    j.guide_action('relevance', 'off')
+    followup = 'Should other staff see the phone number?'
+    model(monkeypatch, [], guide_choice='unanswered', reply=followup)
+    first = turn(j, "Yes. I\u2019d like to keep a phone number for each couple. If they include it in an email, pick it up.").json()
+    assert first['guide_advanced'] and first['reply'] == followup
+    assert first['stop']['id'] == 'crm_fields/contact_field'
+    proposal = change('crm_fields', 0, [dict(name='contact_field', fields=dict(label='Phone number',
+        field_type='text', required=False, probe_behaviour='passive', durability='once', staff_can_see=False))])
+    model(monkeypatch, proposal)
+    second = turn(j, 'Just for me').json()
+    assert second['pending']['ids'] and second['stop']['id'] == first['stop']['id']
+    assert j.state()['capabilities']['record_information'] == 'needed'
+    line, = j.row('tenant_config', j.tenant)['setup_cards']['crm_fields']['lines']
+    assert line['fields']['staff_can_see'] is False and line['fields']['probe_behaviour'] == 'passive'
+    assert not j.query('select id from crm_field_definitions where tenant_id=%s', j.tenant)
+
+
+@pytest.mark.parametrize(('reply', 'expected'), [
+    ('No. We do not need to track customer details.', 'off'),
+    ("Yes, but only if it is optional.", None),
+    ("Yes. I want to know how that works?", None),
+])
+def test_qualified_relevance_keeps_ambiguous_gate_open(guide_journey, monkeypatch, reply, expected):
+    j = guide_journey
+    j.guide_action('relevance', 'off')
+    model(monkeypatch, [], guide_choice='unanswered')
+    result = turn(j, reply).json()
+    assert result['guide_advanced'] == (expected is not None)
+    assert j.state()['capabilities'].get('record_information') == expected
+
+
 def test_money_relevance_accepts_a_typed_yes(guide_journey):
     j = guide_journey
     j.move('relevance.charges.responsibility')
@@ -783,7 +879,7 @@ def test_model_failure_keeps_question_and_typed_false_fallback_needs_no_provider
     assert j.row('scheduling_config',j.tenant) is None
 
 
-def test_knowledge_continue_creates_intro_once_and_resumes_after_ack(journey,monkeypatch):
+def test_knowledge_continue_starts_records_once_and_resumes_current_question(journey,monkeypatch):
     from app import onboarding
     from app.auth import require_tenant
     from app.main import app
@@ -801,13 +897,11 @@ def test_knowledge_continue_creates_intro_once_and_resumes_after_ack(journey,mon
     assert refused.status_code==422 and 'Complete Voice' in refused.text
     assert not onboarded and j.state()==before and not j.state().get('guide')
     seed_reviewed_voice(j)
+    monkeypatch.setattr(onboarding.knowledge_sample,'current',lambda cfg, knowledge: {'approved':True})
     r=j.http.post('/onboarding/knowledge/text',data={'content':'','then':'continue'},follow_redirects=False)
-    assert r.status_code==303 and r.headers['location']=='/app/setup/guide'
-    assert onboarded==[True] and j.state()['guide']['current']=='intro' and not j.state()['guide']['intro_ack']
-    before=j.state();r=j.http.get('/app/setup/guide');assert r.status_code==200
-    assert j.state()==before
-    r=j.http.post('/app/setup/guide/action',json=dict(revision=before['revision'],stop='intro',operation='start'))
-    assert r.status_code==200 and j.state()['guide']['current']=='relevance.records.relationships'
+    assert r.status_code==303 and r.headers['location']=='/app/diary/dependants'
+    assert onboarded==[True] and j.state()['guide']['intro_ack']
+    assert j.state()['guide']['current']=='relevance.records.relationships'
     after=j.state();assert onboarding._prepare_guided_setup(ctx)=='/app/diary/dependants'
     assert j.state()==after
 
@@ -823,7 +917,8 @@ def test_question_and_answers_are_pinned_under_the_thread_without_pause_setup():
     css=(__import__('pathlib').Path(__file__).resolve().parents[1]/'src/app/static/guided_setup.css').read_text(encoding='utf-8')
     assert "parent.insertBefore(navigation,parent.querySelector('#bc-form'))" in js
     assert "stream.appendChild(navigation)" not in js
-    assert "if(stop.kind==='relevance'||stop.kind==='need')pinned.unshift(el('p',stop.question,'guided-ask'))" in js
+    assert "var pinnedQuestion=stop.kind==='relevance'||stop.kind==='need'" in js
+    assert "if(pinnedQuestion)pinned.unshift(el('p',stop.question,'guided-ask'))" in js
     assert "if(secondary.childElementCount)pinned.push(more)" in js
     assert 'Pause setup' not in js and "e.key==='Escape'" not in js
     nav=css.split('.guided-navigation{')[1].split('}')[0]

@@ -55,9 +55,16 @@ def test_onboarding_progress_and_knowledge_layout(tmp_path, width, long_labels):
     page = re.sub(r'<script\b[^>]*\bsrc=[^>]*></script>', '', page)
     page = page.replace('<head>', '<head><meta http-equiv="Content-Security-Policy" '
         'content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'">')
+    if long_labels:
+        page = page.replace('</head>', "<script>sessionStorage.setItem('blam8_concierge_open:offline','0')</script></head>")
+    page = page.replace('</main>', """</main><script>
+      window.firstDockPadding=parseFloat(getComputedStyle(document.body).paddingRight);
+    </script>""")
     assertions = r'''
     const failures=[];
     const check=(ok,message)=>{if(!ok) failures.push(message)};
+    const expectDock=innerWidth>=768 && sessionStorage.getItem('blam8_concierge_open:offline')!=='0';
+    check(expectDock ? firstDockPadding>300 : firstDockPadding===0,'dock width before widget initialisation '+firstDockPadding);
     const rect=el=>el.getBoundingClientRect();
     const stepper=document.querySelector('[data-stepper-total]');
     function verifyLabel(button) {
@@ -112,6 +119,7 @@ def test_onboarding_progress_and_knowledge_layout(tmp_path, width, long_labels):
     panel.classList.add('hidden');
     check(!document.querySelector('[data-knowledge-later]'),'Knowledge has no skip control');
     check(document.querySelector('[data-onb-continue]').disabled,'pending Knowledge cannot continue');
+    check(document.querySelector('[data-onb-continue]').getClientRects().length===0,'pending Knowledge hides Next');
     document.activeElement.blur();
     document.getElementById('layout-result').textContent=JSON.stringify({failures,width:innerWidth});
     document.getElementById('layout-result').dataset.status=failures.length?'FAIL':'PASS';

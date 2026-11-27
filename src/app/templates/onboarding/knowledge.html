@@ -1,22 +1,43 @@
 {% extends "onboarding/base.html" %}
+{% set sample = sample or {} %}
 {% block title %}Knowledge · Set up BLAM8{% endblock %}
 {% block heading %}{{ "Review Knowledge" if pending_reviews else ("Your Knowledge" if sources else "Give it your facts") }}{% endblock %}
-{% block subheading %}{% if not pending_reviews %}{% if sources %}Your agent can use these saved facts. You can read them below or add more any time.{% else %}The facts your agent may quote. {% if site_url %}We read your website and the assistant asks for the rest{% else %}The assistant asks for what's missing, or paste a note{% endif %} — every note is yours to check before it's saved, and you can add more any time.{% endif %}{% endif %}{% endblock %}
+{% block subheading %}{% if not pending_reviews %}{% if sources %}Your agent can use these saved facts. You can read them below or add more any time.{% else %}Tell the assistant a fact about your business or add a note below.{% if configured %} You can also start from your website.{% endif %}{% endif %}{% endif %}{% endblock %}
 {% block card_header %}
 <div data-knowledge-header>
   <h1 data-onboarding-heading class="text-xl font-bold text-navy">{{ self.heading() }}</h1>
 <div data-knowledge-navigation>
   {# Keep the form association: Continue also submits a typed manual note. #}
-  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue{% if not sources or pending_reviews %} disabled{% endif %}
-          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait">{{ next_label or 'Next: Guided setup' }}</button>
+  <button type="submit" form="kb-note" name="then" value="continue" formnovalidate data-onb-continue{% if not sources or pending_reviews or not sample.approved %} disabled{% endif %}{% if not sources or pending_reviews or prefill_content or not sample.approved %} hidden{% endif %}
+          class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-wait">{{ next_label or 'Continue' }}</button>
 </div>
 </div>
 {% endblock %}
 {% block content %}
 <span hidden data-knowledge-saved-reviews='{{ (saved_review_ids or []) | tojson }}'></span>
 
-<p data-knowledge-navigation-status role="status" class="mb-4 text-sm">{% if not sources or pending_reviews %}Review and save your Knowledge before continuing.{% endif %}</p>
-{% if sources and not pending_reviews %}<div data-knowledge-saved-status role="status" class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Knowledge saved</strong> <p>{{ sources|length }} note{{ '' if sources|length == 1 else 's' }} saved. No drafts waiting for review. You can continue when you’re ready.</p></div>{% endif %}
+<p data-knowledge-navigation-status role="status" class="mb-4 text-sm">{% if pending_reviews %}Review your draft notes before continuing.{% elif not sources %}Add and save your first note to continue.{% endif %}</p>
+{% if sources and not pending_reviews %}<div data-knowledge-saved-status role="status" class="mb-4 text-sm"><strong>Knowledge saved</strong> <p>{{ sources|length }} note{{ '' if sources|length == 1 else 's' }} saved. No drafts waiting for review.</p></div>{% endif %}
+{% if not pending_reviews and sample is defined and last_enquiry is defined %}
+<section data-knowledge-sample data-approved="{{ 'yes' if sample.approved else 'no' }}" class="mb-4 space-y-2 text-sm">
+  <div data-sample-message>
+    {% if sample.enquiry %}<p><strong>Example customer enquiry</strong></p><p>{{ sample.enquiry }}</p>{% endif %}
+    {% if sample.question %}<p data-sample-question>{{ sample.question }}</p><p>Tell the Assistant your answer, save the note, then try this enquiry again.</p>
+    {% elif sample.reply %}<p><strong>Sample reply</strong></p><p class="whitespace-pre-line">{{ sample.reply }}</p>
+      <p>{{ 'You approved this reply.' if sample.approved else 'Would you be happy to use this reply? If something is missing, tell the Assistant what to change.' }}</p>
+    {% elif sources %}<p>Try a typical customer enquiry to see how your agent would reply.</p>{% endif %}
+  </div>
+  {% if sample.reply and not sample.approved %}<form action="/onboarding/knowledge/sample" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><input type="hidden" name="sample_id" value="{{ sample.id }}">
+    <button name="operation" value="approve" data-sample-action class="rounded-lg bg-brand px-3 py-2 text-white">Approve this reply</button>
+  </form>{% endif %}
+  <form action="/onboarding/knowledge/sample" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}"><input type="hidden" name="sample_id" value="{{ sample.id or '' }}">
+    <details><summary>Choose your own example</summary><label>Typical customer enquiry<textarea name="enquiry" maxlength="2000" class="block w-full rounded border p-2">{{ last_enquiry }}</textarea></label></details>
+    <button name="operation" value="try" data-sample-action class="mt-2 rounded-lg border px-3 py-2">{{ 'Try this enquiry again' if last_enquiry else 'Try a typical enquiry' if sources else 'Guide me with an example' }}</button>
+  </form>
+</section>
+{% endif %}
 <style>
   .knowledge-review, #site-box { container-type:inline-size; }
   #site-box > .flex { display:grid;grid-template-columns:minmax(0,1fr) auto; }
@@ -30,6 +51,7 @@
   [data-knowledge-header] { display:flex;align-items:flex-start;justify-content:space-between;gap:1rem; }
   [data-knowledge-navigation] { display:flex;justify-content:flex-end;flex-shrink:0; }
   [data-knowledge-navigation] button { min-width:0;white-space:normal; }
+  [data-knowledge-navigation] button[hidden], [data-knowledge-navigation] button:disabled { display:none; }
   [data-knowledge-later] { border:1px solid rgb(var(--c-bd-slate-200));border-radius:.75rem;padding:.875rem;background:rgb(var(--c-bg-white)); }
   [data-knowledge-navigation-status]:empty { display:none; }
   @media(max-width:480px) { [data-knowledge-header] { flex-direction:column-reverse;align-items:stretch; } [data-leave-knowledge] { width:100%; } }
@@ -73,7 +95,7 @@
 <div id="knowledge-pending-reviews">{% for review in pending_reviews or [] %}{% include "_knowledge_review.html" %}{% endfor %}</div>
 {% if pending_reviews %}
 {{ manual_controls }}
-{% if review_coverage %}<div id="knowledge-coverage-shell" data-compact-coverage="1"><details class="mb-3 text-xs text-slate-600"><summary>Knowledge coverage</summary>{% include "_knowledge_coverage_review.html" %}</details></div>{% endif %}
+{% if review_coverage %}<div id="knowledge-coverage-shell">{% include "_knowledge_coverage_review.html" %}</div>{% endif %}
 {% endif %}
 
 {% if sources %}

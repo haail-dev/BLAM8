@@ -685,10 +685,8 @@ ONBOARDING_STEPS = {
         "guidance": (
             (
                 "Here the agent learns the facts it may quote. Optional gaps belong in the grouped unknown-details view. "
-                "Do not start a generic closing policy questionnaire. Only interview when the owner asks for help adding facts; ask at most THREE short "
-                "questions a turn — number them and count; a fourth is a broken turn (run #10 asked four) — in "
-                "their trade's words — prices it must quote, the rules it must enforce, how a first booking "
-                "works, how people pay, safety or refusals, where they work, hours. Reuse approved notes and owner answers. "
+                "Ask one short question at a time about a fact that would change a typical customer reply. "
+                "Use the owner's goals, approved notes and earlier answers to choose it. "
                 "Agreement-specific intervals are a valid answer; never demand a universal inspection frequency. "
                 "Setup questions belong in the corresponding existing Diary, records/workflows or charges/payments section. "
                 "Then write the notes yourself from what they said — each as its own entry in `notes` with a "
@@ -712,9 +710,8 @@ ONBOARDING_STEPS = {
                 "proposal; applying it changes drafts only. Ask only for facts missing from sources and "
                 "owner answers; do not presuppose a universal rule when the source gives agreement-specific "
                 "scope. Uploading a file is theirs to do with the "
-                "control on the page. This is the wizard's last step: its button says 'Next: Diary settings' "
-                "(the first of the tuning steps inside the app), not Continue — say 'press Next' when they're "
-                "done here."
+                "control on the page. Once notes are saved, invite them to try a typical enquiry. "
+            "Guided setup opens after the owner approves the sample reply."
             )),
         "fields": {},
     },
@@ -898,6 +895,10 @@ def _onboarding_sections(step: str, current: dict | None = None, coverage: dict 
         from app import knowledge_coverage
         sections.append(knowledge_coverage.prompt_block(coverage))
     if step == "knowledge":
+        sections.append("The eight Knowledge topics are optional ways of organising notes. Ask one question at a time, "
+                        "only when the owner's intended customer enquiries need it. Reuse their business brief, goals "
+                        "and saved facts. If they answer a sample-reply question, turn their instruction into a note "
+                        "for review. After saving, invite them to try the same enquiry again and approve the sample reply.")
         sections.append("List every unanswered detail you ask about in unanswered, tagged by topic. Absence is unknown; never infer no variation or not applicable. Notes remain pending until the owner reviews evidence and overlap candidates.")
     # Held for later (Kris, kennels run #10): what the customer says for a
     # LATER page is kept now and prefilled there — the catalogue gives the
@@ -1592,7 +1593,7 @@ async def answer_help(question: str, history: list[dict] | None = None,
               "for it is off. An explicit request to decide later is deferred. A question, ambiguous or conditional "
               "answer, or a statement about a different topic is unanswered. Never infer a choice from history. "
               "For unanswered, answer their question or clarify this choice. Do not announce a next question; "
-              "the application selects it after saving. A choice alone requires no setup_changes."})
+              "the application selects it after saving. Record a clear choice even when the owner also supplies field details or you need to ask a follow-up about those details. A choice alone requires no setup_changes."})
     messages = (history or []) + [{"role": "user", "content": question}]
     if investigator is not None:
         system.append({'type': 'text', 'text': help_investigation.instructions()})

@@ -372,6 +372,13 @@ def test_fields_page_shows_defs_and_generic_seeds_only(client, monkeypatch):
     assert "Preview with my last 5 emails" in r.text
 
 
+def test_empty_fields_page_hides_inbox_preview(client, monkeypatch):
+    Env(monkeypatch)
+    response = client.get("/app/crm/fields")
+    assert response.status_code == 200
+    assert 'action="/app/crm/fields/preview"' not in response.text
+
+
 def test_fields_add_validates_via_redirect(client, monkeypatch):
     env = Env(monkeypatch)
     r = client.post("/app/crm/fields", data={"settings_snapshot": json.dumps(dashboard.setup_forms.load(None, "crm_fields")), "entity": "contact", "label": "Phone",

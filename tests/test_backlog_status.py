@@ -92,7 +92,7 @@ def render(status):
     ("complete", 93, 0, 93, 0, "No recent messages need review", False),
     ("partial", 100, 5, 93, 2, "5 recent messages are ready to review", True),
     ("failed", 0, 0, 0, 0, "did not finish", True),
-    ("not_started", 0, 0, 0, 0, "Historical mail has not been imported", True),
+    ("not_started", 0, 0, 0, 0, "Import older emails?", True),
 ])
 def test_rendered_states(monkeypatch, state, selected, ready, auto, fetch, phrase, retry):
     run = {"state": state, "expires_at": (datetime.now(timezone.utc)+timedelta(minutes=15)).isoformat(),

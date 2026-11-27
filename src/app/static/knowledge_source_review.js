@@ -158,7 +158,7 @@
     var message = document.querySelector('[data-knowledge-navigation-status]');
     if (busy || submitting || window.blam8KnowledgeImportBusy || note.elements.content.value.trim() || forms().length || !document.querySelector('[data-knowledge-saved-status]')) {
       event.preventDefault(); event.stopImmediatePropagation();
-      if(message)message.textContent = busy || submitting || window.blam8KnowledgeImportBusy ? 'Wait for the current review operation.' : note.elements.content.value.trim() ? 'Your pasted note is unsaved. Review it or clear it before continuing.' : 'Review and save your Knowledge before continuing.';
+      if(message)message.textContent = busy || submitting || window.blam8KnowledgeImportBusy ? 'Wait for the current review operation.' : note.elements.content.value.trim() ? 'Your pasted note is unsaved. Review it or clear it before continuing.' : forms().length ? 'Review your draft notes before continuing.' : 'Add and save your first note to continue.';
     }
   }, true);
   document.addEventListener('submit', function (event) {

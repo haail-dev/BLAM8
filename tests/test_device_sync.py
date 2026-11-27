@@ -596,7 +596,8 @@ def form_actions(page):
     for name in TUNING_PAGE_TEMPLATES[page]:
         source = (ROOT / "src/app/templates" / name).read_text(encoding="utf-8")
         for match in re.finditer(r'<form[^>]*\baction="([^"]+)"', source):
-            actions.append(match.group(1).replace("{{ s.id }}", "7"))
+            path = match.group(1).partition("{% if choosing_records %}?")[0]
+            actions.append(path.replace("{{ s.id }}", "7"))
     return actions
 
 
@@ -613,7 +614,7 @@ def test_tuning_page_forms_do_not_all_post_to_their_page():
             "/app/settings/scheduling",
         ],
         "booking_details": ["/app/diary/intake"],
-        "dependants": ["/app/diary/dependants"],
+        "dependants": ["/app/diary/dependants", "/app/setup/guide/related-records"],
         "crm_settings": [
             "/app/crm/settings",
             "/app/crm/settings/stages",

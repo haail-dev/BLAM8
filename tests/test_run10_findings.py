@@ -36,13 +36,13 @@ def test_catalogue_picks_one_diary_shape_and_never_rolls_a_passed_year_forward()
     assert "A closure WITH a stated year that has already passed is not next year's closure" in block
 
 
-def test_knowledge_notes_hold_only_what_was_said_and_three_questions_are_counted():
+def test_knowledge_notes_hold_only_what_was_said_and_questions_follow_the_enquiry():
     g = concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
     assert "A note holds ONLY what they said THIS turn" in g
-    assert "a fourth is a broken turn" in g
+    assert "Ask one short question at a time" in g
     block = kc.prompt_block(kc.coverage([{"source": "Trial Night Prices", "text": "£30.50 one dog"}]))
     assert "never a fact lifted from another note or the website, never an inference" in block
-    assert "Prices is only really covered when the main services carry a price" in block
+    assert "individual quotes or personal confirmation can be a complete answer" in block
     ask = kc.ask_text(kc.coverage([])["missing"])
     assert "at most three questions in this turn, numbered" in ask
     assert "and nothing I didn't" in ask
@@ -129,7 +129,7 @@ def test_voice_step_folds_the_brief_and_labels_the_notes_box_as_style():
 
 def test_knowledge_and_mailbox_copy():
     k = _read("src/app/templates/onboarding/knowledge.html")
-    assert "We read your website and the assistant asks for the rest" in k
+    assert "Read key pages and prepare notes for your review." in k
     assert "Standard pallet" not in k
     m = _read("src/app/templates/onboarding/mailbox.html")
     assert "Connect with Microsoft" in m and 'class="flex items-center justify-center gap-2 rounded-lg bg-brand' not in m
