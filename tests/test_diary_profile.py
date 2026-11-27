@@ -174,6 +174,15 @@ def test_open_answers_read_as_not_decided_yet():
     assert diary_profile.profile(state, MODULES)['hours'] == 'Hours: not decided yet.'
 
 
+def test_profile_shows_confirmed_variable_hours():
+    state = new_state()
+    onboarding_state._confirmed_answer(state, contract.question('diary.hours'), 'organisation',
+                                       'organisation', 'not_applicable', None, 'owner')
+    result = diary_profile.profile(state, MODULES)
+    assert result['hours'] == 'No fixed weekly hours.'
+    assert result['hours_state'] == 'not_applicable'
+
+
 def test_hours_line_groups_runs_and_reports_contact_hours():
     hours = contract.answer_value(contract.question('diary.hours'), {
         'working': {'mon': ['09:00', '17:00'], 'tue': ['09:00', '17:00'], 'thu': ['09:00', '17:00'], 'sat': ['10:00', '12:00']},

@@ -193,14 +193,16 @@
   var MAILBOX_INVITE = GATE_BOX
     ? " Gmail is invite-only while Google verifies our app — enter your invite code on this page (Outlook needs no invite)."
     : "";
+  var mailboxConnected = ONB_STEP === "mailbox" && !!document.querySelector("[data-connected-inbox]") && !!document.querySelector("[data-onb-continue]");
+  var mailboxNext = "Your inbox is connected. Review your import status or continue to Voice.";
   var ONB_GREETINGS = {
     interview: ONB_INTRO,
     industry: "Let's get you set up — I'm the BLAM8 AI assistant. Tell me what your business does and I'll pick your sector and fill it in for you.",
     voice: "I'm the BLAM8 AI assistant. How should your replies sound, and how would you like to sign off?",
-    mailbox: "I'm the BLAM8 AI assistant. Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
+    mailbox: mailboxConnected ? "I'm the BLAM8 AI assistant. " + mailboxNext : "I'm the BLAM8 AI assistant. Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
     knowledge: ONB_SITE
       ? "I'm the BLAM8 AI assistant. Once " + ONB_SITE + " has been read, we'll go through your actual notes together. Tell me what to keep or correct; I'll ask about anything that needs your decision. Nothing from the drafts is available to the agent until you save the review."
-      : "I'm the BLAM8 AI assistant. We'll go through your notes together. Tell me what to keep or correct, and I'll ask about anything needing your decision. Pending drafts are separate from saved Knowledge. Unknown details can stay unknown. Nothing from the drafts is available to the agent until you save the review.",
+      : "I'm the BLAM8 AI assistant. What should I know about your business? I'll draft notes for you to check. Your agent can use them once you save.",
     data: "Last step — which systems do you run on? I'm the BLAM8 AI assistant: tell me and I'll point you to the right boxes to tick.",
   };
   // Mid-thread step hand-offs: same job as the greetings but WITHOUT the
@@ -212,14 +214,14 @@
     interview: "Back on the about-you step — tell me what's changed and I'll update the form for you.",
     industry: "Picking your sector from the list — tell me what your business does and I'll pick the closest match for you.",
     voice: "Next: your agent's voice — how replies should sound and sign off. With your mailbox connected you can have it learned from your sent emails in one click (it only ever runs on your say-so), or just describe it and I'll fill the form for you to review.",
-    mailbox: "Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
+    mailbox: mailboxConnected ? mailboxNext : "Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
     knowledge: ONB_SITE
       ? "I'll help you review the notes prepared from " + ONB_SITE + ". We'll check each note and any decisions it needs together. Drafts and corrections stay pending until you save your reviewed decisions."
-      : "I'll help you review each note and any decisions it needs. Unknown details can stay unknown. The drafts stay pending until you save your reviewed decisions. Every pending note needs a decision before you continue.",
+      : "What should I know about your business? You can keep, change or leave out each note before saving.",
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
   };
   var GREETING = document.querySelector('[data-guided-intro]')
-    ? "I'm the BLAM8 AI assistant. Start guided setup and we'll work through Diary, Records and Charges together, one section at a time."
+    ? "I’ll ask about your business and suggest settings for you to review."
     : ONB_MODE
     ? (ONB_GREETINGS[ONB_STEP] || "I'm the BLAM8 AI assistant — here to help you finish setting up, just ask.")
     : (AUTHED
@@ -313,7 +315,9 @@
   if (ONB_MODE) {
     try {
       var lastStep = sessionStorage.getItem(KEY_ONB_LAST);
-      if (log.length && lastStep && lastStep !== ONB_STEP) {
+      var mailboxReturned = mailboxConnected && sessionStorage.getItem(k("onb_mailbox_view")) === "connect";
+      if (ONB_STEP === "mailbox") sessionStorage.setItem(k("onb_mailbox_view"), mailboxConnected ? "connected" : "connect");
+      if (log.length && lastStep && (lastStep !== ONB_STEP || mailboxReturned)) {
         log.push({ role: "assistant",
                    content: ONB_HANDOFFS[ONB_STEP] || ONB_GREETINGS[ONB_STEP] || GREETING });
         saveLog(log);
@@ -471,6 +475,7 @@
     lastAssistant.dataset.bcGreeting = "";
     if (!receiptText) msgs.appendChild(lastAssistant);
     var knowledgeHistory = null;
+    var guideIntro = !!document.querySelector('[data-guided-intro]');
     var lastHistoryPrompt = null, lastHistoryDecision = null;
     var currentIndex = -1;
     if (ONB_STEP === 'knowledge' && !receiptText && !currentKnowledgeFormCard) {
@@ -482,18 +487,19 @@
       }
     }
     log.forEach(function (m, index) {
-      if (ONB_STEP === 'knowledge' && index !== currentIndex || ONB_STEP !== 'knowledge' && m.knowledge_card) {
-        if (ONB_STEP === 'knowledge' && !knowledgeHistory) {
+      var beforeGuide = guideIntro && !m.guide_stop;
+      if (beforeGuide || ONB_STEP === 'knowledge' && index !== currentIndex || ONB_STEP !== 'knowledge' && m.knowledge_card) {
+        if ((beforeGuide || ONB_STEP === 'knowledge') && !knowledgeHistory) {
           knowledgeHistory = document.createElement('details');
           knowledgeHistory.setAttribute('data-knowledge-history', '');
           knowledgeHistory.className = 'rounded-lg border border-slate-200 p-3 text-xs text-slate-500';
           var heading = document.createElement('summary');
-          heading.textContent = receiptText ? 'Earlier conversation · review completed' : 'Earlier conversation';
+          heading.textContent = beforeGuide ? 'Earlier onboarding conversation' : receiptText ? 'Earlier conversation · review completed' : 'Earlier conversation';
           knowledgeHistory.appendChild(heading); msgs.appendChild(knowledgeHistory);
         }
         // Outside Knowledge, keep each question and its recorded choice in
         // the setup history too. Never restore review controls on another page.
-        var historyTarget = ONB_STEP === 'knowledge' ? knowledgeHistory : msgs;
+        var historyTarget = beforeGuide || ONB_STEP === 'knowledge' ? knowledgeHistory : msgs;
         // History is reference text, never a second set of actionable controls.
         var card = m.knowledge_card;
         // Refreshes are presentation, not another exchange. Older transcripts
@@ -1138,7 +1144,7 @@
     var entry=document.querySelector('[data-guided-intro] [data-guided-start]');
     if(entry && window.Blam8GuidedSetup && !FIX_LOG_ID){
       var start=document.createElement('button');start.type='button';start.dataset.guidedEntry='';
-      start.className='rounded-lg bg-brand px-4 py-2 text-white disabled:opacity-50';
+      start.className=entry.className;
       start.textContent=entry.textContent;start.disabled=entry.disabled;
       start.addEventListener('click',function(){window.Blam8GuidedSetup.start();});
       cta.appendChild(start);cta.classList.remove('hidden');refreshTitle();return;
@@ -2071,6 +2077,7 @@
       try { sessionStorage.removeItem(KEY_SETUP_SNOOZE); } catch (e) {}
       fetchSetupStatus();
     }
+    if (data && data.guide_advanced && window.Blam8GuidedSetup) window.Blam8GuidedSetup.followCurrentStop();
     return spoke;
   }
 
@@ -2339,6 +2346,9 @@
     scrollDown(); showTyping();
 
     var history = (silentUser ? log : log.slice(0, -1)).slice(-MAX_TURNS);
+    if (HELP_MODE && (document.querySelector('[data-guided-intro]') || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active())) {
+      history = history.filter(function (turn) { return !!turn.guide_stop; });
+    }
     if (FIX_LOG_ID) { await fixTurn(text, history); }
     else if (ONB_MODE) { await onboardTurn(text, history); }
     else if (HELP_MODE) { await helpTurn(text, history); }

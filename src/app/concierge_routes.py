@@ -587,7 +587,7 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
     history = concierge.sanitize_history(
         [t.model_dump() for t in body.history], MAX_HISTORY_TURNS, MAX_TURN_CHARS)
     from app import onboarding_journey, voice_completion
-    saved, connected = {}, None
+    saved, connected, cfg = {}, None, {}
     try:
         t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
         cfg = db.get_tenant_config(ctx.tenant_id, client=ctx.client) or {}
@@ -623,6 +623,8 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
     tenant = _tenant_context(ctx) if body.step in ("voice", "knowledge", "mailbox") else None
     tenant = dict(tenant or {})
     tenant["onboarding_journey"] = journey
+    if body.step == "knowledge":
+        tenant["voice_notes"] = cfg.get("voice_notes")
     if journey and body.step != "knowledge" and onboarding_journey.is_navigation_request(question):
         return OnboardResponse(reply=onboarding_journey.navigation_reply(journey), form_fill={},
                                ready_to_advance=False, journey=journey)

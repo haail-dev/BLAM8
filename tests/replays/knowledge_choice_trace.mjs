@@ -164,3 +164,16 @@ assert.match(historyText(),/Your choice: Keep this note/);
 // Repeated automatic refreshes keep one current view, not duplicate history.
 await show(data('note','refresh'));await show(data('note','refresh'));
 assert.equal(c.log.filter(m=>m.knowledge_refresh&&!m.knowledge_card?.selected).length,1);
+
+// A new guide shows earlier onboarding as history and keeps it out of guide requests.
+c.ONB_STEP='';c.ONB_MODE=false;c.HELP_MODE=true;c.currentKnowledgeFormCard=null;
+c.document.querySelector=selector=>selector==='[data-guided-intro]'?new Element():null;
+c.log=[{role:'user',content:'My earlier price was £700.'},{role:'assistant',content:'How can I help?',guide_stop:'intro'}];
+c.renderAll();
+assert.match(historyText(),/Earlier onboarding conversation/);
+assert.match(historyText(),/£700/);
+assert(!msgs.children.some(el=>el.textContent.includes('£700')&&el.tagName!=='DETAILS'));
+let requestHistory;
+c.helpTurn=async function(text,history){requestHistory=history;};
+c.input.value='What happens next?';await c.send();
+assert.deepEqual(Array.from(requestHistory,t=>t.content),['How can I help?']);

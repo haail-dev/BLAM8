@@ -1,6 +1,12 @@
 {% extends "app/base.html" %}
 {% block title %}Related records · BLAM8{% endblock %}
 {% block heading %}Related records{% endblock %}
+{% block card_header %}
+<div class="flex flex-wrap items-center justify-between gap-2">
+  {{ super() }}
+  {% include "app/_help_hint.html" %}
+</div>
+{% endblock %}
 {% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
 {% block content %}
 {# Dependants (docs/modules/module-requirement-groups.md; Kris 2026-09-04: "each Contact
@@ -83,15 +89,7 @@
 {% endmacro %}
 <div class="max-w-2xl mx-auto p-4 sm:p-6 space-y-4">
 
-  <div class="glass-card p-4 sm:p-5">
-    <p class="font-semibold text-navy">Do you keep track of people, places or items for your customers?</p>
-    <p class="text-sm text-slate-500 mt-1.5">Name each one in your own words, then list what you need to know about it. Each customer gets their own records, linked to them.</p>
-  </div>
-
-  <div class="flex justify-end">
-    <span hidden data-concierge-ask="Set up my dependants — the kind of thing a booking is about that belongs to the customer (each named subject) and what to know about each one: asked once, confirmed each time, or an expiry date that must cover the booking. Recommend the kind and its fields for my business from what you know about it."></span>
-{% include "app/_help_hint.html" %}
-  </div>
+  <span hidden data-concierge-ask="Set up my dependants - the kind of thing a booking is about that belongs to the customer (each named subject) and what to know about each one: asked once, confirmed each time, or an expiry date that must cover the booking. Recommend the kind and its fields for my business from what you know about it."></span>
 
   {% if saved %}
   <div class="glass-card px-4 py-3 text-sm">
@@ -104,9 +102,18 @@
     <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 
-    <div id="groups" class="space-y-4">
+    <section class="space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="font-semibold text-navy">Record types</h2>
+        {% if not onboarding_progress %}{% include "app/_help_hint.html" %}{% endif %}
+      </div>
+      <p class="text-sm text-slate-500">Choose which people, places or items to track for each customer and what to keep on each record.</p>
+      <div id="groups" class="space-y-4">
       {% for g in groups %}{{ group_card(g, loop.index0) }}{% endfor %}
-    </div>
+      </div>
+      {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add record type</button>
+      {% else %}<span class="text-xs text-slate-400">You can add up to {{ max_groups }} record types.</span>{% endif %}
+    </section>
 
 
     {# Progress ladders (src/app/ladders.py, slice 1 of docs/plan-progress-packages.md,
@@ -116,7 +123,7 @@
     <div class="glass-card p-4 sm:p-5 space-y-3" id="progress">
       <div>
         <p class="font-semibold text-navy">Progress</p>
-        <p class="text-sm text-slate-500 mt-1">If customers or their related records move through stages, list those stages in order. You can update progress from their record or a booking. Customers can see their current stage in the portal.</p>
+        <p class="text-sm text-slate-500 mt-1">Set the stages a customer or related record moves through. Customers can see their current stage in the portal.</p>
       </div>
       <div id="ladders" class="space-y-3">
         {% for l in ladders %}
@@ -146,13 +153,8 @@
       <button type="button" id="add-ladder" class="text-sm font-medium text-brand" {{ 'hidden' if ladders|length >= max_ladders }}>+ Add progress stages</button>
     </div>
 
-    {# With no kind yet nothing in this form can change, so dirty_save.js hid
-       the add button along with the row and a first kind could not be added
-       by hand (2026-10-22). Until one exists the row stays: data-save-always. #}
-    <div data-save-row {% if not groups %}data-save-always{% endif %} class="flex flex-wrap items-center gap-3">
-      {% if groups|length < max_groups %}<button type="button" id="add-group" class="text-sm font-medium text-brand">+ Add {{ 'another' if groups else 'one' }}</button>
-      {% else %}<span class="text-xs text-slate-400">{{ max_groups }} is the most for now</span>{% endif %}
-      <button type="submit" data-save-row class="ml-auto rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
+    <div data-save-row class="flex justify-end">
+      <button type="submit" class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Save</button>
     </div>
     <p class="text-xs text-slate-400">Details about a single booking (its date, address or who to call) belong in {% if setup_walk_active %}<span class="font-medium">Booking requirements</span>{% else %}<a href="/app/diary/intake" class="text-brand">Booking requirements</a>{% endif %}.</p>
   </form>

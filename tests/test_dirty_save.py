@@ -172,12 +172,9 @@ def test_the_page_renders_marked_rows_that_ship_visible(client, monkeypatch):
     assert "/static/dirty_save.js" in html
 
 
-# ── Dependants: the add control lives in the save row ──────────────────────
+# Related record types can be added even while the Save row is hidden.
 def _dependants_save_row(client, monkeypatch, groups):
-    """The rendered Dependants page's save-row wrapper: its opening tag and body.
-
-    The nested Save button carries data-save-row as well (the sweep above looks
-    for it), so the wrapper is the <div>, not every marked element."""
+    """Return the save row after checking the placement of Add record type."""
     import app.dashboard as dashboard
 
     _env(monkeypatch, modules={"scheduling"})
@@ -187,18 +184,16 @@ def _dependants_save_row(client, monkeypatch, groups):
     monkeypatch.setattr(dashboard.db, "list_requirement_groups",
                         lambda t, client=None: list(groups))
     html = client.get("/app/diary/dependants").text
+    assert html.index('id="groups"') < html.index('id="add-group"') < html.index('id="progress"')
     rows = re.findall(r"(<div[^>]*data-save-row[^>]*>)(.*?)</div>", html, re.S)
     assert len(rows) == 1, rows
     return rows[0]
 
 
 def test_an_empty_dependants_page_keeps_its_add_control_reachable(client, monkeypatch):
-    """A tenant with no kind yet has no field in the form to change, so the
-    dirty-save script would hide a plain save row. The page's only add button is
-    inside it, which left an owner no way to start the page by hand."""
     tag, body = _dependants_save_row(client, monkeypatch, groups=[])
-    assert "data-save-always" in tag
-    assert 'id="add-group"' in body
+    assert "data-save-always" not in tag
+    assert 'id="add-group"' not in body
 
 
 def test_a_dependants_page_with_a_kind_hides_its_save_row_until_edited(client, monkeypatch):
@@ -209,4 +204,4 @@ def test_a_dependants_page_with_a_kind_hides_its_save_row_until_edited(client, m
                         "durability": "once"}]}
     tag, body = _dependants_save_row(client, monkeypatch, groups=[kind])
     assert "data-save-always" not in tag
-    assert 'id="add-group"' in body
+    assert 'id="add-group"' not in body

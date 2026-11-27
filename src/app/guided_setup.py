@@ -121,7 +121,7 @@ def registry():
         ids = ['invoice_settings/'+key for key in keys]
         first = result[ids[0]]
         first.update(catalogue=ids, title='Document choices' if len(keys)>2 else 'Deposit choices',
-            substep='charges.terms',required=len(keys)>2, question='Which of these document choices do you need? We can review each choice together before saving.' if len(keys)>2 else
+            substep='charges.terms',required=len(keys)>2, question='Which business details, payment terms and VAT details should appear on your documents, and how long are quotes valid?' if len(keys)>2 else
             'Do you require a deposit, and should it apply when a booking is confirmed?')
         for identity in ids[1:]:
             result.pop(identity)
@@ -205,7 +205,7 @@ DIARY_TEXT = {
     'diary.capacity': 'How many {label} can happen at the same time?',
     'diary.time_shape': 'How is the time set for {label}?',
     'diary.length': 'Roughly how long does one take?',
-    'diary.repeats': 'Does {label} repeat?',
+    'diary.repeats': 'Do entries in {label} repeat?',
     'diary.repeats_detail': 'What does the repeat depend on?',
     'diary.agreement': 'Does anyone outside your team need to agree to the time?',
     'diary.agreement_who': 'Who needs to agree?',
@@ -216,7 +216,7 @@ def discovery_stops(context):
     from app import diary_profile
     state = context['state']
     stops = [dict(id=DIARIES_STOP, kind='diaries', substep='diary.activities', title='Your diaries',
-        question='What do you keep a diary or calendar for? Pick any that fit, or tell me in your own words.',
+        question='What do you use a diary or calendar for?',
         why='Each one becomes its own diary layer. I’ll ask a few short questions about each before suggesting any settings.',
         href=DIARY_HREF, anchor=None, question_id='diary.list', scopes=['organisation'], required=True)]
     for diary in contract.active_diaries(state):
@@ -360,7 +360,7 @@ def steps(context):
             result.extend(discovery_stops(context))
         if sid == 'charges.responsibility':
             result.append(dict(id='orientation.money', kind='orientation', substep=sid, title='Your money',
-                question='Quotes, invoices and payments appear here. We’ll review the relevant charging choices next. This guide creates no invoices or payments.',
+                question='Choose how you handle quotes, invoices and payments. Nothing is issued during setup.',
                 href='/app/money', anchor='orientation.money'))
         if sub['capability'] not in seen_capabilities and sub['capability'] != 'time_occupancy':
             result.append(dict(id='relevance.'+sid, kind='relevance', substep=sid,
@@ -386,6 +386,13 @@ def steps(context):
                       and settings_allowed(s, flags)]
         filtered=[]
         for stop in candidates:
+            if (stop['id'] == 'dependants/field'
+                    and state['capabilities'].get('related_records') in ('off', 'deferred')
+                    and guide['current'] != stop['id']
+                    and not guide['current'].startswith('explain.dependants/')
+                    and not (stop['id'] in guide['pending'] and
+                             guide['decisions'].get(stop['id']) not in ('applied', 'cancelled', 'partial'))):
+                continue
             need=stop.get('need')
             if need:
                 if need not in seen_needs:
@@ -421,7 +428,7 @@ def steps(context):
                         continue
                     filtered.append(dict(id=explanation_id, kind='explanation', decision_id=stop['id'],
                         substep=sid, page=stop['page'], href=stop['href'], title=entry['label'],
-                        question=EXPLANATIONS.get(key, 'Review '+entry['label'].lower()+' here. The card shows the exact proposed value and its difference from the current setting. Ask the assistant if its effect is unclear before accepting.'),
+                        question=EXPLANATIONS.get(key, 'The setup card shows the changes to '+entry['label'].lower()+'.'),
                         anchor='setting.'+key if entry.get('key') else 'editor.'+entry['page'],
                         catalogue=stop['catalogue'], focus_catalogue=identity))
         # A need-gated fact is asked right after its need stop, never before it.
@@ -445,8 +452,34 @@ def steps(context):
         result.insert(index, orientation(context, last_diary))
     result.append(dict(id='finished', kind='finished', substep=None, title='Your setup review',
         question='Your choices and deferred items are kept. You can revisit the grouped review at any time. Drafting stays under its separate explicit control.',
-        href='/app/setup/' + (subs[0]['id'].split('.')[0] if subs else 'charges'), anchor=None))
+        href='/app/' if guide['status'] == 'finished' else '/app/setup/' + (subs[-1]['id'].split('.')[0] if subs else 'charges'), anchor=None))
     return result
+
+
+def price_reference(context, stop):
+    """Show the owner's wording for review without converting it to invoice lines."""
+    if stop.get('substep') != 'charges.terms':
+        return None
+    from app import knowledge_review, onboarding_state
+    state = context['state']
+    question = knowledge_review.QUESTIONS['prices'][0]
+    spec = next((q for q in state.get('routed_questions', {}).values() if q.get('topic') == 'prices'
+                 and q['text'] == question), None)
+    if not spec or knowledge_conflicts(state, {'question_id': spec['id']}):
+        return None
+    current = stop.get('question_id') == spec['id']
+    if not current and stop.get('href') != '/app/invoices/settings':
+        return None
+    answer = state['answers'].get(onboarding_state.key_for(spec['id'], 'organisation', 'organisation'))
+    if answer and answer['state'] == 'answered' and (current or stop['kind'] == 'decision'):
+        return dict(text=answer['value'], saved=True, current=current)
+    if current and context.get('knowledge'):
+        topic = next(t for t in knowledge_review.topic_view(context['knowledge'])['topics'] if t['key'] == 'prices')
+        if len(topic['saved']) == 1:
+            content = topic['saved'][0]['content']
+            if content and len(content) <= 2000:
+                return dict(text=content, saved=False, current=True)
+    return None
 
 
 def describe(context):
@@ -466,12 +499,15 @@ def describe(context):
     section = next((dict(group=g['label'], label=sub['label'], badge=contract.SUBSTEPS[sub['id']][1])
                     for g in groups for sub in g['substeps'] if sub['id']==stop.get('substep')), None)
     decision_id = stop.get('decision_id', stop['id'])
-    unresolved=unresolved_required(context,stop['substep']) if stop['kind']=='review' else []
+    reviewing = stop['kind'] == 'review'
+    unresolved=unresolved_required(context,stop['substep']) if reviewing else []
     return dict(section=section, progress=[dict(key=g['key'], done=g['done']) for g in groups],
-        unresolved=[dict(id=s['id'],title=s['title']) for s in sequence if s['id'] in unresolved],
+        unresolved=[dict(id=s['id'],title=s['question'] if s['kind'] in ('fact', 'need', 'relevance') else s['title'])
+                    for s in sequence if s['id'] in unresolved],
+        review_blocked=bool(reviewing and (unresolved or review_blocker(context['state'], stop['substep']))),
         remaining_sections=sum(context['state']['reviews'].get(sub['id'],{}).get('state') not in ('reviewed','off','deferred')
                                for group in groups for sub in group['substeps']),
-        revision=context['state']['revision'], guide=guide, stop=stop,
+        revision=context['state']['revision'], guide=guide, stop=stop, price_reference=price_reference(context, stop),
         knowledge_conflicts=knowledge_conflicts(context['state'],stop),
         index=index, count=len(sequence), pending=(dict(guide['pending'][decision_id],
             settings_version=context['state']['proposals'][guide['pending'][decision_id]['proposal']]['settings_version'])
@@ -542,6 +578,18 @@ def knowledge_conflicts(state,stop):
         result.append(dict(id=identity,question=question,message=entry['message'],earlier=entry['earlier'],
             candidate=entry.get('candidate')))
     return result
+
+
+def review_blocker(state, substep):
+    from app import onboarding_state
+    for proposal in state['proposals'].values():
+        if proposal['status'] == 'proposed' and any(state['answers'].get(key, {}).get('substep') == substep
+                for key in proposal.get('answers', [proposal['answer']])):
+            return 'Pending suggestions remain. Save or leave them, or explicitly defer this section.'
+    if any(a['substep'] == substep and a['state'] in ('unknown', 'deferred', 'unanswered')
+           and discovery_counts(state, a) for a in state['answers'].values()) or onboarding_state.unresolved_dependencies(state, substep):
+        return 'Related or unanswered decisions remain. Resolve them or explicitly defer this section.'
+    return None
 
 
 def unresolved_required(context, substep):
