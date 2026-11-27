@@ -282,6 +282,7 @@
       {{ sface('Services & durations', (_svc ~ ' service' ~ ('' if _svc == 1 else 's')) if _svc else ('One fixed length — ' ~ _slotlbl)) }}
       {% endif %}
       <div class="px-5 pb-5 pt-1 space-y-4">
+      <div data-pending-rows="service service_urgent service_out_of_hours service_after_job" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
 <div>
       {% if diary_stay_mode %}
       {# A stays diary's other use (Kris 2026-09-13): timed visits the customer
@@ -509,6 +510,7 @@
         <details class="group/row border-t border-slate-200" data-guided-decision="diary_settings/resource">
       {{ sface('Resource types', (_res ~ ' type' ~ ('' if _res == 1 else 's')) if _res else 'One shared pool') }}
       <div class="px-5 pb-5 pt-1 space-y-4">
+      <div data-pending-rows="resource" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
 <div>
       <span class="block text-sm font-medium text-navy mb-1">Resource types <span class="font-normal text-slate-400">— different kinds of bookable unit</span></span>
       <p class="text-xs text-slate-400 mb-2.5">Add a type for each distinct thing customers book — use the names of your own resource types. Each has its own count, so one can be full while another is free. Leave empty to use one shared pool (Bookings per slot, under Advanced).</p>

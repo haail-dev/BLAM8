@@ -114,6 +114,10 @@ def resolve(page, patches, card, signals, *, strict=True):
     out so the saved value carries forward. A new row missing a field that has
     no usual setting (its name, say) is held back with a question.
 
+    On an owner turn, Diary services may use cited facts for the service
+    details. A missing choice gets a question about that service. Automatic
+    drafts retain the strict source policy for Diary rows.
+
     Rows these rules do not cover keep the stricter rule: with ``strict`` an
     assumed or inferred value there refuses the proposal (an owner turn);
     without it the row is left out (a draft the owner never typed).
@@ -128,6 +132,30 @@ def resolve(page, patches, card, signals, *, strict=True):
         line = lines.get(patch.get('id')) if patch['op'] == 'set' else None
         row = line['name'] if line else patch.get('name')
         fields, sources = patch.get('fields', {}), patch.get('sources', {})
+        if strict and (page, row) == ('diary_settings', 'service'):
+            missing = []
+            label = _row_label(fields, line) or 'this service'
+            for field, source in list(sources.items()):
+                kind = source.get('kind')
+                if kind not in ('assumed', 'inferred'):
+                    continue
+                if (kind == 'inferred' and field in ('name', 'minutes', 'price', 'timing')
+                        and evidence_ok(source, signals)):
+                    continue
+                # An unrequested empty assignment must never clear an existing value.
+                if ((field == 'days' and fields[field] == []) or
+                        (field == 'resource' and fields[field] == '') or
+                        (field == 'price' and fields[field] is None)):
+                    fields.pop(field)
+                    sources.pop(field)
+                    continue
+                missing.append(setup_wording.question(page, row, field, label)
+                               or f'What {field} should I use for {label}?')
+            if missing:
+                questions.extend(missing)
+            elif fields or (patch['op'] == 'set' and 'held' in patch):
+                kept.append(patch)
+            continue
         if (page, row) not in SETTLED_ROWS:
             if any(s.get('kind') in ('assumed', 'inferred') for s in sources.values()):
                 if strict:

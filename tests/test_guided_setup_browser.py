@@ -32,7 +32,7 @@ def test_real_diary_projections_edits_accept_and_device_restore(guide_journey,mo
     run_browser(guide_journey,monkeypatch,tmp_path,width,height,theme,'diary')
 
 
-@pytest.mark.parametrize('area,width,height,theme',[('records',390,844,'dark'),('records',820,1024,'dark'),('charges',1280,900,'light'),('contact_fields',820,1024,'dark')])
+@pytest.mark.parametrize('area,width,height,theme',[('records',390,844,'dark'),('records',820,1024,'dark'),('charges',1280,900,'light'),('contact_fields',820,1024,'dark'),('pipeline',820,1024,'dark'),('held_pipeline',820,1024,'dark')])
 def test_records_and_charges_real_native_decision_journeys(guide_journey,monkeypatch,tmp_path,area,width,height,theme):
     run_browser(guide_journey,monkeypatch,tmp_path,width,height,theme,area)
 
@@ -97,6 +97,20 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
         path='/app/crm/fields';view=dashboard.crm_fields_page
         proposed=change('crm_fields',0,[dict(name='contact_field',fields=dict(label='Phone number',
             required=False,probe_behaviour='passive',staff_can_see=False))])
+    elif area in ('pipeline','held_pipeline'):
+        j.move('relevance.records.progress')
+        path='/app/crm/settings';view=dashboard.crm_settings_page
+        proposed=change('crm_settings',0,[dict(name='stage',fields=dict(name=n)) for n in ('New enquiry','Quote sent','Booked','Declined')])
+        if area=='held_pipeline':
+            from tests.test_guided_setup import turn,accept_current
+            j.move('crm_settings/quiet_days')
+            model(monkeypatch,proposed)
+            turn(j,'Track these four stages.')
+            model(monkeypatch,change('crm_settings',1,[dict(fields=dict(key='quiet_days',value=7))]))
+            turn(j,'Flag a contact after seven days.')
+            reminder=next(line for line in j.row('tenant_config',j.tenant)['setup_cards']['crm_settings']['lines'] if line['name']=='setting')
+            accept_current(j,'crm_settings',[reminder['id']])
+            assert j.state()['guide']['current']=='crm_settings/stage'
     elif area=='records':
         j.move('dependants/field');path='/app/diary/dependants';view=dashboard.diary_dependants
         proposed=change('dependants',0,[dict(name='group',fields={'label':'Item','plural':'Items','cardinality':'many'}),
@@ -151,6 +165,11 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
                     padding: parseFloat(getComputedStyle(document.body).paddingRight)
                   };
                 </script>""")
+            if area.startswith('handoff'):
+                response.body=response.body.replace(b'</body>', b'''<script>
+                  const loadingWidget=document.querySelector('[data-guide-loading]');
+                  if(loadingWidget)window.initialTranscriptVisibility=getComputedStyle(loadingWidget.querySelector('#bc-messages')).visibility;
+                </script></body>''')
             response.body=response.body.replace(b'<html lang="en"',('<html data-theme="'+theme+'" lang="en"').encode())
             response.headers['content-length']=str(len(response.body))
             response.set_cookie('bl_csrf','test-csrf')
@@ -215,7 +234,9 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             assert {c:j.state()['capabilities'].get(c) for c in ('related_records','record_information','lifecycle')}=={
                 'related_records':'deferred','record_information':'deferred','lifecycle':'deferred'}
             assert j.state()['guide']['decisions']['diary_settings/stay_mode']=='applied'
-            assert next(a for a in j.state()['answers'].values() if a['question']=='activity.purpose')['value']=='We inspect equipment.'
+            answers={a['question']:a['value'] for a in j.state()['answers'].values()}
+            assert answers['activity.purpose']==('I inspect equipment on site.' if area=='handoff_assistant' else 'We inspect equipment.')
+            assert answers['activity.authority']=='owner_arranges'
         elif area=='hours':
             saved=j.row('scheduling_config',j.tenant)
             assert saved['working_days']=='mon,wed'
@@ -229,6 +250,10 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             assert j.state()['guide']['decisions']['crm_fields/contact_field']=='applied'
             assert j.state()['guide']['decisions']['need.company_fields']=='needed'
             assert j.state()['guide']['decisions']['need.deal_fields']=='off'
+        elif area in ('pipeline','held_pipeline'):
+            saved=j.query('select name from crm_stages where tenant_id=%s order by name',j.tenant,all=True)
+            assert saved==[('Booked',),('Declined',),('New enquiry',),('Quote sent',)]
+            assert j.state()['guide']['decisions']['crm_settings/stage']=='applied'
         elif area=='records':
             saved=j.query('select to_jsonb(g) from requirement_groups g where tenant_id=%s',j.tenant,all=True)
             assert len(saved)==1 and saved[0][0]['fields'][0]['label']=='Owner reference'

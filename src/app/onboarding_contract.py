@@ -78,18 +78,20 @@ NEEDS = {
 }
 
 
-def _question(identity, substep, text, *, kind='text', choices=None, adapter=None, scopes=('organisation',), why='', topic=None):
+def _question(identity, substep, text, *, kind='text', choices=None, choice_labels=None, adapter=None, scopes=('organisation',), why='', topic=None):
     return dict(id=identity, substep=substep, capability=SUBSTEPS[substep][3],
                 topic=topic or identity, text=text, kind=kind, choices=choices,
                 adapter=adapter, scopes=list(scopes), why=why or 'This answer helps review this section; saving it does not apply settings.',
-                dependencies=[])
+                dependencies=[], **({'choice_labels': choice_labels} if choice_labels else {}))
 
 
 QUESTIONS = {
     'activity.purpose': _question('activity.purpose', 'diary.activities', 'What work should this activity represent?', scopes=('organisation', 'activity')),
-    'activity.authority': _question('activity.authority', 'diary.activities', 'Who should arrange and confirm times?', kind='choice',
-        choices=['owner_arranges', 'review_booking_settings'], scopes=('organisation', 'activity'),
-        why='Owner arrangement is a factual preference. Booking authority still depends on the saved booking rules.'),
+    'activity.authority': _question('activity.authority', 'diary.activities', 'How would you like to handle booking times?', kind='choice',
+        choices=['owner_arranges', 'review_booking_settings'],
+        choice_labels={'owner_arranges': 'I arrange and confirm times myself',
+                       'review_booking_settings': 'I want the assistant to help with bookings'}, scopes=('organisation', 'activity'),
+        why='If you want help from the assistant, you can review which bookings it may arrange or confirm.'),
     'records.relationships': _question('records.relationships', 'records.relationships', 'Do you need to keep separate details for each person, place or item linked to a customer?', kind='boolean',
         why='Only the existing contact-to-subject relationship is supported. Other roles remain separate unresolved needs.'),
     'requirements.policy': _question('requirements.policy', 'diary.conditions', 'What must be known or checked before proceeding?', scopes=('organisation', 'activity', 'record_group', 'record')),

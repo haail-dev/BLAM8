@@ -17,6 +17,12 @@ Closing the assistant lets the owner continue in the form-based review.
 On Record fields, Help and the B button reopen the assistant. After the contact
 field review, the guide asks about Companies, then Deals. Choosing Needed highlights
 that form. The owner saves each field with Add and chooses Next when finished.
+Blank forms explain what a field is and give examples. At field review the guide
+shows saved fields and outstanding choices. Setup receipts remain accessible
+through Earlier conversation.
+Suggested stages, related records, booking requirements, diary services and resources,
+and packages appear beside the corresponding form. Editing the proposal updates its
+preview. Accept saves the selected changes and refreshes the form.
 
 A clear relevance answer can advance the guide while the assistant asks for a
 field detail. Pending contact fields appear under Contacts and in the setup
@@ -225,3 +231,11 @@ already be installed. Deployment and
 live E2E testing are separate release actions. Native Chromium emulation does
 not establish real mobile keyboard behavior or live model quality. Usage and
 time savings remain unknown unless directly measured.
+
+At the final progress-stage question, **Continue to Diary** explicitly keeps the current settings and records the section review in the same save. Open or deferred decisions keep the full review available.
+
+When the owner names pipeline stages in the first Progress and follow-up answer, the guide shows those stages for approval immediately and asks about the reminder afterwards. Returning owners with a held stage proposal see it after saving their reminder. If the saved settings or card revision changed, the proposal offers **Review current difference** before acceptance.
+
+Direct answers are visible on factual question cards. The footer saves an entered or edited answer and advances in the same request. Next carries an already saved answer forward.
+
+Confirming a service recap requests a review card. Diary service proposals can cite saved Knowledge for names, durations, prices and timing. Unspecified optional clears are omitted and unsupported choices get a specific follow-up question. Accepting the card saves the service settings.

@@ -1,16 +1,22 @@
 {% extends "app/base.html" %}
 {% block title %}Settings · CRM · BLAM8{% endblock %}
 {% block heading %}CRM{% endblock %}
+{% block card_header %}
+<div class="flex flex-wrap items-center justify-between gap-2">
+  {{ super() }}
+  {% include "app/_help_hint.html" %}
+</div>
+{% endblock %}
 {% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
 {% block content %}
 <div class="max-w-3xl mx-auto p-6 space-y-5">
-  <div class="flex items-start justify-between gap-3">
+  {% if not onboarding_progress %}
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-slate-500 max-w-2xl">The settings behind the CRM. What you track per contact, company and deal lives under <a href="/app/crm/fields" class="text-brand font-medium">Fields</a> — everything else is here.</p>
-    {# Opens the assistant pre-asked to recommend stages + the gone-quiet threshold for
-       THIS business — it can apply them via a "Use recommended settings" card. #}
-    <span hidden data-concierge-ask="Can you help me set up my CRM settings — the pipeline stages and the gone-quiet threshold — for my business?"></span>
-{% include "app/_help_hint.html" %}
+    {% include "app/_help_hint.html" %}
   </div>
+  {% endif %}
+  <span hidden data-concierge-ask="Can you help me set up my CRM settings — the pipeline stages and the gone-quiet threshold — for my business?"></span>
 
   {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Saved.</div>{% endif %}
   {% if msg == 'deleted' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Stage removed — its deals moved to Unstaged on the pipeline.</div>{% endif %}
@@ -22,8 +28,9 @@
       <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pipeline stages</p>
       <p class="text-xs text-slate-400 mt-0.5">The columns your deals move through. Won / Lost / Dormant types close a deal when it lands there; order is lowest-first.</p>
     </div>
+    <div data-pending-stages hidden aria-live="polite" class="space-y-1 rounded-lg border border-slate-200 p-3 text-sm"></div>
     {% if not stages %}
-    <p class="text-sm text-slate-400">No stages yet — nothing is pre-decided for you. Ask the assistant (/help) for a pipeline that fits your business, or add your own below. Deals without a stage sit under Unstaged on the pipeline.</p>
+    <p class="text-sm text-slate-400">No saved stages yet. Add a stage below or ask the assistant for suggestions.</p>
     {% else %}
     {# Column headers (Julius 2026-09-03: three unlabelled boxes per row read
        as a puzzle — especially the bare order numbers). #}

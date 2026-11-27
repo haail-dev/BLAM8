@@ -84,13 +84,21 @@
     this.form.parentNode.insertBefore(this.tray, this.form);
     this.error = node("div", null, "bc-setup-error"); this.error.setAttribute("role", "status"); this.error.hidden = true;
     this.error.appendChild(this.errorText = node("span"));
-    this.error.appendChild(button("Reload cards", function () { self.editing = false; self.load(); }));
+    this.reloadButton=button("Reload cards", function () {
+      if(window.Blam8DeviceSync && window.Blam8DeviceSync.hasConflict()){window.location.reload();return;}
+      self.editing = false; self.load();
+    });
+    this.error.appendChild(this.reloadButton);
     this.form.parentNode.insertBefore(this.error, this.tray);
     this.observer = new MutationObserver(function () { self.place(); });
     this.observer.observe(this.msgs, { childList: true });
     this.load();
   }
-  Panel.prototype.fail = function (message) { this.errorText.textContent = message; this.error.hidden = false; };
+  Panel.prototype.fail = function (message) {
+    this.errorText.textContent = message;
+    this.reloadButton.textContent = window.Blam8DeviceSync && window.Blam8DeviceSync.hasConflict() ? "Reload shared session" : "Reload cards";
+    this.error.hidden = false;
+  };
   Panel.prototype.place = function () {
     var bubbles = this.msgs.querySelectorAll('[data-bc-role="assistant"]');
     var last = bubbles[bubbles.length - 1];
@@ -137,26 +145,27 @@
   Panel.prototype.disable = function () {
     this.tray.querySelectorAll("button,input,select,textarea").forEach(function (el) { el.disabled = true; });
   };
-  function pendingContactFields(cards) {
-    var box = document.querySelector('[data-pending-contact-fields]');
+  function pendingRows(cards, box, page, kinds, heading, describe) {
     if (!box) return;
-    var card = cards.find(function (item) { return item.page === 'crm_fields'; });
+    var card = cards.find(function (item) { return item.page === page; });
     var lines = card ? card.lines.filter(function (line) {
-      return line.name === 'contact_field' && ['held', 'proposed'].includes(line.status);
+      return kinds.includes(line.name) && ['held', 'proposed'].includes(line.status);
     }) : [];
     box.replaceChildren();
     box.hidden = !lines.length;
     if (!lines.length) return;
-    box.appendChild(node('strong', 'Suggested contact fields'));
+    box.appendChild(node('strong', heading));
     lines.forEach(function (line) {
-      var fields = line.fields;
-      var details = [fields.label];
-      if (typeof fields.required === 'boolean') details.push(fields.required ? 'Required' : 'Optional');
-      if (fields.probe_behaviour === 'passive') details.push('Never ask');
-      if (fields.staff_can_see === false) details.push('Hidden from other staff');
-      box.appendChild(node('p', details.join(' · ')));
+      box.appendChild(node('p', describe ? describe(line.fields) : line.display));
     });
     box.appendChild(node('p', 'Pending review in the assistant.'));
+  }
+  function contactFieldSummary(fields) {
+    var details = [fields.label];
+    if (typeof fields.required === 'boolean') details.push(fields.required ? 'Required' : 'Optional');
+    if (fields.probe_behaviour === 'passive') details.push('Never ask');
+    if (fields.staff_can_see === false) details.push('Hidden from other staff');
+    return details.join(' · ');
   }
   Panel.prototype.paint = function () {
     var self = this; this.stale = false; this.dots.replaceChildren();
@@ -178,7 +187,14 @@
     if (this.mode && !this.pending(this.mode).length) this.mode = null;
     this.tray.replaceChildren(); this.tray.hidden = !this.mode || this.waiting;
     if (this.mode) this.paintTray();
-    pendingContactFields(this.data.cards);
+    pendingRows(this.data.cards, document.querySelector('[data-pending-contact-fields]'), 'crm_fields', ['contact_field'], 'Suggested contact fields', contactFieldSummary);
+    pendingRows(this.data.cards, document.querySelector('[data-pending-stages]'), 'crm_settings', ['stage'], 'Suggested pipeline stages', function(fields){
+      return [fields.name, fields.stage_type].filter(Boolean).join(' · ');
+    });
+    document.querySelectorAll('[data-pending-rows]').forEach(function(box){
+      var editor=box.closest('[data-guided-editor]');
+      if(editor)pendingRows(self.data.cards, box, editor.dataset.guidedEditor, box.dataset.pendingRows.split(' '), 'Suggested changes');
+    });
     this.place();
     if(guided) this.dots.hidden=true;
     if(guided)window.Blam8GuidedSetup.project(this.data);
@@ -199,8 +215,13 @@
       var allIDs = card.lines.filter(function (l) { return l.status === "proposed" || l.status === "held"; }).map(function (l) { return l.id; });
       var guided=window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active();
       var groupPreview=guided&&allIDs.length===group.length&&all&&!all.error?all:null;
-      if(guided&&allIDs.length!==group.length&&group.length>1){
-        var visible=group.map(function(item){return item.line.id;}),key=card.id+':'+card.revision+':'+visible.join(',');
+      var rowPreview=view.rows[group[0].line.id];
+      var version=all&&!all.error?all.settings_version:rowPreview&&rowPreview.settings_version;
+      var needsReview=guided && window.Blam8GuidedSetup.outdated(card,version);
+      if(needsReview){
+        title.appendChild(button('Review current difference',window.Blam8GuidedSetup.reviewDifference));
+      }else if(guided&&allIDs.length!==group.length&&group.length>1){
+        var visible=group.map(function(item){return item.line.id;}),key=card.id+':'+card.revision+':'+version+':'+visible.join(',');
         var cached=self.groupPreviews[key];
         if(!cached){self.groupPreviews[key]={loading:true};request('/concierge/setup-cards/'+card.page+'/preview',{
           revision:card.revision,ids:visible}).then(function(preview){self.groupPreviews[key]=preview;self.paint();})
@@ -208,7 +229,7 @@
         else if(!cached.loading&&!cached.error){groupPreview=cached;title.appendChild(button('Accept displayed changes',function(){self.accept(card,visible,cached);}));}
         else if(cached.error)title.appendChild(node('p',cached.error,'bc-setup-problem'));
       }
-      if (self.mode === "suggested" && all && !all.error && allIDs.length === group.length) {
+      if (!needsReview && self.mode === "suggested" && all && !all.error && allIDs.length === group.length) {
         title.appendChild(button(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active()?"Accept displayed changes":"Accept all", function () { self.accept(card, allIDs, all); }));
       }
       self.tray.appendChild(title);

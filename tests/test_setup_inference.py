@@ -18,8 +18,8 @@ def inferred(value, why, evidence):
     return value, {'kind': 'inferred', 'reference': why, 'evidence': evidence}
 
 
-def append(name, **assignments):
-    return {'op': 'append', 'name': name, 'fields': {k: v[0] for k, v in assignments.items()},
+def append(row, **assignments):
+    return {'op': 'append', 'name': row, 'fields': {k: v[0] for k, v in assignments.items()},
             'sources': {k: v[1] for k, v in assignments.items()}}
 
 
@@ -159,10 +159,17 @@ def test_saved_question_reference_is_explained_once_without_quoting_the_owner():
 
 def test_rows_without_usual_settings_keep_the_strict_rule():
     import pytest
-    for page, row in (('invoice_settings', 'setting'), ('diary_settings', 'service'), ('crm_settings', 'setting')):
+    for page, row in (('invoice_settings', 'setting'), ('diary_settings', 'resource'), ('crm_settings', 'setting')):
         patch = append(row, key=said('x'), value=assumed('y'))
         with pytest.raises(ValueError, match='assumed rather than supplied'):
             inference.resolve(page, [patch], None, SIGNALS)
         stated = append(row, key=said('x'), value=said('y'))
         assert inference.resolve(page, [stated], None, SIGNALS) == ([stated], [])
         assert inference.resolve(page, [patch], None, SIGNALS, strict=False) == ([], [])
+
+
+def test_service_with_unknown_price_asks_for_that_price_only():
+    for price in (assumed(20), inferred(20, 'unverified', ['unknown:id'])):
+        patch = append('service', name=said('Visit'), minutes=said(30), timing=said('time'), price=price)
+        assert inference.resolve('diary_settings', [patch], None, SIGNALS) == ([], ['What price should I show for Visit?'])
+        assert inference.resolve('diary_settings', [patch], None, SIGNALS, strict=False) == ([], [])

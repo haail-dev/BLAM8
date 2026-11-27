@@ -602,8 +602,9 @@
   function showTyping() {
     if (setupCards) setupCards.setWaiting(true);
     typingEl = document.createElement("div");
-    typingEl.className = "flex justify-start";
-    typingEl.innerHTML = '<div class="bc-typing rounded-2xl rounded-bl-sm bg-white border border-slate-200 px-3 py-2 text-slate-400"><span class="bc-dot"></span><span class="bc-dot"></span><span class="bc-dot"></span></div>';
+    typingEl.className = "bc-notice flex justify-start";
+    typingEl.setAttribute("role", "status");
+    typingEl.innerHTML = '<span class="bc-notice-text">Thinking…</span>';
     msgs.appendChild(typingEl);
     scrollDown();
   }

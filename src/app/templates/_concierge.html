@@ -13,6 +13,7 @@
 <script src="/static/device_sync.js?v={{ asset_rev }}"></script>
 {% endif %}
 <div id="blam8-concierge" data-pull-refresh="off"
+     {% if concierge_in_app and guided_setup_meta and guided_setup_meta.status=='active' and guided_setup_meta.intro_ack %}data-guide-loading{% endif %}
      data-authed="{{ 'true' if concierge_authed else 'false' }}"
      {# Browser storage is per-BROWSER, not per-account: signing a second tenant
         in on the same machine inherited the first one's thread, snooze stamps
@@ -103,6 +104,7 @@
 </div>
 
 <style>
+  [data-guide-loading] #bc-panel > :not(header) { visibility:hidden; }
   {% if concierge_onboarding_step or setup_strip %}
   /* Continue floats over the foot of the thread with no box behind it; the
      messages fade out above it instead of showing beneath it. concierge.js
@@ -248,36 +250,6 @@
   }
   @media (min-width: 768px) { #bc-resize-handle { display: none; } }
 
-  /* Thinking bubble: the outline breathes baby blue and one blue dot cycles
-     through the ellipsis — motion so it never reads as frozen. A status line
-     swaps the dots for status text but keeps .bc-typing, so the glow runs for
-     the whole wait. */
-  @keyframes bc-think-glow {
-    0%, 100% { border-color: #bae6fd; box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); }
-    50%      { border-color: #7dd3fc; box-shadow: 0 0 5px 1px rgba(125, 211, 252, 0.45); }
-  }
-  .bc-typing { animation: bc-think-glow 1.6s ease-in-out infinite; }
-  /* The bubble must keep the old "…" glyph's 38px footprint — it reads
-     oversized otherwise (Julius 2026-08-02). Dots are wider than the glyph
-     was, so the typing bubble alone gives back 3px of px-3 per side. */
-  .bc-typing { padding-left: 9px; padding-right: 9px; }
-  .bc-typing .bc-dot {
-    display: inline-block; width: 4px; height: 4px; margin: 0 1px;
-    border-radius: 9999px; background: currentColor; vertical-align: middle;
-    animation: bc-dot-cycle 0.9s linear infinite;
-  }
-  .bc-typing .bc-dot:nth-child(2) { animation-delay: 0.3s; }
-  .bc-typing .bc-dot:nth-child(3) { animation-delay: 0.6s; }
-  /* Blue for exactly one third of the cycle, offset a third apart: one blue
-     dot at a time, walking left to right on loop. */
-  @keyframes bc-dot-cycle {
-    0%, 32%   { background: #38bdf8; }
-    33%, 100% { background: currentColor; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .bc-typing, .bc-typing .bc-dot { animation: none; }
-  }
 </style>
 
 <link rel="stylesheet" href="/static/setup_cards.css?v={{ asset_rev }}">

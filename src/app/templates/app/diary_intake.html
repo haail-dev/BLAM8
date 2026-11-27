@@ -65,6 +65,7 @@
   <form method="post" action="/app/diary/intake" class="space-y-4" data-guided-editor="booking_details"
         data-sync-version="{{ (settings_snapshot|default({})).get('config', {}).get('intake_configured_at') or 'initial-checklist' }}">
     <input type="hidden" name="settings_snapshot" value="{{ settings_snapshot|default({})|tojson|forceescape }}">
+    <div data-pending-rows="field" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
 
     <p class="px-1 text-xs text-slate-400">Booking mode: {{ 'Arrival to departure — both times are collected' if stay else 'Appointments' }}.
