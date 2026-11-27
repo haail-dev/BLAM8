@@ -131,13 +131,28 @@ def _is_repeat(page: str, name: str) -> bool:
     return name in (pages().get(page) or {}).get("repeat", set())
 
 
+def _latest_services(items: list[dict]) -> list[dict]:
+    """A pending Diary service is identified by its label, even after a price edit."""
+    seen = set()
+    retained = []
+    for item in reversed(items):
+        if (item.get("page") == "diary_settings" and item.get("name") == "service"
+                and not item.get("used_at")):
+            label = str(item.get("value") or "").partition("|")[0].strip().casefold()
+            if label and label in seen:
+                continue
+            seen.add(label)
+        retained.append(item)
+    return retained[::-1]
+
+
 def merge(existing: list[dict], page: str, values: list[dict], step: str) -> list[dict]:
     """Fold one page's values into the record. A single-value field keeps
     only the owner's LATEST statement (a correction replaces); a repeatable
     row is added unless an identical row already exists. Used items are
     never revived — a re-stated fact after Save is a new, unused item."""
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    items = [dict(i) for i in (existing or []) if isinstance(i, dict)]
+    items = _latest_services([dict(i) for i in (existing or []) if isinstance(i, dict)])
     for v in values:
         name, value = v["name"], v["value"]
         if _is_repeat(page, name):
@@ -148,6 +163,8 @@ def merge(existing: list[dict], page: str, values: list[dict], step: str) -> lis
             items = [i for i in items
                      if not (i.get("page") == page and i.get("name") == name and not i.get("used_at"))]
         items.append({"page": page, "name": name, "value": value, "step": step, "at": now})
+        if page == "diary_settings" and name == "service":
+            items = _latest_services(items)
     return items[-MAX_ITEMS:]
 
 
@@ -302,7 +319,7 @@ def for_page(items: list[dict], page: str) -> list[dict]:
     """The unused values held for one page, as {name, value} pairs — the
     shape the page's prefill and the recommend card both speak."""
     return [{"name": i["name"], "value": i["value"]}
-            for i in (items or [])
+            for i in _latest_services(items or [])
             if i.get("page") == page and not i.get("used_at") and i.get("name") and i.get("value")]
 
 
@@ -329,7 +346,7 @@ def prompt_block(items: list[dict], exclude_page: str | None = None) -> str:
     """The facts the owner has already given, page by page, for the prompts.
     Empty string when there is nothing unused."""
     by_page: dict[str, list[str]] = {}
-    for i in items or []:
+    for i in _latest_services(items or []):
         if i.get("used_at") or not i.get("name"):
             continue
         if exclude_page and i.get("page") == exclude_page:

@@ -189,7 +189,7 @@ INFERENCE_SWAPS = (
      "plainly. Never relabel an assumption as an owner fact. Missing decisions should be\n"
      "asked, not guessed from the business type.",
      "Every field has its own source, reference and evidence. owner_said references the owner's\n"
-     "words; owner_site references supplied source material; inferred gives a one-line reason\n"
+     "actual words, never an internal question ID; owner_site references supplied source material; inferred gives a one-line reason\n"
      "from BUSINESS CONTEXT, with the ids of the signals it rests on in evidence ([] for a usual\n"
      "setting). Never relabel an inference as an owner fact, and never infer from a business type's name."),
     ("Never infer these choices, remove saved options,",

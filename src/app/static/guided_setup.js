@@ -283,6 +283,7 @@
   function shown(question,value){
     if(value==null)return '';
     if(question==='diary.hours')return hoursText(value);
+    if(question==='diary.length' && value.unit==='depends')return value.detail;
     if(question==='diary.date_source'){var source=(state.discovery.date_sources||[]).find(function(d){return d.id===value;});return source?source.label:String(value);}
     if(Array.isArray(value))return value.map(function(v){return (WORDS[question]||{})[v]||v;}).join(', ');
     if(typeof value==='object'&&value.amount)return value.amount+' '+value.unit;

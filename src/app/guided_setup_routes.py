@@ -747,11 +747,8 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         latest=context_for(ctx,body.revision)
         if guide.knowledge_conflicts(latest['state'],stop):
             raise setup_cards.Stale('Knowledge changed while preparing the suggestion. Review its current answer first.')
-        entries, _ = setup_card_model.normalise(setup_card_model.unpack(result.setup_changes or []), cards)
-        if stop['kind']=='fact' and not entries:
-            values = result.guide_answers or []
-            if not values:
-                return dict(**guide.describe(context), reply=result.reply, fallback=False)
+        values = result.guide_answers or []
+        if stop['kind']=='fact' and values:
             if len(values)!=1 or set(values[0])!={'question','state','value'} or values[0]['question']!=stop['question_id']:
                 raise ValueError('The answer did not identify this exact question. Please clarify it.')
             spec=state_store.resolve_question(context['state'],stop['question_id'])
@@ -766,6 +763,7 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
             state['guide']['decisions'][stop['id']]=item['state']
             output=save(ctx,context,state)
             return dict(**output,reply='Your answer is kept for this question and scope. It has not changed settings.',fallback=False)
+        entries, _ = setup_card_model.normalise(setup_card_model.unpack(result.setup_changes or []), cards)
         if not entries:
             return dict(**guide.describe(context), reply=result.reply, fallback=False)
         # One page is handled per turn: the current question's page when the model
@@ -817,11 +815,7 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
     except setup_cards.Stale as exc:
         raise HTTPException(409, str(exc)) from None
     except (ValueError, setup_cards.Invalid) as exc:
-        # The proposal could not be used, but the assistant's reply is still the
-        # answer to the owner: the browser shows this detail as the reply, so it
-        # leads with that reply and adds the reason after it.
-        reply = (result.reply or '').strip()
-        raise HTTPException(422, (reply + '\n\n' if reply else '') + str(exc)) from None
+        raise HTTPException(422, str(exc)) from None
 
 
 def _pack(ctx, context):

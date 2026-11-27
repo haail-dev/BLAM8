@@ -504,10 +504,11 @@ def describe(page, name, fields, provided=None):
     else:
         bits = [f["label"], "required" if f["required"] else "optional"]
         if page == "booking_details":
-            if "kind" in included:
-                bits.append(f["kind"])
+            if "kind" in included and f["kind"] == "document":
+                bits.append("upload a document")
             if "remember" in included:
-                bits.append("remember: " + f["remember"])
+                from app.intake import REMEMBER_FACE
+                bits.append(REMEMBER_FACE.get(f["remember"], "ask each time"))
             if f["services"]:
                 bits.append("only for: " + "; ".join(f["services"]))
         else:

@@ -190,6 +190,8 @@ def reasons(page, row, fields, sources):
     field on its usual setting with no evidence is listed once under
     ``usual`` rather than given its own line.
     """
+    from app.onboarding_contract import QUESTIONS
+
     lines, usual = [], []
     for field in fields:
         source = (sources or {}).get(field)
@@ -198,6 +200,15 @@ def reasons(page, row, fields, sources):
         name = setup_wording.label(page, row, field)
         if source.get('kind') == 'inferred' and not source.get('evidence'):
             usual.append(name)
+            continue
+        # Older guided proposals sometimes cite the setup question instead of
+        # quoting the owner. Describe that source once and keep the stored audit trail.
+        question = QUESTIONS.get(source.get('reference')) if source.get('kind') == 'owner_said' else None
+        if question:
+            reason = {'label': 'Based on your setup answer', 'text': question['text'],
+                      'check': bool(source.get('check'))}
+            if reason not in lines:
+                lines.append(reason)
             continue
         lines.append({'label': name, 'text': SAID.get(source.get('kind'), 'Source') + ': ' + source.get('reference', ''),
                       'check': bool(source.get('check'))})

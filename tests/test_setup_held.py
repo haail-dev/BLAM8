@@ -73,6 +73,25 @@ def test_merge_latest_statement_wins_for_a_single_value_and_rows_accumulate():
     assert rows == ["Trial night | 60 | 30.50 | time", "Meet & greet | 30 | 0 | time"]
 
 
+def test_service_price_correction_survives_reload_and_keeps_other_services(store):
+    def hold(*offers):
+        setup_held.add("t1", [{"page": "diary_settings", "values": [
+            {"name": "service", "value": offer} for offer in offers
+        ]}], "interview")
+
+    full = "Full-day coverage | 480 | 1200 | time"
+    original = "Half-day coverage | 240 | 700 | time"
+    corrected = "Half-day coverage | 240 | 750 | time"
+    hold(full, original)
+    previous = setup_held.load("t1")[-1]
+    hold(corrected)
+    items = setup_held.load("t1")
+    assert [item["value"] for item in items] == [full, corrected]
+    legacy = [previous, *items]
+    assert original not in setup_held.prompt_block(legacy)
+    assert [v["value"] for v in setup_held.for_page(legacy, "diary_settings")] == [full, corrected]
+
+
 def test_merge_leaves_used_items_alone_and_a_restatement_is_new():
     items = [{"page": "diary_settings", "name": "min_notice_hours", "value": "10",
               "step": "interview", "at": "t", "used_at": "t2"}]
