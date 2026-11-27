@@ -153,6 +153,12 @@ def _decided(state, identity, question):
     return bool(found) and found['state'] == 'answered'
 
 
+def describe_length(value):
+    if value['unit'] == 'depends':
+        return value['detail']
+    return f'about {value["amount"]} {value["unit"] if value["amount"] != 1 else value["unit"][:-1]}'
+
+
 def describe(state, identity, date_sources=()):
     """One sentence in plain words from answers only; no model call."""
     v = values(state, identity)
@@ -182,7 +188,7 @@ def describe(state, identity, date_sources=()):
     timing = SHAPE.get(shape, f'timing {UNDECIDED}')
     length = v['diary.length']
     if length and 'diary.length' in plan:
-        timing += f', about {length["amount"]} {length["unit"] if length["amount"] != 1 else length["unit"][:-1]}'
+        timing += ', ' + describe_length(length)
     parts.append(timing)
     repeats = v['diary.repeats']
     if repeats == 'depends':

@@ -226,6 +226,9 @@ def _discovery_value(spec, value):
             raise ValueError('Give a whole number from 1 to 999.')
         return value
     if kind == 'length':
+        if (isinstance(value, dict) and value.get('unit') == 'depends'
+                and value.get('amount') is None and set(value) <= {'amount', 'unit', 'detail'}):
+            return dict(unit='depends', detail=bounded(value.get('detail'), 200))
         if not isinstance(value, dict) or set(value) != {'amount', 'unit'} or value['unit'] not in DIARY_LENGTH_UNITS \
                 or type(value['amount']) is not int or not 1 <= value['amount'] <= 999:
             raise ValueError('Give a whole number of minutes, hours or days.')

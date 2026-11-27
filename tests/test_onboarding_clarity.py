@@ -198,7 +198,7 @@ def test_website_is_a_lockstep_interview_field():
     assert '"website"' in fields.split("interview:")[1].split("]")[0]
     html = _read("src/app/templates/onboarding/interview.html")
     assert 'id="website" name="website"' in html
-    assert "Step 1 of 4 here" in html and "three groups follow" in html
+    assert "fill in the form yourself" in html and "Review your details" in html
 
 
 @pytest.mark.parametrize("raw, want", [
@@ -314,7 +314,7 @@ def test_first_greeting_orients_before_it_asks():
     for line in ("1. About you", "2. Your customer inbox", "3. Voice", "4. Knowledge"):
         assert line in intro
     assert "separate from the account you just signed in with" in intro
-    assert "Diary, Records and workflows, and Charges and payments" in intro
+    assert "Records and workflows, Diary, and Charges and payments" in intro
     assert "edit, accept or leave" in intro and "Next moves the walkthrough" in intro
     assert "five more" not in intro and "Nine in all" not in intro
     assert "We'll check each note and any decisions it needs together." in js

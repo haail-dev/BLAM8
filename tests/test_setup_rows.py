@@ -52,6 +52,15 @@ def test_document_is_explicit_and_cannot_be_remembered():
     assert rows.parse("booking_details", "field", "Evidence | optional | document | remember: once")["problems"]
 
 
+def test_booking_field_summary_uses_customer_facing_words():
+    row = rows.parse("booking_details", "field", "Venue | required | remember: ask")
+    summary = rows.describe("booking_details", "field", row["fields"])
+    assert summary.startswith("Venue") and "required" in summary and "ask each time" in summary
+    assert "remember:" not in summary and "answer" not in summary
+    doc = rows.parse("booking_details", "field", "Evidence | optional | document")
+    assert "upload a document" in rows.describe("booking_details", "field", doc["fields"])
+
+
 def test_dropdown_does_not_move_required_durability_gate_or_hint():
     result = rows.parse("dependants", "field",
                         "Item | Category | dropdown: A, B | optional | once | no gate | Which category?")

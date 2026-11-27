@@ -180,14 +180,11 @@
   // question left people unsure what the assistant was for).
   // Describe both phases without promising a fixed count of later decisions;
   // those follow the available modules and the owner's relevance choices.
-  var ONB_INTRO = "Welcome to BLAM8! I'm the AI assistant — you talk, I fill the forms in, you check them. Setup is in two parts.\n"
-    + "Here, four short steps:\n"
-    + "1. About you — this step\n"
-    + "2. Your customer inbox — connecting the mailbox customers email (separate from the account you just signed in with)\n"
-    + "3. Voice — how your replies should sound\n"
-    + "4. Knowledge — the facts it can quote: prices, hours, policies (your website can fill most of this)\n"
-    + "Then we'll continue on the app's real pages: Diary, Records and workflows, and Charges and payments where relevant. I'll guide each question and show proposed values. You can edit, accept or leave each suggestion. Next moves the walkthrough.\n"
-    + "To start: what does your business do, and who are your customers?";
+  var ONB_INTRO = "I'm the BLAM8 AI assistant. I'll help you set up:\n"
+    + "1. About you\n2. Your customer inbox (separate from the account you just signed in with)\n"
+    + "3. Voice for your replies\n4. Knowledge your agent can use\n"
+    + "Then we'll review Records and workflows, Diary, and Charges and payments where relevant. You can edit, accept or leave suggestions. Next moves the walkthrough.\n"
+    + "First, what does your business do, and who are your customers?";
   // The mailbox step's Gmail gate is a page state (invite box present or
   // not) — the message mentions a code only when the box is really there
   // (kennels run #10: the text told an owner to enter a code into a box the
@@ -199,8 +196,8 @@
   var ONB_GREETINGS = {
     interview: ONB_INTRO,
     industry: "Let's get you set up — I'm the BLAM8 AI assistant. Tell me what your business does and I'll pick your sector and fill it in for you.",
-    voice: "Now let's give your agent a voice — I'm the BLAM8 AI assistant. Describe your business and how you'd like it to sound, and I'll fill these in for you to review.",
-    mailbox: "Step 2 of 4 here: connect the inbox your customers email — I'm the BLAM8 AI assistant. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
+    voice: "I'm the BLAM8 AI assistant. How should your replies sound, and how would you like to sign off?",
+    mailbox: "I'm the BLAM8 AI assistant. Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
     knowledge: ONB_SITE
       ? "I'm the BLAM8 AI assistant. Once " + ONB_SITE + " has been read, we'll go through your actual notes together. Tell me what to keep or correct; I'll ask about anything that needs your decision. Nothing from the drafts is available to the agent until you save the review."
       : "I'm the BLAM8 AI assistant. We'll go through your notes together. Tell me what to keep or correct, and I'll ask about anything needing your decision. Pending drafts are separate from saved Knowledge. Unknown details can stay unknown. Nothing from the drafts is available to the agent until you save the review.",
@@ -215,7 +212,7 @@
     interview: "Back on the about-you step — tell me what's changed and I'll update the form for you.",
     industry: "Picking your sector from the list — tell me what your business does and I'll pick the closest match for you.",
     voice: "Next: your agent's voice — how replies should sound and sign off. With your mailbox connected you can have it learned from your sent emails in one click (it only ever runs on your say-so), or just describe it and I'll fill the form for you to review.",
-    mailbox: "Step 2 of 4 here: connect the inbox your customers email. The page names the account you signed in with; that's your login. This step gives your agent permission to work the mailbox customers actually write to — the same account if that's where they write, or a different one (like info@). Press Connect with Google or Connect with Microsoft: the provider's own screen lists what you're approving (reading new mail and sending replies, never your password) and brings you back here. Google shows an “unverified app” notice while it verifies us — continue via Advanced; that's expected." + MAILBOX_INVITE + " I can't press it for you, but ask me anything.",
+    mailbox: "Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
     knowledge: ONB_SITE
       ? "I'll help you review the notes prepared from " + ONB_SITE + ". We'll check each note and any decisions it needs together. Drafts and corrections stay pending until you save your reviewed decisions."
       : "I'll help you review each note and any decisions it needs. Unknown details can stay unknown. The drafts stay pending until you save your reviewed decisions. Every pending note needs a decision before you continue.",

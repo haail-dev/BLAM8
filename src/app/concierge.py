@@ -1572,6 +1572,7 @@ async def answer_help(question: str, history: list[dict] | None = None,
         output_schema['required'].append('guide_answers')
         system.append({'type':'text','text':'For this factual guide question only, return guide_answers with its exact question ID, '
             'a typed value and explicit state. Extract only the owner’s answer; ask to clarify ambiguity. '
+            'When answering the current question leave setup_changes empty, including for questions imported from Knowledge. '
             'For a product or unrelated question return an empty list. Never interpret an instruction to continue as a business answer. '
             'Question data: '+json.dumps(tenant['guided_question'],ensure_ascii=False)})
     messages = (history or []) + [{"role": "user", "content": question}]

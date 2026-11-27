@@ -18,7 +18,9 @@ ANSWERABLE = [q for q, spec in contract.QUESTIONS.items()
               if spec.get('discovery') and q not in ('diary.list', 'diary.profile')]
 SUGGESTIONS = 5
 VALUE_GUIDE = ('value_json is the JSON text of the value. choice: "we_arrange". multi: ["people"]. count: 3. '
-               'length: {"amount": 2, "unit": "hours"}. hours: {"working": {"mon": ["09:00", "16:00"]}, '
+               'length: {"amount": 2, "unit": "hours"}. For different durations by service, use '
+               '{"unit": "depends", "detail": "the duration of each service in the owner’s words"}; '
+               'never select one duration to represent them all. hours: {"working": {"mon": ["09:00", "16:00"]}, '
                '"contact_same": true}. short_text or reference: "words". Use "null" when state is not answered.')
 RULES = (
     'DIARY DISCOVERY. You are learning how this business uses diaries and calendars. Do not propose settings. '
@@ -168,7 +170,7 @@ PHRASE = {
         'it takes up ' + ' and '.join(diary_profile.RESOURCE[k] for k in v),
     'diary.capacity': lambda v: f'up to {v} at once',
     'diary.time_shape': lambda v: diary_profile.SHAPE[v],
-    'diary.length': lambda v: f'about {v["amount"]} {v["unit"] if v["amount"] != 1 else v["unit"][:-1]}',
+    'diary.length': diary_profile.describe_length,
     'diary.repeats': lambda v: 'it repeats depending on something' if v == 'depends' else diary_profile.REPEAT[v],
     'diary.repeats_detail': lambda v: f'it depends on {v}',
     'diary.agreement': lambda v: {'no': 'no one else needs to agree', 'customer': 'the customer confirms the time',

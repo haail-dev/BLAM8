@@ -176,9 +176,13 @@
     }
     // Why each choice is suggested, in the owner's words; the server builds these lines.
     var reasons = line.reasons || { lines: [], usual: [] };
+    var evidence = node("details");
+    evidence.appendChild(node("summary", "Why this is suggested"));
     reasons.lines.forEach(function (r) {
-      row.appendChild(node("p", (r.check ? "Check this. " : "") + r.label + ". " + r.text, r.check ? "bc-setup-check" : "bc-setup-reason"));
+      var parent = r.check ? row : evidence;
+      parent.appendChild(node("p", (r.check ? "Check this. " : "") + r.label + ". " + r.text, r.check ? "bc-setup-check" : "bc-setup-reason"));
     });
+    if (evidence.childElementCount > 1) row.appendChild(evidence);
     if (reasons.usual.length) {
       var usual = node("details"); usual.appendChild(node("summary", "Other choices use the usual settings"));
       usual.appendChild(node("p", reasons.usual.join(", ")));

@@ -146,6 +146,17 @@ def test_reasons_speak_in_owner_words_and_group_usual_settings():
     assert card['lines'][0]['reasons'] == result
 
 
+def test_saved_question_reference_is_explained_once_without_quoting_the_owner():
+    fields = {'required': True, 'remember': 'ask', 'hint': 'Give the date'}
+    sources = {key: {'kind': 'owner_said', 'reference': 'requirements.policy'} for key in fields}
+    sources['hint'] = {'kind': 'owner_said', 'reference': 'Give the date'}
+    reasons = inference.reasons('booking_details', 'field', fields, sources)
+    assert reasons['lines'] == [
+        {'label': 'Based on your setup answer', 'text': 'What must be known or checked before proceeding?', 'check': False},
+        {'label': 'Prompt shown to customers', 'text': 'You said: Give the date', 'check': False},
+    ]
+
+
 def test_rows_without_usual_settings_keep_the_strict_rule():
     import pytest
     for page, row in (('invoice_settings', 'setting'), ('diary_settings', 'service'), ('crm_settings', 'setting')):
