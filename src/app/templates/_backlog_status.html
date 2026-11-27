@@ -5,7 +5,10 @@
   <p{% if backlog_status.state == 'running' %} data-backlog-started{% endif %}{% if backlog_status.ready is defined %} data-backlog-count="{{ backlog_status.ready }}"{% endif %}>{{ backlog_status.message }}</p>
   {% for detail in backlog_status.details or [] %}<p class="mt-1">{{ detail }}</p>{% endfor %}
   {% if backlog_status.retry %}
-  <p class="mt-2">Optional historical import{% if backlog_status.address %} for {{ backlog_status.address }}{% endif %}: read and store sender, subject, message body and conversation identifiers from up to 100 Inbox messages in the 14 days before this mailbox was first connected. This helps you review senders before enabling drafting. Automated messages are filed separately. This import creates no drafts, sends no replies and creates no contacts.</p>
+  <p class="mt-2">Import up to 100 Inbox messages from the 14 days before you first connected{% if backlog_settings and backlog_status.address %} {{ backlog_status.address }}{% endif %}.</p>
+  <details class="mt-1"><summary>What gets stored?</summary>
+    <p>BLAM8 stores the sender, subject, message body and conversation identifiers so you can review senders. Automated mail is filed separately. Importing creates no contacts or drafts and sends no replies.</p>
+  </details>
   <form method="post" action="{{ '/app/settings/mailbox/backlog' if backlog_settings else '/onboarding/mailbox/backlog' }}" class="mt-2">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <input type="hidden" name="connection_id" value="{{ backlog_status.connection_id }}">
@@ -15,6 +18,6 @@
     <button name="decision" value="later" class="ml-3 text-xs underline">Decide later</button>
   </form>
   {% endif %}
-  <p class="mt-2 text-xs">New incoming mail can still be read and stored while connected. Skipping historical import does not pause new-mail sync or change drafting and sending settings.</p>
+  <p class="mt-2 text-xs">BLAM8 still reads and stores new mail while connected. Your import choice leaves drafting and sending settings unchanged.</p>
   <p data-backlog-refresh-error class="hidden mt-2">Import status could not be refreshed. Reload this page to check progress.</p>
 </div>

@@ -51,6 +51,7 @@ class TypedAnswer(BaseModel):
     stop: str=Field(max_length=120)
     state: Literal['answered','unknown','deferred','not_applicable']
     value: str | bool | int | float | None
+    advance: bool = False
 
 
 @router.post('/answer',dependencies=[Depends(require_csrf_header)])
@@ -67,6 +68,9 @@ def typed_answer(body:TypedAnswer,ctx:TenantCtx=Depends(require_onboarded)):
         state_store._confirmed_answer(state,spec,current['scope_type'],current['scope_id'],body.state,value,ctx.user_id)
         resolve_owner_import(state,spec['id'])
         state['guide']['decisions'][stop['id']]=body.state
+        if body.advance:
+            _move({**context, 'state': state}, state['guide'], stop, 1)
+            return save(ctx, context, state, prepare_known_choice(ctx, context, state))
         return save(ctx,context,state)
     except (ValueError,KeyError) as exc:
         raise HTTPException(400,str(exc) if isinstance(exc,ValueError) else 'Invalid answer.') from None
@@ -163,28 +167,10 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 if stop['kind']!='review' or not target or target['substep']!=stop['substep'] or target['kind']=='review':
                     raise ValueError('Choose a question in this section review.')
                 current['current']=target['id'];current['question_revision']+=1
-            elif body.operation == 'need':
-                if stop['kind']!='need' or body.choice not in ('needed','off','deferred'):
-                    raise ValueError('Choose whether this topic is relevant.')
-                if stop['need'] in contract.NEEDS:
-                    state['needs'][stop['need']]=body.choice=='needed'
-                else:
-                    current.setdefault('needs',{})[stop['need']]=body.choice=='needed'
-                current['decisions'][stop['id']]=body.choice
-                _move({**context,'state':state},current,stop,1)
-            elif body.operation == 'relevance':
-                if stop['kind'] != 'relevance' or body.choice not in ('needed', 'off', 'deferred'):
-                    raise ValueError('Choose whether this section is relevant.')
-                state['capabilities'][stop['capability']] = body.choice
-                if body.choice == 'needed':
-                    for sid, sub in contract.SUBSTEPS.items():
-                        if sub[3] == stop['capability']:
-                            state['reviews'].pop(sid,None)
-                for sid, sub in contract.SUBSTEPS.items():
-                    if sub[3] == stop['capability'] and body.choice in ('off', 'deferred'):
-                        state['reviews'][sid] = dict(state=body.choice, at=state_store.stamp(), by=ctx.user_id)
-                current['decisions'][stop['id']] = body.choice
-                _move({**context, 'state': state}, current, stop, 1)
+            elif body.operation in ('need', 'relevance'):
+                if body.operation != stop['kind']:
+                    raise ValueError('Choose an answer for the current question.')
+                apply_guide_choice(context, state, stop, body.choice, ctx.user_id)
             elif body.operation in ('next', 'back'):
                 if body.choice is not None:
                     raise ValueError('Next and Back only change position.')
@@ -208,14 +194,9 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                     raise ValueError('Unexpected guide choice.')
                 status = 'deferred' if body.operation == 'later' else 'not_applicable' if body.operation == 'not_needed' else 'reviewed'
                 if stop['kind'] == 'review':
-                    pending = [p for p in state['proposals'].values() if p['status'] == 'proposed' and
-                               any(state['answers'].get(k, {}).get('substep') == stop['substep'] for k in p.get('answers', [p['answer']]))]
-                    if body.operation == 'review' and pending:
-                        raise ValueError('Pending suggestions remain. Save or leave them, or explicitly defer this section.')
-                    unresolved = [a for a in state['answers'].values() if a['substep']==stop['substep'] and
-                                  a['state'] in ('unknown','deferred','unanswered') and guide.discovery_counts(state, a)]
-                    if body.operation=='review' and (unresolved or state_store.unresolved_dependencies(state,stop['substep'])):
-                        raise ValueError('Related or unanswered decisions remain. Resolve them or explicitly defer this section.')
+                    blocker = guide.review_blocker(state, stop['substep']) if body.operation == 'review' else None
+                    if blocker:
+                        raise ValueError(blocker)
                     if body.operation=='review' and guide.unresolved_required({**context,'state':state},stop['substep']):
                         raise ValueError('Required decisions have no answer or explicit review yet. Review those questions, keep current settings explicitly, or defer this section.')
                     state['reviews'][stop['substep']] = dict(state='deferred' if status != 'reviewed' else status,
@@ -692,6 +673,28 @@ def prepare_known_choice(ctx, context, state):
     return dict(page=stop['page'],revision=revision,card=changed,expected_settings=None,settings_patch=None)
 
 
+def apply_guide_choice(context, state, stop, choice, user_id):
+    if choice not in ('needed', 'off', 'deferred'):
+        raise ValueError('Choose Needed, Not needed or Decide later.')
+    current = state['guide']
+    if stop['kind'] == 'need':
+        needs = state['needs'] if stop['need'] in contract.NEEDS else current.setdefault('needs', {})
+        needs[stop['need']] = choice == 'needed'
+    elif stop['kind'] == 'relevance':
+        capability = stop['capability']
+        state['capabilities'][capability] = choice
+        for sid, sub in contract.SUBSTEPS.items():
+            if sub[3] == capability:
+                if choice == 'needed':
+                    state['reviews'].pop(sid, None)
+                else:
+                    state['reviews'][sid] = dict(state=choice, at=state_store.stamp(), by=user_id)
+    else:
+        raise ValueError('Choose an answer for the current question.')
+    current['decisions'][stop['id']] = choice
+    _move({**context, 'state': state}, current, stop, 1)
+
+
 def _move(context, current, stop, direction):
     sequence = guide.steps(context)
     index = next(i for i, s in enumerate(sequence) if s['id'] == stop['id'])
@@ -727,6 +730,14 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         raise HTTPException(400, str(exc)) from None
     if stop['kind'] in guide.DISCOVERY:
         return await discovery_turn(ctx, context, body, stop)
+    if stop['kind'] in ('relevance', 'need'):
+        choice = {'yes': 'needed', 'needed': 'needed', 'no': 'off', 'not needed': 'off',
+                  'decide later': 'deferred'}.get(body.question.strip().rstrip('.!').strip().casefold())
+        if choice:
+            state = deepcopy(context['state'])
+            apply_guide_choice(context, state, stop, choice, ctx.user_id)
+            card_write = prepare_known_choice(ctx, context, state)
+            return dict(**save(ctx, context, state, card_write), reply='Choice saved.', guide_advanced=True, fallback=False)
     from app import concierge, concierge_routes, usage
     cards = setup_card_store.load_all(ctx.tenant_id, client=ctx.client)
     tenant = concierge_routes._tenant_context(ctx) or {}
@@ -737,6 +748,8 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         +json.dumps(setup_context.model_view(pack, 'records') if pack else {}, ensure_ascii=False))
     if stop['kind']=='fact':
         tenant['guided_question'] = state_store.resolve_question(context['state'],stop['question_id'])
+    elif stop['kind'] in ('relevance', 'need'):
+        tenant['guided_choice_question'] = stop['question']
     history = concierge.sanitize_history([t.model_dump() for t in body.history], 12, 4000)
     try:
         result = await concierge.answer_help(body.question, history, tenant=tenant, tenant_id=ctx.tenant_id)
@@ -763,9 +776,23 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
             state['guide']['decisions'][stop['id']]=item['state']
             output=save(ctx,context,state)
             return dict(**output,reply='Your answer is kept for this question and scope. It has not changed settings.',fallback=False)
+        choice = result.guide_choice if stop['kind'] in ('relevance', 'need') else None
+        state = deepcopy(context['state'])
+
+        def finish_turn(reply, card_write=None):
+            advanced = choice not in (None, 'unanswered')
+            if advanced:
+                apply_guide_choice(context, state, stop, choice, ctx.user_id)
+                label = {'needed': 'Needed', 'off': 'Not needed', 'deferred': 'Decide later'}[choice]
+                reply = f"{stop['title']}: {label}."
+                if card_write:
+                    reply += ' Your additional suggestion is held for review.'
+            output = save(ctx, context, state, card_write) if advanced or card_write else guide.describe(context)
+            return dict(**output, reply=reply, fallback=False, guide_advanced=advanced)
+
         entries, _ = setup_card_model.normalise(setup_card_model.unpack(result.setup_changes or []), cards)
         if not entries:
-            return dict(**guide.describe(context), reply=result.reply, fallback=False)
+            return finish_turn(result.reply)
         # One page is handled per turn: the current question's page when the model
         # proposed it, otherwise the first. Other pages come up again on their own
         # question, where the owner's words are still in the conversation.
@@ -792,16 +819,15 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
         patches, questions = setup_inference.resolve(entry['page'], patches, card, setup_inference.signal_trust(pack))
         considered = entry.get('considered')
         if not patches and not considered:
-            return dict(**guide.describe(context), reply=_with_questions(result.reply, questions), fallback=False)
+            return finish_turn(_with_questions(result.reply, questions))
         if held:
             patches=[dict(p,held=True) if p['op']!='remove' else p for p in patches]
         # No later provider result can overwrite a newer owner or device turn.
         context_for(ctx, body.revision)
         changed = setup_cards.change(entry['page'], card, entry['revision'], str(uuid4()), patches, considered)
-        state = deepcopy(context['state'])
         link_card(ctx, context, state, target, card, changed)
-        output = save(ctx, context, state, dict(page=entry['page'], revision=entry['revision'], card=changed,
-                      expected_settings=None, settings_patch=None))
+        card_write = dict(page=entry['page'], revision=entry['revision'], card=changed,
+                          expected_settings=None, settings_patch=None)
         if not patches:
             # Notes only (for example "leave this as it is"): the assistant's reply stands.
             reply = result.reply
@@ -811,7 +837,7 @@ async def turn(body: Turn, ctx: TenantCtx = Depends(require_onboarded)):
             reply = 'Your suggestion is ready to review. It is not saved to settings. Edit, Accept or Leave the displayed changes.'
         if deferred:
             reply += ' The rest of what you said will come up on its own page.'
-        return dict(**output, reply=_with_questions(reply, questions), fallback=False)
+        return finish_turn(_with_questions(reply, questions), card_write)
     except setup_cards.Stale as exc:
         raise HTTPException(409, str(exc)) from None
     except (ValueError, setup_cards.Invalid) as exc:

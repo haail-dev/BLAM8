@@ -1,13 +1,13 @@
 {% extends "app/base.html" %}
 {% block title %}Fields · CRM · BLAM8{% endblock %}
-{% block heading %}CRM{% endblock %}
+{% block heading %}Record fields{% endblock %}
 {% block menu_sections %}{% include "app/_crm_nav.html" %}{% endblock %}
 {% block content %}
 {% set entities = [('contact', 'Contacts', 'About each person — role, phone, whatever matters to you.'),
                    ('company', 'Companies', 'About each firm — size, area, terms.'),
                    ('deal', 'Deals', 'About each opportunity — what, when, how much.')] %}
 <div class="max-w-4xl mx-auto p-6 space-y-5">
-  <p class="text-sm text-slate-500 max-w-2xl">Tell BLAM8 what you track and it fills the values in from your emails — no typing, ever. The <span class="font-medium text-slate-700">hint</span> is what it looks out for. Sure values fill themselves; near-misses wait for your one-click confirm. Choose whether replies ask for a blank field: never, once, or up to three times.</p>
+  <p class="text-sm text-slate-500 max-w-2xl">Choose what to track from emails. A hint tells BLAM8 what to look for. You review uncertain matches and choose whether to ask for missing details.</p>
 
   {% if msg == 'saved' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">{% if added %}{{ added }} field{{ '' if added == '1' else 's' }} added from your assistant's card.{% else %}Saved.{% endif %}</div>{% endif %}
   {% if msg == 'deleted' %}<div data-flash class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">Field removed.</div>{% endif %}

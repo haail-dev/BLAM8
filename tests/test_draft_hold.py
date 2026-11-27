@@ -217,7 +217,6 @@ def test_the_connect_screen_does_not_promise_drafts(client, monkeypatch):
     assert r.status_code == 200
     assert "Auto-draft is on" not in r.text
     assert "continue setup without importing historical mail" in r.text
-    assert "Review your import choice" in r.text
     assert "sending settings before enabling drafting" in r.text
 
 

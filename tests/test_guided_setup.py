@@ -56,7 +56,7 @@ def guide_journey(journey, monkeypatch):
     return j
 
 
-def model(monkeypatch, changes, *, facts=None, reply='Please clarify this choice.'):
+def model(monkeypatch, changes, *, facts=None, guide_choice='unanswered', reply='Please clarify this choice.'):
     seen=[]
     answer=concierge.answer_help
     async def diagnosed(*args,**kwargs):
@@ -68,7 +68,7 @@ def model(monkeypatch, changes, *, facts=None, reply='Please clarify this choice
     async def create(**kwargs):
         seen.append(kwargs)
         payload=dict(reply=reply,nav='',submit=None,recommend=[],held=[],no_dependants=False,
-                     setup_changes=changes,guide_answers=facts or [])
+                     setup_changes=changes,guide_answers=facts or [],guide_choice=guide_choice)
         return SimpleNamespace(content=[SimpleNamespace(type='text',text=json.dumps(payload))],
             usage=SimpleNamespace(input_tokens=11,output_tokens=8),model='synthetic')
     monkeypatch.setattr(llm,'create',create)
@@ -88,6 +88,41 @@ def turn(j,text,expected=200):
         stop=j.state()['guide']['current'],question=text,path=description['stop']['href'].split('#')[0],history=[]))
     assert response.status_code==expected,response.text
     return response
+
+
+@pytest.mark.parametrize(('owner_message','choice'), [
+    ('No, one customer record per couple is enough.', 'off'),
+    ('Yes, each customer can have several separate sites.', 'needed'),
+    ('I would like to decide about that later.', 'deferred'),
+    ('Can you explain what a related record is?', 'unanswered'),
+])
+def test_conversational_relevance_updates_the_current_question(guide_journey,monkeypatch,owner_message,choice):
+    j=guide_journey
+    before=j.http.get('/app/setup/guide/state').json()
+    stop=before['stop']
+    assert stop['kind']=='relevance'
+    seen=model(monkeypatch,[],guide_choice=choice)
+    result=turn(j,owner_message).json()
+    assert 'guide_choice' in seen[0]['output_config']['format']['schema']['required']
+    assert result['guide_advanced'] == (choice!='unanswered')
+    assert j.http.get('/app/setup/guide/state').json()['stop']==result['stop']
+    if choice=='unanswered':
+        assert result['stop']==stop and result['revision']==before['revision']
+    else:
+        assert j.state()['capabilities'][stop['capability']]==choice
+        assert j.state()['guide']['decisions'][stop['id']]==choice
+        assert result['stop']['id']!=stop['id']
+        assert j.row('scheduling_config',j.tenant) is None
+
+
+def test_money_relevance_accepts_a_typed_yes(guide_journey):
+    j = guide_journey
+    j.move('relevance.charges.responsibility')
+    result = turn(j, 'Yes.').json()
+    assert result['guide_advanced']
+    assert result['stop']['id'] != 'relevance.charges.responsibility'
+    assert j.state()['capabilities']['charging'] == 'needed'
+    assert j.row('invoice_settings', j.tenant) is None
 
 
 def test_registry_accounts_for_entire_native_catalogue():
@@ -114,6 +149,15 @@ def test_module_limited_start_does_not_send_owner_to_an_unavailable_diary(guide_
         sequence=guided_setup.steps(context)
         assert not any(s['href']=='/app/diary' for s in sequence)
         assert not any(s.get('page','').startswith('crm_') for s in sequence if 'crm' not in modules)
+
+
+@pytest.mark.parametrize('choice', ['off', 'deferred', 'needed'])
+def test_related_record_fields_follow_the_owners_choice(guide_journey, choice):
+    context=onboarding_state.load(guide_journey.ctx)
+    context['state']['capabilities'].update(related_records=choice, record_information='needed')
+    ids={s['id'] for s in guided_setup.steps(context)}
+    assert 'crm_fields/contact_field' in ids
+    assert ('dependants/field' in ids) == (choice == 'needed')
 
 
 def test_start_reuses_actual_saved_knowledge_and_about_you_without_applying(journey,monkeypatch):
@@ -426,7 +470,7 @@ def test_off_journey_finishes_without_settings_or_readiness(guide_journey):
         elif kind=='profile':j.diary('confirm')
         else:j.guide_action('relevance','off') if kind=='relevance' else j.guide_action('next')
     assert kind=='finished'
-    j.guide_action('finish')
+    assert j.guide_action('finish').json()['stop']['href'] == '/app/'
     assert j.state()['guide']['status']=='finished'
     assert j.row('scheduling_config',j.tenant) is None and j.row('invoice_settings',j.tenant) is None
     assert all(r['state']=='off' for r in j.state()['reviews'].values())

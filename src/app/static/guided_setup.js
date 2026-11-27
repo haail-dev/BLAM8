@@ -17,6 +17,13 @@
     'charges.methods':'Choose how customers can pay and which payment instructions to include.'
   };
   var resumeButton=null, stream=null, conversation=null, navigation=null, historyButton=null, messageObserver=null, navigating=false;
+  function showHistory(show){
+    conversation.classList.toggle('guided-show-history',show);
+    var label=show?'Hide earlier conversation':'Earlier conversation';
+    historyButton.firstElementChild.textContent=label;
+    historyButton.title=label;
+    historyButton.setAttribute('aria-expanded',String(show));
+  }
   function messagesChanged(){
     if(!conversation)return;
     var messages=document.getElementById('bc-messages'), earlier=0;
@@ -35,13 +42,19 @@
         stream=el('div',null,'guided-stream');
         conversation=el('section',null,'guided-conversation');
         conversation.setAttribute('aria-label','Setup conversation');
-        historyButton=button('Earlier conversation',function(){
-          var shown=conversation.classList.toggle('guided-show-history');
-          historyButton.setAttribute('aria-expanded',String(shown));
-          historyButton.textContent=shown?'Hide earlier conversation':'Earlier conversation';
+        historyButton=button('',function(){
+          var show=historyButton.getAttribute('aria-expanded')!=='true';
+          showHistory(show);
+          var earlier=messages.querySelectorAll('.guided-earlier');
+          if(show && earlier.length)earlier[earlier.length-1].scrollIntoView({block:'end'});
+          else stream.scrollTop=0;
         });
-        historyButton.className='guided-history';historyButton.setAttribute('aria-expanded','false');
-        conversation.appendChild(historyButton);
+        historyButton.className='guided-history rounded-lg text-white/80 hover:bg-white/10';
+        historyButton.setAttribute('aria-controls','bc-messages');
+        historyButton.appendChild(el('span','','sr-only'));
+        showHistory(false);
+        var close=document.getElementById('bc-close');
+        close.parentNode.insertBefore(historyButton,close);
         messageObserver=new MutationObserver(messagesChanged);messageObserver.observe(messages,{childList:true});
         parent.insertBefore(stream,parent.querySelector('#bc-form'));
       }
@@ -59,7 +72,7 @@
       parent.insertBefore(host,parent.querySelector('#bc-form'));
       parent.insertBefore(messages,parent.querySelector('#bc-form'));
       if(panel){parent.insertBefore(panel.error,parent.querySelector('#bc-form'));parent.insertBefore(panel.tray,parent.querySelector('#bc-form'));}
-      stream.remove();if(navigation)navigation.remove();stream=null;conversation=null;navigation=null;historyButton=null;
+      historyButton.remove();stream.remove();if(navigation)navigation.remove();stream=null;conversation=null;navigation=null;historyButton=null;
       if(messageObserver){messageObserver.disconnect();messageObserver=null;}
       parent.setAttribute('aria-live','polite');
       document.getElementById('bc-input').placeholder='Ask a question…';
@@ -143,12 +156,18 @@
     });viewPage.className='guided-page-toggle';host.appendChild(viewPage);
     var decision=state.guide.decisions[stop.decision_id||stop.id];
     var pending=!!state.pending && ['applied','cancelled','partial'].indexOf(decision)===-1;
-    if(!pending||stop.kind==='explanation')host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?'The displayed changes were saved. Next walks through the affected controls.':
+    var pinnedQuestion=stop.kind==='relevance'||stop.kind==='need';
+    var prices=state.price_reference, pricingQuestion=prices&&prices.current;
+    var reviewingExample=stop.question_id==='diary.example' && state.discovery && state.discovery.prefill && state.discovery.prefill.value!=null;
+    if(pricingQuestion)host.appendChild(el('p',prices.saved?'Review your saved prices':'Do these prices from your Knowledge note still apply?'));
+    else if(reviewingExample)host.appendChild(el('p','Review your example entry'));
+    else if((!pending||stop.kind==='explanation')&&(!pinnedQuestion||decision==='applied'||decision==='cancelled'))host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?'The displayed changes were saved. Next walks through the affected controls.':
       decision==='cancelled'?'You left these suggestions. Next moves on without saving them.':pending?'Review your suggested changes, then choose what to save.':stop.question));
     if(stop.kind==='explanation'&&decision)host.appendChild(el('p',decision==='applied'?'The displayed changes were saved.':
       decision==='cancelled'?'You left these suggestions. The page shows its current settings.':
       decision==='partial'?'Some choices were saved and others left. Review their receipts in the setup record.':'','guided-why'));
-    (stop.kind==='fact'?state.answers||[]:[]).forEach(function(a){host.appendChild(el('p',
+    if(prices)host.appendChild(el('p',(prices.saved?'Your saved prices: ':'From Knowledge: ')+prices.text,'guided-why'));
+    (stop.kind==='fact'&&!pricingQuestion?state.answers||[]:[]).forEach(function(a){host.appendChild(el('p',
       (a.provenance&&['knowledge_owner_review','about_you_owner_review'].indexOf(a.provenance.kind)!==-1?'Already covered — ':'Your answer — ')+
       (typeof a.value==='boolean'?(a.value?'Yes':'No'):String(a.value)),'guided-why'));});
     (state.knowledge_conflicts||[]).forEach(function(conflict){
@@ -163,7 +182,7 @@
     });
     if(stop.why&&!pending){var why=el('details',null,'guided-why');why.appendChild(el('summary','Why this matters'));why.appendChild(el('p',stop.why));host.appendChild(why);}
     if(stop.kind==='fact'){
-      var direct=el('details'),summary=el('summary','Answer directly');direct.appendChild(summary);
+      var direct=el('details'),summary=el('summary',pricingQuestion?'Review or edit prices':'Answer directly');direct.appendChild(summary);
       var field;
       if(stop.answer_kind==='boolean'||stop.answer_kind==='choice'){
         field=el('select');var blank=el('option','Choose an answer');blank.value='';field.appendChild(blank);
@@ -171,12 +190,13 @@
         choices.forEach(function(value){var words={true:'Yes',false:'No',owner_arranges:'I arrange and confirm times',
           review_booking_settings:'Review the assistant’s booking rules'};
           var option=el('option',words[value]||value);option.value=value;field.appendChild(option);});
-      }else{field=el('textarea');field.rows=2;field.maxLength=2000;}
+      }else{field=el('textarea');field.rows=2;field.maxLength=2000;
+        if(pricingQuestion){field.value=prices.text;direct.open=!prices.saved;}}
       field.setAttribute('aria-label',stop.question);field.className='guided-direct-answer';direct.appendChild(field);
-      direct.appendChild(button('Use answer',async function(){
+      direct.appendChild(button('Save and continue',async function(){
         if(busy)return;var value=field.value;if(stop.answer_kind==='boolean'){if(!value){note('Choose Yes or No.');return;}value=value==='true';}
         busy=true;controlsBusy(true);
-        try{state=await request('/answer',{revision:state.revision,stop:stop.id,state:'answered',value:value});paint();}
+        try{state=await request('/answer',{revision:state.revision,stop:stop.id,state:'answered',value:value,advance:true});paint();navigate();}
         catch(e){note(e.message+' Your direct answer is kept.');}
         finally{busy=false;controlsBusy(false);}
       }));
@@ -202,10 +222,11 @@
       actions.appendChild(button('Decide later',function(){action(operation,'deferred');}));
     }else if(stop.kind==='review'){
       (state.unresolved||[]).forEach(function(item){actions.appendChild(button('Review '+item.title,function(){action('revisit',item.id);}));});
-      actions.appendChild(button('Continue — reviewed',function(){action('review');},true));
-      actions.appendChild(button('Defer this section',function(){action('later');}));
+      if(!state.review_blocked)actions.appendChild(button('Continue - reviewed',function(){action('review');},true));
+      else host.appendChild(el('p','Some decisions are still open. Revisit them or defer this section to continue.','guided-why'));
+      actions.appendChild(button('Defer this section',function(){action('later');},state.review_blocked));
     }else if(stop.kind==='finished'){
-      actions.appendChild(button('Finish review',function(){action('finish');},true));
+      actions.appendChild(button('Finish and open Home',function(){action('finish');},true));
     }else if(DISCOVERY.indexOf(stop.kind)!==-1){
       discovery(stop,actions,secondary);
     }else{
@@ -222,7 +243,7 @@
       host.appendChild(el('p','Reviewed Knowledge could not be loaded. Your existing answers are kept.','guided-why'));
       secondary.appendChild(button('Retry Knowledge',function(){action('retry_knowledge');}));
     }
-    var pinned=[actions];if(stop.kind==='relevance'||stop.kind==='need')pinned.unshift(el('p',stop.question,'guided-ask'));
+    var pinned=[actions];if(pinnedQuestion)pinned.unshift(el('p',stop.question,'guided-ask'));
     if(secondary.childElementCount)pinned.push(more);
     navigation.replaceChildren.apply(navigation,pinned);host.appendChild(status);pin();
     if(location.pathname!==stop.href.split('#')[0]){
@@ -232,8 +253,7 @@
     }
     if(panel)project(panel.data);
     if(stream&&revealed!==stop.id){
-      stream.scrollTop=0;conversation.classList.remove('guided-show-history');
-      historyButton.setAttribute('aria-expanded','false');historyButton.textContent='Earlier conversation';
+      stream.scrollTop=0;showHistory(false);
     }
     fit();
     if(revealed!==stop.id){revealed=stop.id;if(highlight)requestAnimationFrame(function(){
@@ -260,7 +280,7 @@
       from_records:'It follows a date we already keep',internal:'Just us, no customer'},
     'diary.occupies':{people:'Someone’s time',places:'A place',equipment:'Equipment',nothing:'Nothing — it’s a date or a to-do'},
     'diary.time_shape':{set_time:'A set time',window:'An arrival window',days:'Over one or more days',due_by:'Done by a date'},
-    'diary.repeats':{no:'No',weekly:'Weekly',fortnightly:'Fortnightly',monthly:'Monthly',six_weekly:'Every six weeks',
+    'diary.repeats':{no:'One-off',weekly:'Weekly',fortnightly:'Fortnightly',monthly:'Monthly',six_weekly:'Every six weeks',
       quarterly:'Quarterly',depends:'It depends on something'},
     'diary.agreement':{no:'No',customer:'The customer confirms',someone_else:'Someone else'}};
   var SUPPORT={ready:'Ready to set up',from_records:'Shown from your records',noted:'Noted for later',
@@ -300,9 +320,9 @@
     var source={conversation:'what you said',suggestion:'the suggestion you chose',context:'your setup'}[prefill.source]||'your setup';
     if(prefill.value!=null){
       box.appendChild(el('p',(prefill.change?'You gave a different answer earlier. Change it to: ':'From '+source+': ')+shown(stop.question_id,prefill.value)+'. Is that right?'));
-      box.appendChild(button(prefill.change?'Use the new answer':'Yes, that’s right',function(){diaryAction('accept_prefill');},true));
+      box.appendChild(button(prefill.change?'Use the new answer':'Confirm answer',function(){diaryAction('accept_prefill');},true));
       box.appendChild(button(prefill.change?'Keep the earlier answer':'Change it',function(){diaryAction('dismiss_prefill');}));
-    }else if(prefill.words){box.appendChild(el('p','From your notes: “'+prefill.words+'”. Set the times below to confirm them.'));}
+    }else if(prefill.words){box.appendChild(el('p','From your notes: “'+prefill.words+'”'));}
     host.appendChild(box);
   }
   function currentAnswer(stop){
@@ -352,19 +372,25 @@
   function hours(stop,actions,secondary){
     var a=state.discovery.answer, prefill=state.discovery.prefill;
     var start=(a&&a.state==='answered'&&a.value)||(prefill&&prefill.value)||null;
-    var working=weekRows('Working',start&&start.working);host.appendChild(el('p','When you’re working','guided-section'));host.appendChild(working.node);
+    var editor=el('details');
+    editor.open=!!start;
+    editor.appendChild(el('summary','Set weekly hours'));
+    host.appendChild(editor);
+    var working=weekRows('Working',start&&start.working);editor.appendChild(el('p','When you’re working','guided-section'));editor.appendChild(working.node);
     var bank=el('label'),bankBox=el('input');bankBox.type='checkbox';bankBox.checked=!!(start&&start.bank_holidays_closed);
-    bank.appendChild(bankBox);bank.appendChild(document.createTextNode(' We’re closed on bank holidays'));host.appendChild(bank);
+    bank.appendChild(bankBox);bank.appendChild(document.createTextNode(' We’re closed on bank holidays'));editor.appendChild(bank);
     var same=el('label'),sameBox=el('input');sameBox.type='checkbox';sameBox.checked=!start||start.contact_same!==false;
-    same.appendChild(sameBox);same.appendChild(document.createTextNode(' People can reach us at the same times'));host.appendChild(same);
-    var contact=weekRows('Contact',start&&start.contact);contact.node.hidden=sameBox.checked;host.appendChild(contact.node);
+    same.appendChild(sameBox);same.appendChild(document.createTextNode(' People can reach us at the same times'));editor.appendChild(same);
+    var contact=weekRows('Contact',start&&start.contact);contact.node.hidden=sameBox.checked;editor.appendChild(contact.node);
     sameBox.addEventListener('change',function(){contact.node.hidden=sameBox.checked;});
-    actions.appendChild(button('Use these hours',function(){
+    editor.appendChild(button('Use these hours',function(){
       var value={working:working.read(),bank_holidays_closed:bankBox.checked,contact_same:sameBox.checked};
       if(!sameBox.checked)value.contact=contact.read();
       if(!Object.keys(value.working).length){note('Tick at least one working day, or choose We don’t keep set hours.');return;}
       answerWith(value);},true));
-    unsure(secondary,'We don’t keep set hours');
+    actions.appendChild(button('We don’t keep set hours',function(){answerWith(null,'not_applicable');}));
+    secondary.appendChild(button('Not sure',function(){answerWith(null,'unknown');}));
+    secondary.appendChild(button('Decide later',function(){answerWith(null,'deferred');}));
   }
   function profile(actions,secondary){
     var p=state.discovery.profile,list=el('ul',null,'guided-diary-list');
@@ -396,7 +422,8 @@
       host.appendChild(label);return box;});
     (d.proposed_labels||[]).forEach(function(p){host.appendChild(button('Add “'+p.label+'”',function(){diaryAction('accept_label',{label:p.label});}));});
     var other=el('textarea');other.rows=2;other.maxLength=400;other.className='guided-direct-answer';
-    other.placeholder='Something else — one per line';other.setAttribute('aria-label','Other diaries, one per line');host.appendChild(other);
+    other.placeholder=boxes.length?'Other diaries, one per line':'Name your diaries, one per line';
+    other.setAttribute('aria-label',other.placeholder);host.appendChild(other);
     other.value=draft.text;other.addEventListener('input',function(){draft.text=other.value;});
     actions.appendChild(button('Continue',function(){
       var labels=other.value.split(/\n|,/).map(function(s){return s.trim();}).filter(Boolean);
@@ -420,6 +447,7 @@
     if(stop.kind==='diaries')return diaries(actions,secondary);
     if(stop.kind==='profile')return profile(actions,secondary);
     prefillBox(stop);currentAnswer(stop);
+    if(state.discovery.prefill && state.discovery.prefill.value!=null)return;
     if(stop.kind==='hours')return hours(stop,actions,secondary);
     choices(stop,actions);unsure(secondary);
   }
@@ -534,7 +562,10 @@
   }
   sheet();
   var api=window.Blam8GuidedSetup={ready:null,start:startGuide,sheet:sheet,active:active,exists:function(){return !!(state&&state.guide);},
-    currentStop:function(){return active()&&state.stop?state.stop.id:'';},messagesChanged:messagesChanged,pause:function(){return action('pause');},
+    currentStop:function(){
+      if(active() && state.stop)return state.stop.id;
+      return document.querySelector('[data-guided-intro]') ? 'intro' : '';
+    },messagesChanged:messagesChanged,followCurrentStop:navigate,pause:function(){return action('pause');},
     attach:function(cards,open){panel=cards;opener=open;Promise.all([api.ready,
       window.Blam8DeviceSync?window.Blam8DeviceSync.ready:Promise.resolve()]).then(function(){paint();cards.paint();resumeLocation();});},
     selection:selection,matches:matches,project:project,

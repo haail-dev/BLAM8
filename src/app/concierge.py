@@ -692,8 +692,9 @@ ONBOARDING_STEPS = {
                 "Agreement-specific intervals are a valid answer; never demand a universal inspection frequency. "
                 "Setup questions belong in the corresponding existing Diary, records/workflows or charges/payments section. "
                 "Then write the notes yourself from what they said — each as its own entry in `notes` with a "
-                "short label and the fact stated plainly in the business's own voice (use 'We' or 'Our', never "
-                "'the business'), numbers exact — and say in `reply` that a card with the notes is ready to "
+                "short label and the fact stated plainly in the business's own voice. Follow the owner's "
+                "saved writing preference and otherwise keep their I/my or we/our wording. Keep numbers exact "
+                "and say in `reply` that a card with the notes is ready to "
                 "save. EVERY turn in which they give you a fact carries that fact as a note in `notes` THAT "
                 "turn — never hold an answer back to bundle it later (an owner who stops after answering must "
                 "not lose it). A note holds ONLY what they said THIS turn — never a sentence lifted from "
@@ -889,6 +890,10 @@ def _onboarding_sections(step: str, current: dict | None = None, coverage: dict 
         sections.append("<your_customer>\nWho you're setting up — speak in their trade's "
                         "words and never make them re-explain their business:\n"
                         + cust + "\n</your_customer>")
+    if step == "knowledge" and (tenant or {}).get("voice_notes"):
+        import json
+        sections.append("Owner's saved writing preference (style only): "
+                        + json.dumps(tenant["voice_notes"][:300], ensure_ascii=False))
     if step == "knowledge" and coverage is not None:
         from app import knowledge_coverage
         sections.append(knowledge_coverage.prompt_block(coverage))
@@ -1094,6 +1099,7 @@ class HelpReply(NamedTuple):
     setup_changes: list | None = None
     evidence: list | None = None
     guide_answers: list | None = None
+    guide_choice: str | None = None
 
 
 def _held_rule_for_help() -> str:
@@ -1575,6 +1581,18 @@ async def answer_help(question: str, history: list[dict] | None = None,
             'When answering the current question leave setup_changes empty, including for questions imported from Knowledge. '
             'For a product or unrelated question return an empty list. Never interpret an instruction to continue as a business answer. '
             'Question data: '+json.dumps(tenant['guided_question'],ensure_ascii=False)})
+    if tenant and tenant.get('guided_choice_question'):
+        from copy import deepcopy
+        output_schema = deepcopy(output_schema)
+        output_schema['properties']['guide_choice'] = {'type': 'string', 'enum': ['needed', 'off', 'deferred', 'unanswered']}
+        output_schema['required'].append('guide_choice')
+        system.append({'type':'text','text':"Classify only the owner's latest answer to the displayed question: "
+            + json.dumps(tenant['guided_choice_question'], ensure_ascii=False)
+            + ". A clear yes or description of using it is needed. A clear no or description of having no use "
+              "for it is off. An explicit request to decide later is deferred. A question, ambiguous or conditional "
+              "answer, or a statement about a different topic is unanswered. Never infer a choice from history. "
+              "For unanswered, answer their question or clarify this choice. Do not announce a next question; "
+              "the application selects it after saving. A choice alone requires no setup_changes."})
     messages = (history or []) + [{"role": "user", "content": question}]
     if investigator is not None:
         system.append({'type': 'text', 'text': help_investigation.instructions()})
@@ -1641,6 +1659,7 @@ async def answer_help(question: str, history: list[dict] | None = None,
                      no_dependants=False if suppress_setup else _help_no_dependants(text),
                      held=[] if suppress_setup else _help_held(text), setup_changes=None if suppress_setup else _help_setup_changes(text),
                      evidence=list(investigator.checked) if investigator is not None else [],
+                     guide_choice=(json.loads(text).get('guide_choice') if tenant and tenant.get('guided_choice_question') and not suppress_setup else None),
                      guide_answers=(json.loads(text).get('guide_answers') if tenant and tenant.get('guided_question') and not suppress_setup else None))
 
 

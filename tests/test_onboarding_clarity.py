@@ -118,7 +118,7 @@ def test_mailbox_step_names_the_login_and_asks_which_inbox(client, monkeypatch):
     assert r.status_code == 200
     assert "Connect the inbox your customers email" in r.text
     assert 'data-signer-email>tallyandmicky@gmail.com' in r.text
-    assert "we don't read any mail from it" in r.text
+    assert "Signing in alone gives BLAM8 no access to your mail" in r.text
     assert "connect that same account" in r.text            # same address is a fine answer
     assert "Where is that inbox?" in r.text
     assert "data-personal-inbox" not in r.text              # nothing connected yet
@@ -158,7 +158,7 @@ def test_connected_inbox_same_as_login_says_so_not_personal(monkeypatch):
     note must say WHY it is shown: the same address as the login."""
     html = _same_as_login(monkeypatch, "business.blam8@gmail.com")
     assert "Connected — the same address as your login." in html
-    assert "data-same-as-login" in html and "Same address as your login." in html
+    assert "data-same-as-login" in html and "Customer inbox connected" in html
     assert "data-personal-inbox" not in html                 # same-as-login wins
     assert "personal address" not in html
     # a business domain, same as login: the same calm note, no domain talk
@@ -326,7 +326,7 @@ def test_first_greeting_orients_before_it_asks():
     # the knowledge greeting names the site being read when there is one
     assert 'var ONB_SITE = ' in js
     assert 'so I\'m reading it now' not in js
-    assert "Pending drafts are separate from saved Knowledge" in js
+    assert "Your agent can use them once you save." in js
 
 
 
@@ -334,8 +334,8 @@ def test_first_greeting_orients_before_it_asks():
 def test_knowledge_notes_are_written_in_the_businesss_own_voice():
     """Kris, live on step 4 (2026-09-13): the website read wrote "The business
     will contact owners…" — a report about the company, not the company. The
-    owner reads these as THEIR knowledge and the agent quotes them, so every
-    note-writing prompt asks for first person plural; the site reader also
+    owner reads these as THEIR knowledge and the agent quotes them. Interview
+    notes respect the owner's chosen first person; the site reader also
     keeps the given business identity and preserves source booking routes
     without assuming that import grants a new operational capability."""
     from app import concierge, kb_website, knowledge_coverage as kc
@@ -345,6 +345,8 @@ def test_knowledge_notes_are_written_in_the_businesss_own_voice():
     assert "does not enable an integration" in kb_website.SYSTEM
     assert "Never replace source instructions with an assumed product capability" in kb_website.SYSTEM
     assert "in the business's own voice" in concierge.ONBOARDING_STEPS["knowledge"]["guidance"]
+    prompt = concierge.build_onboarding_prompt("knowledge", tenant={"voice_notes": "Use I throughout."})
+    assert "Use I throughout." in prompt and "I/my or we/our" in prompt
     block = kc.prompt_block(kc.coverage([]))
     assert "IN THE BUSINESS'S OWN VOICE" in block
 

@@ -248,7 +248,7 @@ def decision(context, row, item, action, state):
             'action': action, 'state': state}
 
 
-def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False):
+def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False, revised_note=''):
     """Return whitelisted local form edits; never save, rewrite facts or weaken admission."""
     _, item = current(context, row, form)
     if not focus_hash or focus_hash != identity(item):
@@ -342,9 +342,17 @@ def apply(context, row, form, focus_hash, raw, *, confirmed_note_decision=False)
         receipt = 'Left the last detail unknown.'
     elif intent == 'correct':
         target = item.get('id') if kind in {'note','support'} else item.get('note_id') if kind=='overlap' else item.get('target')
-        return {'correction_requested': True,
-                'correction_note': {'note_id':target, 'focus_hash':focus_hash} if kind=='note' and target else {},
-                'correction_focus': decision(context, row, item, 'edit', 'preview')}
+        if row['payload'].get('source_snapshot'):
+            return {'correction_requested': True,
+                    'correction_note': {'note_id':target, 'focus_hash':focus_hash} if kind=='note' and target else {},
+                    'correction_focus': decision(context, row, item, 'edit', 'preview')}
+        if (kind == 'note' and row['payload'].get('origin') in {'Assistant interview', 'Assistant suggestion'}
+                and isinstance(revised_note, str) and 0 < len(revised_note.strip()) <= 60000
+                and revised_note.strip() != item['content']):
+            patches['content_'+item['id']] = revised_note.strip()
+            receipt = 'Here is the revised draft for you to check.'
+        else:
+            receipt = 'Choose Edit to update the wording of the note you want to change.'
     elif intent not in {'show', 'explain'}:
         receipt = 'I have not changed that choice. Please say what you want to keep or leave out, and give a reason for leaving out website wording.'
     elif raw['explanation'].strip():
@@ -409,16 +417,27 @@ async def turn(tenant_id, context, row, form, question, focus_hash):
             reason='',answer='',target='',explanation=''), confirmed_note_decision=True)
     from app import concierge, llm, usage
     from app.config import settings
+    schema = _turn_schema(question)
+    revision_rule = ''
+    if (item['kind'] == 'note' and not row['payload'].get('source_snapshot')
+            and row['payload'].get('origin') in {'Assistant interview', 'Assistant suggestion'}):
+        schema = {**schema, 'properties': {**schema['properties'], 'revised_note': {'type': 'string'}},
+                  'required': [*schema['required'], 'revised_note']}
+        revision_rule = (' For a specific correction to the displayed note, use correct with no decisions '
+                         'and put the complete revised note in revised_note. Change only the wording or facts '
+                         'the owner explicitly corrected. Preserve every other fact, price and duration. '
+                         'If the target or change is unclear, ask for clarification and leave revised_note empty. '
+                         'For any other intent leave revised_note empty.')
     message = await llm.create(client=concierge.client().with_options(max_retries=0), tenant_id=tenant_id,
         operation='concierge_onboard', module='concierge', model=settings.anthropic_model,
         max_tokens=1600, system=SYSTEM + (
             '\nWhen reason has enumerated values, use the complete owner message only if '
             'they explicitly supplied a reason to exclude the passage. Otherwise use the '
-            'empty value. Do not turn a bare exclusion request into a reason.'), cache=False,
+            'empty value. Do not turn a bare exclusion request into a reason.' + revision_rule), cache=False,
         messages=[{'role': 'user', 'content': json.dumps({'owner_message':question,
             'displayed_item':item, 'pending_decisions':pending_decisions(context,row,form), 'note_index':[{'id':n['id'],'label':n['label'],'content':n['content']} for n in view(context,row,form)['entries']],
             'shared_caveats': present(context,row,form)['shared_caveats']}, ensure_ascii=False)}],
-        output_config={'format': {'type':'json_schema', 'schema':_turn_schema(question)}})
+        output_config={'format': {'type':'json_schema', 'schema':schema}})
     usage.record_anthropic(tenant_id, message.model, message.usage, operation='concierge_onboard', module='concierge')
     try:
         raw = json.loads(''.join(b.text for b in message.content if getattr(b,'type',None)=='text'))
@@ -443,4 +462,5 @@ async def turn(tenant_id, context, row, form, question, focus_hash):
                         excerpt=_owner_excerpt(d[field],question)
                         if not excerpt:raise HTTPException(422,'An answer did not come from your message. No choices changed.')
                         d[field]=excerpt
-    return apply(context, row, form, focus_hash, raw)
+    revised_note = raw.pop('revised_note', '') if revision_rule and isinstance(raw, dict) else ''
+    return apply(context, row, form, focus_hash, raw, revised_note=revised_note)

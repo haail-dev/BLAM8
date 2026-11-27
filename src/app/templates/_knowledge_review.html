@@ -15,10 +15,10 @@
   <input type="hidden" name="version" value="{{ review.version }}">
   <input type="hidden" name="review_scope" value="notes">
   {% for name,value in review.form.items() if name.startswith('guided_unknown_') or name.startswith('guided_expand_') or name.startswith('review_later_') or name.startswith('reviewed_') or name.startswith('source_revision_') %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
-  <div class="kr-heading"><h2>{{ review.summary.notes }} notes to review</h2><span>Pending · not saved</span></div>
+  <div class="kr-heading"><h2>{{ review.summary.notes }} {{ 'note' if review.summary.notes == 1 else 'notes' }} to review</h2><span>Pending · not saved</span></div>
   <div class="kr-helper"><p><span data-review-remaining>{{ review.summary.notes - review.summary.decided }}</span> <span data-review-remaining-label>{{ "note remaining" if review.summary.notes - review.summary.decided == 1 else "notes remaining" }}</span>. <span data-review-progress>Review each note, then Save once.</span></p><details class="kr-before"><summary>Before you save</summary><div>Reviewed selects this note to keep in the review. Leave for later keeps it pending, not discarded. Resolve every note and possible overlap before Save. Unused website details stay unknown in the audit; they are not added to your agent’s Knowledge. Shared source caveats stay attached. Nothing is available to the agent until saved. Merges combine wording and preserve both sources; check the combined preview before saving.</div></details></div>
   <noscript><p>Use each note’s Decision field to retain, merge or discard it. All decisions still require the final review before saving.</p></noscript>
-  <p class="text-xs text-slate-600 mb-3">Save keeps only the notes and answers you reviewed. Additional website details stay unknown; you can revisit them later.</p>
+  {% if review.payload.source_snapshot %}<p class="text-xs text-slate-600 mb-3">You can revisit unused website details later.</p>{% endif %}
   <p data-review-status role="status" aria-live="polite" class="text-sm text-slate-700"></p>
   {% if review.source_review_enabled and review.payload.source_snapshot %}
   <details data-source-corrections class="space-y-2 rounded-lg border border-slate-200 p-3">

@@ -246,5 +246,6 @@ def profile(state, modules, date_sources=()):
                           reasons=diary_support.wording(result['reasons']), reason_codes=result['reasons']))
     found = state['answers'].get(key_for('diary.hours', 'organisation', 'organisation'))
     hours = found['value'] if found and found['state'] == 'answered' else None
-    return dict(diaries=lines, hours=describe_hours(hours),
+    summary = 'No fixed weekly hours.' if found and found['state'] == 'not_applicable' else describe_hours(hours)
+    return dict(diaries=lines, hours=summary,
                 hours_state=found['state'] if found else OPEN)

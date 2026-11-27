@@ -1,7 +1,7 @@
 {% extends "onboarding/base.html" %}
 {% block title %}Voice · Set up BLAM8{% endblock %}
 {% block heading %}{% if learning_status in ("ready", "accepted") and profile %}Here's how I'll sound{% elif learning_status == "running" %}Learning your voice{% else %}Teach it your voice{% endif %}{% endblock %}
-{% block subheading %}{% if learning_status in ("ready", "accepted") and profile %}Learned from your sent emails — confirm it, or adjust anything. You can refine all of this later in Settings.{% elif learning_status == "running" %}Reading how you write your emails — this usually takes under a minute.{% else %}How should the agent sound and sign off? You can refine all of this later in Settings.{% endif %}{% endblock %}
+{% block subheading %}{% if learning_status in ("ready", "accepted") and profile %}Learned from your sent emails — confirm it, or adjust anything. You can refine all of this later in Settings.{% elif learning_status == "running" %}Reading how you write your emails — this usually takes under a minute.{% else %}Tell the assistant how you write and sign off. Review or edit its suggestions in the form below.{% endif %}{% endblock %}
 {% block content %}
 {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
 {% set label = "block text-sm font-semibold text-navy" %}
@@ -76,7 +76,6 @@
   <form method="post" action="/onboarding/voice/learn">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
     <button type="submit" class="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Learn my voice from my sent emails</button>
-    <span class="ml-3 text-xs text-slate-500">or fill in the form below instead</span>
   </form>
 </div>
 {% elif learning_status == "insufficient" %}

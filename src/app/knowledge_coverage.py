@@ -183,8 +183,8 @@ def prompt_block(cov: dict) -> str:
             lines.append(f"- {topic['label']}: {topic['state']}; pending drafts: {pending or 'none'}; unanswered: {unknown or 'none recorded'}. Ask only for actual gaps; never infer an answer from silence.")
     lines.append("When you have facts, put each as its own note in `notes` (or the `knowledge` "
                  "recommend page as \"Label | content\"): a short label in their words and the "
-                 "fact stated plainly IN THE BUSINESS'S OWN VOICE — first person plural, 'We "
-                 "open at 7am', never 'the business opens' — numbers exact, one clear subject per note. Propose "
+                 "fact stated plainly IN THE BUSINESS'S OWN VOICE. Keep the owner's first-person wording "
+                 "and any explicit writing preference. Keep numbers exact, one clear subject per note. Propose "
                  "ONLY the new notes from this turn's answers — never a fact lifted from another "
                  "note or the website, never an inference. Ask about at most three kinds per "
                  "turn — count them. 'Covered' means SOME note of that kind exists: when the "

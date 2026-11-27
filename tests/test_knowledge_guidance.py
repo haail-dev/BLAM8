@@ -22,6 +22,30 @@ def choice(intent, **kw):
     return {**dict(intent=intent,reason='',answer='',target='',explanation=''),**kw}
 
 
+@pytest.mark.asyncio
+async def test_chat_correction_updates_one_pending_interview_note(monkeypatch):
+    from app import concierge, llm, usage
+    before = 'We offer eight hours for £1,200. Our four-hour package costs £700.'
+    after = 'I offer eight hours for £1,200. My four-hour package costs £750.'
+    ctx, row = context([entry(content=before)])
+    row['payload']['origin'] = 'Assistant interview'
+    form = {'version': ctx['version']}
+    async def model(**kwargs):
+        assert 'revised_note' in kwargs['output_config']['format']['schema']['required']
+        return SimpleNamespace(model='offline', usage={}, content=[SimpleNamespace(
+            type='text', text=json.dumps(choice('correct', revised_note=after)))])
+    monkeypatch.setattr(llm, 'create', model)
+    monkeypatch.setattr(concierge, 'client', lambda: SimpleNamespace(with_options=lambda **kw: None))
+    monkeypatch.setattr(usage, 'record_anthropic', lambda *a, **kw: None)
+    initial = guide.present(ctx, row, form)
+    reply = await guide.turn('tenant', ctx, row, form, 'Use I and my. Four hours costs £750.',
+                             initial['focus_hash'])
+    assert reply['patches'] == {'content_one': after}
+    assert reply['focus']['id'] == 'one' and reply['focus']['content'] == after
+    assert not reply['save_ready'] and not reply.get('correction_requested')
+    assert row['payload']['entries'][0]['content'] == before
+
+
 def act(ctx,row,form,intent,**kw):
     # This helper represents explicit deterministic review actions, not model approval.
     shown=guide.present(ctx,row,form)

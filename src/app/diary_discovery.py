@@ -30,7 +30,11 @@ RULES = (
     'and values, and name the diary by its id or exact label. Return a diary in new_diaries only when the owner names '
     'something they keep a diary or calendar for. If the owner describes something the platform cannot do, record what '
     'they said and never map it to a nearby option. Hours stay a proposal for the owner to confirm. '
-    'Keep the reply short and plain, ask at most one question, and never claim anything was saved.')
+    'For diary.occupies, reserving the owner or staff for one booking uses people, even for an all-day entry. '
+    'Use nothing only for a date or reminder that uses no person, place or equipment. '
+    'Keep coverage length distinct from how long the booking reserves a person. '
+    'Keep the reply short. Ask for clarification only when needed to understand the current answer. '
+    'The guide presents the next question. Never claim anything was saved.')
 
 
 # ── Cached context (Part 0) ───────────────────────────────────────────────────
