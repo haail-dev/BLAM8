@@ -658,7 +658,7 @@ async def onboard(body: OnboardRequest, ctx: TenantCtx = Depends(require_tenant)
             values = {**body.current, **result.form_fill}
             response_ready = voice_completion.complete(values)
             if result.form_fill:
-                response_reply = 'Review the suggested values in the Voice form. ' + ('Your required answers are ready for review; Continue saves them.' if response_ready else 'Still needed: '+', '.join(voice_completion.missing(values))+'.')
+                response_reply = 'Review the suggested values below. Accept the ones you want to add to your form.'
             elif re.search(r'fill|ready|complete|skip',result.reply,re.I):
                 response_reply = ('Review your visible Voice choices, then Continue to save.' if response_ready else 'Still needed in the Voice form: '+', '.join(voice_completion.missing(values))+'. Extra voice notes are optional.')
         return OnboardResponse(reply=response_reply, form_fill=result.form_fill,

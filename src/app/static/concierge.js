@@ -55,7 +55,7 @@
   var STEP_FIELDS = {
     interview: ["business_name", "website", "industry", "business_brief", "goals"],
     industry: ["business_name", "industry", "industry_other"],
-    voice: ["agent_name", "tone", "sign_off"],
+    voice: ["agent_name", "tone", "sign_off", "voice_notes"],
   };
 
   var panel = document.getElementById("bc-panel");
@@ -66,6 +66,14 @@
   var form = document.getElementById("bc-form");
   var input = document.getElementById("bc-input");
   var sendBtn = document.getElementById("bc-send");
+  var voiceGuide = ONB_STEP === "voice" && window.Blam8VoiceGuide && window.Blam8VoiceGuide({
+    messages: msgs, composer: form, input: input, sendButton: sendBtn,
+    scope: root.dataset.setupScope, pageAction: pageContinueBtn,
+    choose: function (answer) {
+      log.push({ role: "user", content: answer });
+      touch(); saveLog(log); renderAll();
+    }
+  });
   var titleEl = document.getElementById("bc-title");
   var usageEl = document.getElementById("bc-usage");
   // The onboarding Continue floats over the foot of the thread
@@ -207,7 +215,7 @@
   var ONB_GREETINGS = {
     interview: ONB_INTRO,
     industry: "Let's get you set up — I'm the BLAM8 AI assistant. Tell me what your business does and I'll pick your sector and fill it in for you.",
-    voice: "I'm the BLAM8 AI assistant. How should your replies sound, and how would you like to sign off?",
+    voice: "I’ll help you choose how your replies sound. You can also fill in the form directly.",
     mailbox: mailboxConnected ? "I'm the BLAM8 AI assistant. " + mailboxNext : "I'm the BLAM8 AI assistant. Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
     knowledge: ONB_STEP === 'knowledge' ? knowledgeOpening() : '',
     data: "Last step — which systems do you run on? I'm the BLAM8 AI assistant: tell me and I'll point you to the right boxes to tick.",
@@ -220,7 +228,7 @@
   var ONB_HANDOFFS = {
     interview: "Back on the about-you step — tell me what's changed and I'll update the form for you.",
     industry: "Picking your sector from the list — tell me what your business does and I'll pick the closest match for you.",
-    voice: "Next: your agent's voice — how replies should sound and sign off. With your mailbox connected you can have it learned from your sent emails in one click (it only ever runs on your say-so), or just describe it and I'll fill the form for you to review.",
+    voice: "Let’s set up your reply style.",
     mailbox: mailboxConnected ? mailboxNext : "Choose Google or Microsoft to connect the inbox your customers use. Your provider will show the permissions for reading mail and sending replies." + MAILBOX_INVITE + " You can ask me about the connection.",
     knowledge: ONB_STEP === 'knowledge' ? knowledgeOpening() : '',
     data: "Where your live data lives: calendar, job software, spreadsheets. Tick what you use on the page; tell me what you run on and I'll point you to the right boxes.",
@@ -594,7 +602,8 @@
     if (window.Blam8GuidedSetup) window.Blam8GuidedSetup.messagesChanged();
     // Opening the panel shows the latest assistant message from its first line,
     // like a live reply (Kris 30 Sep: the long welcome opened at its bottom).
-    if (!log.length || log[log.length - 1].role === "assistant") pinToTop(lastAssistant);
+    if (ONB_STEP === "voice" && voiceGuide) { voiceGuide.mount(); scrollDown(); }
+    else if (!log.length || log[log.length - 1].role === "assistant") pinToTop(lastAssistant);
     else scrollDown();
   }
 
@@ -721,6 +730,7 @@
   }, true);
   var ADVANCE_WANTED = false;
   function showContinueHint() {
+    if (voiceGuide) { cta.classList.add("hidden"); voiceGuide.refresh(); return; }
     function notice(text, working) {
       var line = document.createElement("p");
       line.className = "bc-notice" + (working ? " bc-busy" : "");
@@ -1695,7 +1705,7 @@
       reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
-    if (ONB_STEP === "voice") applyFill(fill);
+    if (ONB_STEP === "voice" && voiceGuide) voiceGuide.propose(fill);
     var entry = { role: "assistant", content: reply };
     if (data && data.focus_hash && knowledgeGuide && data.batch_id && data.version) {
       entry.knowledge_card = {batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
@@ -1728,7 +1738,8 @@
         values: notes.map(function (n) { return { name: "note", value: n.label + " | " + n.content }; }) });
     }
     showContinueHint();
-    pinToTop(replyEl);
+    if (ONB_STEP === "voice" && voiceGuide) { voiceGuide.mount(); scrollDown(); }
+    else pinToTop(replyEl);
     return spoke;
   }
 
@@ -2368,11 +2379,13 @@
   }
 
   async function send(options) {
+    if (voiceGuide && !input.value.trim()) { voiceGuide.next(); return; }
     if (deviceSync) { try { await deviceSync.ready; await deviceSync.flush(); } catch (_) { return; } }
     options = options || {};
     var silentUser = !!options.silentUser;
     var text = input.value.trim();
     if (!text || sending) return;
+    if (voiceGuide && !voiceGuide.beginTurn()) return;
     if (!AUTHED && !SCENARIO && questionsRemaining !== null && questionsRemaining <= 0) {
       applyQuestionAllowance();
       settleKnowledgeChoice(null);
@@ -2395,13 +2408,16 @@
     if (HELP_MODE && (document.querySelector('[data-guided-intro]') || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active())) {
       history = history.filter(function (turn) { return !!turn.guide_stop; });
     }
+    if (voiceGuide && voiceGuide.question()) history = history.concat([{role:"assistant", content:voiceGuide.question()}]);
     if (FIX_LOG_ID) { await fixTurn(text, history); }
     else if (ONB_MODE) { await onboardTurn(text, history); }
     else if (HELP_MODE) { await helpTurn(text, history); }
     else if (SCENARIO) { await scenarioTurn(text); }
     else { await askTurn(text, history); }
 
-    sending = false; sendBtn.disabled = false; applyQuestionAllowance(); input.focus();
+    sending = false; sendBtn.disabled = false; applyQuestionAllowance();
+    if (voiceGuide) voiceGuide.endTurn();
+    input.focus();
     if (window.Blam8KnowledgeGuide) window.Blam8KnowledgeGuide.start();
   }
 

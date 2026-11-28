@@ -1,7 +1,7 @@
 {% extends "onboarding/base.html" %}
 {% block title %}Voice · Set up BLAM8{% endblock %}
-{% block heading %}{% if learning_status in ("ready", "accepted") and profile %}Here's how I'll sound{% elif learning_status == "running" %}Learning your voice{% else %}Teach it your voice{% endif %}{% endblock %}
-{% block subheading %}{% if learning_status in ("ready", "accepted") and profile %}Learned from your sent emails — confirm it, or adjust anything. You can refine all of this later in Settings.{% elif learning_status == "running" %}Reading how you write your emails — this usually takes under a minute.{% else %}Tell the assistant how you write and sign off. Review or edit its suggestions in the form below.{% endif %}{% endblock %}
+{% block heading %}{% if learning_status in ("ready", "accepted") and profile %}Here's how I'll sound{% elif learning_status == "running" %}Learning your voice{% else %}Voice{% endif %}{% endblock %}
+{% block subheading %}{% if learning_status in ("ready", "accepted") and profile %}Learned from your sent emails — confirm it, or adjust anything. You can refine all of this later in Settings.{% elif learning_status == "running" %}Reading how you write your emails — this usually takes under a minute.{% else %}Choose how your customer replies sound.{% endif %}{% endblock %}
 {% block content %}
 {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
 {% set label = "block text-sm font-semibold text-navy" %}
@@ -70,12 +70,12 @@
 </div>
 {% elif offer %}
 <!-- Opt-in: nothing reads their sent mail until they say yes here. -->
-<div class="mb-4 rounded-xl border border-brand/30 bg-blue-50/60 p-5 space-y-3">
-  <p class="text-sm font-semibold text-navy">Want me to learn your voice automatically?</p>
-  <p class="text-sm text-slate-600">I can read your recent sent emails and learn your greeting, tone and sign-off from how you already write — then show you the result to approve. Your emails are analysed, never stored; the style profile is all that's kept, and you can discard it any time from Settings.</p>
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+  <div class="min-w-0 flex-1"><p class="text-sm font-semibold text-navy">Learn from sent emails</p>
+  <p class="text-sm text-slate-600">Review the suggested style before saving. Only the style profile is kept.</p></div>
   <form method="post" action="/onboarding/voice/learn">
     <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
-    <button type="submit" class="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Learn my voice from my sent emails</button>
+    <button type="submit" class="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Learn my voice</button>
   </form>
 </div>
 {% elif learning_status == "insufficient" %}
@@ -106,21 +106,23 @@
     <summary class="cursor-pointer text-sm text-slate-500">What your business does <span class="text-slate-400">(from step 1 — open to edit)</span></summary>
     <textarea id="business_brief" name="business_brief" rows="3" class="{{ field }}" placeholder="A line or two on what your business does and who you help.">{{ cfg.business_brief or '' }}</textarea>
   </details>
-  <div>
-    <label class="{{ label }}" for="agent_name">What the agent calls itself</label>
-    <input id="agent_name" name="agent_name" required aria-describedby="voice-completion-status" class="{{ field }}" value="{{ cfg.agent_name or '' }}" placeholder="the office team">
-  </div>
-  <div>
-    <label class="{{ label }}" for="tone">Tone of voice</label>
-    <input id="tone" name="tone" required aria-describedby="voice-completion-status" class="{{ field }}" value="{{ cfg.tone or '' }}" placeholder="warm and professional">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="{{ label }}" for="agent_name">Assistant name</label>
+      <input id="agent_name" name="agent_name" required aria-describedby="voice-completion-status" class="{{ field }}" value="{{ cfg.agent_name or '' }}" placeholder="the office team">
+    </div>
+    <div>
+      <label class="{{ label }}" for="tone">Tone of voice</label>
+      <input id="tone" name="tone" required aria-describedby="voice-completion-status" class="{{ field }}" value="{{ cfg.tone or '' }}" placeholder="warm and professional">
+    </div>
   </div>
   <div>
     <label class="{{ label }}" for="sign_off">Sign-off</label>
-    <textarea id="sign_off" name="sign_off" required aria-describedby="voice-completion-status" rows="3" class="{{ field }}" placeholder="Kind regards,&#10;The team">{{ cfg.sign_off or '' }}</textarea>
+    <textarea id="sign_off" name="sign_off" required aria-describedby="voice-completion-status" rows="2" class="{{ field }}" placeholder="Kind regards,&#10;The team">{{ cfg.sign_off or '' }}</textarea>
   </div>
   <div>
-    <label class="{{ label }}" for="voice_notes">How you write <span class="font-normal text-slate-400">({% if profile %}learned from your sent emails{% else %}style only{% endif %})</span></label>
-    <textarea id="voice_notes" name="voice_notes" rows="4" class="{{ field }}" placeholder="e.g. Short and friendly, first names, gets straight to the point.">{{ cfg.voice_notes or '' }}</textarea>
+    <label class="{{ label }}" for="voice_notes">Writing notes <span class="font-normal text-slate-400">({% if profile %}learned from your sent emails{% else %}optional{% endif %})</span></label>
+    <textarea id="voice_notes" name="voice_notes" rows="2" class="{{ field }}" placeholder="e.g. Short and friendly, first names, gets straight to the point.">{{ cfg.voice_notes or '' }}</textarea>
     <p class="mt-1 text-xs text-slate-400">Business facts and rules belong in Knowledge, the next step. Extra style notes here are optional.</p>
   </div>
   <div class="flex items-center justify-between pt-1">
@@ -147,5 +149,6 @@
 
 {% endif %}
 <script id="voice-required" type="application/json">{{ voice_required|default({"agent_name":"agent or team name","tone":"tone of voice","sign_off":"sign-off"})|tojson }}</script>
+<script src="/static/voice_guide.js?v={{ asset_rev }}" defer></script>
 <script src="/static/voice_completion.js?v={{ asset_rev }}" defer></script>
 {% endblock %}

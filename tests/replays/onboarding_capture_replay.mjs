@@ -25,7 +25,7 @@ for (const [step, held, fails] of [
     business_brief: 'Fictional/test-only online tuition for adults.',
     goals: 'Collect enquiries for human review; tutor schedules lessons.', website: 'example.test'};
   const context = vm.createContext({
-    window: {},
+    window: {}, voiceGuide: {propose: values => events.push(["proposed", values]), mount() {}}, scrollDown() {},
     ONB_STEP: step, log, String, Object, Array, Event: class {},
     document: {getElementById() { return null; }},
     fieldEls: name => elements[name] ? [elements[name]] : [], flash() {}, readCurrent: () => ({}),
@@ -52,7 +52,8 @@ for (const [step, held, fails] of [
     assert(Object.values(elements).every(el => el.value === ''));
     assert(!bubbles[0].text.includes('This chat turn has not changed'));
   } else {
-    for (const [name, value] of Object.entries(values)) assert.equal(elements[name].value, value);
+    for (const [name, value] of Object.entries(values)) assert.equal(elements[name].value, step === "voice" ? "" : value);
+    if (step === "voice") assert.deepEqual(events.find(e => e[0] === "proposed")[1], values);
     if (step === 'interview') {
       assert(bubbles[0].text.includes('not saved until you submit this form'));
       assert(bubbles[0].text.includes('has not changed sending settings'));
