@@ -176,6 +176,7 @@ def run_browser(j,monkeypatch,tmp_path,width,height,theme,area):
             return response
         return page
     views={path:view}
+    if area=='contact_fields':views['/app/crm/settings']=dashboard.crm_settings_page
     if area.startswith('handoff'):views.update({'/app/diary/dependants':dashboard.diary_dependants,
         '/app/crm/fields':dashboard.crm_fields_page,'/app/crm/settings':dashboard.crm_settings_page,
         '/app/diary':dashboard.diary_view,'/app/diary/settings':dashboard.diary_settings})

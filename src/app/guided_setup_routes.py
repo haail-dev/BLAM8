@@ -70,14 +70,14 @@ def typed_answer(body:TypedAnswer,ctx:TenantCtx=Depends(require_onboarded)):
         resolve_owner_import(state,spec['id'])
         state['guide']['decisions'][stop['id']]=body.state
         if body.advance:
-            _move({**context, 'state': state}, state['guide'], stop, 1)
+            _move(context, state, stop, 1, ctx.user_id)
             return save(ctx, context, state, prepare_known_choice(ctx, context, state))
         return save(ctx,context,state)
     except (ValueError,KeyError) as exc:
         raise HTTPException(400,str(exc) if isinstance(exc,ValueError) else 'Invalid answer.') from None
 
 
-def context_for(ctx, revision=None):
+def context_for(ctx, revision=None, *, legacy_review=False):
     require_manager(ctx)
     context = state_store.load(ctx)
     if revision is not None and revision != context['state']['revision']:
@@ -88,6 +88,10 @@ def context_for(ctx, revision=None):
         if revision is not None and revision != context['state']['revision']:
             raise HTTPException(409, 'Setup changed. Reload the current question.')
         reconcile_knowledge(ctx,context,context['state'])
+    # Older sessions can resume on a retired section boundary. Project their
+    # next stop on reads; the next explicit action persists it with its receipt.
+    if not legacy_review:
+        _pass_section_boundary(context, ctx.user_id)
     return context
 
 
@@ -95,6 +99,11 @@ def save(ctx, context, state, card_write=None):
     state['last_action'] = dict(id=str(uuid4()), operation='guide', at=state_store.stamp(), by=ctx.user_id)
     saved = state_store.save(ctx, context['state'], state, card_write=card_write)
     return guide.describe({**context, 'state': saved})
+
+
+def resume_href(ctx, context):
+    _pass_section_boundary(context, ctx.user_id)
+    return guide.describe(context)['stop']['href']
 
 
 def start_guide(ctx, context):
@@ -136,7 +145,7 @@ def record_choice_redirect(ctx, context, choice):
         updated = {**context, 'state': state}
         _, answered = guide.current(updated, 'question.records.relationships')
         state['guide']['decisions'][answered['id']] = 'answered'
-        _move(updated, state['guide'], answered, 1)
+        _move(updated, state, answered, 1, ctx.user_id)
     result = save(ctx, context, state, prepare_known_choice(ctx, context, state))
     target = result['stop']['href']
     if result['guide']['status'] == 'paused' and result['stop'].get('substep'):
@@ -165,11 +174,13 @@ def read(ctx: TenantCtx = Depends(require_onboarded)):
 
 @router.post('/action', dependencies=[Depends(require_csrf_header)])
 def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
-    context = context_for(ctx, body.revision)
+    context = context_for(ctx, body.revision, legacy_review=body.stop.startswith('review.'))
     if body.operation == 'retry_knowledge' or body.operation == 'start' and not (context['state'].get('guide') or {}).get('intro_ack'):
         context = state_store.load(ctx, knowledge=True)
         if context['state']['revision'] != body.revision:
             raise HTTPException(409, 'Setup changed. Reload before starting the walkthrough.')
+        if not body.stop.startswith('review.'):
+            _pass_section_boundary(context, ctx.user_id)
     state = deepcopy(context['state'])
     card_write = None
     try:
@@ -215,9 +226,8 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                         or not any(s['id'] == 'review.records.information' for s in guide.steps(context))):
                     raise ValueError('Reopen record fields from the start of Progress and follow-up.')
                 current['current'] = 'review.records.information'
+                current['manual_review'] = 'review.records.information'
                 current['question_revision'] += 1
-                current['decisions'].pop(current['current'])
-                state['reviews'].pop('records.information', None)
             elif body.operation == 'revisit':
                 target=next((s for s in guide.steps(context) if s['id']==body.choice),None)
                 if stop['kind']!='review' or not target or target['substep']!=stop['substep'] or target['kind']=='review':
@@ -230,11 +240,16 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
             elif body.operation in ('next', 'back'):
                 if body.choice is not None:
                     raise ValueError('Next and Back only change position.')
+                if body.operation == 'next' and stop['kind'] in ('decision', 'explanation'):
+                    pending = current['pending'].get(stop.get('decision_id', stop['id']))
+                    card = (context['config'].get('setup_cards') or {}).get(stop['page'])
+                    if (pending and state['proposals'][pending['proposal']]['status'] == 'proposed') or pending_lines(stop, card):
+                        raise ValueError('Review the outstanding suggested settings. Accept the changes or choose Leave to dismiss them.')
                 if body.operation == 'next' and stop['kind'] in ('diaries', 'profile') and not guide._answer(state, stop['question_id']):
                     raise ValueError('Choose your diaries, or say you’re not sure, before moving on.' if stop['kind'] == 'diaries'
                                      else 'Confirm your diaries, or choose Decide later, before moving on.')
                 current['explained'][stop['id']] = guide.VERSION
-                _move(context, current, stop, 1 if body.operation == 'next' else -1)
+                _move(context, state, stop, 1 if body.operation == 'next' else -1, ctx.user_id)
                 if current['current'] == guide.DIARIES_STOP:
                     from app import diary_discovery
                     diary_discovery.refresh(_with_knowledge(ctx, context), state)
@@ -246,14 +261,14 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                 current['decisions'].setdefault(stop['id'], 'reviewed_unchanged')
                 current['decisions']['review.records.progress'] = 'reviewed'
                 state['reviews']['records.progress'] = dict(state='reviewed', at=state_store.stamp(), by=ctx.user_id)
-                _move(context, current, sequence[index+1], 1)
+                _move(context, state, sequence[index+1], 1, ctx.user_id)
             elif body.operation == 'keep_current':
                 if stop['kind']!='decision' or body.choice is not None:
                     raise ValueError('Choose a current settings decision.')
                 if stop['id'] in current['pending'] and state['proposals'][current['pending'][stop['id']]['proposal']]['status']=='proposed':
                     raise ValueError('Resolve the pending suggestion or defer it before keeping the current settings.')
                 current['decisions'][stop['id']]='reviewed_unchanged'
-                _move(context,current,stop,1)
+                _move(context,state,stop,1,ctx.user_id)
             elif body.operation in ('later', 'not_needed', 'review'):
                 if body.choice is not None:
                     raise ValueError('Unexpected guide choice.')
@@ -267,7 +282,7 @@ def action(body: Action, ctx: TenantCtx = Depends(require_onboarded)):
                     state['reviews'][stop['substep']] = dict(state='deferred' if status != 'reviewed' else status,
                         at=state_store.stamp(), by=ctx.user_id)
                 current['decisions'][stop['id']] = status
-                _move(context, current, stop, 1)
+                _move(context, state, stop, 1, ctx.user_id)
             elif body.operation == 'finish':
                 if stop['kind'] != 'finished' or body.choice is not None:
                     raise ValueError('Review the remaining sections first.')
@@ -743,6 +758,9 @@ def apply_guide_choice(context, state, stop, choice, user_id):
         raise ValueError('Choose Needed, Not needed or Decide later.')
     current = state['guide']
     if stop['kind'] == 'need':
+        if current['decisions'].get(stop['id']) != choice:
+            state['reviews'].pop(stop['substep'], None)
+            current['decisions'].pop('review.'+stop['substep'], None)
         needs = state['needs'] if stop['need'] in contract.NEEDS else current.setdefault('needs', {})
         needs[stop['need']] = choice == 'needed'
     elif stop['kind'] == 'relevance':
@@ -757,13 +775,42 @@ def apply_guide_choice(context, state, stop, choice, user_id):
     else:
         raise ValueError('Choose an answer for the current question.')
     current['decisions'][stop['id']] = choice
-    _move({**context, 'state': state}, current, stop, 1)
+    _move(context, state, stop, 1, user_id)
 
 
-def _move(context, current, stop, direction):
+def _pass_section_boundary(context, user_id, sequence=None):
+    state = context['state']
+    current = state.get('guide') or {}
+    position = current.get('current', '')
+    if not position.startswith('review.') or current.get('manual_review') == position:
+        return
+    sequence = sequence or guide.steps(context)
+    index = next((i for i, row in enumerate(sequence) if row['id'] == position), None)
+    if index is None:
+        return
+    section = sequence[index]['substep']
+    outstanding = guide.unresolved_required(context, section) or guide.review_blocker(state, section)
+    outcome = 'deferred' if outstanding else 'reviewed'
+    state['reviews'][section] = dict(state=outcome, at=state_store.stamp(), by=user_id, origin='section_progress')
+    current['decisions'][position] = outcome
+    _set_position(current, sequence[index + 1])
+
+
+def _move(context, state, stop, direction, user_id):
+    context = {**context, 'state': state}
+    current = state['guide']
     sequence = guide.steps(context)
     index = next(i for i, s in enumerate(sequence) if s['id'] == stop['id'])
-    next_stop = sequence[max(1, min(len(sequence)-1, index+direction))]
+    index = max(1, min(len(sequence)-1, index+direction))
+    while direction < 0 and sequence[index]['kind'] == 'review':
+        index -= 1
+    if current.get('manual_review') == stop['id']:
+        current.pop('manual_review')
+    _set_position(current, sequence[index])
+    _pass_section_boundary(context, user_id, sequence)
+
+
+def _set_position(current, next_stop):
     current['current'] = next_stop['id']
     current['question_revision'] += 1
     if current['scope_type'] not in next_stop.get('scopes',['organisation']):
@@ -975,14 +1022,18 @@ def _deduplicate(card,patches):
     return result
 
 
+def pending_lines(stop, card):
+    return [line for line in (card or {}).get('lines', []) if line['status'] in setup_cards.PENDING
+            and _allowed(stop, card, dict(op='set', id=line['id']))]
+
+
 def link_card(ctx, context, state, stop, before, card, *, preserve_knowledge=False, confirmed_lines=()):
     """Link exact native lines to scoped answers, updating their superseded history.
 
     The original owner statement stays in history when an edited operational
     setting replaces its representation. No raw conversation is used as a value.
     """
-    selected = [l for l in card['lines'] if l['status'] in setup_cards.PENDING and
-                _allowed(stop, card, dict(op='set', id=l['id']))]
+    selected = pending_lines(stop, card)
     if not selected:
         return
     if preserve_knowledge and guide.knowledge_conflicts(state,stop):

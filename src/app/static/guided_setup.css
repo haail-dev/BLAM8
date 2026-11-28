@@ -14,6 +14,7 @@
 .guided-title:has(+ .guided-context){margin-bottom:.25rem}
 .guided-context{color:var(--guided-muted);margin-bottom:1.25rem}
 .guided-answer-field{display:block;margin-top:.875rem}
+.guided-answer-status{display:block;font-size:.8rem;color:var(--guided-muted)}
 .guided-covered{color:#047857}
 [data-theme="dark"] .guided-covered{color:#6ee7b7}
 .guided-why,.guided-status{font-size:.8rem;color:var(--guided-muted);margin-top:.65rem}
@@ -47,11 +48,21 @@
 .guided-more{margin-top:.5rem}
 .guided-owning-link{display:inline-block;color:#2563eb;text-decoration:underline;margin-top:.5rem}
 .guided-target{scroll-margin-block:1rem}
+[data-guided-decision="diary_settings/stay_mode"].guided-target{border-inline-start:2px solid #638de9;padding-inline-start:.625rem}
 .guided-proposed-note{display:block;font-size:.75rem;color:#1d4ed8;margin:.35rem 0}
 .guided-proposed-note button{font:inherit;padding:.15rem .4rem}
 .guided-running #bc-panel{display:flex!important;position:fixed;right:1rem;bottom:1rem;width:23rem;max-width:calc(100vw - 2rem);height:min(46rem,calc(var(--guided-viewport,100dvh) - 5rem))!important;max-height:calc(var(--guided-viewport,100dvh) - 5rem)!important;transition:none}
 .guided-running #bc-panel>header{flex:none}
 .guided-running #bc-form{flex:none}
+.guided-running #bc-input{min-width:0}
+.guided-composer-next{flex:none;height:2.25rem;padding:0 .75rem;border:1px solid var(--guided-border);border-radius:.75rem;font-size:.875rem}
+.guided-composer-next.guided-primary{background:#2455df;border-color:#2455df;color:white}
+.guided-composer-next[aria-disabled="true"]{opacity:.55}
+.guided-next-notice{margin:0 0 .4rem;font-size:.8rem;color:var(--guided-muted)}
+.guided-next-notice:empty{display:none}
+#bc-input[data-has-message] ~ .guided-composer-next,
+#bc-send:disabled + .guided-composer-next,
+#bc-input:not([data-has-message]) ~ #bc-send:not(:disabled):has(+ .guided-composer-next){display:none}
 .guided-running #blam8-concierge{right:1rem;bottom:1rem}
 .guided-running main.app-sky{padding-right:25rem!important}
 .guided-running #bc-cta,.guided-running #bc-clear{display:none}
@@ -79,12 +90,16 @@
  .guided-running[data-onboarding-shell] #bc-panel{bottom:var(--guided-keyboard-inset,0px)!important}
 }
 
-.guided-navigation{flex:none;padding:.45rem .75rem;border-top:1px solid var(--guided-border);background:var(--guided-surface);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.guided-navigation{display:flex;flex:none;flex-wrap:wrap;align-items:center;justify-content:center;gap:.35rem .75rem;padding:.45rem .75rem;border-top:1px solid var(--guided-border);background:var(--guided-surface);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
 .guided-navigation::-webkit-scrollbar{display:none}
 .guided-navigation:empty{display:none}
+.guided-navigation:not(:has(button,summary,.guided-ask)){display:none}
+.guided-navigation > .guided-actions:empty{display:none}
 .guided-navigation .guided-actions{margin-top:0;gap:.35rem;justify-content:center}
 .guided-navigation .guided-actions button{padding:.3rem .6rem}
-.guided-navigation .guided-more{padding-top:.45rem}
+.guided-navigation .guided-more{margin:0}
+.guided-navigation .guided-more[open],.guided-navigation .guided-ask{flex-basis:100%}
+.guided-navigation:has(> .guided-more[open]){max-height:45%}
 .guided-ask{font-size:.875rem;font-weight:600;line-height:1.3;margin-bottom:.35rem;overflow-wrap:anywhere}
 
 .guided-section{font-size:.75rem;color:var(--guided-muted);margin:-.2rem 0 .65rem}

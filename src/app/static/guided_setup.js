@@ -65,8 +65,7 @@
       stream.appendChild(host);
       stream.appendChild(conversation);conversation.appendChild(messages);
       if(panel){stream.appendChild(panel.error);stream.appendChild(panel.tray);}
-      // The step's question and answers stay pinned under the thread; More
-      // options sits just below them, revealed by scrolling the pinned bar.
+      // The step's actions and More options stay together above the composer.
       if(!navigation)navigation=el('div',null,'guided-navigation');parent.insertBefore(navigation,parent.querySelector('#bc-form'));
       messagesChanged();
       document.getElementById('bc-title').textContent='BLAM8 assistant — Setup';
@@ -85,7 +84,29 @@
   }
   function el(tag,text,cls){var n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
   function button(text,work,primary){var b=el('button',text,primary?'guided-primary':'');b.type='button';b.disabled=busy;b.addEventListener('click',work);return b;}
-  function controlsBusy(on){if(host)document.querySelectorAll('.guided-question button,.guided-navigation button').forEach(function(b){b.disabled=on;});
+  function hasOutstandingSuggestion(){
+    if(!active()||!state.stop)return false;
+    var decision=state.guide.decisions[state.stop.decision_id||state.stop.id];
+    if(state.pending&&!['applied','cancelled','partial'].includes(decision))return true;
+    return !!(panel&&panel.data&&(panel.data.cards||[]).some(function(card){return selection(card).length>0;}));
+  }
+  function syncNextAvailability(){
+    var next=document.querySelector('#bc-form .guided-composer-next');
+    var blocked=!!next&&hasOutstandingSuggestion();
+    if(next)next.setAttribute('aria-disabled',String(blocked));
+    var notice=document.querySelector('#bc-form .guided-next-notice');
+    if(notice&&(!blocked||notice.dataset.stop!==state.stop.id))notice.remove();
+  }
+  function advance(){
+    if(!hasOutstandingSuggestion())return action('next');
+    var form=document.getElementById('bc-form'), notice=form.querySelector('.guided-next-notice');
+    if(!notice){
+      notice=el('p',null,'guided-next-notice');notice.setAttribute('role','status');
+      notice.dataset.stop=state.stop.id;form.prepend(notice);
+    }
+    notice.textContent='You still have suggested settings to review. Accept the changes, edit them, or choose Leave to dismiss them.';
+  }
+  function controlsBusy(on){if(host)document.querySelectorAll('.guided-question button,.guided-navigation button,.guided-composer-next').forEach(function(b){b.disabled=on;});
     document.querySelectorAll('[data-guided-start],[data-guided-entry]').forEach(function(b){b.disabled=on;});}
   function note(text){if(status)status.textContent=text;
     var intro=document.querySelector('[data-guided-intro-status]');if(intro&&!active())intro.textContent=text;}
@@ -147,11 +168,14 @@
       } else submit.removeAttribute('formaction');
     }
     ensureHost();if(!host)return;
+    var oldNext=document.querySelector('#bc-form .guided-composer-next');
+    if(oldNext)oldNext.remove();
     var previousField=host.querySelector('.guided-answer-field .guided-direct-answer');
     host.replaceChildren();
     var hasGuide=!!(state&&state.guide), running=active();
     document.body.classList.toggle('guided-running',running);
     arrange();
+    if(!running)syncNextAvailability();
     if(!hasGuide)return;
     status=el('p',null,'guided-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     if(!running){
@@ -187,11 +211,15 @@
     else if(emptyFields){
       host.appendChild(el('p','You haven’t saved any fields. Add one if there’s a detail you use, such as a phone number for a contact or a budget for a deal. You can also leave these forms empty.'));
     }
-    else if((!pending||stop.kind==='explanation')&&(!pinnedQuestion||decision==='applied'||decision==='cancelled'))host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?(stop.id==='crm_fields/contact_field'?'Your contact fields were saved. Next, review Companies.':'The displayed changes were saved. Next walks through the affected controls.'):
+    else if((!pending||stop.kind==='explanation')&&(!pinnedQuestion||decision==='applied'||decision==='cancelled'))host.appendChild(el('p',stop.kind==='explanation'?stop.question:decision==='applied'?(stop.id==='crm_fields/contact_field'?'Your contact fields were saved. Next, review Companies.':'The displayed changes were saved.'):
       decision==='cancelled'?'You left these suggestions. Next moves on without saving them.':pending?'Review your suggested changes, then choose what to save.':stop.question));
     if(stop.kind==='explanation'&&decision)host.appendChild(el('p',decision==='applied'?'The displayed changes were saved.':
       decision==='cancelled'?'You left these suggestions. The page shows its current settings.':
       decision==='partial'?'Some choices were saved and others left. Review their receipts in the setup record.':'','guided-why'));
+    if(stop.current_setting){
+      var currentMode=el('p','Current booking mode: ');
+      currentMode.appendChild(el('strong',stop.current_setting));host.appendChild(currentMode);
+    }
     if(prices)host.appendChild(el('p',(prices.saved?'Your saved prices: ':'From Knowledge: ')+prices.text,'guided-why'));
     (stop.kind==='fact'&&!pricingQuestion?state.answers||[]:[]).forEach(function(a){
       var covered=a.provenance&&['knowledge_owner_review','about_you_owner_review'].includes(a.provenance.kind);
@@ -222,6 +250,10 @@
           var option=el('option',words[value]||value);option.value=value;field.appendChild(option);});
       }else{field=el('textarea');field.rows=2;field.maxLength=2000;}
       var savedAnswer=(state.answers||[]).find(function(answer){return answer.question===stop.question_id;});
+      if(!savedAnswer&&!pricingQuestion&&!(state.knowledge_conflicts||[]).length){
+        var answerStatus={deferred:'Left for later.',not_applicable:'Marked not applicable.'}[stop.answer_state];
+        direct.appendChild(el('span',answerStatus||'No answer saved yet.','guided-answer-status'));
+      }
       var savedValue=savedAnswer?String(savedAnswer.value):pricingQuestion&&prices.saved?prices.text:'';
       field.value=pricingQuestion?prices.text:savedValue;
       field.dataset.key=JSON.stringify([stop.id,state.guide.scope_type,state.guide.scope_id,state.revision]);
@@ -238,6 +270,14 @@
       label.appendChild(select);host.appendChild(label);
     }
     var actions=el('div',null,'guided-actions');
+    function placeNext(control,inComposer){
+      control.classList.toggle('guided-composer-next',inComposer);
+      if(inComposer){
+        var send=document.getElementById('bc-send');
+        if(send.nextElementSibling!==control)send.after(control);
+      }else if(control.parentNode!==actions)actions.prepend(control);
+      syncNextAvailability();
+    }
     var more=el('details',null,'guided-more');more.appendChild(el('summary','More options'));
     var secondary=el('div',null,'guided-actions');more.appendChild(secondary);
     if(stop.kind==='intro'){
@@ -267,7 +307,6 @@
         if(confirmDiscard('Continuing to Diary'))action('finish_progress');
       },true));
       host.appendChild(el('p','Continuing keeps your current progress settings and completes Records and workflows.','guided-why'));
-      secondary.appendChild(button('Review this section',function(){action('next');}));
     }else if(stop.kind==='finished'){
       actions.appendChild(button('Finish and open Home',function(){action('finish');},true));
     }else if(DISCOVERY.indexOf(stop.kind)!==-1){
@@ -276,21 +315,29 @@
       var nextLabel=(stop.decision_id||stop.id)==='crm_settings/quiet_days' && decision==='applied' && !state.guide.stages_first?'Next: Pipeline stages':'Next';
       if(field){
         var nextAnswer=button('Next',function(){
-          if(field.value===savedValue)return action('next');
+          if(field.value===savedValue)return advance();
           if(!field.value.trim()){note('Enter an answer or choose an option below.');field.focus();return;}
           return action('answer',stop.answer_kind==='boolean'?field.value==='true':field.value);
         },true);
-        function labelNext(){nextAnswer.textContent=field.value===savedValue?'Next':'Save and continue';}
+        function labelNext(){
+          var unchanged=field.value===savedValue;
+          var label=unchanged?'Next':'Save and continue';
+          if(nextAnswer.textContent!==label)nextAnswer.textContent=label;
+          placeNext(nextAnswer,unchanged);
+        }
         field.addEventListener('input',labelNext);
         field.addEventListener('change',labelNext);
-        labelNext();actions.appendChild(nextAnswer);
+        labelNext();
       }else{
-        actions.appendChild(button(nextLabel,function(){action('next');},!pending));
+        placeNext(button(nextLabel,advance,!pending),true);
       }
       if(stop.kind==='decision'||stop.kind==='fact'){
         secondary.appendChild(button('Decide later',function(){action('later');}));
         secondary.appendChild(button('Not needed',function(){action('not_needed');}));
-        if(stop.kind==='decision'&&!pending&&decision!=='applied')actions.appendChild(button('Keep current settings',function(){action('keep_current');}));
+        if(stop.kind==='decision'&&!pending&&decision!=='applied'){
+          var keepLabel=stop.current_setting?'Keep “'+stop.current_setting+'”':'Keep current settings';
+          actions.appendChild(button(keepLabel,function(){action('keep_current');}));
+        }
         if(state.draft&&!pending&&drafting!==stop.id&&!busy)requestDraft(stop);
       }
     }
@@ -303,7 +350,8 @@
     }
     var pinned=[actions];if(pinnedQuestion)pinned.unshift(el('p',stop.question,'guided-ask'));
     if(secondary.childElementCount)pinned.push(more);
-    navigation.replaceChildren.apply(navigation,pinned);host.appendChild(status);pin();
+    navigation.replaceChildren.apply(navigation,pinned);navigation.scrollTop=0;host.appendChild(status);
+    syncNextAvailability();
     if(location.pathname!==stop.href.split('#')[0]){
       var link=el('a','Open '+stop.title);link.href=stop.href;link.className='guided-owning-link';
       link.addEventListener('click',function(e){e.preventDefault();navigate();});host.appendChild(link);
@@ -314,8 +362,8 @@
       stream.scrollTop=0;showHistory(false);
     }
     fit();
-    if(revealed!==stop.id){revealed=stop.id;if(highlight)requestAnimationFrame(function(){
-      if(highlight&&(!document.activeElement||!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)))highlight.scrollIntoView({block:'start',behavior:'instant'});
+    if(panel&&revealed!==stop.id){revealed=stop.id;if(highlight)requestAnimationFrame(function(){
+      if(highlight&&(stop.id==='diary_settings/stay_mode'||!document.activeElement||!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)))highlight.scrollIntoView({block:'start',behavior:'instant'});
     });}
   }
   // ── Diary discovery: answers first, settings after ─────────────────────────
@@ -547,6 +595,7 @@
   }
   function project(data){
     if(!active()||state.stop.href.split('#')[0]!==location.pathname)return;
+    syncNextAvailability();
     clear();var t=target();if(t)reveal(t);else if(state.stop.anchor)note('This control is unavailable here. Use its owning page or defer this decision; it remains unresolved.');
     if((state.knowledge_conflicts||[]).length){note('Knowledge changed. Resolve the earlier answer before accepting or displaying it as a current proposal.');return;}
     var newCard=(data.cards||[]).find(function(card){return selection(card).length&&(!state.pending||card.id!==state.pending.card_id);});
@@ -594,14 +643,6 @@
     else if(projected)note('Proposed — not saved.'+(why?' '+why.text.replace('Suggested: ','Suggested because: '):''));
     if(state.stop.kind==='explanation'&&t)reveal(t);
   }
-  // The pinned bar shows the question and buttons; anything after them (More
-  // options) stays below its fold until the bar itself is scrolled.
-  function pin(){
-    if(!navigation)return;navigation.style.maxHeight='';navigation.scrollTop=0;
-    var actions=navigation.querySelector(':scope > .guided-actions');if(!actions||!navigation.querySelector(':scope > .guided-more'))return;
-    var box=navigation.getBoundingClientRect(),end=actions.getBoundingClientRect().bottom;
-    navigation.style.maxHeight=Math.ceil(end-box.top+parseFloat(getComputedStyle(navigation).paddingBottom))+'px';
-  }
   function fit(){
     if(!active())return;
     var vp=window.visualViewport, height=vp?vp.height:innerHeight;
@@ -612,7 +653,6 @@
     var p=document.getElementById('bc-panel');if(p)document.documentElement.style.setProperty('--guided-panel',p.getBoundingClientRect().height+'px');
     var main=document.querySelector('main');if(main){main.style.maxHeight=innerWidth<=767&&p?
       Math.max(0,p.getBoundingClientRect().top-main.getBoundingClientRect().top-12)+'px':'';}
-    pin();
   }
   function startGuide(){
     if(!state){location.reload();return;}

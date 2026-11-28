@@ -355,15 +355,13 @@ def _finish(ctx: TenantCtx) -> RedirectResponse:
 
 def _prepare_guided_setup(ctx: TenantCtx) -> str:
     """Knowledge's explicit Continue owns initial guide metadata, never a GET."""
-    from app import guided_setup, guided_setup_routes, onboarding_state
+    from app import guided_setup_routes, onboarding_state
     guided_setup_routes.require_manager(ctx)
     context = onboarding_state.load(ctx, knowledge=True)
     existing = context['state'].get('guide') or {}
     if existing.get('intro_ack') and existing.get('current') != 'intro':
-        current = guided_setup.describe(context)
-    else:
-        current = guided_setup_routes.start_guide(ctx, context)
-    return current['stop']['href']
+        return guided_setup_routes.resume_href(ctx, context)
+    return guided_setup_routes.start_guide(ctx, context)['stop']['href']
 
 
 def _next_step_target(ctx: TenantCtx) -> dict:
@@ -386,10 +384,10 @@ def home(ctx: TenantCtx = Depends(require_tenant)):
     t = db.get_tenant(ctx.tenant_id, client=ctx.client) or {}
     if t.get("onboarded_at"):
         try:
-            from app import guided_setup, onboarding_state
+            from app import guided_setup_routes, onboarding_state
             context=onboarding_state.load(ctx)
             if (context['state'].get('guide') or {}).get('status') in ('active','paused'):
-                return RedirectResponse(guided_setup.describe(context)['stop']['href'],status_code=303)
+                return RedirectResponse(guided_setup_routes.resume_href(ctx, context),status_code=303)
         except Exception:
             pass  # Existing completed accounts retain the ordinary app fallback.
         return RedirectResponse("/app", status_code=303)

@@ -27,7 +27,7 @@
       <form method="post" action="/app/diary/settings/booking-mode" class="px-5 pb-5 space-y-3">
         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
         <input type="hidden" name="settings_snapshot" value="{{ booking_mode_snapshot|tojson|forceescape }}">
-        <label class="block text-sm text-slate-500">How bookings use time
+        <label class="block text-sm text-slate-500" data-guided-decision="diary_settings/stay_mode">How bookings use time
           <select name="booking_mode" class="mt-1 block w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
             <option value="appointment" {{ 'selected' if not diary_stay_mode }}>Appointments</option>
             <option value="stay" {{ 'selected' if diary_stay_mode }}>Arrival to departure (including overnight stays)</option>

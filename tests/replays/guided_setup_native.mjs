@@ -178,6 +178,19 @@ try{
      await until('Blam8GuidedSetup.currentStop()!=='+JSON.stringify(before));
    }
    await until('Blam8GuidedSetup.currentStop()==="diary_settings/stay_mode"');
+   await until(`(() => {
+     const mode=document.querySelector('#booking-mode select');
+     const saved=mode.querySelector('option[selected]').textContent.split(' (')[0];
+     const bounds=mode.getBoundingClientRect(), main=document.querySelector('main').getBoundingClientRect();
+     const bar=document.querySelector('.guided-navigation'), toggle=bar.querySelector('.guided-more > summary').getBoundingClientRect();
+     return mode.closest('details').open && bounds.top>=main.top && bounds.bottom<=Math.min(main.bottom,innerHeight) &&
+       mode.closest('.guided-target') && bar.scrollTop===0 && toggle.top>=bar.getBoundingClientRect().top && toggle.bottom<=bar.getBoundingClientRect().bottom+1 &&
+       document.querySelector('.guided-question').innerText.includes('Current booking mode: '+saved) &&
+       bar.innerText.includes('Keep “'+saved+'”');
+   })()`);
+   await click('.guided-more > summary',true);
+   assert(await evaluate('document.querySelector(".guided-more[open]").innerText.includes("Decide later") && document.querySelector(".guided-more[open]").innerText.includes("Not needed")'));
+   await click('.guided-more > summary',true);
  }
  await until('window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question .guided-title")');
  // Restore the real cross-page transcript, including settled and unsettled
@@ -208,26 +221,32 @@ try{
  await shot('01-question');
  if(area.startsWith('handoff')){
    await type('#bc-input','Use appointment times, not arrival-to-departure bookings.');await key('Enter','Enter',13);
-   await until('document.querySelector("[name=booking_mode][data-proposed]")?.value==="appointment" && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept displayed changes")');
+   await until('document.querySelector("[name=booking_mode][data-proposed]")?.value==="appointment" && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept changes")');
    await until('document.querySelector(".guided-conversation")?.tagName==="SECTION" && [...document.querySelectorAll("[data-bc-role=assistant]")].some(e=>e.getClientRects().length&&e.textContent.includes("suggestion"))');
    await shot('02-mode-proposed');
-   await button('Next');await until('Blam8GuidedSetup.currentStop()==="explain.diary_settings/stay_mode"');
-   await shot('03-mode-explained');
-   await evaluate("window.nativeBeforeAccept='old-document'");await button('Accept displayed changes');
+   await until('document.querySelector(".guided-composer-next")?.getAttribute("aria-disabled")==="true"');
+   assert(!await evaluate('document.querySelector(".guided-next-notice")?.checkVisibility()'));
+   await button('Next');
+   await until('document.querySelector("#bc-form .guided-next-notice")?.innerText.includes("choose Leave")');
+   assert.equal(await evaluate('Blam8GuidedSetup.currentStop()'),'diary_settings/stay_mode');
+   await shot('03-mode-awaiting-review');
+   await evaluate("window.nativeBeforeAccept='old-document'");await button('Accept changes');
    await until('window.nativeBeforeAccept!=="old-document" && window.Blam8DeviceSync?.isReady() && document.querySelector("[name=booking_mode]")?.value==="appointment" && !document.querySelector("[data-proposed]") && document.querySelector(".guided-question")?.innerText.includes("were saved")');
    await shot('04-mode-saved');
    await cdp('Page.navigate',{url:`http://127.0.0.1:${appPort}/app/setup/guide`});
-   await until('location.pathname==="/app/diary/settings" && window.Blam8DeviceSync?.isReady() && window.Blam8GuidedSetup?.currentStop()==="explain.diary_settings/stay_mode"');
+   await until('location.pathname==="/app/diary/settings" && window.Blam8DeviceSync?.isReady() && window.Blam8GuidedSetup?.currentStop()==="diary_settings/stay_mode"');
    assert(await evaluate('!document.querySelector(".guided-question").textContent.includes("Your answer — false")'));
    await shot('05-exact-resume');
-   console.log('Actual Knowledge Continue, one-time handover, diary discovery and profile, answer reuse, proposed mode, explanation and Accept passed');
+   await until('document.querySelector(".guided-composer-next")?.getAttribute("aria-disabled")==="false" && !document.querySelector(".guided-next-notice")');
+   await button('Next');await until('document.querySelector(".guided-progress")?.textContent.includes("Section 2 of 3")');
+   console.log('Knowledge handover, diary profile, booking mode, visible options and pending review passed');
  }else if(area==='pipeline'||area==='held_pipeline'){
    if(area==='pipeline'){
      await type('#bc-input',"Yes. I'd like to track each enquiry as New enquiry, Quote sent, Booked or Declined.");
      await key('Enter','Enter',13);
    }else{
      await until('document.querySelector(".bc-setup-tray").innerText.includes("Review current difference")');
-     assert(!await evaluate('document.querySelector(".bc-setup-tray").innerText.includes("Accept displayed changes")'));
+     assert(!await evaluate('document.querySelector(".bc-setup-tray").innerText.includes("Accept changes")'));
      const rejected=await evaluate(`(async()=>{
        const id=document.querySelector('.bc-setup-tray [data-line-id]').dataset.lineId;
        const response=await Blam8DeviceSync.request('/concierge/setup-cards/crm_settings/preview',{
@@ -237,11 +256,18 @@ try{
      assert.deepEqual(rejected,{status:409,conflict:false});
      await button('Review current difference');
    }
-   await until('Blam8GuidedSetup.currentStop()==="crm_settings/stage" && document.querySelector(".bc-setup-tray").innerText.includes("Accept displayed changes")');
+   await until('Blam8GuidedSetup.currentStop()==="crm_settings/stage" && document.querySelector(".bc-setup-tray").innerText.includes("Accept changes")');
+   assert(await evaluate(`(() => {
+     const row=document.querySelector('.bc-setup-tray [data-line-id]');
+     const group=row.parentElement, accept=group.lastElementChild;
+     return accept.textContent==='Accept changes' && [...group.querySelectorAll('[data-line-id]')].every(line =>
+       (line.compareDocumentPosition(accept) & Node.DOCUMENT_POSITION_FOLLOWING) &&
+       ['Edit','Leave'].every(text => [...line.querySelectorAll('button')].some(button => button.textContent===text)));
+   })()`));
    const summary=await evaluate('document.querySelector("[data-pending-stages]").innerText');
    for(const label of ['New enquiry','Quote sent','Booked','Declined','Pending review'])assert(summary.includes(label));
    assert(await evaluate('document.querySelectorAll("[data-stage-row]").length===0'));
-   await button('Accept displayed changes');
+   await button('Accept changes');
    await until('document.querySelectorAll("[data-stage-row]").length===4 && document.querySelector("[data-pending-stages]").hidden');
    assert.deepEqual((await evaluate('Array.from(document.querySelectorAll("[data-stage-row] [name=name]"),el=>el.value)')).sort(),['Booked','Declined','New enquiry','Quote sent']);
    await button('Next');
@@ -254,7 +280,7 @@ try{
  }else if(area==='contact_fields'){
    await type('#bc-input',"Yes. I'd like to keep a phone number. It's optional and only I should see it.");
    await key('Enter','Enter',13);
-   await until('Blam8GuidedSetup.currentStop()==="crm_fields/contact_field" && document.querySelector(".bc-setup-tray").innerText.includes("Accept displayed changes")');
+   await until('Blam8GuidedSetup.currentStop()==="crm_fields/contact_field" && document.querySelector(".bc-setup-tray").innerText.includes("Accept changes")');
    const summary = '[data-pending-contact-fields]';
    assert(await evaluate(`document.querySelector('${summary}').innerText.includes('Phone number') && document.querySelector('${summary}').innerText.includes('Hidden from other staff')`));
    assert(!await evaluate('document.querySelector(".guided-navigation").innerText.includes("Not needed") && document.querySelector(".guided-navigation").innerText.includes("Needed")'));
@@ -282,7 +308,7 @@ try{
    await cdp('Page.bringToFront');
    await evaluate(watchWarnings);
    await evaluate('window.beforeContactSave=true');
-   await button('Accept displayed changes');
+   await button('Accept changes');
    await until('!window.beforeContactSave && document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelector("[data-pending-contact-fields]").hidden');
    assert.equal(await evaluate('sessionStorage.getItem("testSawReloadWarning")'),null);
    assert(!await evaluate('!!document.querySelector("[data-setup-reload]")'));
@@ -324,11 +350,7 @@ try{
    await button('Resume guided setup');await until('document.body.classList.contains("guided-running")');
    await button('Needed');await until('Blam8GuidedSetup.currentStop()==="editor.company_fields"');
    await button('Next');await until('Blam8GuidedSetup.currentStop()==="need.deal_fields" && document.querySelector(".guided-target")?.dataset.recordEntity==="deal"');
-   await button('Not needed');await until('Blam8GuidedSetup.currentStop()==="review.records.information"');
-   await until('document.querySelector(".guided-question").innerText.includes("Phone number · optional · never ask · private")');
-   assert(await evaluate('[...document.querySelectorAll(".bc-setup-applied")].every(el=>!el.getClientRects().length)'));
-   assert(await evaluate('document.querySelector(".guided-question").innerText.includes("Tracking requested") && document.querySelector(".guided-question").innerText.includes("Not needed")'));
-   assert(await evaluate('document.querySelector(".guided-navigation").innerText.includes("Continue to Progress and follow-up")'));
+   await button('Not needed');await until('window.Blam8GuidedSetup?.currentStop()==="relevance.records.progress" && location.pathname==="/app/crm/settings"');
  }else if(area==='knowledge_conflict'){
    await until('document.querySelector(".guided-knowledge-conflict")?.innerText.includes("Within 14 days")');
    assert(await evaluate('document.querySelector(".guided-knowledge-conflict").innerText.includes("Before work begins") && !document.querySelector("[name=payment_terms][data-proposed]")'));
@@ -338,18 +360,18 @@ try{
    await until('(()=>{const r=document.querySelector("[name=payment_terms]").getBoundingClientRect();return r.top>=0&&r.bottom<=document.querySelector("#bc-panel").getBoundingClientRect().top})()');
    assert(await evaluate('!document.querySelector("[data-guided-refresh]")'));
    await shot('03-resolved-proposal');
-   await button('Accept displayed changes');
+   await button('Accept changes');
    await until('document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelector("[name=payment_terms]")?.value==="Before work begins"');
    await shot('04-resolved-saved');
  }else if(area==='hours'){
    const original=await evaluate('Array.from(Blam8ProposalForms.data(document.querySelector("#scheduling")).getAll("working_days"))');
    await type('#bc-input','Bookings are available on Mondays and Wednesdays only.');await key('Enter','Enter',13);
-   await until('document.querySelectorAll("[name=working_days][data-proposed]").length===7 && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept displayed changes")');
+   await until('document.querySelectorAll("[name=working_days][data-proposed]").length===7 && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept changes")');
    assert.deepEqual(await evaluate('[...document.querySelectorAll("[name=working_days]:checked")].map(e=>e.value)'),['mon','wed']);
    assert.deepEqual(await evaluate('Array.from(Blam8ProposalForms.data(document.querySelector("#scheduling")).getAll("working_days"))'),original);
    assert(await evaluate('[...document.querySelectorAll("[name=working_days]")].every(e=>e.disabled)'));
    await shot('02-exact-weekdays');
-   await button('Accept displayed changes');
+   await button('Accept changes');
    // The saved receipt and the native form refresh arrive independently.
    // Wait for both; keep the exact UI and durable SQL assertions below.
    await until('document.querySelector(".guided-question")?.innerText.includes("were saved") && document.querySelectorAll("[data-proposed]").length===0 && [...document.querySelectorAll("[name=working_days]:checked")].map(e=>e.value).join(",")==="mon,wed"');
@@ -381,7 +403,7 @@ try{
    }
    await type('#bc-input',area==='records'?'Track Items with an optional text Reference, remembered once. It never blocks a booking.':
       'No VAT, no business details printed; payment terms On completion, quotes valid 30 days. Prices exclude VAT.');
-   await key('Enter','Enter',13);await until('document.querySelector(".bc-setup-tray")?.innerText.includes("Accept displayed changes")');
+   await key('Enter','Enter',13);await until('document.querySelector(".bc-setup-tray")?.innerText.includes("Accept changes")');
    await shot('02-proposed');
    if(area==='records'){
      assert(await evaluate('!document.querySelector(".bc-setup-tray .bc-setup-problem") && document.querySelector("#add-group.guided-target")'));
@@ -398,7 +420,7 @@ try{
      await until('document.querySelector(".bc-setup-tray").innerText.includes("After completion")');
    }
    await shot('03-edited');
-   await evaluate("window.nativeBeforeAccept='old-document'");await button('Accept displayed changes');
+   await evaluate("window.nativeBeforeAccept='old-document'");await button('Accept changes');
    await until('window.nativeBeforeAccept!=="old-document" && window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question")?.innerText.includes("were saved")');
    await shot('04-saved');
    assert(await evaluate('document.documentElement.scrollWidth<=innerWidth+1 && document.getElementById("bc-input").getBoundingClientRect().bottom<=innerHeight+1'));
@@ -410,8 +432,19 @@ try{
    }
    console.log('Native '+area+' question, existing card edit, exact Accept and saved receipt passed');
  }else{
- await type('#bc-input','We need 24 hours notice and allow bookings 60 days ahead.');await key('Enter','Enter',13);
- await until('document.querySelector("[name=horizon_days]")?.value==="60" && document.querySelectorAll("[data-proposed]").length===2 && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept displayed changes")');
+ const composerNext='document.querySelector("#bc-form .guided-composer-next")?.checkVisibility()';
+ const composerSend='document.querySelector("#bc-send").checkVisibility()';
+ await until(composerNext+' && !'+composerSend);
+ assert(!await evaluate('[...document.querySelectorAll(".guided-navigation button")].some(b=>b.textContent==="Next")'));
+ await type('#bc-input','A draft');
+ assert(await evaluate(composerSend+' && !'+composerNext));
+ await key('a','KeyA',65,2);await key('Backspace','Backspace',8);
+ assert(await evaluate(composerNext+' && !'+composerSend));
+ await type('#bc-input','  ');await key('Enter','Enter',13);
+ assert(await evaluate(composerNext+' && Blam8GuidedSetup.currentStop()==="diary_settings/min_notice_hours"'));
+ await type('#bc-input','We need 24 hours notice and allow bookings 60 days ahead.');await click('#bc-send');
+ await until(composerNext+' && !'+composerSend);
+ await until('document.querySelector("[name=horizon_days]")?.value==="60" && document.querySelectorAll("[data-proposed]").length===2 && document.querySelector(".bc-setup-tray")?.textContent.includes("Accept changes")');
  assert(await evaluate('document.querySelector("[name=min_notice_hours]").value==="24"'));
  await shot('02-proposed');
  if(+widthText===390){
@@ -461,7 +494,7 @@ try{
  await click('#bc-bubble');await button('Resume guided setup');await until('document.body.classList.contains("guided-running") && document.querySelectorAll("[data-proposed]").length===2');
  const trusted=await evaluate('window.trustedEvents.length>=7 && window.trustedEvents.every(Boolean)');assert(trusted);
  await evaluate("window.nativeBeforeAccept='old-document'");
- await button('Accept displayed changes');
+ await button('Accept changes');
  await until('window.nativeBeforeAccept!=="old-document" && window.Blam8DeviceSync?.isReady() && document.querySelector(".guided-question")?.innerText.includes("were saved")');
  assert(await evaluate('document.querySelector("[name=horizon_days]").value==="45" && document.querySelector("[name=min_notice_hours]").value==="24"'));
  await shot('04-saved');

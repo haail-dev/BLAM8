@@ -188,21 +188,24 @@ def test_a_booked_appointment_now_counts_against_at_once():
 def test_the_settings_rows_carry_the_rules():
     """The form compiles, every service row (and the template for a new one) posts all
     four rule fields, and a row shows its own values."""
-    import re
     from pathlib import Path
-    from jinja2 import Environment, FileSystemLoader
+    from jinja2 import ChainableUndefined, Environment, FileSystemLoader
     root = Path(__file__).resolve().parents[1] / "src/app" / "templates"
-    env = Environment(loader=FileSystemLoader(str(root)))
-    env.get_template("app/_scheduling_settings.html")                  # compiles
-    src = (root / "app" / "_scheduling_settings.html").read_text(encoding="utf-8")
-    assert src.count("{{ svc_rules(s) }}") == 1 and src.count("{{ svc_rules({}) }}") == 1
-    macro = re.search(r"{% macro svc_rules\(s\) %}(.*?){% endmacro %}", src, re.S).group(0)
-    row = env.from_string(macro + "{{ svc_rules(s) }}").render(s=services.clean_service_types([RULED])[0])
+    env = Environment(loader=FileSystemLoader(str(root)), undefined=ChainableUndefined)
+    html = env.get_template("app/_scheduling_settings.html").render(
+        scheduling_cfg={}, day_hours={}, service_types=services.clean_service_types([RULED]),
+        csrf_token=lambda _: "offline")
+    row = html.split('id="svc-rows"', 1)[1].split('id="svc-add"', 1)[0]
+    blank = html.split('<template id="svc-template">', 1)[1].split('</template>', 1)[0]
+    for card, starts_open in ((row, False), (blank, True)):
+        opening = card.split('<details ', 1)[1].split('>', 1)[0]
+        assert 'svc-row' in opening and (' open' in opening) == starts_open
+        assert card.index('data-service-title') < card.index('name="service_name"')
+        assert card.index('After-job tasks') < card.index('class="svc-remove')
     for name in ("service_from", "service_until", "service_days", "service_max", "service_starts"):
-        assert f'name="{name}"' in row
+        assert f'name="{name}"' in row and f'name="{name}"' in blank
     assert 'value="13:00"' in row and 'value="16:00"' in row and 'value="1,3"' in row and 'value="4"' in row
     assert row.count('aria-pressed="true"') == 2                        # Tue + Thu
-    blank = env.from_string(macro + "{{ svc_rules({}) }}").render()
     assert 'aria-pressed="true"' not in blank and 'name="service_days" value=""' in blank
 
 
