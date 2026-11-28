@@ -149,6 +149,5 @@
 
 {% endif %}
 <script id="voice-required" type="application/json">{{ voice_required|default({"agent_name":"agent or team name","tone":"tone of voice","sign_off":"sign-off"})|tojson }}</script>
-<script src="/static/voice_guide.js?v={{ asset_rev }}" defer></script>
 <script src="/static/voice_completion.js?v={{ asset_rev }}" defer></script>
 {% endblock %}

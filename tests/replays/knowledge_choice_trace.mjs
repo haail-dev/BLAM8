@@ -27,7 +27,7 @@ const guide={available:()=>true,start(){},isCurrent:(hash,batch,version)=>!!curr
   async ask(text){calls.push(text);const next=queued.shift();if(next instanceof Error)throw next;if(!next)throw new Error('No fixture');current=next;return next;}};
 const noop=()=>{};
 const c=vm.createContext({document:{createElement:tag=>new Element(tag),querySelector:()=>null},window:{Blam8KnowledgeGuide:guide},
-  msgs,input,sendBtn,log:[],voiceGuide:null,deviceSync:null,ONB_STEP:'knowledge',AUTHED:true,ONB_MODE:true,FIX_LOG_ID:false,HELP_MODE:false,SCENARIO:false,MAX_TURNS:16,sending:false,
+  msgs,input,sendBtn,log:[],fieldGuide:null,deviceSync:null,ONB_STEP:'knowledge',AUTHED:true,ONB_MODE:true,FIX_LOG_ID:false,HELP_MODE:false,SCENARIO:false,MAX_TURNS:16,sending:false,
   readCurrent:()=>({}),applyFill:noop,appendHeldLine:noop,hideTyping:noop,showTyping:noop,pinToTop:noop,showContinueHint:noop,
   autosize:noop,refreshTitle:noop,touch:noop,clearPin:noop,unpinCaveat:noop,scrollDown:noop,applyQuestionAllowance:noop,
   saveLog:log=>{saved=JSON.stringify(log);},bubbleEl:(role,text)=>{const e=new Element();e.textContent=text;return e;},

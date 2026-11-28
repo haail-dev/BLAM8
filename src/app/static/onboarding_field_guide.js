@@ -1,9 +1,16 @@
 'use strict';
-/* Voice uses the wizard's form and the shared dock. A reviewed suggestion
-   changes a form draft; the page's own Continue performs the guarded save. */
-window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope, pageAction, choose}) {
-  const form = document.getElementById('voice-form');
-  const fields = {
+/* Field choices update wizard drafts. The visible form owns validation and saving. */
+window.Blam8FieldGuide = function ({step, messages, composer, input, sendButton, scope, pageAction, choose}) {
+  const interview = step === 'interview';
+  const form = document.getElementById(interview ? 'interview-form' : 'voice-form');
+  const fields = interview ? {
+    industry: {label: 'Business type', question: 'How would you describe your type of business?'},
+    business_name: {label: 'Business name', question: 'What name do your customers know you by?'},
+    business_brief: {label: 'Business description', question: 'What do you offer, and who are your customers?'},
+    goals: {label: 'What you want help with', question: 'What would you like BLAM8 to help with?',
+      choices: ['Answer enquiries', 'Manage bookings', 'Follow up quotes']},
+    website: {label: 'Website'}
+  } : {
     tone: {label: 'Tone of voice', question: 'How should your replies sound?',
       choices: ['Warm and professional', 'Friendly and casual', 'Direct and concise']},
     agent_name: {label: 'Assistant name', question: 'What should the assistant call itself?',
@@ -12,11 +19,14 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
       choices: ['Kind regards', 'Best wishes', 'Thanks']},
     voice_notes: {label: 'Writing notes'}
   };
-  const storageKey = 'blam8:voice-review:' + scope;
-  const version = form?.elements.voice_expected.value;
+  const storageKey = 'blam8:' + (interview ? 'interview' : 'voice') + '-review:' + scope;
+  const version = interview && form
+    ? JSON.stringify(Object.keys(fields).map(key => form.elements[key].defaultValue))
+    : form?.elements.voice_expected.value;
   const card = document.createElement('section');
-  card.className = 'space-y-3 rounded-xl border border-slate-200 bg-white p-3 text-sm';
-  card.dataset.voiceGuide = '';
+  card.className = 'guided-question';
+  card.dataset.fieldGuide = '';
+  messages.classList.add('field-guide-stream');
   const hint = document.createElement('p');
   hint.className = 'mb-2 text-xs text-slate-600';
   hint.setAttribute('role', 'status');
@@ -46,7 +56,7 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
   }
   function current() {
     if (!form || form.classList.contains('hidden')) return null;
-    return Object.keys(fields).find(key => form.elements[key]?.required && !form.elements[key].value.trim());
+    return Object.keys(fields).find(key => fields[key].question && !form.elements[key].value.trim());
   }
   function question() {
     const reviews = Object.entries(pending);
@@ -54,7 +64,7 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
     return fields[current()]?.question;
   }
   function say(message) {
-    const status = document.getElementById('voice-completion-status');
+    const status = document.getElementById(interview ? 'interview-guide-status' : 'voice-completion-status');
     if (status && status.textContent === hint.textContent && status.textContent) status.textContent = '';
     hint.hidden = !message;
     hint.textContent = message;
@@ -74,7 +84,7 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
     return button;
   }
   function fillField(key, value) {
-    if (form.classList.contains('hidden')) document.getElementById('voice-adjust')?.click();
+    if (!interview && form.classList.contains('hidden')) document.getElementById('voice-adjust')?.click();
     const field = form.elements[key];
     field.value = value;
     field.dispatchEvent(new Event('input', {bubbles:true}));
@@ -86,11 +96,11 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
     delete pending[key]; persist(); say('');
     if (accept) fillField(key, value);
     lastView = '';
-    choose(accept ? 'Accepted ' + fields[key].label + ': ' + value : 'Left ' + fields[key].label + ' unchanged.');
+    choose(accept ? 'Accepted ' + fields[key].label + ': ' + value : 'Left ' + fields[key].label + ' unchanged.', accept ? selection(key, value) : null);
   }
   function review(key) {
     const row = line(card, 'div', '', 'space-y-1');
-    row.dataset.voiceSuggestion = key;
+    row.dataset.fieldSuggestion = key;
     line(row, 'strong', fields[key].label, 'block text-sm text-navy');
     const value = line(row, 'p', pending[key], 'whitespace-pre-wrap break-words text-slate-700');
     const actions = line(row, 'div', '', 'flex items-center gap-3');
@@ -106,13 +116,46 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
     action(actions, 'Leave', 'py-1 text-slate-600', () => finish(key, false));
     action(actions, 'Accept', 'ml-auto py-1 text-brand', () => finish(key, true));
   }
+  function selection(key, answer) {
+    const field = fields[key];
+    return {step, question: field.question || field.label, choices: field.choices || [], answer};
+  }
+  function prompt(parent, item, completed) {
+    line(parent, 'h3', item.question, 'guided-title');
+    if (!completed) line(parent, 'p', item.choices.length ? 'Choose an answer or write your own.' : 'Write your answer below or enter it in the form.', 'guided-section');
+    const choices = line(parent, 'div', '', 'guided-actions');
+    const options = completed && !item.choices.includes(item.answer) ? [...item.choices, item.answer] : item.choices;
+    options.forEach(answer => {
+      if (completed) {
+        const option = line(choices, 'span', answer, 'field-guide-option');
+        if (answer === item.answer) {
+          option.classList.add('field-guide-selected');
+          const label = line(option, 'span', 'Selected: ', 'sr-only');
+          option.prepend(label);
+        }
+      } else {
+        action(choices, answer, '', () => {
+          say(''); fillField(item.key, answer); choose(answer, selection(item.key, answer));
+        });
+      }
+    });
+  }
+  function history(message) {
+    const item = message.field_selection;
+    if (message.role !== 'user' || item?.step !== step || typeof item.question !== 'string' ||
+        typeof item.answer !== 'string' || !Array.isArray(item.choices) || !item.choices.every(v => typeof v === 'string')) return null;
+    const block = document.createElement('section');
+    block.className = 'guided-question field-guide-completed';
+    prompt(block, item, true);
+    return block;
+  }
   function refresh() {
     const keys = Object.keys(pending), key = current();
     const typed = !!input.value.trim();
     sendButton.style.display = typed ? '' : 'none';
     nextButton.hidden = typed;
     const page = pageAction();
-    const blocked = working || keys.length > 0 || !page || page.disabled;
+    const blocked = working || keys.length > 0 || !page || page.disabled || (interview && !form.elements.industry.value.trim());
     nextButton.setAttribute('aria-disabled', String(blocked));
     nextButton.classList.toggle('opacity-50', blocked);
     const view = JSON.stringify([keys, key, working, !!form, form?.classList.contains('hidden')]);
@@ -123,18 +166,9 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
       line(card, 'strong', 'Suggested changes', 'block text-navy');
       keys.forEach(review);
     } else if (key) {
-      line(card, 'strong', fields[key].question, 'block text-navy');
-      line(card, 'p', 'Choose an answer or write your own.', 'text-xs text-slate-500');
-      const choices = line(card, 'div', '', 'flex flex-wrap gap-2');
-      fields[key].choices.forEach(answer => {
-        action(choices, answer, 'rounded-lg border border-slate-200 px-3 py-2 text-left text-navy', () => {
-          say('');
-          fillField(key, answer);
-          choose(answer);
-        });
-      });
+      prompt(card, {key, question: fields[key].question, choices: fields[key].choices || []}, false);
     } else {
-      line(card, 'p', !form ? 'Learning your voice from sent emails.' :
+      line(card, 'p', interview ? 'Review your business details, then choose Next to continue to your customer inbox.' : !form ? 'Learning your voice from sent emails.' :
         form.classList.contains('hidden') ? 'Review the learned style in the form. Choose Next to use it, or adjust the settings.' :
         'Your reply style is ready. Choose Next to save and continue to Knowledge.', 'text-slate-700');
     }
@@ -147,19 +181,20 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
   function next() {
     if (blocked()) return;
     const button = pageAction();
+    if (interview && !form.elements.industry.value.trim()) { say('Enter your business type before continuing.'); return; }
     if (button && !button.disabled) button.click();
     else say(window.Blam8VoiceCompletion?.read().reason || 'Wait for the voice review or open manual setup.');
   }
   document.addEventListener('submit', event => {
     if ((event.target === form || event.target.matches('[data-voice-accept]')) && blocked()) {
       event.preventDefault(); event.stopImmediatePropagation();
-      const status = document.getElementById('voice-completion-status');
+      const status = document.getElementById(interview ? 'interview-guide-status' : 'voice-completion-status');
       if (status) status.textContent = hint.textContent;
     }
   }, true);
   input.addEventListener('input', () => { say(''); refresh(); });
   return {
-    question, refresh, next,
+    question, refresh, next, history,
     mount() { messages.append(card); refresh(); },
     beginTurn() { if (working) return false; working = true; say(''); refresh(); return true; },
     endTurn() { working = false; refresh(); },

@@ -28,7 +28,7 @@ SOURCE_CAPABILITIES = {
     'src/app/knowledge_comparison.py': 'knowledge.review',
     'src/app/voice_completion.py':'product.help',
     'src/app/static/voice_completion.js':'product.help',
-    'src/app/static/voice_guide.js':'product.help',
+    'src/app/static/onboarding_field_guide.js':'product.help',
     'src/app/templates/onboarding/voice.html':'product.help',
     'docs/operations/knowledge-voice-review.md':'knowledge.review',
     'src/app/templates/app/crm_fields.html': 'crm',

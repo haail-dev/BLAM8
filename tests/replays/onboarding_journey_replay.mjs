@@ -15,7 +15,7 @@ const doc={
   createElement(){return {className:'',textContent:'',children:[],listeners:{},setAttribute(name,value){this[name]=value;},appendChild(el){this.children.push(el);},addEventListener(name,fn){this.listeners[name]=fn;}};}
 };
 const window={Blam8KnowledgeSourceReview:{working:()=>busy}};
-const context=vm.createContext({window,document:doc,Array,JSON,PENDING_KB_CARDS:[],cta,ADVANCE_WANTED:false,
+const context=vm.createContext({window,document:doc,Array,JSON,fieldGuide:null,PENDING_KB_CARDS:[],cta,ADVANCE_WANTED:false,
   pageContinueBtn:()=>action,flash(){},setTimeout(){}});
 vm.runInContext(helper+'\n'+widget.slice(a,b),context);
 const state=window.Blam8OnboardingJourney;
