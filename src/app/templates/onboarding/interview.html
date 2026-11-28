@@ -1,17 +1,31 @@
 {% extends "onboarding/base.html" %}
 {% block title %}About you · Set up BLAM8{% endblock %}
-{% block heading %}Tell us about your business{% endblock %}
-{% block subheading %}Tell the assistant what you do and what you'd like help with, or fill in the form yourself. Review your details before continuing.{% endblock %}
+{% block heading %}About you{% endblock %}
+{% block subheading %}Answer the assistant’s questions or fill in the form yourself. Review your details before continuing.{% endblock %}
 {% block content %}
 {% set field = "mt-2 w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none" %}
 {% set label = "block text-sm font-semibold text-navy" %}
-<form method="post" action="/onboarding/interview" enctype="multipart/form-data" class="space-y-4">
+<form id="interview-form" method="post" action="/onboarding/interview" enctype="multipart/form-data" class="space-y-4">
   <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div>
+      <label class="{{ label }}" for="business_name">Business name</label>
+      <input id="business_name" name="business_name" maxlength="120" class="{{ field }}" value="{{ business_name or '' }}"
+             placeholder="{{ name_placeholder or 'The trading name your customers know you by.' }}">
+      <p class="mt-1 text-xs text-slate-400">Shown to your customers — on your booking portal and in the agent's replies.</p>
+    </div>
+    <div>
+      <label class="{{ label }}" for="industry">Business type</label>
+      <input id="industry" name="industry" required class="{{ field }}" value="{{ selected or '' }}" placeholder="Describe it in your own words">
+    </div>
+  </div>
   <div>
-    <label class="{{ label }}" for="business_name">Business name</label>
-    <input id="business_name" name="business_name" maxlength="120" class="{{ field }}" value="{{ business_name or '' }}"
-           placeholder="{{ name_placeholder or 'The trading name your customers know you by.' }}">
-    <p class="mt-1 text-xs text-slate-400">Shown to your customers — on your booking portal and in the agent's replies.</p>
+    <label class="{{ label }}" for="business_brief">What your business does</label>
+    <textarea id="business_brief" name="business_brief" rows="2" class="{{ field }}" placeholder="A line or two on what your business does and who you help.">{{ cfg.business_brief or '' }}</textarea>
+  </div>
+  <div>
+    <label class="{{ label }}" for="goals">What you'd like handled for you</label>
+    <textarea id="goals" name="goals" rows="2" class="{{ field }}" placeholder="e.g. enquiries answered fast, bookings straight into the diary, quotes followed up.">{{ cfg.goals or '' }}</textarea>
   </div>
   <div>
     <label class="{{ label }}" for="website">Your website <span class="font-normal text-slate-400">(optional)</span></label>
@@ -29,7 +43,7 @@
     {% endif %}
     <input id="portal_banner" type="file" name="portal_banner" accept="image/png,image/jpeg,image/webp,image/gif"
            class="mt-2 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand hover:file:bg-blue-100">
-    <p class="mt-1 text-xs text-slate-400">A wide image (logo, van, shopfront) shown across the top of your customer portal. PNG, JPG, WEBP or GIF up to 4&nbsp;MB — click Choose or drop a file straight onto it. You can add or change it later in Settings.</p>
+    <p class="mt-1 text-xs text-slate-400">A wide image for the top of your customer portal. PNG, JPG, WEBP or GIF up to 4&nbsp;MB — click Choose or drop a file straight onto it. You can add or change it later in Settings.</p>
     {% if banner_err == 'invalid' %}
     <p class="mt-2 text-sm text-rose-600">That file isn't an image we can use — please choose a PNG, JPG, WEBP or GIF, or continue without one.</p>
     {% elif banner_err == 'too_big' %}
@@ -37,18 +51,6 @@
     {% elif banner_err == 'storage' %}
     <p class="mt-2 text-sm text-rose-600">We couldn't store the banner just now — everything else is saved. Try again, or add it later in Settings.</p>
     {% endif %}
-  </div>
-  <div>
-    <label class="{{ label }}" for="business_brief">What your business does</label>
-    <textarea id="business_brief" name="business_brief" rows="2" class="{{ field }}" placeholder="A line or two on what your business does and who you help.">{{ cfg.business_brief or '' }}</textarea>
-  </div>
-  <div>
-    <label class="{{ label }}" for="goals">What you'd like handled for you</label>
-    <textarea id="goals" name="goals" rows="2" class="{{ field }}" placeholder="e.g. enquiries answered fast, bookings straight into the diary, quotes followed up.">{{ cfg.goals or '' }}</textarea>
-  </div>
-  <div>
-    <label class="{{ label }}" for="industry">What does your business do?</label>
-    <input id="industry" name="industry" required class="{{ field }}" value="{{ selected or '' }}" placeholder="Describe it in your own words">
   </div>
   {# Morning brief moved off this step (Julius, 2026-08-02) — it's a setting,
      not an interview question. The default (on, 07:30) is seeded at tenant
@@ -61,6 +63,7 @@
   {% if referral_code_used %}
   <p class="text-sm text-emerald-600">Referred with code <span class="font-semibold">{{ referral_code_used }}</span> — all set.</p>
   {% endif %}
+  <p id="interview-guide-status" role="status" class="text-sm text-slate-600"></p>
   <div class="flex items-center justify-between pt-1">
     <a href="/onboarding/industry" class="text-sm text-slate-400 hover:text-slate-600 transition">Prefer a list? Classic picker</a>
     <button type="submit" data-onb-continue class="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition">Continue</button>

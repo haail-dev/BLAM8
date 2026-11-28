@@ -66,11 +66,14 @@
   var form = document.getElementById("bc-form");
   var input = document.getElementById("bc-input");
   var sendBtn = document.getElementById("bc-send");
-  var voiceGuide = ONB_STEP === "voice" && window.Blam8VoiceGuide && window.Blam8VoiceGuide({
+  var fieldGuide = ["voice", "interview"].includes(ONB_STEP) && window.Blam8FieldGuide && window.Blam8FieldGuide({
+    step: ONB_STEP,
     messages: msgs, composer: form, input: input, sendButton: sendBtn,
     scope: root.dataset.setupScope, pageAction: pageContinueBtn,
-    choose: function (answer) {
-      log.push({ role: "user", content: answer });
+    choose: function (answer, selection) {
+      var entry = { role: "user", content: answer };
+      if (selection) entry.field_selection = selection;
+      log.push(entry);
       touch(); saveLog(log); renderAll();
     }
   });
@@ -486,7 +489,13 @@
     msgs.appendChild(caveatEl(log.length === 0));
     var lastAssistant = bubbleEl("assistant", greeting());
     lastAssistant.dataset.bcGreeting = "";
-    if (!receiptText) msgs.appendChild(lastAssistant);
+    if (fieldGuide && ONB_STEP === 'interview') {
+      var overview = document.createElement('details');
+      var summary = document.createElement('summary');
+      summary.textContent = 'Onboarding overview';
+      summary.className = 'cursor-pointer text-xs text-slate-500';
+      overview.append(summary, lastAssistant); msgs.appendChild(overview);
+    } else if (!receiptText && !fieldGuide) msgs.appendChild(lastAssistant);
     var knowledgeHistory = null;
     var guideIntro = !!document.querySelector('[data-guided-intro]');
     var lastHistoryPrompt = null, lastHistoryDecision = null;
@@ -500,6 +509,8 @@
       }
     }
     log.forEach(function (m, index) {
+      var completed = fieldGuide && fieldGuide.history(m);
+      if (completed) { msgs.appendChild(completed); return; }
       var beforeGuide = guideIntro && !m.guide_stop;
       if (beforeGuide || ONB_STEP === 'knowledge' && index !== currentIndex || ONB_STEP !== 'knowledge' && m.knowledge_card) {
         if ((beforeGuide || ONB_STEP === 'knowledge') && !knowledgeHistory) {
@@ -602,7 +613,7 @@
     if (window.Blam8GuidedSetup) window.Blam8GuidedSetup.messagesChanged();
     // Opening the panel shows the latest assistant message from its first line,
     // like a live reply (Kris 30 Sep: the long welcome opened at its bottom).
-    if (ONB_STEP === "voice" && voiceGuide) { voiceGuide.mount(); scrollDown(); }
+    if (fieldGuide) { fieldGuide.mount(); scrollDown(); }
     else if (!log.length || log[log.length - 1].role === "assistant") pinToTop(lastAssistant);
     else scrollDown();
   }
@@ -730,7 +741,7 @@
   }, true);
   var ADVANCE_WANTED = false;
   function showContinueHint() {
-    if (voiceGuide) { cta.classList.add("hidden"); voiceGuide.refresh(); return; }
+    if (fieldGuide) { cta.classList.add("hidden"); fieldGuide.refresh(); return; }
     function notice(text, working) {
       var line = document.createElement("p");
       line.className = "bc-notice" + (working ? " bc-busy" : "");
@@ -1705,7 +1716,7 @@
       reply = knowledgeGuide && knowledgeGuide.available() || sourceReview && sourceReview.available() ? (e.message || "The review could not be confirmed. Your drafts remain pending; check the review before retrying.") : "Sorry — I couldn't help just now. Send that again in a moment and I'll pick it up, or fill this step in directly — I'll be here if you need me.";
     }
     hideTyping();
-    if (ONB_STEP === "voice" && voiceGuide) voiceGuide.propose(fill);
+    if (fieldGuide) fieldGuide.propose(fill);
     var entry = { role: "assistant", content: reply };
     if (data && data.focus_hash && knowledgeGuide && data.batch_id && data.version) {
       entry.knowledge_card = {batch_id:data.batch_id,version:data.version,focus_hash:data.focus_hash,
@@ -1726,7 +1737,7 @@
       settleKnowledgeChoice(null);
     }
     appendHeldLine(heldFor);
-    if (ONB_STEP !== "voice") applyFill(fill);
+    if (!fieldGuide) applyFill(fill);
     if (reviewLink) {
       msgs.appendChild(navLinkNode(reviewLink));
       window.dispatchEvent(new CustomEvent("blam8:knowledge-review"));
@@ -1738,7 +1749,7 @@
         values: notes.map(function (n) { return { name: "note", value: n.label + " | " + n.content }; }) });
     }
     showContinueHint();
-    if (ONB_STEP === "voice" && voiceGuide) { voiceGuide.mount(); scrollDown(); }
+    if (fieldGuide) { fieldGuide.mount(); scrollDown(); }
     else pinToTop(replyEl);
     return spoke;
   }
@@ -2379,13 +2390,13 @@
   }
 
   async function send(options) {
-    if (voiceGuide && !input.value.trim()) { voiceGuide.next(); return; }
+    if (fieldGuide && !input.value.trim()) { fieldGuide.next(); return; }
     if (deviceSync) { try { await deviceSync.ready; await deviceSync.flush(); } catch (_) { return; } }
     options = options || {};
     var silentUser = !!options.silentUser;
     var text = input.value.trim();
     if (!text || sending) return;
-    if (voiceGuide && !voiceGuide.beginTurn()) return;
+    if (fieldGuide && !fieldGuide.beginTurn()) return;
     if (!AUTHED && !SCENARIO && questionsRemaining !== null && questionsRemaining <= 0) {
       applyQuestionAllowance();
       settleKnowledgeChoice(null);
@@ -2408,7 +2419,7 @@
     if (HELP_MODE && (document.querySelector('[data-guided-intro]') || window.Blam8GuidedSetup && window.Blam8GuidedSetup.active())) {
       history = history.filter(function (turn) { return !!turn.guide_stop; });
     }
-    if (voiceGuide && voiceGuide.question()) history = history.concat([{role:"assistant", content:voiceGuide.question()}]);
+    if (fieldGuide && fieldGuide.question()) history = history.concat([{role:"assistant", content:fieldGuide.question()}]);
     if (FIX_LOG_ID) { await fixTurn(text, history); }
     else if (ONB_MODE) { await onboardTurn(text, history); }
     else if (HELP_MODE) { await helpTurn(text, history); }
@@ -2416,7 +2427,7 @@
     else { await askTurn(text, history); }
 
     sending = false; sendBtn.disabled = false; applyQuestionAllowance();
-    if (voiceGuide) voiceGuide.endTurn();
+    if (fieldGuide) fieldGuide.endTurn();
     input.focus();
     if (window.Blam8KnowledgeGuide) window.Blam8KnowledgeGuide.start();
   }

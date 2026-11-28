@@ -247,6 +247,15 @@ Direct answers are visible on factual question cards. The footer saves an entere
 
 Confirming a service recap requests a review card. Diary service proposals can cite saved Knowledge for names, durations, prices and timing. Unspecified optional clears are omitted and unsupported choices get a specific follow-up question. Accepting the card saves the service settings.
 
+## About you
+
+About you and Voice share the guided question layout in the assistant dock.
+Choosing a listed answer fills the form. Suggestions from free text can be
+edited, accepted or left individually. The transcript keeps completed questions
+in order with their selected answers marked. Earlier choices are read-only.
+About you keeps its manual form, optional website and portal banner. Continue
+and the empty composer's Next both use the existing interview form.
+
 ## Voice
 
 Voice keeps all four editable fields in the wizard form. The assistant dock asks

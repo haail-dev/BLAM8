@@ -16,34 +16,55 @@ ROOT=Path(__file__).resolve().parents[1]
 
 @pytest.mark.parametrize('theme',['light','dark'])
 @pytest.mark.parametrize('width',[390,1440])
-def test_voice_both_continues_trimmed_validation_visible_fill_and_save_failure(tmp_path,theme,width):
+@pytest.mark.parametrize('step',['voice','interview'])
+def test_guided_field_choices_history_and_save(tmp_path,theme,width,step):
     env=Environment(loader=FileSystemLoader(ROOT/'src/app/templates'),autoescape=True)
-    request=SimpleNamespace(state=SimpleNamespace(tenant_id='offline',user_email='owner@example.test'),url=SimpleNamespace(path='/onboarding/voice'))
-    html=env.get_template('onboarding/voice.html').render(**onboarding._step_ctx('voice'),
+    request=SimpleNamespace(state=SimpleNamespace(tenant_id='offline',user_email='owner@example.test'),url=SimpleNamespace(path='/onboarding/'+step))
+    html=env.get_template('onboarding/'+step+'.html').render(**onboarding._step_ctx(step),
         request=request,asset_rev='offline',cfg={},profile=None,learning_status='manual',
         voice_required=voice_completion.REQUIRED,csrf_token=lambda request:'offline',device_sync_enabled=lambda:False,
         onboarding_identity=lambda request:{'mailbox':None,'same':False})
     html=re.sub(r'<script\b[^>]*\bsrc=[^>]*>.*?</script>','',html,flags=re.S)
     html=re.sub(r'<link\b[^>]*>','',html)
     html=html.replace('<head>','<head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'">'
-        +'<style>'+(ROOT/'src/app/static/tw.css').read_text()+'</style>')
+        +'<style>'+(ROOT/'src/app/static/tw.css').read_text()+(ROOT/'src/app/static/guided_setup.css').read_text()+'</style>')
     prelude='''
     document.documentElement.dataset.theme=THEME;
     sessionStorage.clear();
     var posts=0;
     window.fetch=async function(url,options){
       if(String(url).includes('/concierge/onboard'))return {ok:true,json:async()=>({reply:'Review your suggested values.',
-        form_fill:{agent_name:'Office team',tone:'Warm and professional',sign_off:'Kind regards, The team'},ready_to_advance:true})};
+        form_fill:location.hash==='#interview'?{industry:'Design',business_name:'Studio',business_brief:'Graphic design for shops'}:{agent_name:'Office team',tone:'Warm and professional',sign_off:'Kind regards, The team'},ready_to_advance:true})};
       posts++;return {ok:false,status:503,json:async()=>({detail:'Synthetic save failure'})};
     };
     '''.replace('THEME',json.dumps(theme))
-    scripts='\n'.join((ROOT/'src/app/static'/name).read_text(encoding='utf-8') for name in ['onboarding_journey.js','voice_guide.js','voice_completion.js','concierge.js'])
+    scripts='\n'.join((ROOT/'src/app/static'/name).read_text(encoding='utf-8') for name in ['onboarding_journey.js','onboarding_field_guide.js','voice_completion.js','concierge.js'])
     assertions=r'''
     document.addEventListener('DOMContentLoaded',async function(){
       const failures=[];const check=(v,m)=>{if(!v)failures.push(m)};
       const wait=()=>new Promise(r=>setTimeout(r,50));
       try{
         await wait();document.getElementById('bc-bubble').click();
+        if(location.hash==='#interview'){
+          const form=document.getElementById('interview-form'),guide=()=>document.querySelector('[data-field-guide]');
+          const pick=(root,label)=>Array.from(root.querySelectorAll('button')).find(b=>b.textContent===label).click();
+          const next=document.querySelector('#bc-send + button');
+          check(guide().closest('#bc-panel') && form.closest('main'),'Separate assistant and form');
+          check(guide().innerText.includes('type of business') && next.getAttribute('aria-disabled')==='true','First question and gate');
+          const input=document.getElementById('bc-input');input.value='I run Studio, offering graphic design for shops.';
+          input.dispatchEvent(new Event('input',{bubbles:true}));
+          document.getElementById('bc-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+          for(let i=0;i<30 && !guide().querySelector('[data-field-suggestion]');i++)await wait();
+          check(!form.elements.industry.value,'Inferred type awaits review');
+          for(const key of ['industry','business_name','business_brief'])pick(guide().querySelector('[data-field-suggestion="'+key+'"]'),'Accept');
+          pick(guide(),'Answer enquiries');
+          check(form.elements.goals.value==='Answer enquiries' && form.elements.business_name.value==='Studio','Form updated');
+          const history=()=>document.querySelectorAll('.field-guide-completed');
+          check(history().length===4 && history()[3].textContent.includes('What would you like') && history()[3].querySelector('.field-guide-selected').textContent.includes('Answer enquiries'),'Question history in selection order');
+          check(history()[3].querySelectorAll('button').length===0 && next.getAttribute('aria-disabled')==='false','Read-only history and optional website');
+          let submits=0;form.addEventListener('submit',e=>{e.preventDefault();submits++});next.click();
+          check(submits===1,'Next uses the interview form');
+        }else{
         const form=document.getElementById('voice-form'),page=form.querySelector('[data-onb-continue]');
         const panel=()=>document.querySelector('#bc-send + button');
         const press=(parent,label)=>Array.from(parent.querySelectorAll('button')).find(b=>b.textContent===label).click();
@@ -52,12 +73,17 @@ def test_voice_both_continues_trimmed_validation_visible_fill_and_save_failure(t
         check(page.disabled && panel().getAttribute('aria-disabled')==='true','Whitespace: both Continue controls disabled');
         form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await wait();
         check(posts===0,'Whitespace cannot reach save transport');
-        const guide=()=>document.querySelector('[data-voice-guide]');
-        const pending=key=>guide().querySelector('[data-voice-suggestion="'+key+'"]');
+        const guide=()=>document.querySelector('[data-field-guide]');
+        const pending=key=>guide().querySelector('[data-field-suggestion="'+key+'"]');
         check(form.closest('main') && guide().closest('#bc-panel'),'Form and guide keep separate panels');
         press(guide(),'Friendly and casual');
         check(form.elements.tone.value==='Friendly and casual' && !pending('tone'),'One click fills the exact tone');
         check(guide().textContent.includes('call itself') && posts===0,'Choice advances to name without saving');
+        document.getElementById('bc-close').click();document.getElementById('bc-bubble').click();
+        const history=document.querySelectorAll('.field-guide-completed'),answered=history[0];
+        check(history.length===1 && answered.innerText.includes('How should your replies sound?'),'Question survives reopening the dock');
+        check(answered.querySelectorAll('.field-guide-option').length===3 && answered.querySelector('.field-guide-selected').textContent.includes('Friendly and casual') && !answered.querySelector('button'),'Selected answer in read-only original choices');
+        check(!Array.from(document.querySelectorAll('[data-bc-role=user]')).some(b=>b.textContent==='Friendly and casual'),'No duplicate answer bubble');
         const input=document.getElementById('bc-input');input.value='Use Office team, warm and professional, Kind regards, The team.';
         input.dispatchEvent(new Event('input',{bubbles:true}));
         check(panel().hidden && document.getElementById('bc-send').style.display!=='none','Typing switches to Send');
@@ -81,6 +107,7 @@ def test_voice_both_continues_trimmed_validation_visible_fill_and_save_failure(t
         check(document.documentElement.scrollWidth<=innerWidth+1,'No horizontal overflow');
         document.getElementById('bc-close').click();form.elements.tone.focus();
         check(getComputedStyle(form.elements.tone).outlineStyle!=='none' || getComputedStyle(form.elements.tone).boxShadow!=='none','Keyboard focus visible');
+        }
       }catch(e){failures.push(e.stack || String(e));}
       const out=document.getElementById('voice-result');out.textContent=JSON.stringify({failures,width:innerWidth});
     });
@@ -88,7 +115,7 @@ def test_voice_both_continues_trimmed_validation_visible_fill_and_save_failure(t
     page=tmp_path/'content.html'
     page.write_text(html.replace('</body>','<pre id="voice-result">PENDING</pre><script>'+prelude+scripts+assertions+'</script></body>'),encoding='utf-8')
     frame=tmp_path/'frame.html'
-    frame.write_text('<!doctype html><style>body{margin:0}iframe{display:block;border:0}</style>'+f'<iframe width="{width}" height="1100" src="content.html"></iframe><script>setInterval(function(){{var r=document.querySelector("iframe").contentDocument.getElementById("voice-result");if(r && r.textContent!=="PENDING" && !document.getElementById("voice-result"))document.body.appendChild(r.cloneNode(true));}},50)</script>',encoding='utf-8')
+    frame.write_text('<!doctype html><style>body{margin:0}iframe{display:block;border:0}</style>'+f'<iframe width="{width}" height="1100" src="content.html#{step}"></iframe><script>setInterval(function(){{var r=document.querySelector("iframe").contentDocument.getElementById("voice-result");if(r && r.textContent!=="PENDING" && !document.getElementById("voice-result"))document.body.appendChild(r.cloneNode(true));}},50)</script>',encoding='utf-8')
     result=subprocess.run([chromium_binary(),'--headless=new','--no-sandbox','--disable-gpu',
         '--allow-file-access-from-files','--disable-background-networking','--disable-component-update','--disable-sync',
         '--disable-default-apps','--no-first-run','--no-default-browser-check','--no-proxy-server',

@@ -1,7 +1,7 @@
 /* Guided setup keeps the current decision, conversation and card in one scroll
    region. The composer and application navigation each own a separate row. */
-.guided-running { --guided-border:#dce2eb; --guided-surface:#fff; --guided-muted:#526078; }
-[data-theme="dark"] .guided-running { --guided-border:#364152; --guided-surface:#1c222c; --guided-muted:#b0bdd0; }
+.guided-running,.field-guide-stream { --guided-border:#dce2eb; --guided-surface:#fff; --guided-muted:#526078; }
+[data-theme="dark"] :is(.guided-running,.field-guide-stream) { --guided-border:#364152; --guided-surface:#1c222c; --guided-muted:#b0bdd0; }
 .guided-stream{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;background:var(--guided-surface);scrollbar-width:none}
 /* Hide scrollbar chrome without disabling wheel, touch or keyboard scrolling. */
 .guided-stream::-webkit-scrollbar{display:none}
@@ -122,3 +122,14 @@
 .guided-hours-row{display:grid;grid-template-columns:7.5rem 1fr auto 1fr;align-items:center;gap:.4rem;font-size:.8rem}
 .guided-hours-row input[type=time]{border:1px solid var(--guided-border);border-radius:.4rem;padding:.25rem .35rem;color:inherit;background:var(--guided-surface);min-width:0}
 .guided-question>label{display:flex;align-items:center;gap:.4rem;font-size:.85rem;margin:.35rem 0}
+
+/* Keep answered wizard questions in reading order above the current decision. */
+.field-guide-stream .guided-question{padding:.65rem 0;flex:none}
+.field-guide-stream .field-guide-completed{border-bottom:1px solid var(--guided-border);color:var(--guided-muted)}
+.field-guide-completed .guided-title{font-weight:500}
+.field-guide-option{border:1px solid var(--guided-border);border-radius:.5rem;padding:.5rem .75rem;font-size:.8rem;white-space:pre-wrap;overflow-wrap:anywhere}
+.field-guide-selected{background:#e7efff;color:#244882;border-color:#96acd4}
+.field-guide-selected::before{content:"\2713";margin-right:.4rem}
+[data-theme="dark"] .field-guide-selected{background:#273a58;color:#c4dcff;border-color:#536d95}
+.field-guide-stream [data-bc-role]>div:first-child{border:0;background:transparent;box-shadow:none;color:inherit;padding:.25rem 0}
+.field-guide-stream [data-bc-role=user]>div:first-child{color:var(--guided-muted)}

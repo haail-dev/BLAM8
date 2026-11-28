@@ -255,7 +255,9 @@
 <link rel="stylesheet" href="/static/setup_cards.css?v={{ asset_rev }}">
 <link rel="stylesheet" href="/static/concierge_busy.css?v={{ asset_rev }}">
 <script src="/static/setup_cards.js?v={{ asset_rev }}" defer></script>
-{% if concierge_in_app %}<link rel="stylesheet" href="/static/guided_setup.css?v={{ asset_rev }}">
+{% if concierge_in_app or concierge_onboarding_step in ("interview", "voice") %}<link rel="stylesheet" href="/static/guided_setup.css?v={{ asset_rev }}">{% endif %}
+{% if concierge_onboarding_step in ("interview", "voice") %}<script src="/static/onboarding_field_guide.js?v={{ asset_rev }}" defer></script>{% endif %}
+{% if concierge_in_app %}
 <script src="/static/guided_setup.js?v={{ asset_rev }}" defer></script>{% endif %}
 <script src="/static/concierge.js?v={{ asset_rev }}" defer></script>
 {% if landing_glass_logo and not public_glass_header %}
