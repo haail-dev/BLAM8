@@ -429,10 +429,7 @@ def steps(context):
             stop['decision'] = guide['decisions'].get(stop['id'])
             filtered.append(stop)
             pending = guide['pending'].get(stop['id'])
-            # These single decisions already show the accepted result on their form.
-            # An owner who reached an explanation before the update can still leave it.
-            saved_on_form = stop['id'] in ('crm_fields/contact_field', 'crm_settings/quiet_days', 'crm_settings/stage') and stop['decision'] == 'applied'
-            if pending and (not saved_on_form or guide['current'] == 'explain.' + stop['id']):
+            if pending:
                 proposal = state['proposals'].get(pending['proposal'], {})
                 # Explain the exact represented choices, never the whole
                 # catalogue. One stable stop per affected native control.
@@ -442,6 +439,10 @@ def steps(context):
                     entry = setup_catalogue.lookup(identity)
                     key = entry.get('key', entry['name'])
                     explanation_id='explain.'+(stop['id']+':'+key if identity!=stop['id'] and identity in rows else identity)
+                    # A resolved card already shows its outcome. Preserve only an
+                    # explanation the owner is currently reading so resume is stable.
+                    if stop['decision'] in ('applied', 'partial', 'cancelled') and guide['current'] != explanation_id:
+                        continue
                     if entry['name'] == 'setting' and 'setting.'+entry['page']+'.'+key not in represented and guide['current']!=explanation_id:
                         continue
                     filtered.append(dict(id=explanation_id, kind='explanation', decision_id=stop['id'],
@@ -536,6 +537,12 @@ def describe(context):
         # A removed module/decision cannot be silently certified as complete.
         stop = sequence[0]
     index = sequence.index(stop)
+    if stop['kind'] == 'fact':
+        saved = _answer(context['state'], stop['question_id'], guide['scope_type'], guide['scope_id'])
+        stop['answer_state'] = saved['state'] if saved else 'unanswered'
+    if stop['id'] == 'diary_settings/stay_mode':
+        from app import intake
+        stop['current_setting'] = 'Arrival to departure' if intake.stay_mode(context['cfg']) else 'Appointments'
     groups = contract.group_steps(context['modules'], context['cfg'], context['state'], context['groups'])
     section = next((dict(group=g['label'], label=sub['label'], badge=contract.SUBSTEPS[sub['id']][1])
                     for g in groups for sub in g['substeps'] if sub['id']==stop.get('substep')), None)

@@ -278,7 +278,7 @@
       {% else %}
       {{ sface('Services & durations', (_svc ~ ' service' ~ ('' if _svc == 1 else 's')) if _svc else ('One fixed length — ' ~ _slotlbl)) }}
       {% endif %}
-      <div class="px-5 pb-5 pt-1 space-y-4">
+      <div class="px-3 pb-5 pt-1 space-y-4 sm:px-5">
       <div data-pending-rows="service service_urgent service_out_of_hours service_after_job" hidden aria-live="polite" class="rounded-lg border border-slate-200 p-3 text-sm"></div>
 <div>
       {% if diary_stay_mode %}
@@ -286,140 +286,176 @@
          comes to, each with its own "at once", kept apart from the spaces. #}
             <p class="text-xs text-slate-400 mb-2.5" data-appointments-help>Timed visits alongside the stays — a meet &amp; greet, an assessment. Each has how long it takes and how many can run <strong>at once</strong>, separate from your spaces. The agent books these with their own tools; stays and same-day visits stay as they are.</p>
             <p class="text-xs text-slate-400 mb-2.5 -mt-1.5">Each can also take bookings only between set times, on set days, and up to a set number a day — leave any blank for no limit.</p>
-      {% else %}
-            <p class="text-xs text-slate-400 mb-2.5">List the services you offer, each with how long it takes — the agent books that length when a customer asks for it. Leave empty to use one fixed slot length (above) for every booking.</p>
-      <p class="text-xs text-slate-400 mb-2.5 -mt-1.5">Resource &amp; buffer are optional: tie a service to a <em>resource type</em> below (its own capacity/skill), and set its own turnaround gap.</p>
-      <p class="text-xs text-slate-400 mb-2.5 -mt-1.5">Each service can also take bookings only between set times, on set days, and up to a set number a day — leave any blank for no limit.</p>
-      <p class="text-xs text-slate-400 mb-2.5 -mt-1.5"><strong>Timing</strong> is what the customer is offered: an <em>exact time</em> for an appointment they come to; <em>morning or afternoon</em> for work at their address where you manage the hour (a survey, a fitting); <em>whole day</em> for a day-long job. The diary still reserves the service's real length.</p>
+      {% elif not service_types %}
+      <p class="mb-3 text-xs text-slate-500">Add a service to set its duration and price. With no services, bookings use the diary’s fixed slot length.</p>
       {% endif %}
-      {# Practice OS (docs/os/practice.md §4.2): a per-service Recall cadence (months) rides
-         in the SAME service row — only shown for practice tenants; the positional array
-         stays aligned with service_name for every tenant because the input is always emitted
-         (a hidden empty one for non-practice), so parse_form never misaligns. #}
-      {% set svc_cols = "1.4fr_5rem_5rem_9rem_1fr_5rem_5rem_2rem" if practice_on else "1.4fr_5rem_5rem_9rem_1fr_5rem_2rem" %}
-      <div class="hidden md:grid grid-cols-[{{ svc_cols }}] gap-2 px-1 pb-1 text-xs font-semibold text-slate-400">
-        {% if diary_stay_mode %}<span>Appointment</span><span>Mins</span><span>Price £</span><span>At once</span><span></span><span></span>{% else %}<span>Service</span><span>Mins</span><span>Price £</span><span>Timing</span><span>Resource</span><span>Buffer</span>{% endif %}{% if practice_on %}<span>Recall mo</span>{% endif %}<span></span>
-      </div>
-      {# A service's own booking rules (docs/plan-diary-multiview.md, Kris 2026-09-23):
-         hours, days and a max a day. Positional like the rest of the row — every row
-         always posts all four, blank = no rule. #}
-      {% macro svc_rules(s) %}
-          <div class="md:col-span-full flex flex-wrap items-center gap-x-2 gap-y-1.5 pl-1 pb-1.5 text-xs text-slate-500" data-svc-rules>
-            <span>Takes bookings</span>
-            <input name="service_from" type="time" step="900" value="{{ s.hours_from or '' }}" aria-label="Takes bookings from"
-                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>to</span>
-            <input name="service_until" type="time" step="900" value="{{ s.hours_until or '' }}" aria-label="Takes bookings until"
-                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>or only at</span>
-            <input name="service_starts" value="{{ (s.starts or [])|join(', ') }}" placeholder="e.g. 11:00, 15:00" aria-label="Only starts at"
-                   class="w-36 rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span class="ml-1">on</span>
-            <input type="hidden" name="service_days" value="{{ (s.days or [])|join(',') }}">
-            <span class="inline-flex gap-1" title="None ticked = every day you're open">
-              {% for d in range(7) %}<button type="button" class="svc-day h-7 w-7 rounded-full border border-slate-300 text-[11px] font-semibold text-slate-500 transition aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-white"
-                      data-day="{{ d }}" aria-pressed="{{ 'true' if s.days and d in s.days else 'false' }}" aria-label="{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][d] }}">{{ 'MTWTFSS'[d] }}</button>{% endfor %}
+      {% set service_input = "mt-1 block min-w-0 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-navy" %}
+      {% macro service_row(s, saved=false) %}
+        {% set item_name = 'appointment' if diary_stay_mode else 'service' %}
+        <details class="svc-row group/service min-w-0 rounded-lg border border-slate-200" data-item-name="{{ item_name }}"{% if not saved %} open{% endif %}>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <span class="min-w-0">
+              <strong class="block break-words text-sm text-navy" data-service-title>{{ s.name or ('New ' ~ item_name) }}</strong>
+              <span class="block text-xs text-slate-500" data-service-summary>{% if s.minutes %}{{ s.minutes }} min{% endif %}{% if s.price is defined and s.price is not none %} · £{{ s.price }}{% endif %}</span>
             </span>
-            <span class="ml-1">max</span>
-            <input name="service_max" type="number" min="1" max="500" step="1" value="{{ s.max_per_day or '' }}" placeholder="—" aria-label="Most a day"
-                   class="w-16 rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>a day</span>
-            {# Urgent (docs/plan-service-urgency.md, D1): same day when asked before a
-               cut-off, on the service's own notice. Blank = not urgent, diary notice. #}
-            <span class="ml-1" title="An urgent job: done the same day when the customer asks before this time">same day if asked before</span>
-            <input name="service_same_day" type="time" step="900" value="{{ s.same_day_until or '' }}" aria-label="Same day if asked before"
-                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>with</span>
-            <input name="service_notice" type="number" min="0" max="72" step="1" value="{{ s.notice_hours if s.notice_hours is not none else '' }}" placeholder="—" aria-label="Notice for this service, hours"
-                   class="w-14 rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>h notice</span>
-            {# Out of hours (docs/plan-service-urgency.md, D1): evenings until a time,
-               extra days, bank holidays, its own price, and who decides. Blank until
-               or no price = none. Every row posts all six. #}
-            {% set o = s.out_of_hours or {} %}
-            <span class="basis-full h-0"></span>
-            <span title="Evenings, extra days or bank holidays at a different price">Out of hours: until</span>
-            <input name="service_ooh_until" type="time" step="900" value="{{ o.until or '' }}" aria-label="Out of hours until"
-                   class="w-[6.75rem] rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>and on</span>
-            <input name="service_ooh_days" value="{% for d in o.days or [] %}{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d] }}{{ ', ' if not loop.last }}{% endfor %}" placeholder="e.g. Sun" aria-label="Out of hours extra days"
-                   class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <select name="service_ooh_bh" aria-label="Bank holidays" class="rounded-lg border border-slate-300 px-2 py-1 text-sm bg-white">
-              <option value="" {{ '' if o.bank_holidays else 'selected' }}>not bank holidays</option>
-              <option value="1" {{ 'selected' if o.bank_holidays else '' }}>and bank holidays</option>
-            </select>
-            <span>at £</span>
-            <input name="service_ooh_price" type="number" min="0" step="0.01" value="{{ o.price if o.price is not none else '' }}" placeholder="—" aria-label="Out-of-hours first hour"
-                   class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <select name="service_ooh_basis" aria-label="Out-of-hours price basis" class="rounded-lg border border-slate-300 px-2 py-1 text-sm bg-white">
-              <option value="unspecified" {{ 'selected' if not o.price_basis or o.price_basis == 'unspecified' else '' }}>price basis not specified</option>
-              <option value="booking" {{ 'selected' if o.price_basis == 'booking' else '' }}>per booking</option>
-              <option value="first_hour" {{ 'selected' if o.price_basis == 'first_hour' else '' }}>first hour</option>
-            </select>
-            <span>then (first-hour pricing only) £</span>
-            <input name="service_ooh_after" type="number" min="0" step="0.01" value="{{ o.price_after if o.price_after is not none else '' }}" placeholder="—" aria-label="Out-of-hours per hour after"
-                   class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <span>an hour —</span>
-            {% if o.carried_over_review %}
-            <p class="text-sm text-amber-700">{{ 'Price basis and terms' if 'terms' in o.carried_over_review else 'Price basis' }} carried over, awaiting owner review. Check these before saving.</p>
-            <label><input type="checkbox" name="service_ooh_reviewed" value="{{ s.name }}"> I have reviewed these terms and price basis</label>
-            {% endif %}
-            <input name="service_ooh_terms" value="{{ o.terms or '' }}" maxlength="1000" aria-label="Out-of-hours terms" placeholder="Your additional terms, if any" class="rounded-lg border border-slate-300 px-2 py-1 text-sm">
-            <select name="service_ooh_offer" aria-label="Who decides" class="rounded-lg border border-slate-300 px-2 py-1 text-sm bg-white">
-              <option value="ask" {{ 'selected' if (o.offer or 'ask') == 'ask' else '' }}>ask me first</option>
-              <option value="auto" {{ 'selected' if o.offer == 'auto' else '' }}>offer it automatically</option>
-              <option value="existing" {{ 'selected' if o.offer == 'existing' else '' }}>automatically for existing customers</option>
-            </select>
-            {# After the job (docs/plan-after-job-tasks.md): work this service leaves
-               for the business, each with a deadline from the job being done.
-               Every row posts it, so the positional lists stay aligned. #}
-            <span class="basis-full h-0"></span>
-            <span title="Tasks this job leaves for you, each with a deadline counted from when the job is done">After the job:</span>
-            <input name="service_after_job" value="{% for t in s.after_job or [] %}{{ t.title }} — {{ t.days }} {{ 'working ' if t.unit == 'working' }}day{{ 's' if t.days != 1 }}{{ '; ' if not loop.last }}{% endfor %}" aria-label="After the job tasks"
-                   placeholder="e.g. Send the report — 2 days; Book the check-up — 30 working days"
-                   class="min-w-0 flex-1 basis-64 rounded-lg border border-slate-300 px-2 py-1 text-sm">
+            <span aria-hidden="true" class="shrink-0 rotate-90 text-slate-400 group-open/service:-rotate-90">&rsaquo;</span>
+          </summary>
+          <div class="space-y-2 px-4 pb-4">
+            <div class="grid grid-cols-2 gap-3 pb-2">
+              <label class="block min-w-0 text-xs text-slate-500 col-span-full">{{ 'Appointment name' if diary_stay_mode else 'Service name' }}
+                <input name="service_name" value="{{ s.name }}" class="{{ service_input }}">
+              </label>
+              <label class="block min-w-0 self-end text-xs text-slate-500">Duration (minutes)
+                <input name="service_minutes" type="number" min="5" max="1440" step="5" value="{{ s.minutes }}" placeholder="60" class="{{ service_input }}">
+              </label>
+              <label class="block min-w-0 self-end text-xs text-slate-500">Price (£)
+                <input name="service_price" type="number" min="0" step="0.01" value="{{ s.price if s.price is not none else '' }}" class="{{ service_input }}">
+              </label>
+              {% if diary_stay_mode %}
+              <label class="block min-w-0 text-xs text-slate-500 col-span-full">Appointments at once
+                <input name="service_at_once" type="number" min="1" max="999" step="1" value="{{ appointment_at_once.get(s.name, 1) if saved else '' }}" placeholder="1" class="{{ service_input }}">
+              </label>
+              <input type="hidden" name="service_timing" value="time"><input type="hidden" name="service_resource" value="{{ s.resource or '' }}"><input type="hidden" name="service_buffer" value="">
+              {% else %}
+              <label class="block min-w-0 text-xs text-slate-500 col-span-full">Timing offered to customers
+                <select name="service_timing" class="{{ service_input }}">
+                  <option value="time" {{ 'selected' if (s.timing or 'time') == 'time' else '' }}>Exact time</option>
+                  <option value="half" {{ 'selected' if s.timing == 'half' else '' }}>Morning or afternoon</option>
+                  <option value="day" {{ 'selected' if s.timing == 'day' else '' }}>Whole day</option>
+                </select>
+              </label>
+              <p class="col-span-full text-xs text-slate-500" data-service-timing-help></p>
+              {% endif %}
+            </div>
+            <details class="group/rule">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 py-2 text-sm font-semibold text-navy [&::-webkit-details-marker]:hidden">Availability &amp; booking limits
+                <span aria-hidden="true" class="text-slate-400 group-open/rule:rotate-90">&rsaquo;</span>
+              </summary>
+              <div class="grid grid-cols-1 gap-3 pb-2 sm:grid-cols-2">
+                <label class="block min-w-0 text-xs text-slate-500">Earliest time
+                  <input name="service_from" type="time" step="900" value="{{ s.hours_from or '' }}"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Latest time
+                  <input name="service_until" type="time" step="900" value="{{ s.hours_until or '' }}"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500 col-span-full">Specific start times
+                  <input name="service_starts" value="{{ (s.starts or [])|join(', ') }}" placeholder="e.g. 11:00, 15:00"
+                    class="{{ service_input }}">
+                </label>
+                <fieldset data-svc-rules class="col-span-full"><legend class="mb-1 text-xs text-slate-500">Booking days</legend>
+                  <input type="hidden" name="service_days" value="{{ (s.days or [])|join(',') }}">
+                  <span class="flex flex-wrap gap-1" title="None ticked = every day you're open">
+                    {% for d in range(7) %}<button type="button" class="svc-day h-7 w-7 rounded-full border border-slate-300 text-[11px] font-semibold text-slate-500 transition aria-pressed:border-brand aria-pressed:bg-brand aria-pressed:text-white"
+                            data-day="{{ d }}" aria-pressed="{{ 'true' if s.days and d in s.days else 'false' }}" aria-label="{{ ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][d] }}">{{ 'MTWTFSS'[d] }}</button>{% endfor %}
+                  </span>
+                </fieldset>
+                <label class="block min-w-0 text-xs text-slate-500">Maximum bookings per day
+                  <input name="service_max" type="number" min="1" max="500" step="1" value="{{ s.max_per_day or '' }}" placeholder="—"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Same-day booking cutoff
+                  <input name="service_same_day" type="time" step="900" value="{{ s.same_day_until or '' }}"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Required notice (hours)
+                  <input name="service_notice" type="number" min="0" max="72" step="1" value="{{ s.notice_hours if s.notice_hours is not none else '' }}" placeholder="—"
+                    class="{{ service_input }}">
+                </label>
+              </div>
+            </details>
+            <details class="group/rule">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 py-2 text-sm font-semibold text-navy [&::-webkit-details-marker]:hidden">{{ 'Pricing rules' if diary_stay_mode else 'Resources, buffer & pricing rules' }}
+                <span aria-hidden="true" class="text-slate-400 group-open/rule:rotate-90">&rsaquo;</span>
+              </summary>
+              <div class="grid grid-cols-1 gap-3 pb-2 sm:grid-cols-2">
+                {% if not diary_stay_mode %}
+                <label class="block min-w-0 text-xs text-slate-500">Resource type
+                  <input name="service_resource" value="{{ s.resource or '' }}" placeholder="Any" list="resource-names" class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Buffer after booking (minutes)
+                  <input name="service_buffer" type="number" min="0" max="480" step="5" value="{{ s.buffer if s.buffer is not none else '' }}" class="{{ service_input }}">
+                </label>
+                {% endif %}
+                {% set o = s.out_of_hours or {} %}
+                <label class="block min-w-0 text-xs text-slate-500">Out-of-hours bookings until
+                  <input name="service_ooh_until" type="time" step="900" value="{{ o.until or '' }}"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Extra booking days
+                  <input name="service_ooh_days" value="{% for d in o.days or [] %}{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d] }}{{ ', ' if not loop.last }}{% endfor %}" placeholder="e.g. Sun"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Bank holidays
+                  <select name="service_ooh_bh" class="{{ service_input }}">
+                    <option value="" {{ '' if o.bank_holidays else 'selected' }}>not bank holidays</option>
+                    <option value="1" {{ 'selected' if o.bank_holidays else '' }}>and bank holidays</option>
+                  </select>
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Out-of-hours price (£)
+                  <input name="service_ooh_price" type="number" min="0" step="0.01" value="{{ o.price if o.price is not none else '' }}" placeholder="—"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Price basis
+                  <select name="service_ooh_basis" class="{{ service_input }}">
+                    <option value="unspecified" {{ 'selected' if not o.price_basis or o.price_basis == 'unspecified' else '' }}>price basis not specified</option>
+                    <option value="booking" {{ 'selected' if o.price_basis == 'booking' else '' }}>per booking</option>
+                    <option value="first_hour" {{ 'selected' if o.price_basis == 'first_hour' else '' }}>first hour</option>
+                  </select>
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500">Hourly rate after the first hour (£)
+                  <input name="service_ooh_after" type="number" min="0" step="0.01" value="{{ o.price_after if o.price_after is not none else '' }}" placeholder="—"
+                    class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500 col-span-full">Additional terms
+                  <input name="service_ooh_terms" value="{{ o.terms or '' }}" maxlength="1000" placeholder="Your additional terms, if any" class="{{ service_input }}">
+                </label>
+                <label class="block min-w-0 text-xs text-slate-500 col-span-full">When to offer out-of-hours bookings
+                  <select name="service_ooh_offer" class="{{ service_input }}">
+                    <option value="ask" {{ 'selected' if (o.offer or 'ask') == 'ask' else '' }}>ask me first</option>
+                    <option value="auto" {{ 'selected' if o.offer == 'auto' else '' }}>offer it automatically</option>
+                    <option value="existing" {{ 'selected' if o.offer == 'existing' else '' }}>automatically for existing customers</option>
+                  </select>
+                </label>
+                {% if o.carried_over_review %}
+                <p class="text-sm text-amber-700">{{ 'Price basis and terms' if 'terms' in o.carried_over_review else 'Price basis' }} carried over, awaiting owner review. Check these before saving.</p>
+                <label><input type="checkbox" name="service_ooh_reviewed" value="{{ s.name }}"> I have reviewed these terms and price basis</label>
+                {% endif %}
+              </div>
+            </details>
+            <details class="group/rule">
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 py-2 text-sm font-semibold text-navy [&::-webkit-details-marker]:hidden">After-job tasks
+                <span aria-hidden="true" class="text-slate-400 group-open/rule:rotate-90">&rsaquo;</span>
+              </summary>
+              <div class="grid grid-cols-1 gap-3 pb-2 sm:grid-cols-2">
+                <label class="block min-w-0 text-xs text-slate-500 col-span-full">Tasks and deadlines
+                  <input name="service_after_job" value="{% for t in s.after_job or [] %}{{ t.title }} — {{ t.days }} {{ 'working ' if t.unit == 'working' }}day{{ 's' if t.days != 1 }}{{ '; ' if not loop.last }}{% endfor %}"
+                    placeholder="e.g. Send the report — 2 days; Book the check-up — 30 working days"
+                    class="{{ service_input }}">
+                </label>
+                {% if practice_on %}
+                <label class="block min-w-0 text-xs text-slate-500">Recall interval (months)
+                  <input name="service_recall_months" type="number" min="1" max="60" step="1" value="{{ s.recall_months if s.recall_months is not none else '' }}" class="{{ service_input }}">
+                </label>
+                {% else %}
+                <input type="hidden" name="service_recall_months" value="{{ s.recall_months if s.recall_months is not none else '' }}">
+                {% endif %}
+              </div>
+            </details>
+            <button type="button" class="svc-remove py-2 text-sm text-rose-600">Remove <span data-service-remove-name>{{ s.name or item_name }}</span></button>
           </div>
+        </details>
       {% endmacro %}
       <div id="svc-rows" class="space-y-2">
-        {% for s in service_types %}
-        <div class="svc-row grid grid-cols-1 md:grid-cols-[{{ svc_cols }}] gap-2 items-center">
-          <input name="service_name" value="{{ s.name }}" placeholder="e.g. Cut &amp; blow dry"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <input name="service_minutes" type="number" min="5" max="1440" step="5" value="{{ s.minutes }}" placeholder="60"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <input name="service_price" type="number" min="0" step="0.01" value="{{ s.price if s.price is not none else '' }}" placeholder="—"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {% if diary_stay_mode %}
-          <input name="service_at_once" type="number" min="1" max="999" step="1" value="{{ appointment_at_once.get(s.name, 1) }}" placeholder="1" title="How many can run at the same time"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <span></span><span></span>
-          <input type="hidden" name="service_timing" value="time"><input type="hidden" name="service_resource" value="{{ s.resource or '' }}"><input type="hidden" name="service_buffer" value="">
-          {% else %}
-          <select name="service_timing" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
-            <option value="time" {{ 'selected' if (s.timing or 'time') == 'time' else '' }}>Exact time</option>
-            <option value="half" {{ 'selected' if s.timing == 'half' else '' }}>Morning or afternoon</option>
-            <option value="day" {{ 'selected' if s.timing == 'day' else '' }}>Whole day</option>
-          </select>
-          <input name="service_resource" value="{{ s.resource or '' }}" placeholder="(any)" list="resource-names"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <input name="service_buffer" type="number" min="0" max="480" step="5" value="{{ s.buffer if s.buffer is not none else '' }}" placeholder="—"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {% endif %}
-          {% if practice_on %}
-          <input name="service_recall_months" type="number" min="1" max="60" step="1" value="{{ s.recall_months if s.recall_months is not none else '' }}" placeholder="—"
-                 class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {% else %}
-          <input type="hidden" name="service_recall_months" value="{{ s.recall_months if s.recall_months is not none else '' }}">
-          {% endif %}
-          <button type="button" class="svc-remove text-slate-400 hover:text-rose-600 text-xl leading-none px-2" aria-label="Remove">&times;</button>
-          {{ svc_rules(s) }}
-        </div>
-        {% endfor %}
+        {% for s in service_types %}{{ service_row(s, saved=true) }}{% endfor %}
       </div>
-      <button type="button" id="svc-add"
-              class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
-        <span class="text-lg leading-none">+</span> {{ 'Add an appointment' if diary_stay_mode else 'Add a service' }}
-      </button>
+      <div class="mt-3 flex items-center justify-between gap-3">
+        <button type="button" id="svc-add" class="inline-flex items-center gap-1.5 text-sm font-semibold text-brand hover:underline">
+          <span aria-hidden="true">+</span> {{ 'Add an appointment' if diary_stay_mode else 'Add a service' }}
+        </button>
+        <span data-save-row><button type="submit" class="rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white">Save changes</button></span>
+      </div>
       {% if diary_stay_mode %}
       {# The front desk rule (Kris 2026-09-13): whether an appointment may overlap
          a drop-off or a collection — off when a partner or employee can take one
@@ -442,50 +478,70 @@
       </div>
       {% endif %}
       <template id="svc-template">
-        <div class="svc-row grid grid-cols-1 md:grid-cols-[{{ svc_cols }}] gap-2 items-center">
-          <input name="service_name" placeholder="e.g. Cut &amp; blow dry" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <input name="service_minutes" type="number" min="5" max="1440" step="5" placeholder="60" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <input name="service_price" type="number" min="0" step="0.01" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {% if diary_stay_mode %}
-          <input name="service_at_once" type="number" min="1" max="999" step="1" placeholder="1" title="How many can run at the same time" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <span></span><span></span>
-          <input type="hidden" name="service_timing" value="time"><input type="hidden" name="service_resource" value=""><input type="hidden" name="service_buffer" value="">
-          {% else %}
-          <select name="service_timing" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
-            <option value="time">Exact time</option>
-            <option value="half">Morning or afternoon</option>
-            <option value="day">Whole day</option>
-          </select>
-          <input name="service_resource" placeholder="(any)" list="resource-names" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          <input name="service_buffer" type="number" min="0" max="480" step="5" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {% endif %}
-          {% if practice_on %}
-          <input name="service_recall_months" type="number" min="1" max="60" step="1" placeholder="—" class="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-          {% else %}
-          <input type="hidden" name="service_recall_months" value="">
-          {% endif %}
-          <button type="button" class="svc-remove text-slate-400 hover:text-rose-600 text-xl leading-none px-2" aria-label="Remove">&times;</button>
-          {{ svc_rules({}) }}
-        </div>
+        {{ service_row({}) }}
       </template>
       <script>
         (function () {
           var rows = document.getElementById('svc-rows');
           var tpl = document.getElementById('svc-template');
           if (!rows || !tpl) return;
-          document.getElementById('svc-add').addEventListener('click', function () {
+          var add = document.getElementById('svc-add');
+          var currency = new Intl.NumberFormat('en-GB', {style:'currency', currency:'GBP', trailingZeroDisplay:'stripIfInteger'});
+          function updateCard(row) {
+            var name = row.querySelector('[name="service_name"]').value.trim();
+            var minutes = Number(row.querySelector('[name="service_minutes"]').value);
+            var price = row.querySelector('[name="service_price"]').value;
+            var hours = Math.floor(minutes / 60), remainder = minutes % 60;
+            var duration = [hours && (hours + (hours === 1 ? ' hour' : ' hours')), remainder && (remainder + ' min')].filter(Boolean).join(' ');
+            row.querySelector('[data-service-title]').textContent = name || 'New ' + row.dataset.itemName;
+            row.querySelector('[data-service-summary]').textContent = [duration, price && currency.format(Number(price))].filter(Boolean).join(' · ');
+            row.querySelector('[data-service-remove-name]').textContent = name || row.dataset.itemName;
+            var help = row.querySelector('[data-service-timing-help]');
+            if (help) {
+              var descriptions = {time:'Customers see an exact time.', half:'Customers see a morning or afternoon booking.', day:'Customers see a whole-day booking.'};
+              help.textContent = descriptions[row.querySelector('[name="service_timing"]').value] + (duration ? ' The service lasts ' + duration + '.' : '');
+            }
+          }
+          rows.querySelectorAll('.svc-row').forEach(updateCard);
+          function refresh(event) {
+            var row = event.target.closest('.svc-row');
+            if (row && ['service_name','service_minutes','service_price','service_timing'].includes(event.target.name)) updateCard(row);
+          }
+          rows.addEventListener('input', refresh);
+          rows.addEventListener('change', refresh);
+          add.addEventListener('click', function () {
             rows.appendChild(tpl.content.cloneNode(true));
-            rows.lastElementChild.querySelector('input[name="service_name"]').focus();
+            updateCard(rows.lastElementChild);
+            rows.lastElementChild.querySelector('[name="service_name"]').focus();
           });
           rows.addEventListener('click', function (e) {
-            if (e.target.classList.contains('svc-remove')) e.target.closest('.svc-row').remove();
+            var remove = e.target.closest('.svc-remove');
+            if (remove) {
+              var card = remove.closest('.svc-row');
+              var notice = document.createElement('div'), undo = document.createElement('button');
+              notice.className = 'flex items-center justify-between gap-3 px-4 py-3 text-sm text-slate-500';
+              notice.appendChild(document.createTextNode(card.querySelector('[data-service-title]').textContent + ' marked for removal.'));
+              undo.type = 'button'; undo.className = 'font-semibold text-brand'; undo.textContent = 'Undo';
+              notice.appendChild(undo);
+              card.replaceWith(notice);
+              undo.focus();
+              undo.addEventListener('click', function () {
+                notice.replaceWith(card);
+                card.querySelector('summary').focus();
+                rows.dispatchEvent(new Event('change', {bubbles:true}));
+              });
+              rows.dispatchEvent(new Event('change', {bubbles:true}));
+              return;
+            }
             var day = e.target.closest('.svc-day');
             if (day) {
               day.setAttribute('aria-pressed', day.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
               var wrap = day.closest('[data-svc-rules]');
-              wrap.querySelector('input[name="service_days"]').value =
+              var days = wrap.querySelector('input[name="service_days"]');
+              days.value =
                 Array.prototype.map.call(wrap.querySelectorAll('.svc-day[aria-pressed="true"]'),
                                          function (b) { return b.getAttribute('data-day'); }).join(',');
+              days.dispatchEvent(new Event('change', {bubbles:true}));
             }
           });
         })();

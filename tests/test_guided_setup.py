@@ -301,18 +301,23 @@ def test_explanations_preserve_one_proposal_and_resume_the_exact_control(guide_j
     model(monkeypatch,change('diary_settings',0,[dict(fields={'key':'min_notice_hours','value':24}),dict(fields={'key':'horizon_days','value':60})]))
     turn(j,'24 hours notice, 60 days ahead.')
     proposal=deepcopy(j.state()['guide']['pending']['diary_settings/min_notice_hours'])
-    j.guide_action('next')
+    revision=j.state()['revision']
+    blocked=j.guide_action('next',expected=400)
+    assert 'outstanding suggested settings' in blocked.json()['detail']
+    assert j.state()['revision']==revision
+    # Owners who previously advanced with a pending card can resume there.
+    j.move('explain.diary_settings/min_notice_hours')
+    d=j.http.get('/app/setup/guide/state').json()
+    assert d['pending']['proposal']==proposal['proposal']
+    j.guide_action('next',expected=400);j.guide_action('pause');j.guide_action('resume')
     d=j.http.get('/app/setup/guide/state').json()
     assert d['stop']['id']=='explain.diary_settings/min_notice_hours'
-    assert d['pending']['proposal']==proposal['proposal']
-    j.guide_action('next');j.guide_action('pause');j.guide_action('resume')
-    d=j.http.get('/app/setup/guide/state').json()
-    assert d['stop']['id']=='explain.diary_settings/horizon_days'
-    assert d['stop']['anchor']=='setting.horizon_days'
+    assert d['stop']['anchor']=='setting.min_notice_hours'
     assert j.row('scheduling_config',j.tenant) is None
     accept_current(j,'diary_settings')
     assert j.state()['guide']['decisions']['diary_settings/min_notice_hours']=='applied'
-    assert j.state()['guide']['current']=='explain.diary_settings/horizon_days'
+    assert j.state()['guide']['current']=='explain.diary_settings/min_notice_hours'
+    assert j.guide_action('next').json()['stop']['kind'] != 'explanation'
 
 
 def test_exact_prior_setting_answer_prepares_one_card_without_reasking_or_saving(guide_journey):
@@ -372,7 +377,10 @@ def test_changed_or_removed_knowledge_is_unresolved_before_proposal_review_and_m
     assert model_answer['state']=='unknown' and model_answer['value'] is None
     turn(j,'Use the terms you already know',expected=400)
     j.move('review.charges.terms');j.guide_action('review',expected=400)
-    assert stop in [s['id'] for s in j.http.get('/app/setup/guide/state').json()['unresolved']]
+    resumed=routes.context_for(j.ctx)
+    assert stop in guided_setup.unresolved_required(resumed,'charges.terms')
+    assert resumed['state']['reviews']['charges.terms']['state']=='deferred'
+    assert j.http.get('/app/setup/guide/state').json()['stop']['kind']!='review'
     j.move(stop)
     j.guide_action('knowledge_keep_earlier' if removed else 'knowledge_use_updated',q['id'])
     card=j.row('tenant_config',j.tenant)['setup_cards']['invoice_settings']
@@ -522,7 +530,7 @@ def test_notice_horizon_edit_next_accept_and_resume_real_sql(guide_journey,monke
     assert answer['value']==45 and answer['history'][-1]['value']==60
     assert answer['provenance']['reference']==line['id']
     assert j.row('scheduling_config',j.tenant) is None
-    stop=j.state()['guide']['current'];j.guide_action('next');j.guide_action('back')
+    stop=j.state()['guide']['current'];j.guide_action('next',expected=400)
     assert j.state()['guide']['current']==stop and j.row('scheduling_config',j.tenant) is None
     ids=[l['id'] for l in card['lines'] if l['status']=='proposed']
     preview=j.http.post('/concierge/setup-cards/diary_settings/preview',json=dict(revision=card['revision'],ids=ids)).json()
@@ -719,7 +727,7 @@ def test_saved_followup_days_advance_to_held_stages(guide_journey,monkeypatch,al
     model(monkeypatch,change('crm_settings',1,[dict(fields=dict(key='quiet_days',value=7))]))
     turn(j,'Flag a contact after seven days.')
     if already_on_explanation:
-        assert j.guide_action('next').json()['stop']['id']=='explain.crm_settings/quiet_days'
+        j.move('explain.crm_settings/quiet_days')
     card=j.row('tenant_config',j.tenant)['setup_cards']['crm_settings']
     reminder=next(line for line in card['lines'] if line['name']=='setting')
     accept_current(j,'crm_settings',[reminder['id']])
@@ -800,6 +808,7 @@ def test_charges_explicit_required_batch_saves_empty_false_values_without_paymen
     assert not saved.get('stripe_account_id') and not saved.get('bank_account_number')
     assert j.row('scheduling_config',j.tenant) is None
     (tmp_path/'charges-receipts.json').write_text(json.dumps(dict(state=j.state(),settings=saved),indent=2),encoding='utf-8')
+    assert j.guide_action('next').json()['stop']['kind'] != 'explanation'
 
 
 def test_partial_accept_then_leave_retains_saved_line_and_receipt(guide_journey,monkeypatch):
@@ -810,11 +819,13 @@ def test_partial_accept_then_leave_retains_saved_line_and_receipt(guide_journey,
     line=next(l for l in card['lines'] if l['fields']['key']=='min_notice_hours')
     card=accept_current(j,'diary_settings',[line['id']])
     remaining=next(l for l in card['lines'] if l['status']=='proposed')
+    j.guide_action('next',expected=400)
     response=j.http.post('/concierge/setup-cards/diary_settings/changes',json=dict(revision=card['revision'],changes=[dict(op='remove',id=remaining['id'])]))
     assert response.status_code==200,response.text
     proposal=j.state()['proposals'][j.state()['guide']['pending']['diary_settings/min_notice_hours']['proposal']]
     assert proposal['status']=='partial' and set(proposal['line_receipts'].values())=={'applied','left'}
     assert j.row('scheduling_config',j.tenant)['min_notice_hours']==24
+    assert j.guide_action('next').json()['stop']['kind'] != 'explanation'
 
 
 def test_permission_and_view_as_are_enforced_for_guide_reads_and_writes(journey,monkeypatch):
@@ -864,12 +875,36 @@ def test_next_past_absent_required_answer_cannot_mark_section_reviewed_or_finish
     j.move('review.diary.activities');j.guide_action('review',expected=400)
     assert 'diary.activities' not in j.state()['reviews']
     d=j.http.get('/app/setup/guide/state').json()
-    assert any(s['id']=='question.activity.purpose' for s in d['unresolved'])
+    assert d['stop']['substep']=='diary.time' and d['stop']['kind']!='review'
+    assert 'diary.activities' not in j.state()['reviews']  # Reading an old position is inert.
     j.guide_action('revisit','question.activity.purpose')
     assert j.state()['guide']['current']=='question.activity.purpose'
     j.move('finished');j.guide_action('finish',expected=400)
     j.move('review.diary.activities');j.guide_action('later')
     assert j.state()['reviews']['diary.activities']['state']=='deferred'
+
+
+@pytest.mark.parametrize('answered', [True, False])
+def test_leaving_diary_activities_preserves_answers_and_skips_the_review(guide_journey, answered):
+    j=guide_journey
+    j.move('diary_settings/stay_mode')
+    j.answer('activity.purpose','Site visits')
+    if answered:
+        j.answer('activity.authority','owner_arranges')
+    before=deepcopy(j.state()['answers'])
+    # The fixture has no discovery profile. Explicitly resolve discovery
+    # decisions to isolate the two factual answers at this boundary.
+    ctx=onboarding_state.load(j.ctx)
+    state=deepcopy(ctx['state'])
+    for stop in guided_setup.steps(ctx):
+        if stop.get('substep')=='diary.activities' and stop['kind'] in guided_setup.DISCOVERY:
+            state['guide']['decisions'][stop['id']]='not_applicable'
+    onboarding_state.save(j.ctx,ctx['state'],state)
+    result=j.guide_action('keep_current').json()
+    assert result['stop']['substep']=='diary.time' and result['stop']['kind']!='review'
+    assert j.state()['reviews']['diary.activities']['state']==('reviewed' if answered else 'deferred')
+    assert j.state()['answers']==before and not j.row('scheduling_config',j.tenant)
+    assert j.guide_action('back').json()['stop']['id']=='diary_settings/stay_mode'
 
 
 def test_reopen_older_record_field_review_and_answer_missed_entity_questions(guide_journey):
@@ -882,6 +917,7 @@ def test_reopen_older_record_field_review_and_answer_missed_entity_questions(gui
     state['reviews']['records.information']=dict(state='reviewed',at=onboarding_state.stamp(),by=j.ctx.user_id)
     onboarding_state.save(j.ctx,context['state'],state)
     review=j.guide_action('reopen_record_fields').json()
+    assert j.state()['reviews']['records.information']==state['reviews']['records.information']
     assert review['stop']['href']=='/app/crm/fields'
     assert {s['id'] for s in review['unresolved']}=={'need.company_fields','need.deal_fields'}
     j.guide_action('review',expected=400)
@@ -937,6 +973,12 @@ def test_confirmed_service_recap_creates_two_reviewable_lines(guide_journey, mon
     saved = j.row('scheduling_config', j.tenant)['service_types']
     assert [(s['name'], s['minutes'], float(s['price']), s['timing']) for s in saved] == [
         (name, minutes, price, 'day') for name, minutes, price in packages]
+    next_stop = j.guide_action('next').json()['stop']
+    assert next_stop['id'] == 'diary_settings/stay_mode'
+    assert next_stop['current_setting'] == 'Appointments'
+    context = onboarding_state.load(j.ctx)
+    context['cfg']['booking_mode'] = 'stay'
+    assert guided_setup.describe(context)['stop']['current_setting'] == 'Arrival to departure'
 
 
 def test_service_confirmation_asks_for_unstated_price(guide_journey, monkeypatch):

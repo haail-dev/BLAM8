@@ -136,7 +136,11 @@ const field=name=>doc().querySelector('[name="'+name+'"]');
 const type=(name,value)=>{const el=field(name);el.value=value;el.dispatchEvent(new (win().Event)('input',{bubbles:true}));};
 const acceptAll=label=>until(()=>{
   const heading=Array.from(doc().querySelectorAll('.bc-setup-heading')).find(h=>h.querySelector('strong') && h.querySelector('strong').textContent===label);
-  return heading && heading.querySelector('button');
+  if (!heading) return null;
+  const group=heading.parentElement, accept=group.lastElementChild;
+  if (!accept.matches('button') || accept.textContent!=='Accept changes') return null;
+  if (!group.querySelector('.bc-setup-line')) throw Error('Acceptance shown without any changes');
+  return accept;
 }).then(button=>button.click());
 const openSuggested=async()=>{(await until(()=>doc().querySelector('.bc-setup-dot.suggested'))).click();};
 const loaded=async()=>{await until(()=>sync());await sync().ready;};

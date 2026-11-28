@@ -148,7 +148,9 @@ def test_a_rows_value_hides_only_when_that_row_opens():
     macro = s[s.index("{% macro sface"):s.index("{% endmacro %}")]
     assert "group-open/row:invisible" in macro
     assert "group-open:invisible" not in macro, "unscoped — values vanish with the sheet"
-    rows = re.findall(r'<details class="(group[^"]*)"', s)
+    rows = re.findall(
+        r'<details\b[^>]*?class="([^"]*)"[^>]*>(?:(?!</?details\b).)*?{{\s*sface\(',
+        s, re.S)
     assert rows and all("group/row" in c for c in rows), rows
     # Exactly one unscoped variant survives, and it is the CARD's own face. That
     # one is correct: the card has no .group ancestor to be confused by, and its

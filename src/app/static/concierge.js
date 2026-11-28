@@ -1280,6 +1280,7 @@
   // ── send ──────────────────────────────────────────────────────────────────
   var sending = false;
   function autosize() {
+    input.toggleAttribute("data-has-message", !!input.value.trim());
     input.style.height = "auto";
     input.style.height = Math.min(input.scrollHeight, 112) + "px";
   }

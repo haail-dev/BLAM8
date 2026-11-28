@@ -129,7 +129,12 @@ device drafts and removes a misleading preview. Device sync remains enabled.
 
 Related catalogue controls are grouped into owner decisions. A proposal adds
 durable explanation stops for its affected native controls, with the same card
-available throughout. The current conversation stays visible; earlier discussion
+available throughout the pending review. While the current suggestion is open,
+Next is dimmed. Activating it explains how to review the outstanding changes
+in a status message above the composer. Once every line is accepted or left,
+Next moves past that card's explanations. An owner already reading one can
+resume there and continue directly to the next decision.
+The current conversation stays visible; earlier discussion
 can be expanded. On phones the actual relevant page stays above the assistant,
 with an Expand page control. The assistant's header remains a resize handle:
 dragging it (or its arrow keys) sets the sheet height, which the guide keeps for
@@ -146,7 +151,9 @@ acceptance. The owner can explicitly choose the earlier or updated answer;
 this revises the same pending card and still requires Accept to save settings.
 Owner-edited or accepted settings retain their independent authority. Reads
 derive freshness without writing metadata; explicit mutations persist it.
-Section reviews link directly to unanswered required decisions. The read-only
+Advancing past the last item opens the next section directly. A section with
+open decisions is marked deferred. Its answers and pending settings remain
+available in their existing editors. The read-only
 Diary page closes the Diary group, after its settings, and a fresh tenant can
 see it before configuring intake; this does not bypass validation for creating
 a booking.
@@ -212,7 +219,7 @@ sentence, multi-answer saves and the settings hand-off.
 
 `tests/test_guided_setup.py` covers the real Help caller with synthetic model
 transport, native card validation, HTTP handlers and disposable SQL. The notice
-and horizon fixture prepares 24/60, edits to 24/45, moves Next/Back without saving,
+and horizon fixture prepares 24/60, edits to 24/45, checks the pending review,
 then accepts the exact values and checks resumed answers and receipts. The
 off journey finishes with no scheduling or invoice row.
 
@@ -232,10 +239,21 @@ live E2E testing are separate release actions. Native Chromium emulation does
 not establish real mobile keyboard behavior or live model quality. Usage and
 time savings remain unknown unless directly measured.
 
-At the final progress-stage question, **Continue to Diary** explicitly keeps the current settings and records the section review in the same save. Open or deferred decisions keep the full review available.
+At the final progress-stage question, **Continue to Diary** explicitly keeps the current settings and records section progress in the same save.
 
 When the owner names pipeline stages in the first Progress and follow-up answer, the guide shows those stages for approval immediately and asks about the reminder afterwards. Returning owners with a held stage proposal see it after saving their reminder. If the saved settings or card revision changed, the proposal offers **Review current difference** before acceptance.
 
-Direct answers are visible on factual question cards. The footer saves an entered or edited answer and advances in the same request. Next carries an already saved answer forward.
+Direct answers are visible on factual question cards. The footer saves an entered or edited answer and advances in the same request. When Next is available it shares the composer button position with Send. Entering a message shows Send and clearing the message restores Next.
 
 Confirming a service recap requests a review card. Diary service proposals can cite saved Knowledge for names, durations, prices and timing. Unspecified optional clears are omitted and unsupported choices get a specific follow-up question. Accepting the card saves the service settings.
+
+## Summary cards
+
+Use Summary cards for a list of saved items that each have their own settings.
+In Services & durations, each closed card shows the service name, duration and
+price. The chevron opens that service. The editor shows the everyday fields
+first, with optional rules grouped by task. Use the existing muted settings
+border around the card and spacing between its sections.
+
+New items open for entry. The removal action names its item and offers Undo
+until the owner saves. Accepting a proposal shows the saved items collapsed.

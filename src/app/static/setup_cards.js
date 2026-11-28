@@ -209,31 +209,37 @@
     items.forEach(function (item) { (byPage[item.card.page] || (byPage[item.card.page] = [])).push(item); });
     Object.keys(byPage).forEach(function (page) {
       var view = self.data.views[page], group = byPage[page], card = group[0].card;
+      var section = node("section");
       var title = node("div", null, "bc-setup-heading"); title.appendChild(node("strong", view.label));
       var all = view.all;
-      // Accept all means all pending lines on this page, not a hidden subset.
+      // Use the page preview only when every pending line is visible.
       var allIDs = card.lines.filter(function (l) { return l.status === "proposed" || l.status === "held"; }).map(function (l) { return l.id; });
       var guided=window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active();
-      var groupPreview=guided&&allIDs.length===group.length&&all&&!all.error?all:null;
+      var visible=group.map(function(item){return item.line.id;});
+      var groupPreview=allIDs.length===visible.length&&all&&!all.error?all:null;
       var rowPreview=view.rows[group[0].line.id];
       var version=all&&!all.error?all.settings_version:rowPreview&&rowPreview.settings_version;
       var needsReview=guided && window.Blam8GuidedSetup.outdated(card,version);
       if(needsReview){
         title.appendChild(button('Review current difference',window.Blam8GuidedSetup.reviewDifference));
+      }else if(guided&&!groupPreview&&group.length===1&&rowPreview&&!rowPreview.error){
+        groupPreview=rowPreview;
       }else if(guided&&allIDs.length!==group.length&&group.length>1){
-        var visible=group.map(function(item){return item.line.id;}),key=card.id+':'+card.revision+':'+version+':'+visible.join(',');
+        var key=card.id+':'+card.revision+':'+version+':'+visible.join(',');
         var cached=self.groupPreviews[key];
         if(!cached){self.groupPreviews[key]={loading:true};request('/concierge/setup-cards/'+card.page+'/preview',{
-          revision:card.revision,ids:visible}).then(function(preview){self.groupPreviews[key]=preview;self.paint();})
-          .catch(function(err){self.groupPreviews[key]={error:err.message};self.paint();});}
-        else if(!cached.loading&&!cached.error){groupPreview=cached;title.appendChild(button('Accept displayed changes',function(){self.accept(card,visible,cached);}));}
+          revision:card.revision,ids:visible}).then(function(preview){self.groupPreviews[key]=preview;if(!self.editing)self.paint();})
+          .catch(function(err){self.groupPreviews[key]={error:err.message};if(!self.editing)self.paint();});}
+        else if(!cached.loading&&!cached.error)groupPreview=cached;
         else if(cached.error)title.appendChild(node('p',cached.error,'bc-setup-problem'));
+      }else if(guided&&!groupPreview&&all&&all.error){
+        title.appendChild(node('p',all.error,'bc-setup-problem'));
       }
-      if (!needsReview && self.mode === "suggested" && all && !all.error && allIDs.length === group.length) {
-        title.appendChild(button(window.Blam8GuidedSetup&&window.Blam8GuidedSetup.active()?"Accept displayed changes":"Accept all", function () { self.accept(card, allIDs, all); }));
-      }
-      self.tray.appendChild(title);
-      group.forEach(function (item) { self.paintLine(item, view, guided && !!title.querySelector('button'), groupPreview); });
+      section.appendChild(title);
+      var canAccept = !needsReview && self.mode === "suggested" && groupPreview;
+      group.forEach(function (item) { section.appendChild(self.paintLine(item, view, guided || !!canAccept, groupPreview)); });
+      if (canAccept) section.appendChild(button("Accept changes", function () { self.accept(card, visible, groupPreview); }));
+      self.tray.appendChild(section);
     });
   };
   Panel.prototype.paintLine = function (item, view, hasGroupAccept, groupPreview) {
@@ -275,13 +281,13 @@
     else if(preview&&preview.error&&grouped)row.appendChild(node('p','Included in the displayed changes. Accept this group together.'));
     else if (!effective) (line.problems || []).forEach(function (p) { row.appendChild(node("p", p, "bc-setup-problem")); });
     var actions = node("div", null, "bc-setup-actions");
-    if (!hasGroupAccept && this.mode === "suggested" && preview && !preview.error) actions.appendChild(button("Accept", function () { self.accept(card, [line.id], preview); }));
     actions.appendChild(button("Edit", function () { self.edit(row, card, line, effective && effective.fields); }));
     actions.appendChild(button("Leave", function () { self.mutate(card, "/changes", { revision: card.revision, changes: [{ op: "remove", id: line.id }] }); }));
     if (this.mode === "held" || (preview && preview.error && !grouped)) {
       var link = node("a", "Open page"); link.href = view.href; actions.appendChild(link);
     }
-    row.appendChild(actions); this.tray.appendChild(row);
+    if (!hasGroupAccept && this.mode === "suggested" && preview && !preview.error) actions.appendChild(button("Accept", function () { self.accept(card, [line.id], preview); }));
+    row.appendChild(actions); return row;
   };
   Panel.prototype.mutate = async function (card, action, body) {
     if (this.busy || this.stale || this.waiting) return;
@@ -390,6 +396,7 @@
       self.mutate(card, "/changes", { revision: card.revision, changes: [{ op: "set", id: line.id, fields: dirty, sources: sources }] });
     }));
     editor.appendChild(button("Cancel", function () { self.editing = false; self.load(); }));
+    this.disable();
     row.replaceChildren(editor); editor.querySelector("input,select,textarea").focus();
   };
   function consideredNotes(parent, card) {
