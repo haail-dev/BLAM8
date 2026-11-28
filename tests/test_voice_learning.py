@@ -287,7 +287,7 @@ def test_voice_step_is_opt_in_never_auto_spawns(client, monkeypatch):
     monkeypatch.setattr(vl, "spawn", lambda tid, mid=None: spawned.append(tid))
     r = client.get("/onboarding/voice")
     assert spawned == []                                     # nothing reads sent mail uninvited
-    assert "Want me to learn your voice automatically?" in r.text
+    assert "Learn from sent emails" in r.text
     assert "/onboarding/voice/learn" in r.text
     assert "voice-form" in r.text                            # manual form stays available
     assert "Analysing your sent emails" not in r.text

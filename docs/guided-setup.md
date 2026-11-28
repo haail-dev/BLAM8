@@ -247,6 +247,15 @@ Direct answers are visible on factual question cards. The footer saves an entere
 
 Confirming a service recap requests a review card. Diary service proposals can cite saved Knowledge for names, durations, prices and timing. Unspecified optional clears are omitted and unsupported choices get a specific follow-up question. Accepting the card saves the service settings.
 
+## Voice
+
+Voice keeps all four editable fields in the wizard form. The assistant dock asks
+about the first missing required value. Choosing an answer previews that exact
+value. Typed replies use the existing Voice assistant and its suggestions also
+require review. Each item offers Edit, Leave and Accept. Accept copies that
+item into the form. Next in the empty composer uses the same save action as the
+form's Continue. Pending suggestions must be resolved before either can advance.
+
 ## Summary cards
 
 Use Summary cards for a list of saved items that each have their own settings.

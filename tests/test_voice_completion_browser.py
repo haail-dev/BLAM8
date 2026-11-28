@@ -37,7 +37,7 @@ def test_voice_both_continues_trimmed_validation_visible_fill_and_save_failure(t
       posts++;return {ok:false,status:503,json:async()=>({detail:'Synthetic save failure'})};
     };
     '''.replace('THEME',json.dumps(theme))
-    scripts='\n'.join((ROOT/'src/app/static'/name).read_text(encoding='utf-8') for name in ['onboarding_journey.js','concierge.js','voice_completion.js'])
+    scripts='\n'.join((ROOT/'src/app/static'/name).read_text(encoding='utf-8') for name in ['onboarding_journey.js','voice_guide.js','voice_completion.js','concierge.js'])
     assertions=r'''
     document.addEventListener('DOMContentLoaded',async function(){
       const failures=[];const check=(v,m)=>{if(!v)failures.push(m)};
@@ -45,17 +45,33 @@ def test_voice_both_continues_trimmed_validation_visible_fill_and_save_failure(t
       try{
         await wait();document.getElementById('bc-bubble').click();
         const form=document.getElementById('voice-form'),page=form.querySelector('[data-onb-continue]');
-        const panel=()=>document.querySelector('#bc-cta button');
-        check(page.disabled && panel() && panel().disabled,'Empty: both Continue controls disabled');
+        const panel=()=>document.querySelector('#bc-send + button');
+        const press=(parent,label)=>Array.from(parent.querySelectorAll('button')).find(b=>b.textContent===label).click();
+        check(page.disabled && panel() && panel().getAttribute('aria-disabled')==='true','Empty: both Continue controls disabled');
         ['agent_name','tone','sign_off'].forEach(k=>{form.elements[k].value=' \n\t ';form.elements[k].dispatchEvent(new Event('input',{bubbles:true}));});
-        check(page.disabled && panel().disabled,'Whitespace: both Continue controls disabled');
+        check(page.disabled && panel().getAttribute('aria-disabled')==='true','Whitespace: both Continue controls disabled');
         form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await wait();
         check(posts===0,'Whitespace cannot reach save transport');
+        const guide=()=>document.querySelector('[data-voice-guide]');
+        const pending=key=>guide().querySelector('[data-voice-suggestion="'+key+'"]');
+        check(form.closest('main') && guide().closest('#bc-panel'),'Form and guide keep separate panels');
+        press(guide(),'Friendly and casual');
+        check(!form.elements.tone.value.trim() && pending('tone').textContent.includes('Friendly and casual'),'Choice proposes exact tone');
+        panel().click();check(document.querySelector('#bc-form [role=status]').textContent.includes('Accept'),'Pending Next explains');
+        press(pending('tone'),'Edit');
+        const edit=pending('tone').querySelector('textarea');
+        edit.value='Friendly and brief';edit.dispatchEvent(new Event('input',{bubbles:true}));
+        press(pending('tone'),'Accept');
+        check(form.elements.tone.value==='Friendly and brief' && guide().textContent.includes('call itself'),'Accept fills and advances once');
         const input=document.getElementById('bc-input');input.value='Use Office team, warm and professional, Kind regards, The team.';
+        input.dispatchEvent(new Event('input',{bubbles:true}));
+        check(panel().hidden && document.getElementById('bc-send').style.display!=='none','Typing switches to Send');
         document.getElementById('bc-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
-        for(let i=0;i<30 && !form.elements.agent_name.value.includes('Office');i++)await wait();
-        check(form.elements.agent_name.value==='Office team' && form.elements.sign_off.value.includes('The team'),'Assistant fill visible');
-        check(!page.disabled && panel() && !panel().disabled,'Valid required fields: both Continue controls enabled');
+        for(let i=0;i<30 && !pending('agent_name');i++)await wait();
+        check(!form.elements.agent_name.value.trim(),'Typed proposal waits for review');
+        press(pending('tone'),'Leave');press(pending('agent_name'),'Accept');press(pending('sign_off'),'Accept');
+        check(form.elements.tone.value==='Friendly and brief' && form.elements.agent_name.value==='Office team','Leave preserves own tone, Accept fills name');
+        check(!page.disabled && panel() && panel().getAttribute('aria-disabled')==='false','Valid required fields: both Continue controls enabled');
         check(form.elements.voice_notes.value==='','Extra voice notes optional');
         panel().click();await wait();
         check(posts===1,'Assistant Continue uses one real form save');
