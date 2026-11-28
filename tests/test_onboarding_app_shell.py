@@ -7,19 +7,30 @@ from app.templating import templates
 from tests.test_onboarding_stepper import Tags
 
 
-def render(path, done=(), status=None, dismissed=False):
+def render(path, done=(), status=None, dismissed=False, template='shell-test.html', **context):
     env=templates.env.overlay(undefined=ChainableUndefined,loader=ChoiceLoader([
         DictLoader({'shell-test.html':'{% extends "app/base.html" %}{% block heading %}Native editor{% endblock %}{% block content %}<form data-native-form><input name="value"></form>{% endblock %}',
                     '_theme_head.html':''}),templates.env.loader]))
     groups=onboarding_contract.group_steps({'scheduling','crm'})
     for group in groups:group['done']=group['key'] in done
     request=SimpleNamespace(url=SimpleNamespace(path=path),state=SimpleNamespace(user_email='owner@example.test',tenant_id='offline'),cookies={},query_params={})
-    return env.get_template('shell-test.html').render(request=request,asset_rev='test',
+    return env.get_template(template).render(request=request,asset_rev='test',**context,
         onboarding_identity=lambda _:dict(mailbox='owner@example.test',same=True),
         device_sync_enabled=lambda:False,csrf_token=lambda _:'test',
         guided_setup_meta=dict(status=status) if status else None,
         setup_strip_raw=dict(steps=groups,dismissed_at='dismissed' if dismissed else None),
         setup_strip_fn=setup_handoff.strip,setup_prefill={'page':'test'})
+
+
+@pytest.mark.parametrize('fleet', [False, True])
+def test_diary_settings_help_stays_with_heading_during_setup(fleet):
+    html = render('/app/diary/settings', done=('records',), template='app/diary_settings.html',
+                  fleet_mode=fleet, scheduling_cfg={}, day_hours={}, booking_mode_snapshot={})
+    header = html.split('<h1 data-onboarding-heading', 1)[1].split('</div>', 1)[0]
+    assert '>Diary settings</h1>' in header and 'href="/help"' in header
+    form = html.split('id="scheduling"', 1)[1].split('</form>', 1)[0]
+    assert 'href="/help"' not in form and 'href="/app/diary"' not in form
+    assert ('href="/app/fleet"' in form) == fleet
 
 
 @pytest.mark.parametrize('path,current',[

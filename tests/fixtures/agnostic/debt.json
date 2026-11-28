@@ -14384,12 +14384,12 @@
     },
     {
       "path": "src/app/templates/app/_scheduling_settings.html",
-      "line": 122,
+      "line": 127,
       "kind": "asset",
-      "fingerprint": "1709b8eabe83f37b67f25f07438e7f80d39ce6d3783177e521669ed4e28cf457",
+      "fingerprint": "80ede430c0ceec4185732709c3f2ead42bd50441322df076dbe3621f0eb70e13",
       "scope": "<module>",
       "occurrence": 0,
-      "excerpt": "When the diary is open for bookings — see it at <a href=\"/app/diary\" class=\"text-brand hover:underli",
+      "excerpt": "{% if fleet_mode %}Capacity itself comes from your <a href=\"/app/fleet\" class=\"text-brand hover:unde",
       "owner": "U01",
       "closure_step": "S1b",
       "reason": 0

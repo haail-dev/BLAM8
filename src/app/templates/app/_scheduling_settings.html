@@ -123,11 +123,8 @@
         <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">{{ 'Fleet diary' if fleet_mode else 'Diary calendar' }}</p>
         {% endif %}
         <p class="text-sm text-slate-400">
-          {% if fleet_mode %}
-          When the diary is open for bookings — see it at <a href="/app/diary" class="text-brand hover:underline">Diary</a>. Capacity itself comes from your <a href="/app/fleet" class="text-brand hover:underline">vehicles</a>.
-          {% else %}
-          Set the calendar the agent checks before offering a booking — see it at <a href="/app/diary" class="text-brand hover:underline">Diary</a>.
-          {% endif %}
+          {{ 'When the diary is open for bookings' if fleet_mode else 'Set the calendar the agent checks before offering a booking' }}{% if not onboarding_progress %} — see it at <a href="/app/diary" class="text-brand hover:underline">Diary</a>{% endif %}.
+          {% if fleet_mode %}Capacity itself comes from your <a href="/app/fleet" class="text-brand hover:underline">vehicles</a>.{% endif %}
         </p>
         {# Opens the in-app assistant pre-asked to walk THIS business through its
            settings — it already knows the tenant's industry + current setup
@@ -136,7 +133,7 @@
            sentence above it into four ragged lines. It is an offer, not the
            subject of the section. #}
         <span hidden data-concierge-ask="Review my current diary settings using only my explicit answers and supplied source material. Preserve existing choices. Ask about missing choices before proposing a change; do not assume numbers or claim a proposal was saved."></span>
-{% include "app/_help_hint.html" %}
+        {% if not onboarding_progress %}{% include "app/_help_hint.html" %}{% endif %}
         {# Booking requirements left the diary menu with the other settings
            rows (2026-09-02), and the cog lands here — so this page has to be
            the door to it, or the checklist would only be reachable from the

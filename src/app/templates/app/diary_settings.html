@@ -1,6 +1,12 @@
 {% extends "app/base.html" %}
 {% block title %}Diary settings · BLAM8{% endblock %}
 {% block heading %}Diary settings{% endblock %}
+{% block card_header %}
+  <div class="flex items-baseline justify-between gap-3">
+    {{ super() }}
+    {% include "app/_help_hint.html" %}
+  </div>
+{% endblock %}
 {% set back = ('/app/diary/intake', 'Booking requirements') if mode_only else ('/app/diary', 'Diary') %}
 {% block menu_sections %}{% include "app/_diary_nav.html" %}{% endblock %}
 {% block content %}
