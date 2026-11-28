@@ -131,5 +131,5 @@
 .field-guide-selected{background:#e7efff;color:#244882;border-color:#96acd4}
 .field-guide-selected::before{content:"\2713";margin-right:.4rem}
 [data-theme="dark"] .field-guide-selected{background:#273a58;color:#c4dcff;border-color:#536d95}
-.field-guide-stream [data-bc-role]>div:first-child{border:0;background:transparent;box-shadow:none;color:inherit;padding:.25rem 0}
-.field-guide-stream [data-bc-role=user]>div:first-child{color:var(--guided-muted)}
+.field-guide-stream [data-bc-role]>div.rounded-2xl{border:0;background:transparent;box-shadow:none;color:inherit;padding:.25rem 0}
+.field-guide-stream [data-bc-role=user]>div.rounded-2xl{color:var(--guided-muted)}
