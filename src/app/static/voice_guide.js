@@ -73,16 +73,18 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
     button.addEventListener('click', handle);
     return button;
   }
+  function fillField(key, value) {
+    if (form.classList.contains('hidden')) document.getElementById('voice-adjust')?.click();
+    const field = form.elements[key];
+    field.value = value;
+    field.dispatchEvent(new Event('input', {bubbles:true}));
+    field.dispatchEvent(new Event('change', {bubbles:true}));
+  }
   function finish(key, accept) {
     const value = pending[key];
     if (accept && !value.trim()) { say('Enter a value or choose Leave.'); return; }
     delete pending[key]; persist(); say('');
-    if (accept) {
-      if (form.classList.contains('hidden')) document.getElementById('voice-adjust')?.click();
-      form.elements[key].value = value;
-      form.elements[key].dispatchEvent(new Event('input', {bubbles:true}));
-      form.elements[key].dispatchEvent(new Event('change', {bubbles:true}));
-    }
+    if (accept) fillField(key, value);
     lastView = '';
     choose(accept ? 'Accepted ' + fields[key].label + ': ' + value : 'Left ' + fields[key].label + ' unchanged.');
   }
@@ -126,7 +128,9 @@ window.Blam8VoiceGuide = function ({messages, composer, input, sendButton, scope
       const choices = line(card, 'div', '', 'flex flex-wrap gap-2');
       fields[key].choices.forEach(answer => {
         action(choices, answer, 'rounded-lg border border-slate-200 px-3 py-2 text-left text-navy', () => {
-          pending[key] = answer; persist(); say(''); choose(answer);
+          say('');
+          fillField(key, answer);
+          choose(answer);
         });
       });
     } else {

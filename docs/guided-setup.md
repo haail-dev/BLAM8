@@ -250,8 +250,8 @@ Confirming a service recap requests a review card. Diary service proposals can c
 ## Voice
 
 Voice keeps all four editable fields in the wizard form. The assistant dock asks
-about the first missing required value. Choosing an answer previews that exact
-value. Typed replies use the existing Voice assistant and its suggestions also
+about the first missing required value. Clicking an answer fills that field
+immediately and shows the next missing field. Suggestions from typed replies
 require review. Each item offers Edit, Leave and Accept. Accept copies that
 item into the form. Next in the empty composer uses the same save action as the
 form's Continue. Pending suggestions must be resolved before either can advance.
